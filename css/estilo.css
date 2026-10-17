@@ -3674,3 +3674,18 @@ body.celular .menu-opcoes button { min-height: 48px; }
   background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 75%); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7); }
 .mapa-inteiro[hidden] { display: none; }
 .mapa-inteiro { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); }
+/* Celular, item 8 (achados do teste de toque): alvos de 44 px e letras de 14 px nos que faltavam. */
+body.celular .recado-marca { width: 44px; height: 44px; font-size: 1rem; }
+body.celular .borda-mais { width: 44px; height: 84px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .alca-folha { height: 44px; top: -12px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .alca-folha i { margin-top: 19px; }
+body.celular .recolher { min-height: 44px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome { font-size: 0.875rem; }
+body.celular :is(.hud-plano, .painel-baixo, .painel-pergunta) :is(small, b, span, em, i, button) { font-size: max(14px, 1em); }
+body.celular .hud-plano :is(.plano-marca, .quadro-seta, .quadro-prazo-curto, .desc-longa) { font-size: 14px; }
+body.celular .recolher { min-height: 44px !important; height: auto !important; }
+body.celular .tela-jogo :is(small, b) { font-size: max(14px, 1em); }
+body.celular .relogio-noite small { font-size: 14px !important; }
+body.celular .quadro-cabeca { min-height: 44px; }
+/* As setas de "mais cena" ficam acima dos indicadores de quem está fora da tela ("‹ 2", "Caçada +1 ›"). */
+.borda-mais { top: 30%; }
