@@ -8,6 +8,7 @@ import { telaDiario } from './diario.js';
 import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
 import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
+import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
@@ -100,6 +101,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   try { plano = { ...plano, ...(JSON.parse(localStorage.getItem(chavePlano(noite, p))) || {}) }; } catch { /* sem rascunho */ }
   let alterado = false;
 
+  // Poderes que funcionam na cena: só os que a ficha tem (nas demonstrações, p._poderes).
+  const meusPoderes = new Set(p._poderes || (() => { try { return v5.calcular(p.ficha || {}).poderes || []; } catch { return []; } })());
+  const poderesCena = p.sprite?.url ? PODERES_DA_CENA.filter((x) => meusPoderes.has(x.id)) : [];
+  const nomePoder = (id) => { for (const d of Object.values(v5.DISCIPLINAS)) { const pw = d.poderes.find((x) => x.id === id); if (pw) return pw.nome; } return id; };
+
   // --- Interface sobre a cena ---------------------------------------------------------------
   const retrato = retratoDe(p);
   const fome = p.estado?.fome ?? 0;
@@ -122,6 +128,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           <button type="button" class="hud-com-icone" data-hud="mapa" title="Mapa do Rio (M)" aria-label="Mapa do Rio"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">Mapa <kbd>M</kbd></span></button>
           <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M9 2.5v6a1.6 1.6 0 0 0 3.2 0V4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
           <button type="button" class="hud-com-icone" data-hud="diario" title="Diário (J)" aria-label="Diário"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 3v18"/><path d="M12 8h4M12 11.5h4"/></svg><span class="hud-nome">Diário <kbd>J</kbd></span></button>
+          ${poderesCena.length ? '<button type="button" class="hud-com-icone hud-sangue" data-hud="disciplinas" title="Disciplinas (Q)" aria-label="Disciplinas"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C15 8 18 11 18 15a6 6 0 0 1-12 0c0-4 3-7 6-12z"/></svg><span class="hud-nome">Sangue <kbd>Q</kbd></span></button>' : ''}
           <button type="button" data-hud="efeitos" class="hud-icone" aria-pressed="${efeitos.ligados()}" title="Chuva e efeitos">☂</button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente">♪</button>
           <button type="button" data-hud="legenda" class="hud-icone" title="Como funciona a noite">?</button>
@@ -129,6 +136,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         </nav>
       </header>
       <aside class="hud-plano" aria-live="polite"></aside>
+      <div class="barra-disciplinas" hidden role="toolbar" aria-label="Disciplinas"></div>
       <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>E</kbd> interagir · <kbd>Tab</kbd> mostrar tudo · <kbd>M</kbd> mapa · <kbd>P</kbd> plano · <kbd>F</kbd> ficha · <kbd>J</kbd> diário</footer>
     </div>`;
   const palco = raiz.querySelector('.palco');
@@ -146,7 +154,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     try { localStorage.setItem(chaveVantagens, JSON.stringify(lista)); } catch { /* sem armazenamento */ }
     som.reacao?.('vantagem', 0);
     aviso('Você sabe algo que ajuda: a opção ligada ganhou a marca ✦.');
-    cena?.atualizarPontos(montarPontos());
+    // Durante a caçada, os pontos da cena são as presas: não troca por cima delas.
+    if (!emCaca) cena?.atualizarPontos(montarPontos());
     desenharPlano();
   }
   const vantagemDe = (texto) => (texto ? lerVantagens().find((v) => v.termos?.some((t) => semAcentoV(texto).includes(t))) : null);
@@ -247,7 +256,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (avisarEncerrada()) return;
     if (!plano.principal?.trim()) { aviso('Escolha ou escreva a ação principal primeiro.'); return; }
     const campos = {
-      principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal)), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
+      principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal)) + (plano.poderes_cena?.length ? ` [usou ${plano.poderes_cena.join(', ')} (Despertar)]` : ''), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
       curta_1: (plano.curta_1 || '').trim(), curta_2: (plano.curta_2 || '').trim(), esforco: !!plano.esforco,
     };
     try {
@@ -490,14 +499,61 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     });
   }
 
+  // --- Disciplinas em ação ---------------------------------------------------------------------------
+  const barra = raiz.querySelector('.barra-disciplinas');
+  const chaveSangue = `mascara.sangue.${noite?.id || 'sem-noite'}`;
+  const ativosAte = new Map();
+  function desenharBarra() {
+    if (!barra) return;
+    const agora = Date.now();
+    barra.innerHTML = poderesCena.filter((x) => x.quando === 'sempre' || emCaca).map((x) => {
+      const resta = Math.ceil(((ativosAte.get(x.id) || 0) - agora) / 1000);
+      return `<button type="button" data-poder="${x.id}" title="${esc(nomePoder(x.id))}: ${esc(x.efeito)}"${resta > 0 ? ' class="ativo"' : ''}>${esc(nomePoder(x.id))}${resta > 0 ? ` <small>${resta} s</small>` : ''}</button>`;
+    }).join('') || '<span class="nota">Nenhum poder serve aqui agora.</span>';
+  }
+  function alternarBarra(abrir = barra.hidden) {
+    barra.hidden = !abrir;
+    if (abrir) desenharBarra();
+  }
+  async function usarDisciplina(id) {
+    const def = poderesCena.find((x) => x.id === id);
+    if (!def || !cena) return;
+    if (def.quando === 'caca' && !emCaca) { aviso('Esse poder só serve durante a caçada na hora.'); return; }
+    let avisado = false;
+    try { avisado = localStorage.getItem(chaveSangue) === '1'; } catch { /* sem armazenamento */ }
+    if (!avisado) {
+      const r = await perguntar(camadas, { rotulo: 'O sangue desperta', texto: `<p>${esc(AVISO_DESPERTAR)}</p>`, opcoes: ['Usar o sangue', 'Agora não'] });
+      if (r !== 0) return;
+      try { localStorage.setItem(chaveSangue, '1'); } catch { /* sem armazenamento */ }
+    }
+    const presaAlvo = emCaca?.alvo || null;
+    if (!cena.usarPoder(id, { alvo: presaAlvo })) { aviso('Esse poder só serve durante a caçada.'); return; }
+    const nome = nomePoder(id);
+    if (def.dur) { ativosAte.set(id, Date.now() + def.dur * 1000); const t = setInterval(() => { desenharBarra(); if (Date.now() > ativosAte.get(id)) clearInterval(t); }, 1000); }
+    if (emCaca) {
+      emCaca.poderes.add(nome);
+      if (id === 'perscrutar-alma') emCaca.perscrutou = true;
+      if (id === 'assombro' || id === 'intimidar') emCaca.presenca = id;
+      if (id === 'nublar-memoria') emCaca.nublar = true;
+    } else {
+      plano.poderes_cena = [...new Set([...(plano.poderes_cena || []), nome])];
+      guardarRascunho();
+    }
+    desenharBarra();
+  }
+  barra?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-poder]');
+    if (b) { ev.stopPropagation(); usarDisciplina(b.dataset.poder); }
+  });
+
   // --- Caçada na hora (minijogo, sem dados) ---------------------------------------------------------
   // A Fome abre os olhos: três presas na cena; a abordagem pelo tipo de predador; o fim escreve o texto
   // da caçada no plano. O Narrador rola no fechamento, a partir desse texto.
   let emCaca = null;
   function fomeDesperta(sim) {
+    // Visual próprio da caçada: vermelho mais frio, sem a vinheta e o batimento da Fome real.
     document.body.classList.toggle('fome-desperta', sim);
-    document.body.dataset.fome = String(sim ? 5 : (p.estado?.fome ?? ''));
-    definirClima({ fome: sim ? 5 : (p.estado?.fome ?? null) });
+    setTimeout(desenharBarra, 0);
     const desistir = camadas.querySelector('.caca-desistir');
     if (sim && !desistir) {
       const b = document.createElement('button');
@@ -515,8 +571,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
   function cacarAgora(onde) {
     if (avisarEncerrada() || !cena) return;
-    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}` }));
-    emCaca = { presas, onde };
+    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}`, temperamento: temperamentoDe(`${pr.id}.${noite?.numero || 0}`) }));
+    emCaca = { presas, onde, poderes: new Set() };
     fomeDesperta(true);
     som.acorde?.();
     cena.atualizarPontos(presas);
@@ -534,6 +590,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }), pr.vulneravel ? 1700 : 150);
   }
   function iniciarAbordagem(pr, modo) {
+    emCaca.alvo = pr;
     cena.falar('A FOME', ABORDAGENS[modo].explica, 4200);
     const zonas = lerVantagens().filter((v) => v.cacada && v.lugar === lugarId).map((v) => ({ x: v.x, y: v.y, raio: 0.12 }));
     if (modo === 'conversa') {
@@ -542,9 +599,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       const perguntar = (n) => {
         if (n >= PERGUNTAS_CONVERSA.length) { terminarCaca(pr, modo, (2 - boas) * 0.3 + (hesitou ? 0.25 : 0), boas >= 1); return; }
         const q = PERGUNTAS_CONVERSA[n];
+        const extra = n === 0 && emCaca.presenca ? [`${nomePoder(emCaca.presenca)}: ${emCaca.presenca === 'assombro' ? 'um sorriso, e ela já confia' : 'um olhar, e ela não ousa recusar'}`] : [];
         cena.perguntarNoBalao({
-          voz: 'A FOME', texto: q.texto, opcoes: q.opcoes,
-          aoEscolher: (i) => { if (i === 0) boas += 1; setTimeout(() => perguntar(n + 1), 500); },
+          voz: 'A FOME', texto: q.texto, opcoes: [...q.opcoes, ...extra],
+          aoEscolher: (i) => { if (i === 0 || i === 2) boas += i === 2 ? 2 : 1; setTimeout(() => perguntar(n + 1), 500); },
           aoExpirar: () => { hesitou = true; setTimeout(() => perguntar(n + 1), 300); },
         });
       };
@@ -558,18 +616,32 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (!chegou) { terminarCaca(pr, modo, atencao, false); return; }
         if (modo !== 'frente') { terminarCaca(pr, modo, atencao, true); return; }
         const t0 = performance.now();
+        const extraFrente = emCaca.presenca ? [`${nomePoder(emCaca.presenca)}: só o olhar, sem palavra`] : [];
         cena.perguntarNoBalao({
-          voz: 'A FOME', texto: FRASES_FRENTE.texto, opcoes: FRASES_FRENTE.opcoes,
-          aoEscolher: (i) => terminarCaca(pr, modo, Math.min(1, atencao + (i === 1 ? 0.4 : 0) + (performance.now() - t0) / 20000), i === 0),
+          voz: 'A FOME', texto: FRASES_FRENTE.texto, opcoes: [...FRASES_FRENTE.opcoes, ...extraFrente],
+          aoEscolher: (i) => terminarCaca(pr, modo, Math.min(1, atencao + (i === 1 ? 0.4 : 0) + (i === 2 ? 0 : (performance.now() - t0) / 20000)), i !== 1),
           aoExpirar: () => terminarCaca(pr, modo, Math.min(1, atencao + 0.45), false),
         });
       },
     });
   }
-  function terminarCaca(pr, modo, atencao, deuCerto) {
+  function terminarCaca(pr, modo, atencao, deuCerto, jaPerguntou = false) {
     if (!emCaca) return;
+    // Nublar a Memória: quem viu esquece ("foi visto" vira "alguém olhou").
+    if (emCaca.nublar && atencao >= 0.67 && !jaPerguntou) {
+      cena.perguntarNoBalao({
+        voz: 'DOMINAÇÃO', texto: 'Alguém viu você.', opcoes: ['Fazer esquecer (Nublar a Memória)', 'Deixar assim'],
+        aoEscolher: (i) => { if (i === 0) { emCaca.esqueceu = true; terminarCaca(pr, modo, 0.5, deuCerto, true); } else terminarCaca(pr, modo, atencao, deuCerto, true); },
+        aoExpirar: () => terminarCaca(pr, modo, atencao, deuCerto, true),
+      });
+      return;
+    }
+    const extras = [];
+    if (emCaca.perscrutou && pr.temperamento) extras.push(`ressonância ${TEMPERAMENTOS[pr.temperamento].nome}`);
+    if (emCaca.esqueceu) extras.push('fez a testemunha esquecer');
+    if (emCaca.poderes.size) extras.push(`usou ${[...emCaca.poderes].join(', ')} (Despertar)`);
     const v = vantagemDaCacada(lugarId);
-    const { texto, curto: linha } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota });
+    const { texto, curto: linha } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota, extras });
     plano.cacada = texto;
     plano.cacada_curta = linha;
     plano.cacada_de = texto;
@@ -704,6 +776,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       case 'plano': abrirPlano(); break;
       case 'enviar': enviar(); break;
       case 'encerrar': encerrar(); break;
+      case 'disciplinas': alternarBarra(); break;
       case 'menu': abrirMenu(); break;
       case 'legenda': abrirLegenda(); break;
       case 'recolher':
@@ -752,6 +825,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     },
     aoTecla: (ev) => {
       const k = ev.key.toLowerCase();
+      if (k === 'q' && poderesCena.length) { ev.preventDefault(); alternarBarra(); return; }
       const mapa = { m: 'mapa', f: 'ficha', j: 'diario', p: 'plano' };
       if (mapa[k]) { ev.preventDefault(); acao_(mapa[k]); }
     },

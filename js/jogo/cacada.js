@@ -73,10 +73,11 @@ export function atencaoEmPalavras(a) {
 }
 
 // O texto da caçada para o plano e a linha curta do quadro.
-export function textoDaCacada({ presa, abordagem, atencao, deuCerto, onde, vantagem }) {
+export function textoDaCacada({ presa, abordagem, atencao, deuCerto, onde, vantagem, extras = [] }) {
   const a = ABORDAGENS[abordagem];
   const rua = atencaoEmPalavras(atencao).replace('você foi visto', 'foi visto');
-  const nota = vantagem ? ` [vantagem: ${vantagem}]` : '';
+  const juntos = extras.join('; ');
+  const nota = `${juntos ? ` ${juntos.charAt(0).toUpperCase()}${juntos.slice(1)}.` : ''}${vantagem ? ` [vantagem: ${vantagem}]` : ''}`;
   const texto = deuCerto
     ? `Caçou ${presa.rotulo} ${onde}, ${a.texto}; ${rua}.${nota}`
     : `Tentou caçar ${presa.rotulo} ${onde}, ${a.texto}, mas a presa escapou antes; ${rua}.${nota}`;

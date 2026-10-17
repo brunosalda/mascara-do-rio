@@ -115,13 +115,16 @@ async function demoCena(raiz) {
   const base = personagemFicticio();
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const lugar = LOCAIS.some((l) => l.id === params.get('lugar')) ? params.get('lugar') : 'lapa';
-  // &ficha=atenta: a ficha fictícia com as habilidades dos escondidos em nível alto.
+  // &ficha=atenta: a ficha fictícia com as habilidades dos escondidos em nível alto (e os poderes da cena).
+  // &ficha=poderes: só os poderes (Auspícios 3, Ofuscação 2, Rapidez 3, Presença 1, Dominação 1).
+  const PODERES_DEMO = ['sentidos-agucados', 'perscrutar-alma', 'manto-sombras', 'silencio-morte', 'passagem-invisivel', 'ligeireza', 'piscar', 'assombro', 'nublar-memoria'];
+  const poderesDemo = ['atenta', 'poderes'].includes(params.get('ficha')) ? PODERES_DEMO : null;
   if (params.get('ficha') === 'atenta') {
     base.ficha = structuredClone(base.ficha);
     const niveis = ((base.ficha.habilidades ||= {}).niveis ||= {});
     for (const h of ['prontidao', 'investigacao', 'intuicao', 'ocultismo', 'manha']) niveis[h] = 4;
   }
-  const p = { ...base, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
+  const p = { ...base, _poderes: poderesDemo || undefined, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
   try { localStorage.setItem('mascara.lido.demo-noite-2', '1'); } catch { /* sem armazenamento */ }
   await telaNoite(raiz, p, { lugar, fonte: fonteFicticia() });
   raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('noite fictícia; nada vai ao banco'));

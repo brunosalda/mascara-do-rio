@@ -89,6 +89,7 @@ export function montarCena(raiz, {
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
         ${htmlBoneco(sprite)}
         <svg class="contornos" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <svg class="rastro" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polyline points=""/></svg>
         <div class="balao-voz" hidden></div>
         <div class="fala-passagem" hidden></div>
         <div class="cena-pontos"></div>
@@ -192,7 +193,7 @@ export function montarCena(raiz, {
   // --- Pontos ----------------------------------------------------------------------------------
   function desenharPontos(recemFeitos = new Set()) {
     camadaPontos.innerHTML = lista.map((p) => `
-      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}" data-ponto="${esc(p.id)}"
+      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-luz" aria-hidden="true"></span>
         <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -254,6 +255,8 @@ export function montarCena(raiz, {
 
   // --- Voz interior que comenta ao passar perto -------------------------------------------------
   function falar(voz, texto, ms = 3200) {
+    // Uma pergunta no balão esperando resposta não é coberta por outra fala.
+    if (balaoEscolha && performance.now() < balaoEscolha.ate) return;
     balao.className = `balao-voz voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}`;
     balao.hidden = false;
@@ -310,7 +313,7 @@ export function montarCena(raiz, {
     if (!c) return;
     caca = null;
     cena.classList.remove('em-caca');
-    boneco.classList.remove('na-sombra');
+    boneco.classList.remove('na-sombra', 'manto');
     atencaoEl.hidden = true;
     c.aoFim?.({ chegou, atencao: c.atencao });
   }
@@ -329,9 +332,13 @@ export function montarCena(raiz, {
     const naSombra = luz < 0.25;
     boneco.classList.toggle('na-sombra', c.modo === 'sombra' && naSombra);
     let taxa = c.modo === 'sombra' ? (naSombra ? -0.03 : luz * 0.09) : 0.035;
+    // Ofuscação: Manto de Sombras (parado, some) e Passagem Invisível (alguns segundos, mesmo andando).
+    const sumido = (c.manto && !andando) || agora < (c.invisivelAte || 0);
+    boneco.classList.toggle('manto', sumido);
+    if (sumido) taxa = Math.min(taxa, -0.05);
     if (c.zonas.some((z) => dist(z.x, z.y, pos.x, pos.y) < z.raio)) taxa *= 0.4; // vantagem: canto sem câmera
     // Barulho: correndo, um anel a cada 0,4 s; se o anel alcança a presa, a atenção sobe.
-    if (correndo && andando) {
+    if (correndo && andando && !c.silencio) {
       c.anel -= dt;
       if (c.anel <= 0) {
         c.anel = 0.4;
@@ -341,7 +348,7 @@ export function montarCena(raiz, {
     }
     // A presa olha de relance quando ele entra na borda do campo dela.
     const d = dist(c.alvo.x, c.alvo.y, pos.x, pos.y);
-    if (!c.olhou && d < 0.22 && !naSombra) {
+    if (!c.olhou && d < 0.22 && !naSombra && !sumido) {
       c.olhou = true;
       const el = camadaPontos.querySelector('.ponto-presa');
       if (el) { el.classList.add('olhou'); setTimeout(() => el.classList.remove('olhou'), 500); }
@@ -356,6 +363,63 @@ export function montarCena(raiz, {
     else if (agora - c.t0 > c.limite * 1000) encerrarFurtividade(false);
   }
 
+  // --- Disciplinas em ação (rodada 19): efeitos na cena, sem dados ---------------------------------
+  const rastro = cena.querySelector('.rastro polyline');
+  let sentidosAte = 0;
+  let alvoDoRastro = null;
+  function olhosDeSangue() {
+    boneco.classList.remove('olhos-sangue');
+    void boneco.offsetWidth;
+    boneco.classList.add('olhos-sangue');
+    setTimeout(() => boneco.classList.remove('olhos-sangue'), 1400);
+  }
+  // Devolve false quando o poder não serve agora (os da caçada fora da caçada).
+  function usarPoder(id, { alvo = null } = {}) {
+    const agora = performance.now();
+    if (id === 'sentidos-agucados') {
+      sentidosAte = agora + 10000;
+      alvoDoRastro = alvo || caca?.alvo || lista.filter((p) => p.tipo === 'detalhe' && !p.visto).sort((a, b) => dist(a.x, a.y, pos.x, pos.y) - dist(b.x, b.y, pos.x, pos.y))[0] || null;
+      mostrarTudoAte = agora + 10000;
+      proximaChecagem = 0;
+      cena.classList.add('sentidos');
+      som.sentidos?.(true);
+      setTimeout(() => { if (performance.now() >= sentidosAte - 50) { cena.classList.remove('sentidos'); rastro.setAttribute('points', ''); som.sentidos?.(false); } }, 10000);
+    } else if (id === 'perscrutar-alma') {
+      cena.classList.add('perscrutando');
+      clearTimeout(usarPoder.tp);
+      usarPoder.tp = setTimeout(() => cena.classList.remove('perscrutando'), 12000);
+    } else {
+      if (!caca) return false;
+      if (id === 'manto-sombras') caca.manto = true;
+      else if (id === 'silencio-morte') caca.silencio = true;
+      else if (id === 'passagem-invisivel') caca.invisivelAte = agora + 8000;
+      else if (id === 'ligeireza') caca.ligeireza = true;
+      else if (id === 'piscar') {
+        const dx = caca.alvo.x - pos.x;
+        const dy = caca.alvo.y - pos.y;
+        const n = Math.hypot(dx * ASPECTO, dy) || 1;
+        const passo = Math.min(0.14, n * 0.8) / n;
+        const destino = [pos.x + dx * passo, pos.y + dy * passo];
+        if (dentro(destino, geo.chao)) { pos.x = destino[0]; pos.y = destino[1]; boneco.classList.add('piscou'); setTimeout(() => boneco.classList.remove('piscou'), 300); }
+      } else return false;
+    }
+    olhosDeSangue();
+    som.reacao?.('disciplina', 0);
+    return true;
+  }
+  function desenharRastro(agora) {
+    if (agora > sentidosAte || !alvoDoRastro) return;
+    // Um rastro vermelho e tremido do personagem até o alvo.
+    const pts = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      const x = pos.x + (alvoDoRastro.x - pos.x) * t + Math.sin(t * 9 + agora / 900) * 0.006;
+      const y = pos.y + (alvoDoRastro.y - pos.y) * t + Math.cos(t * 7) * 0.004;
+      pts.push(`${x.toFixed(4)},${y.toFixed(4)}`);
+    }
+    rastro.setAttribute('points', pts.join(' '));
+  }
+
   // Ao entrar (e ao fechar a narração): os nomes de todos os pontos aparecem por um instante, com
   // faíscas mais fortes, e depois somem devagar.
   function apresentar(ms = 3000) {
@@ -367,7 +431,7 @@ export function montarCena(raiz, {
   }
 
   function checarComentarios() {
-    if (conversa || camadaAberta() || performance.now() < falaAte + 600) return;
+    if (conversa || camadaAberta() || balaoEscolha || performance.now() < falaAte + 600) return;
     for (const c of comentarios) {
       if (dist(c.x, c.y, pos.x, pos.y) > c.raio) continue;
       if (comentar && !comentar(c)) continue;
@@ -533,6 +597,7 @@ export function montarCena(raiz, {
         const f = faixas[Math.floor(Math.random() * faixas.length)];
         const ida = Math.random() < 0.5;
         vida.passante = { f, x: ida ? f.x0 : f.x1, dir: ida ? 1 : -1, fase: 0 };
+        passante.style.setProperty('--halo', ['255, 70, 60', '255, 180, 70', '90, 140, 255', '140, 180, 160'][Math.floor(Math.random() * 4)]);
         passante.hidden = false;
       }
       const p = vida.passante;
@@ -789,13 +854,14 @@ export function montarCena(raiz, {
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
     const norma = Math.hypot(dx, dy) || 1;
-    const fator = limitar(altura(pos.y) / ALTURA_REF, 0.45, 1.3) * (correndo ? CORRIDA : 1);
+    const fator = limitar(altura(pos.y) / ALTURA_REF, 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1);
     const desejadoX = (dx / norma) * VEL_X * fator;
     const desejadoY = (dy / norma) * VEL_Y * fator;
     const k = Math.min(1, dt * ACELERACAO);
     vel.x += (desejadoX - vel.x) * k;
     vel.y += (desejadoY - vel.y) * k;
     if (caca) atualizarCaca(agora, dt, correndo);
+    desenharRastro(agora);
     if (Math.abs(vel.x) < 0.002 && !dx) vel.x = 0;
     if (Math.abs(vel.y) < 0.002 && !dy) vel.y = 0;
     const antes = { x: pos.x, y: pos.y };
@@ -1074,6 +1140,8 @@ export function montarCena(raiz, {
     perguntarNoBalao,
     apresentar,
     iniciarFurtividade,
+    usarPoder,
+    emFurtividade: () => !!caca,
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
   };
