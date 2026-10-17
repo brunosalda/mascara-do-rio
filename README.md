@@ -12,17 +12,41 @@ a privada de cada personagem.
 
 ## Estrutura
 
-Em construção (etapa 1 do plano).
+```
+.
+├── index.html              ← o app (página única)
+├── css/estilo.css
+├── js/
+│   ├── app.js              ← sessão, personagem atual, navegação
+│   ├── banco.js            ← login e leitura/gravação no Supabase
+│   ├── cidade.js           ← lugares do Rio e a pintura de fundo de cada um
+│   ├── config.js           ← URL e chave pública do Supabase
+│   ├── criacao.js          ← assistente de criação de personagem (9 etapas)
+│   ├── noite.js            ← painel da noite e envio de ações
+│   ├── ficha.js            ← ficha em palavras e ficha técnica
+│   ├── diario.js           ← noites já narradas
+│   ├── ui.js               ← narração (vozes, falas, escolhas), painéis de HQ, utilitários
+│   └── motor/
+│       ├── v5.js           ← regras da V5: tabelas, cálculos, validação, textos
+│       └── dados.js        ← rolagens (usado só pelos scripts do Narrador)
+├── img/                    ← cenário padrão do Rio, retrato padrão, pinturas dos lugares
+├── package.json            ← marca os .js como módulos ES (sem dependências)
+└── supabase/migrations/    ← tabelas e regras de acesso (RLS)
+```
+
+O Narrador (instruções, bíblia da cidade, scripts de rolagem) fica numa pasta
+privada fora deste repositório.
 
 ## Rodando localmente
 
-Não há build. Basta servir os arquivos estaticamente, por exemplo:
+Não há build. Basta servir os arquivos estaticamente na porta 3000 (é o
+endereço para onde o link de login por e-mail volta):
 
 ```
-python -m http.server 8000
+python -m http.server 3000
 ```
 
-e abrir `http://localhost:8000/` no navegador.
+e abrir `http://localhost:3000/` no navegador.
 
 ## Deploy
 

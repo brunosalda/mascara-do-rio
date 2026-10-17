@@ -1,0 +1,6 @@
+{
+  "name": "mascara-do-rio",
+  "private": true,
+  "type": "module",
+  "description": "Marca os arquivos .js como módulos ES, para o motor de regras rodar no navegador e no Node (scripts do Narrador). Não há dependências nem build."
+}
