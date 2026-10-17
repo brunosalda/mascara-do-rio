@@ -90,6 +90,7 @@ export function montarCena(raiz, {
         ${htmlBoneco(sprite)}
         <svg class="contornos" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
         <svg class="rastro" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polyline points=""/></svg>
+        <svg class="campo-presa" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path d=""/></svg>
         <div class="balao-voz" hidden></div>
         <div class="fala-passagem" hidden></div>
         <div class="cena-pontos"></div>
@@ -180,6 +181,7 @@ export function montarCena(raiz, {
   let falaAte = 0;
   let balaoEscolha = null;   // { opcoes, aoEscolher, ate }: pergunta pequena no balão, sem parar de andar
   let caca = null;           // caçada pela sombra ou de frente: { alvo, modo, limite, t0, atencao, zonas, aoFim }
+  let focoBeijo = null;      // o Beijo: a câmera fecha no par
   let esperaAte = 0;         // antecipação: vira para o destino e só então sai (80 ms)
   let vivo = true;
   // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
@@ -309,8 +311,30 @@ export function montarCena(raiz, {
     }
     return Math.min(1.5, s);
   }
+  // Campo de visão da presa: um leque de uns 70° olhando para o meio da rua. Dentro dele, na luz, a
+  // presa repara mais rápido; com Sentidos Aguçados, o leque aparece no chão.
+  const RAIO_CAMPO = 0.24;
+  function dentroDoCampo(c, x, y) {
+    const dx = (x - c.alvo.x) * ASPECTO;
+    const dy = y - c.alvo.y;
+    if (Math.hypot(dx, dy) > RAIO_CAMPO) return false;
+    const ang = Math.atan2(dy, dx);
+    let d = ang - c.olhar;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    return Math.abs(d) < 0.62;
+  }
+  const campoEl = cena.querySelector('.campo-presa path');
+  function desenharCampo(c) {
+    if (!c || performance.now() > sentidosAte) { campoEl.setAttribute('d', ''); return; }
+    const pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const a = c.olhar - 0.62 + (1.24 * i) / 10;
+      pts.push(`${(c.alvo.x + (Math.cos(a) * RAIO_CAMPO) / ASPECTO).toFixed(4)},${(c.alvo.y + Math.sin(a) * RAIO_CAMPO * 0.45).toFixed(4)}`);
+    }
+    campoEl.setAttribute('d', `M${c.alvo.x.toFixed(4)},${c.alvo.y.toFixed(4)} L${pts.join(' L')} Z`);
+  }
   function iniciarFurtividade({ alvo, modo = 'sombra', limite = 20, zonas = [], aoFim }) {
-    caca = { alvo, modo, limite, zonas, aoFim, t0: performance.now(), atencao: 0, anel: 0, olhou: false };
+    caca = { alvo, modo, limite, zonas, aoFim, t0: performance.now(), atencao: 0, anel: 0, olhou: false, olhar: alvo.x > 0.5 ? Math.PI : 0 };
     cena.classList.add('em-caca');
     atencaoEl.hidden = false;
     atencaoEl.textContent = PALAVRAS_ATENCAO(0);
@@ -322,6 +346,7 @@ export function montarCena(raiz, {
     cena.classList.remove('em-caca');
     boneco.classList.remove('na-sombra', 'manto');
     atencaoEl.hidden = true;
+    campoEl.setAttribute('d', '');
     c.aoFim?.({ chegou, atencao: c.atencao });
   }
   // Na caçada pela sombra, o clique só anda (correr faz barulho): Shift, clique duplo ou Ligeireza.
@@ -363,7 +388,10 @@ export function montarCena(raiz, {
     }
     // A presa olha de relance quando ele entra na borda do campo dela.
     const d = dist(c.alvo.x, c.alvo.y, pos.x, pos.y);
-    if (!c.olhou && d < 0.22 && !naSombra && !sumido) {
+    const noCampo = dentroDoCampo(c, pos.x, pos.y);
+    if (noCampo && !naSombra && !sumido) taxa += 0.15;
+    desenharCampo(c);
+    if (!c.olhou && noCampo && !naSombra && !sumido) {
       c.olhou = true;
       const el = camadaPontos.querySelector('.ponto-presa');
       if (el) { el.classList.add('olhou'); setTimeout(() => el.classList.remove('olhou'), 500); }
@@ -402,6 +430,47 @@ export function montarCena(raiz, {
     boneco.classList.add('olhos-sangue');
     setTimeout(() => boneco.classList.remove('olhos-sangue'), 1400);
   }
+  // O Beijo (fim da caçada que deu certo): a câmera fecha no par, a pintura perde a cor, a cidade
+  // abafa e entram dois batimentos da presa, cada vez mais lentos; a figura se inclina, a presa baixa,
+  // um clarão dourado e tudo volta. Sem sangue na tela. Clique ou Esc pula.
+  function beijo(presa) {
+    return new Promise((resolver) => {
+      const curto = reduzido();
+      const ms = curto ? 1000 : 2500;
+      focoBeijo = { x: presa.x, y: presa.y };
+      cena.classList.add('beijo');
+      boneco.style.setProperty('--inclinacao', `${presa.x < pos.x ? -7 : 7}deg`);
+      boneco.classList.add('inclinado', 'boca-vermelha');
+      camadaPontos.querySelector('.ponto-presa')?.classList.add('baixando');
+      som.abafar?.(true);
+      som.batimentoDaPresa?.(curto);
+      let feito = false;
+      const pular = (ev) => {
+        if (ev?.type === 'keydown' && ev.key !== 'Escape') return;
+        ev?.stopPropagation();
+        ev?.preventDefault();
+        acabar();
+      };
+      function acabar() {
+        if (feito) return;
+        feito = true;
+        cena.removeEventListener('click', pular, true);
+        document.removeEventListener('keydown', pular, true);
+        cena.classList.add('clarao-dourado');
+        setTimeout(() => {
+          cena.classList.remove('beijo', 'clarao-dourado');
+          boneco.classList.remove('inclinado', 'boca-vermelha');
+          focoBeijo = null;
+          som.abafar?.(false);
+          resolver();
+        }, 150);
+      }
+      cena.addEventListener('click', pular, true);
+      document.addEventListener('keydown', pular, true);
+      setTimeout(acabar, ms - 150);
+    });
+  }
+
   // Devolve false quando o poder não serve agora (os da caçada fora da caçada).
   function usarPoder(id, { alvo = null } = {}) {
     const agora = performance.now();
@@ -706,12 +775,12 @@ export function montarCena(raiz, {
   function atualizarCamera(dt) {
     // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
     const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
-    const zAlvo = conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
+    const zAlvo = focoBeijo ? 1.25 : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
     const h = altura(pos.y);
-    const fx = (marcado ? pos.x * 0.6 + marcado.x * 0.4 : pos.x) * W;
+    const fx = (focoBeijo ? (pos.x + focoBeijo.x) / 2 : marcado ? pos.x * 0.6 + marcado.x * 0.4 : pos.x) * W;
     const fy = (pos.y - h * 0.5) * H;
     let alvoX;
     let alvoY;
@@ -1186,6 +1255,7 @@ export function montarCena(raiz, {
     apresentar,
     iniciarFurtividade,
     usarPoder,
+    beijo,
     emFurtividade: () => !!caca,
     // Anda até um ponto (de frente, na caçada: ele vai direto até a presa).
     irAte: (p) => {

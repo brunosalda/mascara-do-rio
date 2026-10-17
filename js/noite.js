@@ -14,7 +14,7 @@ import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
-import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS } from './jogo/detalhes.js';
+import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS, DETALHES_SENTIDOS, VANTAGENS_SENTIDOS } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
@@ -224,7 +224,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const enviado = acao && !alterado;
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
-    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''} <i>✓</i>` : '<em>falta escolher</em>';
+    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''}${plano.disciplina_principal && plano.disciplina_de === plano.principal ? ` <span class="icone-sangue" title="Com ${esc(plano.disciplina_principal)}">✶</span>` : ''} <i>✓</i>` : '<em>falta escolher</em>';
     const doMinijogo = plano.cacada_curta && plano.cacada === plano.cacada_de;
     const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>'
       : pt.cacada && doMinijogo && plano.cacada_falhou ? `<span class="linha-falhou">${esc(plano.cacada_curta)}</span>`
@@ -260,7 +260,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (avisarEncerrada()) return;
     if (!plano.principal?.trim()) { aviso('Escolha ou escreva a ação principal primeiro.'); return; }
     const campos = {
-      principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal)) + (plano.poderes_cena?.length ? ` [usou ${plano.poderes_cena.join(', ')} (Despertar)]` : ''), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
+      principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal))
+        + (plano.disciplina_principal && plano.disciplina_de === plano.principal ? ` [usou ${plano.disciplina_principal} (Despertar)]` : '')
+        + (plano.poderes_cena?.length ? ` [usou ${plano.poderes_cena.join(', ')} (Despertar)]` : ''), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
       curta_1: (plano.curta_1 || '').trim(), curta_2: (plano.curta_2 || '').trim(), esforco: !!plano.esforco,
     };
     try {
@@ -332,6 +334,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       id: `detalhe-${d.id}`, tipo: 'detalhe', icone: visto(d.id) ? '·' : '?', rotulo: d.rotulo, acao: `Examinar: ${d.rotulo}`,
       x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d, baixo: /po[cç]a|garrafa|ch[aã]o|bueiro|tampa|bituca|papel|moeda|sapato|caco/i.test(d.rotulo),
     }));
+    const ds = DETALHES_SENTIDOS[lugarId];
+    if (ds && meusPoderes.has('sentidos-agucados')) {
+      pts.push({ id: `detalhe-${ds.id}`, tipo: 'detalhe', icone: '?', rotulo: ds.rotulo, acao: `Examinar: ${ds.rotulo}`, x: ds.x, y: ds.y, sentidos: true, visto: visto(ds.id), detalhe: ds });
+    }
     return pts;
   }
 
@@ -349,7 +355,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           const hd = raiz.querySelector('.hud-descobertas');
           if (hd) { hd.classList.remove('subiu'); void hd.offsetWidth; hd.classList.add('subiu'); }
           cena.falar(d.voz, d.texto, 7000);
-          const v = VANTAGENS[lugarId]?.[d.id];
+          const v = VANTAGENS[lugarId]?.[d.id] || VANTAGENS_SENTIDOS[d.id];
           if (v) setTimeout(() => ganharVantagem({ ...v, id: `${lugarId}.${d.id}`, lugar: lugarId, x: d.x, y: d.y }), 900);
           cena.atualizarPontos(montarPontos());
         },
@@ -440,6 +446,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   function abrirOpcao(pt) {
     const texto = pt.texto;
+    const discOpcao = disciplinaDaOpcao(texto);
     const camada = abrirDialogo(camadas, {
       rotulo: emOutroLugar ? visitado.nome : 'Esta noite',
       html: `
@@ -447,7 +454,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         ${pt.livre ? `<label>O que exatamente?<textarea data-livre rows="3" maxlength="1200">${esc(texto)} </textarea></label>` : ''}
         <ol class="escolhas">
           <li><button type="button" data-principal><span class="escolha-num">1.</span> — Fazer isto esta noite</button></li>
-          <li><button type="button" data-fechar-dialogo><span class="escolha-num">2.</span> — Pensar melhor</button></li>
+          ${discOpcao ? `<li><button type="button" data-com-disciplina><span class="escolha-num">2.</span> — Fazer isto com ${esc(discOpcao)} <span class="icone-sangue" aria-hidden="true">✶</span></button></li>` : ''}
+          <li><button type="button" data-fechar-dialogo><span class="escolha-num">${discOpcao ? 3 : 2}.</span> — Pensar melhor</button></li>
         </ol>`,
       rodape: plano.principal && plano.principal !== texto ? `<span class="nota">Isto substitui a ação principal atual: “${esc(curto(plano.principal, 10))}”.</span>` : '',
     });
@@ -457,6 +465,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       confirmarEscolha(ev.currentTarget, () => escolherPrincipal(escolhido, camada));
     };
     camada.el.querySelector('[data-fechar-dialogo]').onclick = () => camada.fechar();
+    camada.el.querySelector('[data-com-disciplina]')?.addEventListener('click', async (ev) => {
+      const botao = ev.currentTarget;
+      if (!(await avisoDoSangue())) return;
+      plano.disciplina_principal = discOpcao;
+      plano.disciplina_de = texto;
+      confirmarEscolha(botao, () => escolherPrincipal(texto, camada));
+    });
     camada.el.querySelector('[data-livre]')?.focus();
   }
 
@@ -502,6 +517,40 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (t) guardar(ev.target, t, false);
       }
     });
+  }
+
+  // --- Disciplinas nas opções da noite (pelo verbo) ---------------------------------------------------
+  const VERBOS = [
+    { termos: ['seguir', 'vigiar', 'espiar', 'observar'], discs: ['ofuscacao'] },
+    { termos: ['perguntar', 'conversar', 'falar', 'convencer', 'pedir'], discs: ['presenca', 'dominacao'] },
+    { termos: ['procurar', 'investigar', 'descobrir', 'pesquisar'], discs: ['auspicios'] },
+    { termos: ['entrar', 'forcar', 'fugir', 'arrombar', 'correr', 'ir embora'], discs: ['potencia', 'rapidez'] },
+  ];
+  const meusNiveisDisc = (() => {
+    if (p._poderes) {
+      const n = {};
+      for (const [id, d] of Object.entries(v5.DISCIPLINAS)) if (d.poderes.some((pw) => meusPoderes.has(pw.id))) n[id] = 1;
+      return n;
+    }
+    try { return v5.calcular(p.ficha || {}).disciplinas || {}; } catch { return {}; }
+  })();
+  function disciplinaDaOpcao(texto) {
+    const t = semAcentoV(texto);
+    for (const v of VERBOS) {
+      if (!v.termos.some((x) => t.includes(x))) continue;
+      const d = v.discs.find((id) => (meusNiveisDisc[id] | 0) > 0);
+      if (d) return v5.DISCIPLINAS[d].nome;
+    }
+    return null;
+  }
+  async function avisoDoSangue() {
+    let avisado = false;
+    try { avisado = localStorage.getItem(chaveSangue) === '1'; } catch { /* sem armazenamento */ }
+    if (avisado) return true;
+    const r = await perguntar(camadas, { rotulo: 'O sangue desperta', texto: `<p>${esc(AVISO_DESPERTAR)}</p>`, opcoes: ['Usar o sangue', 'Agora não'] });
+    if (r !== 0) return false;
+    try { localStorage.setItem(chaveSangue, '1'); } catch { /* sem armazenamento */ }
+    return true;
   }
 
   // --- Disciplinas em ação ---------------------------------------------------------------------------
@@ -647,6 +696,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (emCaca.perscrutou && pr.temperamento) extras.push(`ressonância ${TEMPERAMENTOS[pr.temperamento].nome}`);
     if (emCaca.esqueceu) extras.push('fez a testemunha esquecer');
     if (emCaca.poderes.size) extras.push(`usou ${[...emCaca.poderes].join(', ')} (Despertar)`);
+    if (deuCerto && !emCaca.beijou) {
+      emCaca.beijou = true;
+      cena.beijo(pr).then(() => terminarCaca(pr, modo, atencao, deuCerto, true));
+      return;
+    }
     const v = vantagemDaCacada(lugarId);
     const { texto, curto: linha, falhou } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota, extras });
     plano.cacada = texto;

@@ -428,3 +428,32 @@ export const VANTAGENS_ESCONDIDOS = {
   'esc-marquise': { cacada: true, nota: 'viu que a câmera da marquise está virada para a parede' },
   'esc-olheiro': { termos: ['subir', 'escada', 'topo', 'procurar'], nota: 'sabe que tem alguém vigiando a escada da laje de cima' },
 };
+
+// Detalhes que só os Sentidos Aguçados revelam (rodada 21): um por lugar, só sobre o lugar. Ficam
+// invisíveis até o jogador usar Sentidos; examinar pode dar vantagem ✦ (VANTAGENS_SENTIDOS).
+export const DETALHES_SENTIDOS = {
+  lapa: { id: 'sent-arco', x: 0.36, y: 0.69, rotulo: 'Marcas na pilastra', voz: 'AUSPÍCIOS', texto: 'Arranhões finos na pedra do arco, na altura de um ombro. Alguém se encosta sempre aqui para vigiar a rua.' },
+  centro: { id: 'sent-escada', x: 0.34, y: 0.72, rotulo: 'A escadaria do teatro', voz: 'AUSPÍCIOS', texto: 'Um cheiro frio sai de uma porta lateral do teatro, de um porão que ninguém usa.' },
+  'santa-teresa': { id: 'sent-trilho', x: 0.26, y: 0.86, rotulo: 'O trilho quente', voz: 'AUSPÍCIOS', texto: 'O trilho ainda está quente, mas o último bonde passou faz horas.' },
+  'zona-sul': { id: 'sent-areia', x: 0.55, y: 0.72, rotulo: 'A areia remexida', voz: 'AUSPÍCIOS', texto: 'Um trecho de areia foi alisado com cuidado, como se alguém quisesse apagar marcas.' },
+  barra: { id: 'sent-guarita', x: 0.2, y: 0.78, rotulo: 'A guarita escura', voz: 'AUSPÍCIOS', texto: 'Dentro da guarita apagada, um rádio sussurra. O vigia está lá, no escuro, olhando a pista.' },
+  'zona-norte': { id: 'sent-viaduto', x: 0.5, y: 0.7, rotulo: 'Debaixo do viaduto', voz: 'AUSPÍCIOS', texto: 'Debaixo do viaduto, uma porta de ferro pintada da cor da parede. Ela abre por dentro.' },
+  morro: { id: 'sent-degrau', x: 0.33, y: 0.76, rotulo: 'O degrau solto', voz: 'AUSPÍCIOS', texto: 'Um dos degraus soa oco. Tem um vão embaixo, do tamanho de uma caixa.' },
+  cemiterio: { id: 'sent-cova', x: 0.62, y: 0.88, rotulo: 'A terra mexida', voz: 'AUSPÍCIOS', texto: 'A terra de uma cova antiga foi revirada e alisada de novo. Faz pouco tempo.' },
+  porto: { id: 'sent-cais', x: 0.22, y: 0.82, rotulo: 'A escada do cais', voz: 'AUSPÍCIOS', texto: 'Uma escadinha de ferro desce do cais até a água. Os degraus de baixo estão molhados de pés.' },
+  baixada: { id: 'sent-muro', x: 0.66, y: 0.74, rotulo: 'O buraco no muro', voz: 'AUSPÍCIOS', texto: 'Atrás do mato, um buraco no muro da linha do trem, grande o bastante para uma pessoa.' },
+  niteroi: { id: 'sent-espelho', x: 0.58, y: 0.66, rotulo: 'O reflexo errado', voz: 'AUSPÍCIOS', texto: 'No espelho d\'água, uma figura parada perto do museu. Na praça, ninguém.' },
+};
+export const VANTAGENS_SENTIDOS = {
+  'sent-arco': { cacada: true, nota: 'sabe onde o vigia da rua costuma se encostar' },
+  'sent-escada': { termos: ['teatro', 'entrar', 'investigar', 'procurar'], nota: 'sabe de uma porta lateral do teatro que dá para um porão' },
+  'sent-trilho': { termos: ['bonde', 'seguir', 'trilho'], nota: 'sabe que alguém andou pelos trilhos depois do último bonde' },
+  'sent-areia': { termos: ['praia', 'areia', 'procurar', 'investigar'], nota: 'viu onde alguém apagou marcas na areia' },
+  'sent-guarita': { cacada: true, nota: 'sabe que o vigia da guarita olha a pista no escuro' },
+  'sent-viaduto': { termos: ['viaduto', 'entrar', 'procurar', 'esconder'], nota: 'sabe de uma porta escondida debaixo do viaduto' },
+  'sent-degrau': { termos: ['escada', 'esconder', 'procurar', 'subir'], nota: 'sabe de um vão escondido num degrau da escadaria' },
+  'sent-cova': { termos: ['tumulo', 'cova', 'investigar', 'procurar'], nota: 'viu que uma cova antiga foi aberta faz pouco' },
+  'sent-cais': { termos: ['cais', 'agua', 'barco', 'navio', 'seguir'], nota: 'sabe que alguém sobe do mar pela escada do cais' },
+  'sent-muro': { cacada: true, nota: 'sabe de um buraco no muro da linha do trem para sumir dali' },
+  'sent-espelho': { termos: ['museu', 'mac', 'vigiar', 'procurar'], nota: 'viu no espelho d\'água alguém parado perto do museu' },
+};

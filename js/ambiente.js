@@ -258,6 +258,16 @@ export const som = {
     const t = audio.ctx.currentTime + 0.02;
     for (const [f, v] of [[55, 0.08], [82.41, 0.045], [110, 0.035], [130.81, 0.022]]) tom(audio, t, f, { tipo: 'triangle', dur: 2.8, volume: v, ataque: 0.08 });
   },
+  // O Beijo: dois batimentos da presa, cada vez mais lentos e baixos.
+  batimentoDaPresa(curto = false) {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.05;
+    const passo = curto ? 0.35 : 0.85;
+    [0, passo, passo * 2.3].forEach((dt, i) => {
+      pulso(audio, t + dt, 70 - i * 6, 0.14 - i * 0.04, audio.mestre);
+      pulso(audio, t + dt + 0.2, 58 - i * 5, 0.09 - i * 0.025, audio.mestre);
+    });
+  },
   // Sentidos Aguçados: os sons do lugar ficam mais altos por um tempo.
   sentidos(sim) {
     if (camada && audio) camada.g.gain.setTargetAtTime(sim ? 1.9 : (abafado ? 0.3 : 1), audio.ctx.currentTime, 0.4);
