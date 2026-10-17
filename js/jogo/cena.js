@@ -94,6 +94,7 @@ export function montarCena(raiz, {
         <svg class="campo-presa" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path d=""/></svg>
         <div class="balao-voz" hidden></div>
         <div class="fala-passagem" hidden></div>
+        <svg class="fio-escolha" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><line pathLength="1" x1="0" y1="0" x2="0" y2="0"/></svg>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
       </div>
@@ -197,7 +198,7 @@ export function montarCena(raiz, {
   // --- Pontos ----------------------------------------------------------------------------------
   function desenharPontos(recemFeitos = new Set()) {
     camadaPontos.innerHTML = lista.map((p) => `
-      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
+      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}${p.brasa ? ` brasa-${p.brasa}` : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-luz" aria-hidden="true"></span>
         <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -277,7 +278,9 @@ export function montarCena(raiz, {
     balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>${prazo}`;
     balao.hidden = false;
     falaAte = performance.now() + ms;
-    balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte };
+    // Os primeiros 400 ms não contam: o clique que escolheu a presa (ou um duplo clique) não pode
+    // responder sozinho a pergunta que acabou de abrir embaixo do cursor.
+    balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte, desde: performance.now() };
     som.voz?.();
   }
   function cancelarBalao(porque) {
@@ -288,7 +291,7 @@ export function montarCena(raiz, {
     aoCancelar?.(porque);
   }
   function responderBalao(i) {
-    if (!balaoEscolha) return;
+    if (!balaoEscolha || performance.now() - balaoEscolha.desde < 400) return;
     const { aoEscolher } = balaoEscolha;
     balaoEscolha = null;
     falaAte = performance.now();
@@ -299,6 +302,92 @@ export function montarCena(raiz, {
     const b = ev.target.closest('[data-balao]');
     if (b) { ev.stopPropagation(); responderBalao(Number(b.dataset.balao)); }
   });
+
+  // --- A escolha da noite ganha corpo (rodada 24) -----------------------------------------------------
+  // Ao confirmar a ação principal: o personagem vira para o objeto, a câmera enquadra os dois, um fio de
+  // luz vermelha vai até ele e some, e um letreiro diz a intenção. Dura 1,8 s; um clique pula. A brasa que
+  // fica no objeto é do próprio ponto (classe "feito" no CSS). É só intenção: o resultado é do Narrador.
+  let focoEscolha = null;
+  const fioEscolha = cena.querySelector('.fio-escolha');
+  function marcarEscolha(id, frase, { curta = false } = {}) {
+    const p = lista.find((x) => x.id === id);
+    if (!p) return;
+    if (curta) return; // ação curta: só a brasa menor, que o próprio ponto mostra
+    const curto = reduzido();
+    const ms = curto ? 900 : 1800;
+    virarPara(p.x < pos.x);
+    focoEscolha = { x: p.x, y: p.y, ate: performance.now() + ms };
+    const h = altura(pos.y);
+    const linha = fioEscolha.querySelector('line');
+    linha.setAttribute('x1', pos.x.toFixed(4));
+    linha.setAttribute('y1', (pos.y - h * 0.55).toFixed(4));
+    linha.setAttribute('x2', p.x.toFixed(4));
+    linha.setAttribute('y2', (p.y - 0.01).toFixed(4));
+    fioEscolha.classList.remove('vai');
+    void fioEscolha.getBoundingClientRect();
+    fioEscolha.classList.add('vai');
+    const letreiro = document.createElement('div');
+    letreiro.className = 'letreiro-escolha';
+    letreiro.setAttribute('role', 'status');
+    letreiro.innerHTML = `<small>Esta noite</small><b>${esc(frase)}</b>`;
+    cena.appendChild(letreiro);
+    som.toque?.();
+    let acabou = false;
+    const acabar = () => {
+      if (acabou) return;
+      acabou = true;
+      cena.removeEventListener('click', pular, true);
+      focoEscolha = null;
+      letreiro.classList.add('saindo');
+      fioEscolha.classList.remove('vai');
+      setTimeout(() => letreiro.remove(), 400);
+    };
+    const pular = (ev) => { ev.stopPropagation(); ev.preventDefault(); acabar(); };
+    setTimeout(() => cena.addEventListener('click', pular, true), 120);
+    setTimeout(acabar, ms);
+  }
+
+  // --- O lugar lembra (rodada 24) -------------------------------------------------------------------
+  // Só no aparelho e só nesta noite (quem chama guarda e apaga). Um vestígio genérico onde a presa
+  // estava, um vulto parado olhando o canto onde ele foi visto. Ao passar perto do vestígio, A FOME fala.
+  const VESTIGIOS = {
+    celular: '<svg viewBox="0 0 40 20"><rect x="12" y="6" width="16" height="9" rx="1.5" transform="rotate(-12 20 10)" class="tela"/></svg>',
+    moto: '<svg viewBox="0 0 60 30"><circle cx="12" cy="22" r="6" class="roda"/><circle cx="46" cy="22" r="6" class="roda"/><path d="M12 22 L24 12 L40 12 L46 22" class="quadro"/><circle cx="50" cy="13" r="2.4" class="pisca"/></svg>',
+    copo: '<svg viewBox="0 0 40 16"><ellipse cx="22" cy="10" rx="15" ry="4" class="poca"/><path d="M6 6 L10 4 L13 10 L8 12 Z" class="copo"/></svg>',
+  };
+  let lembrancas = [];
+  let vestigioPerto = null;
+  function lembrar({ vestigio, vigia } = {}) {
+    lembrancas.forEach((el) => el.remove());
+    lembrancas = [];
+    vestigioPerto = null;
+    if (vestigio && VESTIGIOS[vestigio.tipo]) {
+      const el = document.createElement('span');
+      el.className = `vestigio vestigio-${vestigio.tipo}`;
+      el.setAttribute('aria-hidden', 'true');
+      el.style.cssText = `left:${pct(vestigio.x)};top:${pct(vestigio.y)};--s:${(altura(vestigio.y) / ALTURA_REF).toFixed(3)};z-index:${Math.round(vestigio.y * 1000)}`;
+      el.innerHTML = VESTIGIOS[vestigio.tipo];
+      mundo.appendChild(el);
+      lembrancas.push(el);
+      vestigioPerto = { x: vestigio.x, y: vestigio.y, longe: false, dito: !!vestigio.dito, aoDizer: vestigio.aoDizer };
+    }
+    if (vigia) {
+      const el = document.createElement('span');
+      el.className = 'vigia vulto';
+      el.setAttribute('aria-hidden', 'true');
+      el.style.cssText = `left:${pct(vigia.x)};top:${pct(vigia.y)};--s:${(altura(vigia.y) / ALTURA_REF).toFixed(3)};z-index:${Math.round(vigia.y * 1000)};--lado:${vigia.olha < vigia.x ? -1 : 1}`;
+      el.innerHTML = VULTO;
+      mundo.appendChild(el);
+      lembrancas.push(el);
+    }
+  }
+  function checarVestigio() {
+    const v = vestigioPerto;
+    if (!v || v.dito || caca || balaoEscolha) return;
+    const d = dist(v.x, v.y, pos.x, pos.y);
+    if (d > 0.16) v.longe = true;
+    else if (v.longe && d < 0.08) { v.dito = true; falar('A FOME', 'Ainda está quente.', 2800); v.aoDizer?.(); }
+  }
 
   // --- Caçada pela sombra / de frente (rodada 18) ---------------------------------------------------
   // A visibilidade se lê no próprio personagem: na sombra, ele vira silhueta escura com um contorno
@@ -894,12 +983,13 @@ export function montarCena(raiz, {
   function atualizarCamera(dt) {
     // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
     const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
-    const zAlvo = focoBeijo ? 1.25 : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
+    const foco = focoBeijo || (focoEscolha && performance.now() < focoEscolha.ate ? focoEscolha : null);
+    const zAlvo = focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
     const h = altura(pos.y);
-    const fx = (focoBeijo ? (pos.x + focoBeijo.x) / 2 : marcado ? pos.x * 0.6 + marcado.x * 0.4 : pos.x) * W;
+    const fx = (foco ? (pos.x + foco.x) / 2 : marcado ? pos.x * 0.6 + marcado.x * 0.4 : pos.x) * W;
     const fy = (pos.y - h * 0.5) * H;
     let alvoX;
     let alvoY;
@@ -1043,9 +1133,15 @@ export function montarCena(raiz, {
         const laco = custoLaco.length ? custoLaco.reduce((s, x) => s + x, 0) / custoLaco.length : 0;
         const piorLaco = custoLaco.length ? Math.max(...custoLaco) : 0;
         custoLaco.length = 0;
-        if (agora > proximaContagem) { proximaContagem = agora + 2000; elementos = document.getElementsByTagName('*').length; }
-        medidor.textContent = `${Math.round(1000 / media)} qps · pior quadro ${Math.round(pior)} ms · laço ${laco.toFixed(2)} ms (pior ${piorLaco.toFixed(1)}) · ${elementos} elementos`;
-        medidor.classList.toggle('ruim', media > 25 || pior > 50);
+        if (agora > proximaContagem) {
+          proximaContagem = agora + 2000;
+          elementos = document.getElementsByTagName('*').length;
+          // Nenhuma camada da cena pode rolar: se alguma rolou, o bloco da caçada sai da tela.
+          const camadas = [cena, cena.parentElement, ...cena.querySelectorAll('*')];
+          rolada = camadas.filter((el) => el && (el.scrollTop || el.scrollLeft)).map((el) => `${el.className || el.tagName} ${el.scrollLeft},${el.scrollTop}`).slice(0, 2).join('; ');
+        }
+        medidor.textContent = `${Math.round(1000 / media)} qps · pior quadro ${Math.round(pior)} ms · laço ${laco.toFixed(2)} ms (pior ${piorLaco.toFixed(1)}) · ${elementos} elementos${rolada ? ` · ROLOU: ${rolada}` : ''}`;
+        medidor.classList.toggle('ruim', media > 25 || pior > 50 || !!rolada);
       }
     }
     ultimo = agora;
@@ -1203,6 +1299,7 @@ export function montarCena(raiz, {
       }
       ajustarRotulos(agora);
       checarComentarios();
+      checarVestigio();
     }
     if (medidor) custoLaco.push(performance.now() - inicioLaco);
     requestAnimationFrame(quadro);
@@ -1210,6 +1307,7 @@ export function montarCena(raiz, {
   const custoLaco = [];
   let proximaContagem = 0;
   let elementos = 0;
+  let rolada = '';
 
   // Linha fina do objeto até a borda da caixa de conversa (a caixa do jogo mais recente na tela).
   const linha = cena.querySelector('.linha-conversa');
@@ -1424,6 +1522,8 @@ export function montarCena(raiz, {
       virarPara(x < pos.x);
       semProgresso = 0;
     },
+    marcarEscolha,
+    lembrar,
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
   };

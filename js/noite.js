@@ -322,6 +322,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: cacaFalhou ? 'Caçar de novo' : emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), falta: !(plano.cacada || plano.nao_cacar), papel: 'escuro' });
       pedidos.push({ id: 'escrever', tipo: 'escrever', icone: '✎', rotulo: 'Outra ideia', acao: 'Escrever o que fazer', papel: 'livre' });
     }
+    // A brasa da escolha: a ação principal deixa uma brasa vermelha no objeto pelo resto da noite; uma
+    // ideia escrita ou as ações curtas deixam a brasa no lápis (menor, se forem só as curtas).
+    if (noite) {
+      const comPrincipal = pedidos.find((pd) => pd.tipo === 'acao' && pd.feito);
+      const temCurtas = [plano.curta_1, plano.curta_2].some((x) => x?.trim());
+      if (comPrincipal) comPrincipal.brasa = 'grande';
+      const lapis = pedidos.find((pd) => pd.id === 'escrever');
+      if (lapis && plano.principal?.trim() && !comPrincipal) lapis.brasa = 'grande';
+      else if (lapis && temCurtas) lapis.brasa = 'pequena';
+    }
     const ancoras = distribuirAncoras(geo, pedidos);
     const pts = [
       { id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: geo.saida[0], y: geo.saida[1] },
@@ -424,9 +434,33 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function escolherPrincipal(texto, camada) {
     plano.principal = texto;
     guardarRascunho();
-    aviso('Ação principal escolhida. Envie quando o plano estiver pronto.');
     camada?.fechar();
+    if (!cena) { aviso('Ação principal escolhida. Envie quando o plano estiver pronto.'); return; }
+    const pts = montarPontos();
+    cena.atualizarPontos(pts);
+    const alvo = pts.find((pt) => pt.brasa === 'grande');
+    const frase = curto(texto, 12).replace(/^./, (c) => c.toLowerCase()).replace(/[.…]*$/, '.');
+    setTimeout(() => cena.marcarEscolha(alvo?.id, frase), 260);
+    setTimeout(() => aviso('Ação principal escolhida. Envie quando o plano estiver pronto.'), 2100);
   }
+
+  // O lugar lembra: só neste aparelho e só nesta noite (a chave tem o id da noite; na próxima, nada).
+  const chaveLembra = () => `mascara.lembra.${noite?.id || 'sem-noite'}.${lugarId}`;
+  function lerLembranca() { try { return JSON.parse(localStorage.getItem(chaveLembra()) || '{}'); } catch { return {}; } }
+  function guardarLembranca(muda) {
+    const atualLembra = { ...lerLembranca(), ...muda };
+    try { localStorage.setItem(chaveLembra(), JSON.stringify(atualLembra)); } catch { /* sem armazenamento */ }
+    mostrarLembranca(atualLembra);
+  }
+  function mostrarLembranca(m = lerLembranca()) {
+    if (!m.vestigio && !m.vigia) return;
+    cena?.lembrar?.({
+      vigia: m.vigia,
+      vestigio: m.vestigio && { ...m.vestigio, aoDizer: () => guardarLembranca({ vestigio: { ...m.vestigio, dito: true } }) },
+    });
+  }
+  const TIPOS_VESTIGIO = ['celular', 'moto', 'copo'];
+  const tipoVestigio = (id) => TIPOS_VESTIGIO[[...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0) % TIPOS_VESTIGIO.length];
 
   function abrirHistoria(revelar, depois) {
     const camada = abrirDialogo(camadas, {
@@ -472,7 +506,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       plano.disciplina_de = texto;
       confirmarEscolha(botao, () => escolherPrincipal(texto, camada));
     });
-    camada.el.querySelector('[data-livre]')?.focus();
+    camada.el.querySelector('[data-livre]')?.focus({ preventScroll: true });
   }
 
   function abrirCacada() {
@@ -516,7 +550,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         i -= desloc;
         if (i < sugestoes.length) guardar(b, sugestoes[i], false);
         else if (i === sugestoes.length) guardar(b, emOutroLugar ? `Caçar do meu jeito de sempre ${visitado.em}` : 'Do meu jeito de sempre', false);
-        else if (i === sugestoes.length + 1) { const l = camada.el.querySelector('.caca-livre'); l.hidden = false; l.querySelector('textarea').focus(); }
+        else if (i === sugestoes.length + 1) { const l = camada.el.querySelector('.caca-livre'); l.hidden = false; l.querySelector('textarea').focus({ preventScroll: true }); }
         else guardar(b, '', true);
         return;
       }
@@ -688,7 +722,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     setTimeout(() => cena.perguntarNoBalao({
       voz: 'A FOME', texto: 'Como?', ms: 1e9, perto: { x: pr.x, y: pr.y, raio: 0.4 },
       aoCancelar: () => cena.falar('A FOME', 'Escolha outra, ou volte a ela.', 3000),
-      opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
+      // A primeira opção é sempre o jeito do predador, dita como gesto: "Do seu jeito: pela sombra · Ir".
+      opcoes: ordem.map((k, i) => (i === 0 ? `Do seu jeito: ${ABORDAGENS[k].nome.toLowerCase()} · Ir` : ABORDAGENS[k].nome)),
       aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
     }), pr.vulneravel ? 1700 : 150);
     // Conhecer a presa: parado perto dela por 2 s antes de responder, você repara em algo a mais.
@@ -836,9 +871,18 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     void camadas.offsetWidth;
     camadas.classList.add('pulso-fome');
     setTimeout(() => camadas.classList.remove('pulso-fome'), 1100);
+    const viu = emCaca.visto && !emCaca.esqueceu;
     emCaca = null;
     fomeDesperta(false);
     cena.atualizarPontos(montarPontos());
+    const ondeEstava = cena.posicao();
+    const lembra = {};
+    if (deuCerto) lembra.vestigio = { x: pr.x, y: pr.y, tipo: tipoVestigio(pr.id) };
+    if (viu) {
+      const lado = pr.x < 0.5 ? 1 : -1;
+      lembra.vigia = { x: Math.min(0.94, Math.max(0.06, pr.x + lado * 0.09)), y: pr.y - 0.015, olha: ondeEstava.x };
+    }
+    if (lembra.vestigio || lembra.vigia) setTimeout(() => guardarLembranca(lembra), 900);
     cena.falar('A FOME', deuCerto ? 'Agora sim. Por enquanto.' : 'Escapou. Eu continuo aqui.', 3600);
     guardarRascunho();
     if (!deuCerto) aviso(`${modo === 'sombra' ? 'Ela foi embora.' : 'A presa escapou.'} A tentativa fica no plano; dá para caçar de novo até enviar.`);
@@ -857,13 +901,19 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         <label class="radio"><input type="checkbox" data-esforco ${plano.esforco ? 'checked' : ''}> Se for preciso, gaste minha Força de Vontade para tentar de novo</label>
         <ol class="escolhas"><li><button type="button" data-principal><span class="escolha-num">1.</span> — Guardar no plano</button></li></ol>`,
     });
-    camada.el.querySelector('[data-livre]').focus();
+    camada.el.querySelector('[data-livre]').focus({ preventScroll: true });
     camada.el.querySelector('[data-principal]').onclick = (ev) => {
       plano.principal = camada.el.querySelector('[data-livre]').value.trim();
       plano.curta_1 = camada.el.querySelector('[data-c1]').value.trim();
       plano.curta_2 = camada.el.querySelector('[data-c2]').value.trim();
       plano.esforco = camada.el.querySelector('[data-esforco]').checked;
-      confirmarEscolha(ev.currentTarget, () => { guardarRascunho(); camada.fechar(); });
+      confirmarEscolha(ev.currentTarget, () => {
+        guardarRascunho();
+        camada.fechar();
+        const pts = montarPontos();
+        cena?.atualizarPontos(pts);
+        if (plano.principal) setTimeout(() => cena?.marcarEscolha('escrever', curto(plano.principal, 12).replace(/^./, (c) => c.toLowerCase()).replace(/[.…]*$/, '.')), 260);
+      });
     };
   }
 
@@ -1017,6 +1067,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     },
   });
   desenharPlano();
+  mostrarLembranca();
   // Só no modo de depuração: a cena fica acessível no console, para os testes.
   if (location.hash.includes('depurar')) window.__cena = cena;
   if (noite && acao?.encerrada_em) fonte.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
