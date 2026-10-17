@@ -30,6 +30,45 @@ export async function entrarComSenha(email, senha) {
 }
 
 // criarSenha: o link volta com ?criar-senha=1 e a tela de criar a senha abre sozinha depois de entrar.
+// Entrar colando o link do e-mail (o redirecionamento ainda cai em localhost): aceita o link do e-mail
+// (…/auth/v1/verify?token=…&type=magiclink), o endereço que já abriu errado (…#access_token=…&refresh_token=…)
+// ou o código de 6 números. Nada do link, do token ou do código é guardado nem registrado.
+export async function entrarComLinkColado(texto, email = '') {
+  const t = String(texto || '').trim();
+  if (!t) throw new Error('Cole o link do e-mail no campo.');
+  const emailLimpo = String(email || '').trim().toLowerCase();
+  let erro = null;
+  if (/access_token=/.test(t)) {
+    const parte = t.slice(t.indexOf('#') + 1).replace(/^[^?]*\?/, '');
+    const q = new URLSearchParams(parte.includes('access_token=') ? parte : t.split('#').pop());
+    const access_token = q.get('access_token');
+    const refresh_token = q.get('refresh_token');
+    if (!access_token || !refresh_token) throw new Error('Esse endereço está incompleto. Copie de novo, inteiro.');
+    ({ error: erro } = await sb.auth.setSession({ access_token, refresh_token }));
+  } else if (/[?&]token=/.test(t)) {
+    let token = null; let tipo = 'magiclink';
+    try { const u = new URL(t.replace(/&amp;/g, '&')); token = u.searchParams.get('token'); tipo = u.searchParams.get('type') || tipo; } catch { /* não é um endereço */ }
+    if (!token) throw new Error('Esse link está incompleto. Copie de novo, inteiro.');
+    ({ error: erro } = await sb.auth.verifyOtp({ token_hash: token, type: tipo === 'signup' ? 'signup' : 'magiclink' }));
+    if (erro) ({ error: erro } = await sb.auth.verifyOtp({ token_hash: token, type: 'email' }));
+  } else if (/^\d{6}$/.test(t.replace(/\s/g, ''))) {
+    if (!emailLimpo) throw new Error('Digite o seu e-mail no passo 1 antes de colar o código.');
+    ({ error: erro } = await sb.auth.verifyOtp({ email: emailLimpo, token: t.replace(/\s/g, ''), type: 'email' }));
+  } else {
+    throw new Error('Isso não parece o link do e-mail. No e-mail, toque e segure o link, escolha Copiar e cole aqui.');
+  }
+  if (erro) {
+    if (/expired|invalid|not found|used|otp/i.test(erro.message)) throw new Error('Esse link já foi usado ou venceu. Peça outro no passo 1.');
+    throw new Error('Não deu para entrar com esse link. Peça outro no passo 1.');
+  }
+  // O link tem de ser do e-mail digitado: se for de outra pessoa, a sessão não fica.
+  if (emailLimpo) {
+    const { data } = await sb.auth.getSession();
+    const doLink = data.session?.user?.email?.toLowerCase();
+    if (doLink && doLink !== emailLimpo) { await sb.auth.signOut(); throw new Error('Esse link é de outro e-mail. Use o link que chegou para o e-mail do passo 1.'); }
+  }
+}
+
 export async function entrarComLink(email, { criarSenha = false } = {}) {
   const { error } = await sb.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
@@ -37,6 +76,7 @@ export async function entrarComLink(email, { criarSenha = false } = {}) {
   });
   if (error) {
     if (/not.*allowed|convidado|Database error/i.test(error.message)) throw new Error('Este e-mail não está na lista de convidados.');
+    if (error.status === 429 || /rate limit|security purposes|too many/i.test(error.message)) throw new Error('O limite de e-mails desta hora estourou. Espere alguns minutos e peça de novo; se já tem um e-mail com link, cole o link no passo 2.');
     throw new Error(error.message);
   }
 }

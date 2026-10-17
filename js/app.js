@@ -90,11 +90,19 @@ export function telaLogin(raiz, { demo = false } = {}) {
             <p class="msg-login" id="msg-login" role="status" hidden></p>
           </form>
           <form id="form-pedir-link" novalidate hidden>
+            <p class="passo-titulo"><b>1</b> Peça o link</p>
             <p class="nota" data-explica></p>
             <label data-campo-link="email">E-mail<input type="email" name="email" autocomplete="email" required></label>
             <button class="btn" type="submit">Mandar o link</button>
-            <button class="btn-texto" type="button" data-voltar-login>Voltar para entrar com senha</button>
             <p class="msg-login" role="status" hidden></p>
+            <p class="passo-titulo"><b>2</b> Cole o link do e-mail</p>
+            <p class="nota">No e-mail, <b>não toque no link</b>. Toque e segure, escolha <b>Copiar</b> e cole aqui. Se o link já abriu uma página que não carregou, copie o endereço dessa página e cole aqui.</p>
+            <label data-campo-colar>Cole aqui o link do e-mail<textarea name="colado" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label>
+            <button class="btn" type="button" data-colar>Entrar com o link</button>
+            <p class="msg-login msg-colar" role="status" hidden></p>
+            <p class="passo-titulo"><b>3</b> Crie a sua senha</p>
+            <p class="nota">Assim que o link entrar, a tela de criar a senha abre aqui mesmo.</p>
+            <button class="btn-texto" type="button" data-voltar-login>Voltar para entrar com senha</button>
           </form>
           <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
         </div>
@@ -151,11 +159,11 @@ export function telaLogin(raiz, { demo = false } = {}) {
     form.hidden = true;
     formLink.hidden = false;
     msgLink.hidden = true;
-    rotulo.textContent = modo === 'esqueci' ? 'Esqueci a senha' : 'Primeira vez';
+    rotulo.textContent = modo === 'esqueci' ? 'Esqueci a senha' : 'Criar a minha senha';
     notaTopo.hidden = true;
     formLink.querySelector('[data-explica]').textContent = modo === 'esqueci'
-      ? 'Digite o seu e-mail. Mandamos um link: ao entrar por ele, você cria uma senha nova.'
-      : 'Digite o e-mail que recebeu o convite. Mandamos um link: ao entrar por ele, você cria a sua senha.';
+      ? 'Digite o seu e-mail. Mandamos um link para você entrar e criar uma senha nova.'
+      : 'Digite o e-mail que recebeu o convite. Mandamos um link para você entrar e criar a sua senha.';
     formLink.email.value = form.email.value;
     formLink.email.focus();
   }
@@ -178,7 +186,18 @@ export function telaLogin(raiz, { demo = false } = {}) {
     return true;
   };
 
+  // Passo 2: colar o link do e-mail (ou o endereço que abriu errado) e entrar sem o redirecionamento.
+  const botaoColar = formLink.querySelector('[data-colar]');
+  const msgColar = formLink.querySelector('.msg-colar');
+  const campoColar = formLink.querySelector('[data-campo-colar]');
+
   if (demo) {
+    botaoColar.onclick = () => {
+      if (!formLink.colado.value.trim()) { mensagem('erro', campoColar, 'Cole o link do e-mail no campo.', msgColar); return; }
+      formLink.colado.value = '';
+      mensagem('ok', botaoColar, 'Demonstração: no jogo, o link entra e a tela de criar a senha abre aqui mesmo.', msgColar);
+      setTimeout(() => import('./senha.js').then((m) => m.abrirSenhaDireto({ demo: true })), 900);
+    };
     const ordem = ['convidado', 'senha', 'link'];
     let i = 0;
     const proxima = (e) => { e?.preventDefault(); MENSAGENS[ordem[i++ % ordem.length]](); };
@@ -214,6 +233,23 @@ export function telaLogin(raiz, { demo = false } = {}) {
     } catch (err) {
       if (/convidados/i.test(err.message)) MENSAGENS.convidado(campoLink, msgLink);
       else mensagem('erro', botao, esc(err.message || 'Não deu para mandar o link agora. Tente de novo em instantes.'), msgLink);
+      if (/limite/i.test(err.message)) formLink.colado.focus();
+    } finally { soltar(); }
+  };
+  botaoColar.onclick = async () => {
+    if (botaoColar.disabled) return;
+    if (!formLink.colado.value.trim()) { mensagem('erro', campoColar, 'Cole o link do e-mail no campo.', msgColar); return; }
+    const soltar = ocupado(botaoColar, 'Entrando…');
+    msgColar.hidden = true;
+    try {
+      // Com a sessão aberta, a tela troca sozinha; esta marca faz a tela de criar a senha abrir logo em cima.
+      try { localStorage.setItem('mascara.criarSenha', '1'); } catch { /* sem armazenamento */ }
+      await banco.entrarComLinkColado(formLink.colado.value, formLink.email.value);
+      formLink.colado.value = '';
+    } catch (err) {
+      try { localStorage.removeItem('mascara.criarSenha'); } catch { /* sem armazenamento */ }
+      formLink.colado.value = '';
+      mensagem('erro', campoColar, esc(err.message), msgColar);
     } finally { soltar(); }
   };
   botaoLink.onclick = async () => {

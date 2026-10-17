@@ -3514,3 +3514,8 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 .letreiro-envio { border: 2px solid #a8823e; background: linear-gradient(180deg, rgba(42, 31, 20, 0.97), rgba(20, 14, 9, 0.97)) !important;
   clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px); }
 .letreiro-envio b { font-size: 1.2rem; }
+
+/* Criar a minha senha na própria entrada, em três passos (o link do e-mail colado no passo 2). */
+.passo-titulo { margin: 0.7rem 0 0; font: 700 0.92rem var(--sans); letter-spacing: 0.04em; color: #f0dcb0; }
+.passo-titulo b { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; margin-right: 0.4rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); border: 1.5px solid #c9a25a; color: #fff; font-size: 0.8rem; }
+#form-pedir-link textarea { width: 100%; min-height: 4.5rem; padding: 0.5rem; font: 400 0.95rem var(--sans); color: var(--texto-claro); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(201, 162, 90, 0.5); text-transform: none; letter-spacing: 0; resize: vertical; }
