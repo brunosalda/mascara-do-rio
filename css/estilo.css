@@ -3464,3 +3464,9 @@ body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
   background: linear-gradient(180deg, #a8823e, #6e5229 55%, #4a3518); border-top: 1px solid #f0d590;
   clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
 .tela-espera .moldura.moldura-tela { inset: 8px; border-width: 3px; box-shadow: 0 0 0 4px #1c150f, 0 0 0 7px var(--bronze), 0 0 0 8px #1c150f, inset 0 0 40px 10px rgba(0, 0, 0, 0.7); }
+
+/* Rodada 42, item 4: foco do teclado bem visível (contorno de bronze claro) nos painéis, caixas e telas.
+   Enter e espaço acionam os botões (nativo); a ordem do foco segue a leitura do documento. */
+:is(button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid #f0d590 !important; outline-offset: 2px !important; box-shadow: 0 0 0 6px rgba(20, 14, 8, 0.85) !important; }
+.cena .ponto:focus-visible { outline-offset: 4px !important; }
