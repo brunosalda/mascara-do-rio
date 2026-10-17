@@ -49,15 +49,16 @@ export function gravarPosicao(p, noite, id) {
   } catch { /* sem armazenamento */ }
 }
 
-export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
+// fonte: de onde vêm a noite, as narrações e a ação (o banco; nas demonstrações, dados fictícios).
+export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
   const [noite, narracoes, resolvidas, ultima] = await Promise.all([
-    banco.noiteAberta(),
-    banco.narracoesDoPersonagem(p.id),
-    banco.noitesResolvidas(),
-    banco.ultimaNoite().catch(() => null),
+    fonte.noiteAberta(),
+    fonte.narracoesDoPersonagem(p.id),
+    fonte.noitesResolvidas(),
+    fonte.ultimaNoite().catch(() => null),
   ]);
-  let acao = noite ? await banco.minhaAcao(noite.id, p.id) : null;
+  let acao = noite ? await fonte.minhaAcao(noite.id, p.id) : null;
 
   const narrNoite = narracoes.find((n) => n.tipo === 'noite');
   const ultimaNoite = narrNoite ? resolvidas.find((n) => n.id === narrNoite.noite_id) : null;
@@ -181,8 +182,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     });
     if (r !== 0) return;
     try {
-      acao = await banco.encerrarNoite(acao.id);
-      todosEncerrados = await banco.todosEncerraram(noite.id);
+      acao = await fonte.encerrarNoite(acao.id);
+      todosEncerrados = await fonte.todosEncerraram(noite.id);
       desenharPlano();
       som.selo?.();
     } catch (err) {
@@ -231,7 +232,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       curta_1: (plano.curta_1 || '').trim(), curta_2: (plano.curta_2 || '').trim(), esforco: !!plano.esforco,
     };
     try {
-      acao = await banco.salvarAcao(noite.id, p.id, campos, acao?.id);
+      acao = await fonte.salvarAcao(noite.id, p.id, campos, acao?.id);
       alterado = false;
       try { localStorage.removeItem(chavePlano(noite, p)); } catch { /* sem armazenamento */ }
       desenharPlano();
@@ -613,7 +614,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     },
   });
   desenharPlano();
-  if (noite && acao?.encerrada_em) banco.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
+  if (noite && acao?.encerrada_em) fonte.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
 
   if (abrir === 'ficha') { abrirFicha(); return; }
   if (abrir === 'diario') { abrirDiario(); return; }

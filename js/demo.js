@@ -3,10 +3,10 @@
 // gravam no banco e não mexem na sessão. Sem ?depurar, app.js nem carrega este arquivo.
 import { CENAS, clasSugeridos, montarFicha } from './motor/roteiro.js';
 import { narracaoComPaineis, escolhas, aviso } from './ui.js';
-import { CENARIO_ABERTURA } from './cidade.js';
+import { CENARIO_ABERTURA, LOCAIS } from './cidade.js';
 import { montarCena } from './jogo/cena.js';
 import { abrirDialogo, confirmarEscolha } from './jogo/camadas.js';
-import { telaEspera, cartaoDeAbertura } from './noite.js';
+import { telaEspera, cartaoDeAbertura, telaNoite } from './noite.js';
 import { telaLogin } from './app.js';
 import { som } from './ambiente.js';
 
@@ -81,7 +81,47 @@ function demoEntrada(raiz) {
   raiz.querySelector('.tela-entrada')?.insertAdjacentHTML('beforeend', faixaDemo('cada clique em “Entrar” ou no link mostra uma das mensagens; nada é enviado'));
 }
 
-const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada };
+// Cena completa de uma noite fictícia: quadro, opções, caçada, curtas, detalhes e o personagem com a
+// caminhada em vídeo do Bruno. A ação "enviada" fica só na memória da página. &lugar=<id> escolhe o bairro.
+const CAMINHADA_DO_BRUNO = {
+  url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-perfil.png', quadros: 10, largura: 154, altura: 300, parado: 5,
+  frente: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-frente.png', quadros: 10, largura: 112, altura: 300, parado: 4 },
+  costas: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-costas.png', quadros: 10, largura: 110, altura: 300, parado: 1 },
+  respira: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-respira.png', quadros: 8, largura: 78, altura: 300 },
+};
+
+function fonteFicticia() {
+  const noite = { id: 990003, numero: 3, status: 'aberta', fecha_em: new Date(Date.now() + 2 * 86400000).toISOString() };
+  const narracao = {
+    id: 'demo-noite-2', tipo: 'noite', noite_id: 990002, paineis: [],
+    texto: PRELUDIO,
+    opcoes: [...OPCOES_PRELUDIO, 'Procurar o dono do bar e perguntar pelo homem de terno.'],
+  };
+  const resolvida = { id: 990002, numero: 2, status: 'resolvida', narracao_publica: 'A chuva não parou a noite inteira. Na Lapa, falaram de um homem de terno que não pisca.', paineis: [] };
+  let acao = null;
+  return {
+    noiteAberta: async () => noite,
+    narracoesDoPersonagem: async () => [narracao],
+    noitesResolvidas: async () => [resolvida],
+    ultimaNoite: async () => noite,
+    minhaAcao: async () => acao,
+    salvarAcao: async (_n, _p, campos) => { acao = { id: 'demo-acao', ...campos, atualizado_em: new Date().toISOString(), encerrada_em: null }; return acao; },
+    encerrarNoite: async () => { acao = { ...acao, encerrada_em: new Date().toISOString() }; return acao; },
+    todosEncerraram: async () => true,
+  };
+}
+
+async function demoCena(raiz) {
+  const base = personagemFicticio();
+  const params = new URLSearchParams(location.hash.split('?')[1] || '');
+  const lugar = LOCAIS.some((l) => l.id === params.get('lugar')) ? params.get('lugar') : 'lapa';
+  const p = { ...base, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
+  try { localStorage.setItem('mascara.lido.demo-noite-2', '1'); } catch { /* sem armazenamento */ }
+  await telaNoite(raiz, p, { lugar, fonte: fonteFicticia() });
+  raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('noite fictícia; nada vai ao banco'));
+}
+
+const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada, cena: demoCena };
 
 export function telaDemo(raiz, nome) {
   document.body.dataset.tela = 'cena';
