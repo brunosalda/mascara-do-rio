@@ -3369,3 +3369,10 @@ body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }
 .cartao-tres-dicas { margin: 0.2rem 0 0.4rem; padding: 0; list-style: none; display: grid; gap: 0.35rem; text-align: left; font: 400 1.02rem var(--texto-livro); color: #f0e2c4; }
 .cartao-tres-dicas li::before { content: '✦ '; color: #c9a25a; }
 .cartao-tres-dicas small { display: inline; font: italic 400 0.92rem var(--texto-livro); text-transform: none; letter-spacing: 0; color: #cdb48a; }
+
+/* Rodada 39, item 4: na última hora, o céu já claramente azul no alto, luzes da rua bem mais fracas e a
+   moldura do relógio pulsando em laranja. Nas 2 horas antes, continua sutil. */
+.tela-jogo.ultima-hora .palco::after { opacity: 1;
+  background: linear-gradient(180deg, rgba(120, 165, 230, 0.95) 0%, rgba(150, 180, 225, 0.6) 22%, rgba(110, 135, 185, 0.28) 45%, rgba(70, 85, 125, 0.14) 100%); }
+.tela-jogo.ultima-hora .brilho-luz, .tela-jogo.ultima-hora .vivo-poca, .tela-jogo.ultima-hora .vivo-neon { opacity: 0.35; }
+.relogio-noite.ultima-hora .aro { stroke: #ff8a2a; stroke-width: 3; }

@@ -1336,6 +1336,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     raiz.querySelector('.tela-jogo')?.classList.toggle('amanhecer', amanhecer > 0);
     const ultimaHora = forcar != null || (resta > 0 && resta < 3600000);
     relogio.classList.toggle('ultima-hora', ultimaHora);
+    // Rodada 39: na última hora, o amanhecer fica claro de longe e o primeiro passarinho canta.
+    const tela = raiz.querySelector('.tela-jogo');
+    if (tela && ultimaHora && !tela.classList.contains('ultima-hora')) setTimeout(() => som.reacao?.('passaro', 0.4), 1200);
+    tela?.classList.toggle('ultima-hora', ultimaHora);
     if (ultimaHora) {
       setTimeout(() => {
         const chaveSol = `mascara.sol-vem.${noite?.id}`;
