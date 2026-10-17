@@ -664,7 +664,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cena.atualizarPontos(montarPontos());
     cena.falar('A FOME', deuCerto ? 'Agora sim. Por enquanto.' : 'Escapou. Eu continuo aqui.', 3600);
     guardarRascunho();
-    if (!deuCerto && modo === 'sombra') aviso('Ela foi embora. A tentativa fica no plano; dá para caçar de novo até enviar.');
+    if (!deuCerto) aviso(`${modo === 'sombra' ? 'Ela foi embora.' : 'A presa escapou.'} A tentativa fica no plano; dá para caçar de novo até enviar.`);
     else aviso('Caçada guardada no plano. A Fome baixa quando a noite fechar. Dá para caçar de novo até enviar.');
   }
 
