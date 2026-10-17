@@ -3,7 +3,7 @@
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
 import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
-import { telaFicha } from './ficha.js';
+import { telaFicha, telaRegistro } from './ficha.js';
 import { telaDiario } from './diario.js';
 import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
 import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
@@ -1023,7 +1023,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
 
   function abrirFicha() {
-    abrirJanela(camadas, { titulo: 'Ficha', classe: 'janela-larga', montar: (corpo) => telaFicha(corpo, p) });
+    abrirJanela(camadas, { titulo: 'Registro do personagem', classe: 'janela-larga janela-registro', montar: (corpo) => telaRegistro(corpo, p) });
   }
 
   function abrirDiario() {
@@ -1051,6 +1051,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           <div class="opcoes-leitura">
             <span class="grupo-rotulo">Pausa automática</span>
             ${[['visto', 'Quando viram você'], ['presa', 'Quando a presa começa a ir embora'], ['poder', 'Quando um poder acaba']].map(([k, nome]) => `<div class="leitura-grupo" role="group" aria-label="${nome}"><span>${nome}</span><div><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="1" aria-pressed="${!!pausaAuto()[k]}">Pausar</button><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="0" aria-pressed="${!pausaAuto()[k]}">Não</button></div></div>`).join('')}
+            <div class="leitura-grupo" role="group" aria-label="Névoa nas áreas"><span>Névoa nas áreas (primeira visita da noite)</span><div><button type="button" class="chip-leitura" data-nevoa="1" aria-pressed="${nevoaLigada()}">Ligada</button><button type="button" class="chip-leitura" data-nevoa="0" aria-pressed="${!nevoaLigada()}">Desligada</button></div></div>
             <p class="nota">Espaço pausa e solta a cena a qualquer momento. Pausado, dá para marcar o destino e escolher um poder: tudo acontece ao soltar.</p>
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
@@ -1061,6 +1062,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             const campo = b.dataset.leitura;
             gravarLeitura({ [campo]: campo === 'ritmo' ? Number(b.dataset.valor) : b.dataset.valor });
             corpo.querySelectorAll(`[data-leitura="${campo}"]`).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          };
+        });
+        corpo.querySelectorAll('[data-nevoa]').forEach((b) => {
+          b.onclick = () => {
+            try { localStorage.setItem('mascara.nevoaAreas', b.dataset.nevoa); } catch { /* sem armazenamento */ }
+            corpo.querySelectorAll('[data-nevoa]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
           };
         });
         corpo.querySelectorAll('[data-pausa]').forEach((b) => {
@@ -1197,7 +1204,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function aoPausa(pausadoAgora, motivo) {
     const b = raiz.querySelector('.botao-pausa');
     if (b) { b.setAttribute('aria-pressed', String(pausadoAgora)); b.title = pausadoAgora ? 'Soltar (espaço)' : 'Pausar (espaço)'; }
-    if (pausadoAgora) anotar('PAUSA', motivo ? `${motivo}.` : 'o mundo parou. Espaço solta.');
+    // Só as pausas automáticas vão para o registro, com o motivo; a manual diz "espaço solta" na pedra-chave.
+    if (pausadoAgora && motivo) anotar('PAUSA', `${motivo}.`);
   }
   // Tela de passagem (rodada 27): ao trocar de lugar, um cartão com a pintura do destino escurecida, o
   // nome gravado e uma dica. No mínimo 0,8 s (ou o tempo de carregar a pintura); um clique pula.
@@ -1237,6 +1245,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     setTimeout(() => { carregou = true; talvezTirar(); }, 2500);
     cartao.addEventListener('click', tirar);
   }
+  // Névoa leve (rodada 29): só na primeira visita ao lugar em cada noite, e se a opção estiver ligada.
+  const nevoaLigada = () => { try { return localStorage.getItem('mascara.nevoaAreas') !== '0'; } catch { return true; } };
+  const chaveNevoa = `mascara.nevoa.${noite?.id || 'sem-noite'}.${lugarId}`;
+  let nevoaNaEntrada = false;
+  try { nevoaNaEntrada = !!noite && nevoaLigada() && localStorage.getItem(chaveNevoa) !== '1'; } catch { /* sem armazenamento */ }
+  // Marca a visita depois de uns segundos na cena (a tela pode ser montada duas vezes ao abrir).
+  if (nevoaNaEntrada) setTimeout(() => { if (camadas.isConnected) { try { localStorage.setItem(chaveNevoa, '1'); } catch { /* sem armazenamento */ } } }, 4000);
   let numerosAte = 0;
   function mostrarNumeros() {
     camadas.classList.add('mostrar-numeros');
@@ -1247,6 +1262,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {
     nome: p.nome,
+    nevoa: nevoaNaEntrada,
     painel: raiz.querySelector('.painel-pergunta'),
     aoFalar: (voz, texto) => anotar(voz, texto),
     aoMostrarTudo: () => mostrarNumeros(),

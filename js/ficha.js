@@ -248,3 +248,117 @@ export async function telaFicha(raiz, p) {
   };
   desenhar();
 }
+
+// --- Registro do personagem (rodada 29) ------------------------------------------------------------
+// Dentro do jogo, F abre a ficha como registro de personagem dos RPGs clássicos: retrato grande à
+// esquerda com nome, clã, predador e geração; à direita, as abas Ficha, Disciplinas e Biografia;
+// embaixo, as trilhas de Vitalidade, Força de Vontade, Humanidade e Fome. Letra grande.
+const bolinhas = (n, max = 5) => `<span class="rp-bolinhas" aria-label="${n} de ${max}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'cheia' : ''}"></i>`).join('')}</span>`;
+
+function trilha(nome, resta, max, classe, palavra) {
+  return `<div class="rp-trilha ${classe}" title="${esc(nome)}: ${resta} de ${max}">
+    <span class="rp-trilha-nome">${esc(nome)}</span>
+    <span class="rp-trilha-caixas">${Array.from({ length: max }, (_, i) => `<i class="${i < resta ? 'cheia' : ''}"></i>`).join('')}</span>
+    <small>${esc(palavra)}</small>
+  </div>`;
+}
+
+function abaFichaRP(f, calc) {
+  const colunas = Object.entries(v5.GRUPOS).map(([g, nome]) => `
+    <div class="rp-coluna">
+      <h4>${esc(nome)}</h4>
+      <ul>${v5.ATRIBUTOS.filter((a) => a.grupo === g).map((a) => `<li title="${esc(v5.palavra('atributo', calc.atributos[a.id]))}"><span>${termo(a.nome, a.desc)}</span>${bolinhas(calc.atributos[a.id])}</li>`).join('')}</ul>
+    </div>`).join('');
+  const treinadas = v5.HABILIDADES.filter((h) => calc.habilidades[h.id] > 0)
+    .sort((a, b) => calc.habilidades[b.id] - calc.habilidades[a.id] || a.nome.localeCompare(b.nome));
+  const espDe = (hab) => calc.especializacoes.filter((e) => e.hab === hab && e.nome?.trim()).map((e) => esc(e.nome));
+  const marcas = (lista, catalogo, tipo) => lista.filter((x) => x.nivel > 0)
+    .map((x) => `<li><span>${termoDe(tipo, x.id, nomeItem(catalogo, x.id))}${x.nota ? ` <small class="inline">(${esc(x.nota)})</small>` : ''}</span>${bolinhas(x.nivel, x.nivel)}</li>`).join('');
+  return `
+    <div class="rp-colunas">${colunas}</div>
+    <h4 class="rp-titulo">Habilidades</h4>
+    <ul class="rp-lista duas">${treinadas.map((h) => `<li><span>${termo(h.nome, h.desc)}${espDe(h.id).length ? ` <small class="inline">(${espDe(h.id).join(', ')})</small>` : ''}</span>${bolinhas(calc.habilidades[h.id])}</li>`).join('') || '<li class="nota">Nenhuma ainda.</li>'}</ul>
+    <div class="rp-duas">
+      <div><h4 class="rp-titulo">Vantagens</h4><ul class="rp-lista">${marcas(calc.vantagens, v5.VANTAGENS, 'vantagem') || '<li class="nota">Nenhuma.</li>'}</ul></div>
+      <div><h4 class="rp-titulo">Defeitos</h4><ul class="rp-lista">${marcas(calc.defeitos, v5.DEFEITOS, 'defeito') || '<li class="nota">Nenhum.</li>'}</ul></div>
+    </div>`;
+}
+
+function abaDisciplinasRP(calc) {
+  const itens = Object.entries(calc.disciplinas).map(([id, n]) => {
+    const d = v5.DISCIPLINAS[id];
+    const poderes = d.poderes.filter((pw) => calc.poderes.includes(pw.id));
+    return `
+      <article class="rp-disciplina">
+        <header><b>${termoDe('disciplina', id, d.nome)}</b>${bolinhas(n)}</header>
+        ${poderes.length ? `<ul>${poderes.map((pw) => `<li><b>${esc(pw.nome)}</b> — ${esc(pw.desc || '')}</li>`).join('')}</ul>` : '<p class="nota">Nenhum poder escolhido.</p>'}
+      </article>`;
+  }).join('');
+  return `${itens || '<p class="nota">Nenhuma disciplina ainda.</p>'}
+    <p class="rp-despertar"><b>O risco do Despertar.</b> Usar o sangue pede um teste de Despertar quando a noite fechar: a Fome pode subir.</p>`;
+}
+
+function abaBiografiaRP(f, p) {
+  const o = f.origem || {};
+  const conv = (f.conviccoes || []).filter((x) => x?.texto?.trim());
+  const linhas = [
+    o.nomeEmVida ? ['Em vida', esc(semPontoFinal(o.nomeEmVida))] : null,
+    o.ocupacao ? ['O que fazia', esc(semPontoFinal(o.ocupacao))] : null,
+    o.bairro ? ['De onde vem', esc(semPontoFinal(o.bairro))] : null,
+    o.abraco ? ['O Abraço', esc(semPontoFinal(o.abraco))] : null,
+    ...conv.map((c) => ['Convicção', `${esc(semPontoFinal(c.texto))}${pedraDeToque(c) ? ` <small>(quem te prende: ${esc(pedraDeToque(c))})</small>` : ''}`]),
+    f.ambicao ? ['Ambição', esc(semPontoFinal(f.ambicao))] : null,
+    f.desejo ? ['Desejo', esc(semPontoFinal(f.desejo))] : null,
+    f.aparencia ? ['Aparência', esc(f.aparencia)] : null,
+  ].filter(Boolean);
+  return `
+    <p class="rp-intro">A última noite como uma pessoa comum, e o que ficou dela.</p>
+    <dl class="rp-bio">${linhas.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') || '<p class="nota">A biografia aparece quando a ficha estiver completa.</p>'}</dl>`;
+}
+
+export function telaRegistro(raiz, p) {
+  const f = p.ficha || {};
+  if (!f.cla) { raiz.innerHTML = '<p class="nota">A ficha ainda está no começo.</p>'; return; }
+  const calc = v5.calcular(f);
+  const c = v5.cla(f.cla);
+  const pr = v5.predador(f.predador?.id);
+  const est = p.estado || {};
+  const caixa = (e, max) => { const m = e?.max || max || 0; return [Math.max(0, m - (e?.superficial || 0) - (e?.agravado || 0)), m]; };
+  const [vitR, vitM] = caixa(est.vitalidade, calc.vitalidade);
+  const [vonR, vonM] = caixa(est.vontade, calc.forcaVontade);
+  const hum = est.humanidade ?? calc.humanidade ?? 0;
+  const fome = est.fome ?? 0;
+  const abas = [['ficha', 'Ficha', () => abaFichaRP(f, calc)], ['disciplinas', 'Disciplinas', () => abaDisciplinasRP(calc)], ['biografia', 'Biografia', () => abaBiografiaRP(f, p)]];
+  raiz.innerHTML = `
+    <section class="registro-pj">
+      <aside class="rp-lado">
+        <div class="rp-retrato"><img src="${esc(retratoDe(p))}" alt="Retrato de ${esc(p.nome)}"></div>
+        <h2 class="rp-nome">${esc(p.nome || 'Sem nome')}</h2>
+        ${linhaEmVida({ ...f, nome: p.nome })}
+        <dl class="rp-dados">
+          <dt>Clã</dt><dd>${c ? termoDe('cla', c.id, c.nome) : '—'}</dd>
+          <dt>Predador</dt><dd>${pr ? termoDe('predador', pr.id, pr.nome) : '—'}</dd>
+          <dt>Geração</dt><dd>${calc.geracao ? `${calc.geracao}ª` : '—'}</dd>
+        </dl>
+        ${f.origem?.conceito ? `<p class="rp-conceito">${esc(f.origem.conceito)}</p>` : ''}
+      </aside>
+      <div class="rp-corpo">
+        <div class="rp-abas" role="tablist">${abas.map(([id, nome], i) => `<button type="button" role="tab" data-rp="${id}" aria-selected="${i === 0}">${nome}</button>`).join('')}</div>
+        <div class="rp-pagina" role="tabpanel"></div>
+      </div>
+      <footer class="rp-trilhas">
+        ${trilha('Vitalidade', vitR, vitM, 'tr-vit', v5.textoVitalidade(est.vitalidade?.max || vitM, est.vitalidade?.superficial, est.vitalidade?.agravado))}
+        ${trilha('Força de Vontade', vonR, vonM, 'tr-von', v5.textoVontade(est.vontade?.max || vonM, est.vontade?.superficial, est.vontade?.agravado))}
+        ${trilha('Humanidade', hum, 10, 'tr-hum', v5.textoHumanidade(hum))}
+        ${trilha('Fome', fome, 5, 'tr-fome', v5.textoFome(fome).nome)}
+      </footer>
+    </section>`;
+  const pagina = raiz.querySelector('.rp-pagina');
+  const mostrar = (id) => {
+    raiz.querySelectorAll('[data-rp]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rp === id)));
+    pagina.innerHTML = abas.find(([a]) => a === id)[2]();
+  };
+  raiz.querySelectorAll('[data-rp]').forEach((b) => { b.onclick = () => mostrar(b.dataset.rp); });
+  mostrar('ficha');
+  ligarGlossario();
+}

@@ -70,7 +70,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  nome = '', painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', nevoa = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
@@ -87,6 +87,7 @@ export function montarCena(raiz, {
         <div class="pintura-cinza" style="background-image:url('${fundoUrl}')" aria-hidden="true"></div>
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
+        <canvas class="veu-area" aria-hidden="true" hidden></canvas>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
         ${geo.vida?.passantes?.length ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
@@ -390,6 +391,52 @@ export function montarCena(raiz, {
     if (cliquesNoPersonagem++ % 3 === 0) falar((nome || 'VOCÊ').toUpperCase(), falasDoCla[Math.floor(Math.random() * falasDoCla.length)], 3200);
     return true;
   }
+
+  // --- Névoa leve na primeira visita (rodada 29) -------------------------------------------------------
+  // Um véu escuro translúcido (50%, um pouco desfocado no CSS) sobre o que ainda não foi visto. Abre num
+  // círculo suave em volta do personagem; o canvas é pequeno e só é redesenhado quando ele se mexe.
+  // Detalhes e presas só aparecem na parte aberta; ações e saídas ficam sempre à vista.
+  const veu = cena.querySelector('.veu-area');
+  const VEU_L = 192;
+  const VEU_A = Math.round(VEU_L / ASPECTO);
+  const veuAtivo = !!nevoa && !semPersonagem;
+  let veuCtx = null;
+  let veuUltimo = null;
+  if (veuAtivo) {
+    veu.width = VEU_L;
+    veu.height = VEU_A;
+    veu.hidden = false;
+    veuCtx = veu.getContext('2d', { willReadFrequently: true });
+    veuCtx.fillStyle = 'rgba(6, 6, 10, 0.5)';
+    veuCtx.fillRect(0, 0, VEU_L, VEU_A);
+  }
+  function abrirVeu(x, y, raio = 0.16) {
+    if (!veuCtx) return;
+    const cx = x * VEU_L;
+    const cy = (y - 0.06) * VEU_A;
+    const r = raio * VEU_L;
+    const g = veuCtx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    veuCtx.globalCompositeOperation = 'destination-out';
+    veuCtx.fillStyle = g;
+    veuCtx.beginPath();
+    veuCtx.ellipse(cx, cy, r, r * 1.25, 0, 0, Math.PI * 2);
+    veuCtx.fill();
+    veuCtx.globalCompositeOperation = 'source-over';
+  }
+  function atualizarVeu() {
+    if (!veuCtx) return;
+    if (veuUltimo && dist(veuUltimo.x, veuUltimo.y, pos.x, pos.y) < 0.012) return;
+    veuUltimo = { x: pos.x, y: pos.y };
+    abrirVeu(pos.x, pos.y);
+  }
+  const sobVeu = (x, y) => {
+    if (!veuCtx) return false;
+    const px = Math.min(VEU_L - 1, Math.max(0, Math.round(x * VEU_L)));
+    const py = Math.min(VEU_A - 1, Math.max(0, Math.round(y * VEU_A)));
+    return veuCtx.getImageData(px, py, 1, 1).data[3] > 60;
+  };
 
   // --- Pausa (rodada 27) -------------------------------------------------------------------------------
   // Espaço pausa e solta. Pausado, o jogador pode marcar o destino e escolher um poder: tudo acontece
@@ -1429,6 +1476,7 @@ export function montarCena(raiz, {
       for (const el of camadaPontos.children) {
         const p = lista.find((x) => x.id === el.dataset.ponto);
         if (p?.discreto) el.classList.toggle('revelado', visivel(p, agora));
+        if (veuCtx && p && (p.tipo === 'detalhe' || p.tipo === 'presa')) el.classList.toggle('sob-veu', sobVeu(p.x, p.y));
       }
       const novo = maisPerto(agora);
       if (novo !== perto) {
@@ -1439,6 +1487,7 @@ export function montarCena(raiz, {
         if (perto) dica.innerHTML = toque ? esc(perto.acao || perto.rotulo) : `<kbd>E</kbd> ${esc(perto.acao || perto.rotulo)}`;
       }
       ajustarRotulos(agora);
+      atualizarVeu();
       checarComentarios();
       checarVestigio();
     }
