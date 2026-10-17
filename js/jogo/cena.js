@@ -492,11 +492,16 @@ export function montarCena(raiz, {
     // Tab mostra o nome do tipo e o estado em palavras (como as presas).
     const ESTADOS_GENTE = ['distraído', 'com pressa', 'cansado', 'olhando o celular', 'esperando alguém', 'sozinho'];
     const estado = ESTADOS_GENTE[(i * 7 + g.tipo.length) % ESTADOS_GENTE.length];
-    el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura ? `<img src="img/gente/${figura}.png" alt="" draggable="false">` : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
+    // Integração na pintura (ordem do Bruno): sombra de contato, reflexo invertido no chão molhado, e a
+    // figura tingida pela cor e pelo brilho da pintura em volta dos pés (amostrados quando a pintura carrega).
+    const src = figura ? `img/gente/${figura}.png` : '';
+    el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
+      ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
+      : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
     el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
       el.classList.add('pessoa-pintada');
-      // Tinge com a luz do lugar: mais clara perto de um poste ou néon, mais escura no breu.
+      // Antes de amostrar a pintura: brilho pelas luzes marcadas do lugar.
       const luz = luzEm(g.x, g.y);
       el.style.setProperty('--luz-gente', (0.72 + Math.min(1, luz) * 0.5).toFixed(2));
     }
@@ -512,12 +517,49 @@ export function montarCena(raiz, {
     p.el.classList.toggle('vira', p.dir < 0);
   }
   gente.forEach(posicionarPessoa);
+  // Amostra a pintura em volta dos pés de cada pessoa: a cor vira a tinta da figura e o brilho, o filtro.
+  if (gente.some((p) => p.el.classList.contains('pessoa-pintada')) && fundoUrl) {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const W = 336;
+        const H = Math.round(W / ASPECTO);
+        const cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const cx = cv.getContext('2d', { willReadFrequently: true });
+        cx.drawImage(img, 0, 0, W, H);
+        for (const p of gente) {
+          if (!p.el.classList.contains('pessoa-pintada')) continue;
+          const px = Math.round(p.x * W);
+          const py = Math.round(p.y * H);
+          const d = cx.getImageData(Math.max(0, px - 6), Math.max(0, py - 10), 12, 12).data;
+          let r = 0; let gg = 0; let b = 0;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; }
+          const n = d.length / 4;
+          r /= n; gg /= n; b /= n;
+          const lum = (0.299 * r + 0.587 * gg + 0.114 * b) / 255;
+          p.el.style.setProperty('--luz-gente', Math.max(0.62, Math.min(1.25, 0.55 + lum * 1.5)).toFixed(2));
+          p.el.style.setProperty('--tinta-gente', `rgb(${Math.round(r)}, ${Math.round(gg)}, ${Math.round(b)})`);
+        }
+      } catch { /* sem leitura da imagem: fica o brilho das luzes marcadas */ }
+    };
+    img.src = fundoUrl;
+  }
+  // Ao conversar, a pessoa vira para o personagem.
+  function virarPessoaPara(id) {
+    const p = gente.find((g) => g.id === id);
+    if (!p) return;
+    const olhaEsquerda = pos.x < p.x;
+    p.dir = olhaEsquerda ? -1 : 1;
+    p.el.classList.toggle('vira', olhaEsquerda);
+    p.fixa = performance.now() + 8000;
+  }
   let proximaVirada = performance.now() + 4000;
   function virarAlguem(agora) {
     if (agora < proximaVirada || !gente.length || pausado) return;
     proximaVirada = agora + 3000 + Math.random() * 5000;
     const p = gente[Math.floor(Math.random() * gente.length)];
-    if (p.anda) return;
+    if (p.anda || (p.fixa && performance.now() < p.fixa)) return;
     p.el.classList.toggle('vira');
     setTimeout(() => p.el.classList.toggle('vira'), 1400 + Math.random() * 1600);
   }
@@ -2005,6 +2047,7 @@ export function montarCena(raiz, {
     alternarPausa,
     pausado: () => pausado,
     centrarCamera,
+    virarPessoaPara,
     vistaDoAlto: !!geo.alto,
     depoisDaPausa: (fn) => { if (pausado) aoSoltarPausa.push(fn); else fn(); },
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },

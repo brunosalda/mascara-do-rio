@@ -53,6 +53,18 @@ export const TIPOS_GENTE = {
     falas: ['No meu tempo a Lapa era outra coisa.', 'Senta aí, moço. O banco é grande.', 'Essa chuva não para mais.'],
     repara: 'conta histórias para quem para do lado',
   },
+  // Elenco próprio de cada lugar (ordem do Bruno: gente presa ao cenário). Falas provisórias, até o
+  // roteirista mandar as definitivas.
+  'lapa-sambista': {
+    nome: 'Sambista', rotulo: 'um sambista com o pandeiro, encostado num pilar dos Arcos', presa: true,
+    falas: ['A roda começa tarde hoje. Chuva espanta o povo.', 'Conhece aquela do Cartola? Ninguém mais pede.', 'Aqui embaixo dos Arcos o som fica bonito.'],
+    repara: 'conhece todo mundo que passa pelos Arcos de madrugada',
+  },
+  'lapa-dona-do-bar': {
+    nome: 'Dona do bar', rotulo: 'a dona do bar, de avental, na porta', presa: false,
+    falas: ['Entra ou sai, meu filho, que a porta não é sala.', 'A cozinha fechou. Cerveja ainda tem.', 'Aqui eu sei quem é quem. Você eu ainda não sei.'],
+    repara: 'não esquece um rosto e sabe quem deve no bar',
+  },
 };
 
 // Figura provisória em SVG: corpo genérico mais um detalhe que diz o tipo (guarda-chuva, isopor,
@@ -83,6 +95,8 @@ export const FIGURAS_GENTE = {
   celular: ['mulher-celular'],
   garconete: ['garconete'],
   idoso: ['idoso-banco'],
+  'lapa-sambista': ['lapa-sambista'],
+  'lapa-dona-do-bar': ['lapa-dona-do-bar'],
 };
 
 // Pistas nas conversas (rodada 34): uma por lugar, com um tipo de pessoa. Conversar com ela dá uma

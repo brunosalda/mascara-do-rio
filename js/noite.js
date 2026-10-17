@@ -808,6 +808,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function falarComPessoa(pt) {
     const t = TIPOS_GENTE[pt.tipoGente];
     if (!t) return;
+    cena.virarPessoaPara?.(pt.id);
     if (emCaca && !emCaca.alvo) {
       if (!t.presa) { cena.falar('A FOME', t.nome === 'Policial' ? 'Esse não. Farda chama atenção.' : 'Esse está de olho em tudo. Outro.', 2800); return; }
       escolherPresa({ id: `presa-${pt.id}`, rotulo: t.rotulo, repara: t.repara, vulneravel: t.vulneravel, x: pt.x, y: pt.y, tipo: 'presa', icone: '♦', acao: `Escolher: ${t.rotulo}`, temperamento: temperamentoDe(`${pt.id}.${noite?.numero || 0}`) });
