@@ -1424,13 +1424,17 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (!livres.length) { usadas = []; livres = DICAS_PASSAGEM.map((_, i) => i); }
     const i = livres[Math.floor(Math.random() * livres.length)];
     try { localStorage.setItem('mascara.dicasVistas', JSON.stringify([...usadas, i])); } catch { /* sem armazenamento */ }
+    // Rodada 39: a primeira entrada na vista do alto, em cada aparelho, ensina com três dicas.
+    let primeiraVez = false;
+    if (geo.alto) { try { primeiraVez = !localStorage.getItem('mascara.ensinouAlto'); } catch { /* sem armazenamento */ } }
+    if (primeiraVez) setTimeout(() => { if (palco.isConnected) { try { localStorage.setItem('mascara.ensinouAlto', '1'); } catch { /* sem armazenamento */ } } }, 1500);
     const cartao = document.createElement('div');
     cartao.className = 'cartao-passagem';
     cartao.setAttribute('role', 'status');
     // O cartão usa a pintura na altura dos olhos (a de antes), que continua no jogo.
     const imagemCartao = emOutroLugar ? (visitado.imagem || imagem) : (localAtual?.imagem || imagem);
     cartao.style.setProperty('--fundo', `url('${new URL(imagemCartao, location.href).href}')`);
-    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é <b>${esc((NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '').toLowerCase())}</b></p>` : ''}<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
+    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é <b>${esc((NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '').toLowerCase())}</b></p>` : ''}${primeiraVez ? `<ul class="cartao-tres-dicas">${[['Clique no chão para andar', 'toque'], ['Mouse na borda ou setas para olhar em volta', 'arraste com dois dedos'], ['Tab mostra quem está aqui', 'toque longo']].map(([pc, cel]) => `<li>${esc(pc)} <small>· no celular: ${esc(cel)}</small></li>`).join('')}</ul>` : `<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p>`}<div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
     camadas.appendChild(cartao);
     const t0 = performance.now();
     const tirar = () => {

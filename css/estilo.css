@@ -3364,3 +3364,8 @@ body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }
 .recado-marca:hover { background: rgba(60, 40, 20, 0.85); }
 .form-recado { display: grid; gap: 0.6rem; }
 .form-recado input { width: 100%; padding: 0.5rem; font: inherit; }
+
+/* Rodada 39, item 3: as três dicas da primeira vez na vista do alto. */
+.cartao-tres-dicas { margin: 0.2rem 0 0.4rem; padding: 0; list-style: none; display: grid; gap: 0.35rem; text-align: left; font: 400 1.02rem var(--texto-livro); color: #f0e2c4; }
+.cartao-tres-dicas li::before { content: '✦ '; color: #c9a25a; }
+.cartao-tres-dicas small { display: inline; font: italic 400 0.92rem var(--texto-livro); text-transform: none; letter-spacing: 0; color: #cdb48a; }
