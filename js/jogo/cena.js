@@ -74,7 +74,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  nome = '', nevoa = false, nevoaLonge = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', nevoa = false, nevoaLonge = false, temPedido = null, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -497,7 +497,7 @@ export function montarCena(raiz, {
     const src = figura ? `img/gente/${figura}.png` : '';
     el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
       ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-lado" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
-      : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
+      : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${temPedido?.(g.tipo) ? 'tem um pedido' : estado}</small></span>`;
     el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
       el.classList.add('pessoa-pintada');
@@ -596,7 +596,21 @@ export function montarCena(raiz, {
     p.el.classList.toggle('vira');
     setTimeout(() => p.el.classList.toggle('vira'), 1400 + Math.random() * 1600);
   }
+  // Quem tem um pedido, ao ver o personagem chegar perto, vira para ele e levanta a mão (sem "!").
+  let proximoAceno = 0;
+  function acenarSeTemPedido() {
+    const agora = performance.now();
+    if (agora < proximoAceno || !temPedido) return;
+    proximoAceno = agora + 400;
+    for (const p of gente) {
+      if (!temPedido(p.tipoGente)) continue;
+      const perto = dist(p.x, p.y, pos.x, pos.y) < 0.16;
+      if (perto && !p.acenou) { p.acenou = true; virarPessoaPara(p.id); p.el.classList.remove('acena'); void p.el.offsetWidth; p.el.classList.add('acena'); }
+      if (!perto && dist(p.x, p.y, pos.x, pos.y) > 0.3) p.acenou = false;
+    }
+  }
   function andarGente(dt) {
+    acenarSeTemPedido();
     virarAlguem(performance.now());
     for (const p of gente) {
       if (!p.anda || pausado) continue;

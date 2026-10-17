@@ -90,6 +90,7 @@ const ESTADO_FASE3 = {
   noites_jogadas: 3,
   descansado: true,
   bairros: { lapa: 2, centro: 1 },
+  pedidos_resolvidos: ['dona-do-bar'],
   status: { camarilla: 'tolerado', anarquistas: 'desconhecido', independentes: 'respeitado', policia: 'desconhecido' },
   refugio: { bairro: 'Lapa', local: 'Um quarto alugado em cima de um bar, com a janela pintada de preto.', seguranca: 'fraca', rebanho: 'nenhum', nota: 'uma tranca nova e um colchão no chão' },
   itens: [
@@ -198,6 +199,7 @@ async function demoMapa(raiz) {
     visitados: new Set([atual, 'centro', 'santa-teresa']),
     descobertas: { [atual]: { vistos: 1, total: 3 }, centro: { vistos: 0, total: 3 }, 'santa-teresa': { vistos: 2, total: 3 } },
     bairros: { lapa: 2, centro: 1 },
+  pedidos_resolvidos: ['dona-do-bar'],
     clima: 'noite de garoa',
     aoEntrar: (id) => voltar(alto ? `${id}-alto` : id),
     aoTecla: (ev) => { if (ev.key === 'Escape' || ev.key.toLowerCase() === 'm') { ev.preventDefault(); voltar(); } },

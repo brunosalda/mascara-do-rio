@@ -822,7 +822,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const fala = nivelBairro >= 2 && FALAS_DE_CASA[pt.tipoGente] ? FALAS_DE_CASA[pt.tipoGente] : t.falas[Math.floor(Math.random() * t.falas.length)];
     // A primeira fala da pessoa já vai para o registro (a pergunta no painel não registra sozinha).
     anotar(t.nome.toUpperCase(), fala);
-    const pedido = PEDIDOS[pt.tipoGente];
+    const pedido = pedidosResolvidos.has(pt.tipoGente) ? null : PEDIDOS[pt.tipoGente];
+    if (pedidosResolvidos.has(pt.tipoGente) && !sessionStorage.getItem(`mascara.agradeceu.${pt.tipoGente}.${noite?.id}`)) {
+      // A consequência visível: a pessoa lembra do que você resolveu.
+      try { sessionStorage.setItem(`mascara.agradeceu.${pt.tipoGente}.${noite?.id}`, '1'); } catch { /* sem armazenamento */ }
+      const obrigado = `Você resolveu aquilo pra mim. ${PEDIDOS[pt.tipoGente]?.nome ? 'Não esqueço.' : ''}`.trim();
+      setTimeout(() => { cena.falar(t.nome.toUpperCase(), obrigado, 3600); }, 200);
+    }
     cena.perguntarNoBalao({
       voz: t.nome.toUpperCase(), texto: fala, opcoes: pedido ? ['Puxar conversa', 'Perguntar se precisa de alguma coisa', 'Deixar para lá'] : ['Puxar conversa', 'Deixar para lá'], perto: { x: pt.x, y: pt.y, raio: 0.3 },
       aoEscolher: (i) => {
@@ -846,6 +852,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // no fechamento (recompensa em favor, nome no bairro e às vezes item). Os de "fio solto" vão marcados.
   const chavePedidos = `mascara.pedidos.${noite?.id || 'sem-noite'}.${p.id}`;
   const lerPedidos = () => { try { return JSON.parse(localStorage.getItem(chavePedidos)) || []; } catch { return []; } };
+  // O jogador não vê as paradas de dados ("Carisma + Manha"): elas ficam para o Narrador.
+  const semDados = (t) => String(t || '').replace(/\s*\([^)]*\+[^)]*\)/g, '').replace(/\s+([.,;])/g, '$1');
+  // Pedidos resolvidos pelo Narrador (ganhos.pedidos, ou estado.pedidos_resolvidos na demonstração).
+  const pedidosResolvidos = new Set([
+    ...(p.estado?.pedidos_resolvidos || []),
+    ...narracoes.flatMap((n) => (n.ganhos?.pedidos || []).filter((x) => x.resolvido !== false).map((x) => x.figura || x)),
+  ]);
+  const temPedidoAberto = (tipo) => !!PEDIDOS[tipo] && !pedidosResolvidos.has(tipo) && !lerPedidos().includes(tipo);
   function oferecerPedido(pt, t, pedido) {
     const ativos = lerPedidos();
     if (ativos.includes(pt.tipoGente)) { cena.falar(t.nome.toUpperCase(), 'Você já disse que ia ver isso pra mim.', 3000); return; }
@@ -861,7 +875,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         else { aviso('As duas ações curtas já estão ocupadas. Troque uma no plano para aceitar o pedido.'); return; }
         try { localStorage.setItem(chavePedidos, JSON.stringify([...ativos, pt.tipoGente])); } catch { /* sem armazenamento */ }
         guardarRascunho();
-        anotar('VOCÊ', `aceita o pedido: ${pedido.resolver.split('.')[0]}.`);
+        anotar('VOCÊ', `aceita o pedido: ${semDados(pedido.resolver.split('.')[0])}.`);
         aviso('Pedido aceito: foi para as ações curtas. O Narrador resolve no fechamento.');
       },
     }), 700);
@@ -1412,6 +1426,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {
     nome: p.nome,
+    temPedido: (tipo) => temPedidoAberto(tipo),
     nevoa: nevoaNaEntrada,
     nevoaLonge: nevoaLigada(),
     painel: raiz.querySelector('.painel-pergunta'),
