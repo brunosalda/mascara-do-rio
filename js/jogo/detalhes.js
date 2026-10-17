@@ -154,14 +154,14 @@ export const DESCOBERTAS = {
 
   niteroi: {
     detalhes: [
-      { id: 'mac', x: 0.3, y: 0.575, rotulo: 'O MAC', voz: 'ACADÊMICOS',
+      { id: 'mac', x: 0.4, y: 0.64, rotulo: 'O MAC', voz: 'ACADÊMICOS',
         texto: 'O Museu de Arte Contemporânea, de Oscar Niemeyer, pousado na pedra como um disco voador. Lá dentro, as janelas mostram o Rio inteiro.' },
-      { id: 'baia', x: 0.48, y: 0.565, rotulo: 'A baía', voz: 'INTUIÇÃO',
+      { id: 'baia', x: 0.74, y: 0.65, rotulo: 'A baía', voz: 'INTUIÇÃO',
         texto: 'Do outro lado da baía, o Rio brilha. De lá, Niterói é só uma linha de luzes. Daqui, quem parece pequeno é o Rio.' },
     ],
     comentarios: [
-      { id: 'espelho', x: 0.36, y: 0.58, raio: 0.06, voz: 'PRONTIDÃO', texto: 'O espelho d\'água reflete o museu inteiro. O seu reflexo sai borrado. Ainda bem que está escuro.' },
-      { id: 'barca', x: 0.48, y: 0.56, raio: 0.06, voz: 'MANHA', texto: 'A última barca para o Rio sai à meia-noite e meia. Depois, só pela ponte.' },
+      { id: 'espelho', x: 0.35, y: 0.62, raio: 0.08, voz: 'PRONTIDÃO', texto: 'O espelho d\'água reflete o museu inteiro. O seu reflexo sai borrado. Ainda bem que está escuro.' },
+      { id: 'barca', x: 0.78, y: 0.66, raio: 0.08, voz: 'MANHA', texto: 'A última barca para o Rio sai à meia-noite e meia. Depois, só pela ponte.' },
     ],
   },
 };

@@ -302,27 +302,30 @@ export const LUGARES = {
     vida: { passantes: [{ y: 0.605, x0: 0.43, x1: 0.56 }], farois: { y0: 0.6, y1: 0.9 } },
   },
 
-  // Niterói: a pintura é o MAC visto de longe, sobre o penhasco; o único chão é a borda do espelho
-  // d'água do museu, longe e pequena. Candidata a ser repintada com chão na frente.
+  // Niterói: a praça molhada diante do MAC, com a baía e o Rio ao fundo (pintura refeita em 17/10/2026).
   niteroi: {
-    horizonte: 0.42,
-    k: 0.45,
-    chao: [[0.15, 0.5], [0.25, 0.55], [0.35, 0.565], [0.45, 0.56], [0.52, 0.52], [0.535, 0.54], [0.47, 0.58], [0.35, 0.595], [0.22, 0.58], [0.12, 0.52]],
-    entrada: [0.33, 0.58],
-    saida: [0.14, 0.515],
+    horizonte: 0.46,
+    k: 0.75,
+    chao: [[0.01, 0.6], [0.3, 0.6], [0.67, 0.6], [0.85, 0.62], [0.92, 0.66], [0.99, 0.72], [0.99, 0.94], [0.01, 0.94]],
+    entrada: [0.45, 0.86],
+    saida: [0.04, 0.7],
     ancoras: {
-      museu: { x: 0.3, y: 0.575, papel: 'memoria', termos: ['museu', 'mac', 'niemeyer', 'arte', 'exposicao'] },
-      vista: { x: 0.48, y: 0.565, termos: ['vista', 'baia', 'rio', 'olhar', 'observar', 'vigiar', 'barca'] },
-      borda: { x: 0.4, y: 0.58, papel: 'livre', termos: ['gente', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
-      rampa: { x: 0.2, y: 0.555, termos: ['rampa', 'seguir', 'caminho', 'procurar', 'encontrar', 'icarai'] },
-      escuro: { x: 0.52, y: 0.535, papel: 'escuro', termos: ['penhasco', 'escuro', 'esconder', 'sombra'] },
+      museu: { x: 0.4, y: 0.63, papel: 'memoria', termos: ['museu', 'mac', 'niemeyer', 'arte', 'exposicao'] },
+      vista: { x: 0.75, y: 0.64, termos: ['vista', 'baia', 'rio', 'olhar', 'observar', 'vigiar', 'barca'] },
+      mureta: { x: 0.9, y: 0.74, termos: ['mureta', 'mar', 'pescador', 'icarai', 'praia'] },
+      praca: { x: 0.5, y: 0.82, papel: 'livre', termos: ['praca', 'gente', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
+      rampa: { x: 0.18, y: 0.63, termos: ['rampa', 'seguir', 'caminho', 'procurar', 'encontrar'] },
+      escuro: { x: 0.06, y: 0.86, papel: 'escuro', termos: ['escuro', 'esconder', 'sombra', 'mato'] },
     },
     frente: [],
     luzes: [
-      { x: 0.3, y: 0.3, cor: '#ffd890', raio: 0.25, forca: 0.7 },
-      { x: 0.67, y: 0.12, cor: '#e8eeff', raio: 0.6, forca: 0.3 },
+      { x: 0.94, y: 0.2, cor: '#ffc060', raio: 0.35, forca: 0.9, falha: true },
+      { x: 0.87, y: 0.45, cor: '#ffc060', raio: 0.18, forca: 0.7 },
+      { x: 0.045, y: 0.42, cor: '#ffc060', raio: 0.2, forca: 0.7 },
+      { x: 0.4, y: 0.32, cor: '#ffd890', raio: 0.35, forca: 0.7 },
+      { x: 0.22, y: 0.45, cor: '#ff4030', raio: 0.15, forca: 0.5 },
     ],
-    vida: {},
+    vida: { passantes: [{ y: 0.61, x0: 0.05, x1: 0.65 }] },
   },
 };
 
