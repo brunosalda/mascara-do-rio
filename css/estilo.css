@@ -3342,3 +3342,12 @@ body.sem-efeitos .vivo { animation: none !important; opacity: 0 !important; }
 .feito-silhueta { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: start; opacity: 0.62; }
 .feito-sombra { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(60, 40, 20, 0.25); color: rgba(60, 40, 20, 0.5); }
 .feito-silhueta small { font-style: italic; }
+
+/* Rodada 38, item 4: o amanhecer na pintura (só opacidade e cor, por cima de tudo). */
+.tela-jogo .palco::after { content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: var(--amanhecer, 0);
+  background: linear-gradient(180deg, rgba(110, 150, 210, 0.85) 0%, rgba(140, 165, 205, 0.45) 28%, rgba(90, 110, 160, 0.2) 55%, rgba(60, 75, 110, 0.12) 100%); mix-blend-mode: screen; }
+.tela-jogo .palco::after { z-index: 60; }
+.tela-jogo.amanhecer .brilho-luz, .tela-jogo.amanhecer .vivo-poca, .tela-jogo.amanhecer .vivo-neon { opacity: calc(1 - var(--amanhecer, 0) * 0.55); }
+.relogio-noite.ultima-hora { animation: relogio-pulsa 1.6s ease-in-out infinite; }
+@keyframes relogio-pulsa { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 140, 40, 0)); scale: 1; } 50% { filter: drop-shadow(0 0 10px rgba(255, 140, 40, 0.95)); scale: 1.06; } }
+body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }

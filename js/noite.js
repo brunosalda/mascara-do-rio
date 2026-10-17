@@ -1309,6 +1309,22 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     relogio.title = texto;
     relogio.setAttribute('aria-label', `Relógio da noite: ${texto}`);
     relogio.classList.toggle('amanhecendo', f > 0.85);
+    // Rodada 38: o amanhecer na pintura. Nas últimas 3 horas, o céu clareia para o azul da madrugada e as
+    // luzes da rua enfraquecem; na última hora, o relógio pulsa e a Fome avisa. ?depurar&amanhecer=1 força.
+    const forcar = /[?&]amanhecer=1/.test(location.hash) ? 0.92 : null;
+    const amanhecer = forcar ?? (resta > 0 && resta < 3 * 3600000 ? 1 - resta / (3 * 3600000) : resta <= 0 ? 1 : 0);
+    raiz.querySelector('.tela-jogo')?.style.setProperty('--amanhecer', amanhecer.toFixed(3));
+    raiz.querySelector('.tela-jogo')?.classList.toggle('amanhecer', amanhecer > 0);
+    const ultimaHora = forcar != null || (resta > 0 && resta < 3600000);
+    relogio.classList.toggle('ultima-hora', ultimaHora);
+    if (ultimaHora) {
+      setTimeout(() => {
+        const chaveSol = `mascara.sol-vem.${noite?.id}`;
+        if (!relogio.isConnected || sessionStorage.getItem(chaveSol)) return;
+        try { sessionStorage.setItem(chaveSol, '1'); } catch { /* sem armazenamento */ }
+        anotar('A FOME', 'O sol vem aí.');
+      }, 2500);
+    }
     relogio.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true">
         <circle class="aro" cx="32" cy="32" r="30"/>
         <g class="disco" style="transform:rotate(${(-180 * f).toFixed(1)}deg)">
@@ -1321,6 +1337,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
   desenharRelogio();
   const relogioTimer = setInterval(() => { if (!relogio.isConnected) { clearInterval(relogioTimer); return; } desenharRelogio(); }, 60000);
+  // Passarinhos longe, de vez em quando, enquanto amanhece.
+  const passaros = setInterval(() => {
+    if (!relogio.isConnected) { clearInterval(passaros); return; }
+    if (raiz.querySelector('.tela-jogo.amanhecer') && Math.random() < 0.5) som.reacao?.('passaro', Math.random() * 1.6 - 0.8);
+  }, 14000);
   function alternarPaineis() {
     paineisOcultos = !paineisOcultos;
     camadas.classList.toggle('paineis-ocultos', paineisOcultos);

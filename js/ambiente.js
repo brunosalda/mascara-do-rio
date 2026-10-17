@@ -344,6 +344,7 @@ export const som = {
       gaivota: () => { tom(audio, t, 1480, { dur: 0.45, volume: 0.009, ate: 1100, ataque: 0.04, pan }); tom(audio, t + 0.5, 1320, { dur: 0.5, volume: 0.007, ate: 990, ataque: 0.04, pan }); },
       surdo: () => { [0, 0.5, 0.75].forEach((dt) => pulso(audio, t + dt, 55, 0.06)); },
       cachorro: () => { tom(audio, t, 330, { tipo: 'triangle', dur: 0.12, volume: 0.012, ate: 220, pan }); tom(audio, t + 0.25, 311, { tipo: 'triangle', dur: 0.12, volume: 0.01, ate: 208, pan }); },
+      passaro: () => { [0, 0.16, 0.5].forEach((dt, i) => tom(audio, t + dt, [2900, 3300, 2700][i], { dur: 0.09, volume: 0.004, ate: [3400, 3700, 3100][i], ataque: 0.01, pan })); },
       vela: () => { tom(audio, t, 1760, { dur: 0.6, volume: 0.004, ataque: 0.2, pan }); },
       grilo: () => { for (let i = 0; i < 3; i++) tom(audio, t + i * 0.07, 3600, { dur: 0.03, volume: 0.005, ataque: 0.004, pan }); },
       sino: () => { for (const [f, v, d] of [[440, 0.025, 3], [880, 0.01, 2.2]]) tom(audio, t, f, { dur: d, volume: v, pan }); },
