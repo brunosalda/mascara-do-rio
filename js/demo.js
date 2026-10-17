@@ -203,9 +203,11 @@ function abrirCaixaDemo(raiz, caixa) {
 // Parâmetros da demonstração (depurar, raf, ficha) mantidos ao trocar de tela; troca só o que vier.
 function paramsDemo(muda = {}) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
-  params.set('depurar', '');
+  // PROVISÓRIO (vitrine): quem entrou pelo botão da entrada continua sem o medidor do ?depurar.
+  const marca = params.has('vitrine') ? 'vitrine' : 'depurar';
+  params.set(marca, '');
   for (const [k, v] of Object.entries(muda)) params.set(k, v);
-  return params.toString().replace('depurar=', 'depurar');
+  return params.toString().replace(`${marca}=`, marca);
 }
 
 // Mapa do Rio fictício (rodada 30): o pergaminho com dados de demonstração. Entrar num bairro volta à

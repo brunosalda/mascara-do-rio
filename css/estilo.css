@@ -3527,3 +3527,7 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 .aviso-versao { position: fixed; z-index: 1000; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); translate: -50% 0; min-height: 44px; padding: 0.5rem 1.2rem;
   font: 700 0.95rem var(--sans); letter-spacing: 0.03em; color: #fbeccb; cursor: pointer; border: 2px solid #c9a25a; border-radius: 999px;
   background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7); }
+
+/* PROVISÓRIO (vitrine): o botão "Ver o jogo (demonstração)" da entrada. */
+.caixa-entrada .ver-demo { display: flex; align-items: center; justify-content: center; min-height: 48px; margin: 0.8rem 0 0.2rem; text-decoration: none;
+  border: 2px solid #c9a25a; border-radius: 999px; color: #fbeccb; background: linear-gradient(180deg, #6e5229, #3a2a1a); font: 700 0.95rem var(--sans); letter-spacing: 0.05em; text-transform: uppercase; }
