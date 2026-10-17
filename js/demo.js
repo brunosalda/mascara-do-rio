@@ -3,7 +3,7 @@
 // gravam no banco e não mexem na sessão. Sem ?depurar, app.js nem carrega este arquivo.
 import { CENAS, clasSugeridos, montarFicha } from './motor/roteiro.js';
 import { narracaoComPaineis, escolhas, aviso } from './ui.js';
-import { CENARIO_ABERTURA, LOCAIS } from './cidade.js';
+import { CENARIO_ABERTURA, LOCAIS, LOCAIS_EXTRA } from './cidade.js';
 import { montarCena } from './jogo/cena.js';
 import { abrirDialogo, confirmarEscolha } from './jogo/camadas.js';
 import { telaEspera, cartaoDeAbertura, telaNoite } from './noite.js';
@@ -121,7 +121,7 @@ async function demoCena(raiz) {
   const semPintura = pedido.replace(/-realista$/, '');
   // A vista do alto é o padrão; &vista=olhos mostra a pintura na altura dos olhos.
   const vista = semPintura.endsWith('-alto') ? 'alto' : params.get('vista') === 'olhos' ? 'olhos' : null;
-  const lugar = LOCAIS.some((l) => l.id === semPintura.replace(/-alto$/, '')) ? semPintura.replace(/-alto$/, '') : 'lapa';
+  const lugar = [...LOCAIS, ...(vista === 'alto' ? LOCAIS_EXTRA : [])].some((l) => l.id === semPintura.replace(/-alto$/, '')) ? semPintura.replace(/-alto$/, '') : 'lapa';
   // &ficha=atenta: a ficha fictícia com as habilidades dos escondidos em nível alto (e os poderes da cena).
   // &ficha=poderes: só os poderes (Auspícios 3, Ofuscação 2, Rapidez 3, Presença 1, Dominação 1).
   const PODERES_DEMO = ['sentidos-agucados', 'perscrutar-alma', 'manto-sombras', 'silencio-morte', 'passagem-invisivel', 'ligeireza', 'piscar', 'assombro', 'nublar-memoria'];

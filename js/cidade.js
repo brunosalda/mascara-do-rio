@@ -22,6 +22,18 @@ export const LOCAIS = [
   { id: 'niteroi', nome: 'Niterói', em: 'em Niterói', a: 'a Niterói', imagem: 'img/cidade/niteroi.jpg', termos: ['niteroi', 'icarai', 'mac'] },
 ];
 
+// Lugares que ainda não estão no mapa do jogo (o aeroporto e São Paulo, fase 3.2): só abrem na
+// demonstração da vista do alto (#/demo/cena?depurar&lugar=<id>-alto). Sem termos, para o texto do
+// Narrador nunca cair neles por engano.
+export const LOCAIS_EXTRA = [
+  { id: 'aeroporto-rio', cidade: 'rio', nome: 'Aeroporto Santos Dumont', em: 'no aeroporto', a: 'ao aeroporto', imagem: 'img/cidade/alto/aeroporto-rio.jpg', termos: [] },
+  { id: 'se', cidade: 'sp', nome: 'Praça da Sé', em: 'na Praça da Sé', a: 'à Praça da Sé', imagem: 'img/cidade/alto/se.jpg', termos: [] },
+  { id: 'centro-sp', cidade: 'sp', nome: 'Vale do Anhangabaú', em: 'no Vale do Anhangabaú', a: 'ao Vale do Anhangabaú', imagem: 'img/cidade/alto/centro-sp.jpg', termos: [] },
+  { id: 'paulista', cidade: 'sp', nome: 'Avenida Paulista', em: 'na Paulista', a: 'à Paulista', imagem: 'img/cidade/alto/paulista.jpg', termos: [] },
+  { id: 'liberdade', cidade: 'sp', nome: 'Liberdade', em: 'na Liberdade', a: 'à Liberdade', imagem: 'img/cidade/alto/liberdade.jpg', termos: [] },
+  { id: 'augusta', cidade: 'sp', nome: 'Rua Augusta', em: 'na Augusta', a: 'à Augusta', imagem: 'img/cidade/alto/augusta.jpg', termos: [] },
+];
+
 // Retratos que representam cada clã (Higgsfield, 17/10/2026), em img/clas/<id>.jpg.
 const CLAS_COM_IMAGEM = new Set([
   'brujah', 'gangrel', 'malkaviano', 'nosferatu', 'toreador', 'tremere', 'ventrue', 'banu-haqim',

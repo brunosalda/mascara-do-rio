@@ -375,9 +375,10 @@ for (const [id, m] of Object.entries(MARCACAO)) {
 for (const [id, a] of Object.entries(ALTOS)) {
   const base = LUGARES[id] || { ancoras: {} };
   const ancoras = {};
-  for (const [nome, [x, y]] of Object.entries(a.ancoras)) {
+  for (const [nome, [x, y, papelProprio]] of Object.entries(a.ancoras)) {
     const b = base.ancoras[nome] || {};
-    ancoras[nome] = { x, y, termos: b.termos || [], ...(b.papel ? { papel: b.papel } : {}) };
+    const papel = b.papel || papelProprio;
+    ancoras[nome] = { x, y, termos: b.termos || [nome], ...(papel ? { papel } : {}) };
   }
   LUGARES[`${id}-alto`] = {
     alto: true, aspecto: 1344 / 576, imagem: `img/cidade/alto/${id}.jpg`,

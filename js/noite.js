@@ -5,7 +5,7 @@ import * as banco from './banco.js';
 import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
 import { telaFicha, telaRegistro } from './ficha.js';
 import { telaDiario } from './diario.js';
-import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
+import { retratoDe, imagemDoLocal, localDe, LOCAIS, LOCAIS_EXTRA, CENARIO_ABERTURA } from './cidade.js';
 import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
@@ -73,7 +73,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // Rota #/lugar/<id> muda a posição; #/noite mostra onde o personagem está agora.
   if (lugar) gravarPosicao(p, noite, lugar);
   else lugar = lerPosicao(p, noite);
-  const visitado = lugar ? LOCAIS.find((l) => l.id === lugar) : null;
+  const visitado = lugar ? (LOCAIS.find((l) => l.id === lugar) || (location.hash.includes('/demo/') ? LOCAIS_EXTRA.find((l) => l.id === lugar) : null)) : null;
   const emOutroLugar = visitado && visitado.id !== localAtual?.id;
   const lugarNome = emOutroLugar ? visitado.nome : (localAtual?.nome || p.estado?.local || 'Rio de Janeiro');
   // Geografia da pintura (chão, âncoras, objetos, luzes) e o que dá para descobrir no lugar.
