@@ -44,17 +44,26 @@ export function quandoCurto(iso) {
   return `${fmtDia.format(d)}, ${Number(h)}h${m && m !== '00' ? m : ''}`;
 }
 
-// "fecha em 2 dias (seg., 7h)", "fecha em 5 h (seg., 7h)", "fecha em 40 min"
+// Tempo restante num formato só (rodada 27), igual no relógio da noite e no quadro:
+// "2 dias", "1 dia e 5 h", "5 h 20", "40 min".
+export function tempoRestante(ms) {
+  if (ms <= 0) return 'agora';
+  const min = Math.floor(ms / 60000);
+  const h = Math.floor(min / 60);
+  const d = Math.floor(h / 24);
+  if (d >= 2) return `${d} dias`;
+  if (d === 1) return h % 24 ? `1 dia e ${h % 24} h` : '1 dia';
+  if (h >= 1) return `${h} h ${String(min % 60).padStart(2, '0')}`;
+  return `${Math.max(1, min)} min`;
+}
+
+// "fecha em 2 dias (seg., 7h)", "fecha em 1 dia e 5 h (seg., 7h)", "fecha em 5 h 20 (seg., 7h)", "fecha em 40 min"
 export function prazoRestante(iso) {
   if (!iso) return '';
   const ms = new Date(iso) - Date.now();
   if (ms <= 0) return 'fechando agora';
-  const horas = ms / 3.6e6;
-  const quando = quandoCurto(iso);
-  if (horas >= 48) return `fecha em ${Math.floor(horas / 24)} dias (${quando})`;
-  if (horas >= 24) return `fecha em 1 dia (${quando})`;
-  if (horas >= 1) return `fecha em ${Math.floor(horas)} h (${quando})`;
-  return `fecha em ${Math.max(1, Math.round(ms / 60000))} min`;
+  const t = tempoRestante(ms);
+  return ms >= 3.6e6 ? `fecha em ${t} (${quandoCurto(iso)})` : `fecha em ${t}`;
 }
 
 // Quando o Narrador volta: a tarefa dele roda às 7h07 e a cada 2 horas até 1h07 (horário de Brasília);

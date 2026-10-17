@@ -2694,3 +2694,108 @@ body.sem-efeitos .retrato-grande .estado-cor { animation: none !important; }
 @keyframes fala-sobe { 0% { opacity: 0; translate: 0 6px; } 10% { opacity: 1; translate: 0 0; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -14px; } }
 .fala-passagem { background: none !important; border: 0 !important; box-shadow: none !important; font-style: italic; color: #e6dccb; text-shadow: 0 0 3px #000, 0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000; }
 body.sem-efeitos .balao-voz:not(.balao-escolha), body.sem-efeitos .marca-destino { animation: none !important; }
+
+/* =====================================================================================================
+   Rodada 27, ajustes da avaliação: moldura com peso de pedra esculpida, rótulos das barras, selos de
+   estado e Humanidade, celular (quadro na folha de baixo, faixa da demonstração), medidor no canto.
+   ===================================================================================================== */
+.tela-jogo.bg2:not(.paineis-ocultos) .moldura {
+  border: 4px solid; border-color: #e6c886 #a07a3e #5e4421 #b48c4a;
+  box-shadow: 0 0 0 2px #120c08, 0 0 0 4px #6e5229, 0 3px 0 4px #120c08, inset 0 0 26px 6px rgba(0, 0, 0, 0.75), inset 0 2px 0 rgba(255, 230, 170, 0.25);
+}
+.moldura .placa { fill: #4a3820; stroke: #e0bf78; stroke-width: 2.4; filter: drop-shadow(1px 2px 1px #000); }
+.moldura .placa-dentro { fill: #2a1f14; stroke: #8a6a36; stroke-width: 1.5; }
+.moldura .no { fill: #a0101e; stroke: #e0bf78; }
+/* Caixas com chanfro (luz em cima e à esquerda, sombra embaixo e à direita) e cravos nas junções. */
+.tela-jogo.bg2:not(.paineis-ocultos) .registro-noite,
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-plano,
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta {
+  border: 3px solid; border-color: #d8b670 #4a3518 #3a2a14 #c09a58;
+  box-shadow: 0 0 0 1px #120c08, inset 0 0 14px rgba(0, 0, 0, 0.8), 2px 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::before, .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::after {
+  content: ''; position: absolute; top: 8px; width: 12px; height: 12px; border-radius: 50%; z-index: 3; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #fff0c0, #c9a25a 40%, #5e4421 80%); box-shadow: 0 1px 2px #000;
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::before { left: 0; }
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::after { right: 394px; }
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato::before {
+  content: ''; width: 12px; height: 12px; border-radius: 50%; margin-bottom: 2px;
+  background: radial-gradient(circle at 35% 30%, #fff0c0, #c9a25a 40%, #5e4421 80%); box-shadow: 0 1px 2px #000;
+}
+/* Rótulos das barras: na horizontal, abaixo de cada barra, com o nome inteiro no texto do mouse. */
+.painel-retrato .barra small { writing-mode: horizontal-tb; rotate: none; font: 700 0.78rem/1 var(--sans); letter-spacing: 0.02em; color: #e8cf98; }
+/* Selos de estado e Humanidade em bolinhas. */
+.selos-estado { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 28px; max-width: 100%; }
+.selo { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #8a6a36; background: radial-gradient(circle at 35% 30%, #5e4830, #1c150f 75%); box-shadow: 0 1px 3px #000; }
+.selo b { font: 700 0.95rem/1 var(--sans); color: #f0dcb0; }
+.selo small { position: absolute; bottom: -9px; left: 50%; translate: -50% 0; font: 700 0.68rem/1 var(--sans); color: #fff; background: #120c08; padding: 1px 3px; border: 1px solid #8a6a36; }
+.selo-faminto { border-color: #c8202f; } .selo-faminto b { color: #ff5a68; }
+.selo-ferido b { color: #9fd0a8; }
+.selo-risco { border-color: #e6a040; } .selo-risco b { color: #ffcf7a; }
+.selo-poder { border-color: #b31525; } .selo-poder b { color: #f08a98; }
+.humanidade-bolinhas { display: grid; grid-template-columns: repeat(5, 9px); gap: 4px; justify-content: center; padding-top: 4px; }
+.humanidade-bolinhas i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #c9a25a; background: #120c08; }
+.humanidade-bolinhas i.cheia { background: radial-gradient(circle at 35% 30%, #fff6dc, #d8c9a0 60%); }
+/* Medidor do ?depurar: pequeno, no canto de cima à esquerda, dentro da moldura. */
+.medidor-fps { right: auto !important; bottom: auto !important; left: 10px; top: 10px; font-size: 10.5px; padding: 2px 6px; opacity: 0.85; max-width: 60%; }
+.tela-jogo.bg2:not(.paineis-ocultos) .medidor-fps { left: 8px; top: 8px; }
+@media (max-width: 760px) {
+  .tela-jogo.bg2 { --baixo: 132px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo { display: flex; flex-direction: column-reverse; gap: 4px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .registro-noite { flex: none; height: 36px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano { bottom: 48px; left: 8px; right: 8px; transform: none; width: auto; max-width: none; max-height: none; overflow: hidden; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-linhas { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::before, .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::after, .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato::before { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .selos-estado, .tela-jogo.bg2:not(.paineis-ocultos) .humanidade-bolinhas { display: none; }
+  .faixa-demo { font-size: 0 !important; top: 62px !important; bottom: auto !important; padding: 2px 8px !important; white-space: nowrap; max-width: 60vw; }
+  .faixa-demo::before { content: 'Demonstração'; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+}
+
+/* =====================================================================================================
+   Rodada 27: pausa (espaço), pausa automática e telas de passagem.
+   ===================================================================================================== */
+.tela-jogo.pausado .palco *, .tela-jogo.pausado .palco *::before, .tela-jogo.pausado .palco *::after,
+body.cena-pausada #chuva, body.cena-pausada #chuva *, body.cena-pausada #nevoa, body.cena-pausada #luzes * { animation-play-state: paused !important; }
+.tela-jogo.bg2.pausado:not(.paineis-ocultos) .moldura { border-color: #b8202e #7a121c #4a0a10 #9a1a26; box-shadow: 0 0 0 2px #120c08, 0 0 0 4px #6e1a20, inset 0 0 40px 10px rgba(120, 0, 10, 0.55); }
+.tela-jogo.bg2.pausado .moldura .pedra-chave { width: 92px; }
+.tela-jogo.bg2.pausado .moldura .pedra-chave i { display: none; }
+.tela-jogo.bg2.pausado .moldura .pedra-chave::after { content: 'PAUSA'; font: 700 0.78rem/1 var(--sans); letter-spacing: 0.2em; color: #ffcf7a; text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(255, 230, 170, 0.3); margin-top: -2px; }
+.tela-jogo.pausado .palco { filter: saturate(0.65) brightness(0.9); transition: filter 0.2s; }
+.tela-jogo.bg2.paineis-ocultos.pausado::after, .tela-jogo:not(.bg2).pausado::after {
+  content: 'PAUSA · espaço solta'; position: absolute; z-index: 260; top: 12px; left: 50%; translate: -50% 0; padding: 0.3rem 0.9rem; pointer-events: none;
+  font: 700 0.85rem/1 var(--sans); letter-spacing: 0.15em; color: #ffcf7a; background: rgba(40, 6, 10, 0.85); border: 2px solid #b8202e;
+}
+.botao-pausa {
+  position: absolute; z-index: 270; width: 32px; height: 32px; padding: 0; display: none; place-items: center; cursor: pointer; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 70%); border: 1.5px solid #c9a25a; color: #f0dcb0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.botao-pausa svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+.botao-pausa[aria-pressed='true'] { border-color: #e04050; color: #ffcf7a; background: radial-gradient(circle at 35% 30%, #7a1a22, #2a0a0e 70%); }
+@media (min-width: 761px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-pausa { display: grid; bottom: 18px; right: calc(var(--col-d) / 2 + 22px); } }
+@media (max-width: 760px), (pointer: coarse) {
+  .botao-pausa { display: grid; top: auto; bottom: calc(var(--baixo, 46px) + 8px); right: 48px; }
+  .tela-jogo.bg2.paineis-ocultos .botao-pausa { top: 10px; bottom: auto; left: 50px; right: auto; }
+}
+.barra-disciplinas button.na-fila { outline: 2px dashed #ffcf7a; outline-offset: 2px; }
+
+/* Tela de passagem entre lugares: a pintura do destino escurecida, o nome gravado e uma dica. */
+.cartao-passagem {
+  position: absolute; inset: 0; z-index: 900; display: grid; place-items: center; cursor: pointer;
+  background: linear-gradient(rgba(6, 4, 3, 0.72), rgba(6, 4, 3, 0.86)), var(--fundo) center / cover, #0b0806;
+  animation: cartao-entra 0.25s ease-out;
+}
+.cartao-passagem.saindo { opacity: 0; transition: opacity 0.35s; }
+@keyframes cartao-entra { from { opacity: 0; } }
+.cartao-moldura {
+  display: grid; justify-items: center; gap: 0.5rem; max-width: min(620px, 90vw); padding: 1.6rem 2.2rem 1.3rem; text-align: center;
+  background: linear-gradient(180deg, rgba(46, 36, 28, 0.94), rgba(28, 21, 15, 0.96));
+  border: 4px solid; border-color: #e6c886 #a07a3e #5e4421 #b48c4a; box-shadow: 0 0 0 2px #120c08, 0 0 0 4px #6e5229, 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+.cartao-moldura small { font: 700 0.75rem/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; color: #c9a25a; }
+.cartao-moldura h2 { margin: 0; font: italic 600 2.2rem/1.1 var(--titulo); color: #f6ead6; text-shadow: 0 2px 0 #000, 0 0 18px rgba(200, 30, 40, 0.35); }
+.cartao-dica { margin: 0.3rem 0 0; font: 400 1.15rem/1.4 var(--texto-livro); color: #e9dcc4; }
+.cartao-dica b { display: block; font: 700 0.72rem/1 var(--sans); letter-spacing: 0.18em; text-transform: uppercase; color: #ff6b74; margin-bottom: 0.25rem; }
+.cartao-pular { font: 600 0.78rem/1 var(--sans); color: #9c8f7a; }
+@media (max-width: 760px) { .cartao-moldura h2 { font-size: 1.7rem; } .cartao-moldura { padding: 1.2rem 1.2rem 1rem; } }
+.tela-jogo.pausado .painel-pergunta *, .tela-jogo.pausado .balao-voz * { animation-play-state: paused !important; }

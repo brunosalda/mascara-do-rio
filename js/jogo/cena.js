@@ -70,7 +70,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  painel = null, aoFalar = null, aoMostrarTudo = null,
+  painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
@@ -391,6 +391,30 @@ export function montarCena(raiz, {
     return true;
   }
 
+  // --- Pausa (rodada 27) -------------------------------------------------------------------------------
+  // Espaço pausa e solta. Pausado, o jogador pode marcar o destino e escolher um poder: tudo acontece
+  // ao soltar. A moldura acende em vermelho e a pedra-chave mostra PAUSA (CSS em .pausado).
+  let pausado = false;
+  const aoSoltarPausa = [];
+  function pausar(motivo = '') {
+    if (pausado || semPersonagem) return;
+    pausado = true;
+    raiz.closest('.tela-jogo')?.classList.add('pausado');
+    document.body.classList.add('cena-pausada');
+    som.abafar?.(true);
+    aoPausa?.(true, motivo);
+  }
+  function soltar() {
+    if (!pausado) return;
+    pausado = false;
+    raiz.closest('.tela-jogo')?.classList.remove('pausado');
+    document.body.classList.remove('cena-pausada');
+    if (!conversa) som.abafar?.(false);
+    aoPausa?.(false, '');
+    aoSoltarPausa.splice(0).forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+  }
+  function alternarPausa() { if (pausado) soltar(); else pausar(); }
+
   // --- A escolha da noite ganha corpo (rodada 24) -----------------------------------------------------
   // Ao confirmar a ação principal: o personagem vira para o objeto, a câmera enquadra os dois, um fio de
   // luz vermelha vai até ele e some, e um letreiro diz a intenção. Dura 1,8 s; um clique pula. A brasa que
@@ -624,6 +648,7 @@ export function montarCena(raiz, {
     let indo = false;
     if (c.modo === 'sombra' && resta < 6) {
       indo = true;
+      if (!c.avisouIndo) { c.avisouIndo = true; aoPresaVai?.(); }
       const sentido = c.alvo.x >= pos.x ? 1 : -1;
       const nx = c.alvo.x + sentido * 0.012 * dt;
       if (dentro([nx, c.alvo.y], geo.chao)) {
@@ -636,6 +661,7 @@ export function montarCena(raiz, {
     const nivel = c.atencao < 0.34 ? '0' : c.atencao < 0.67 ? '1' : '2';
     if (atencaoEl.dataset.nivel !== nivel) atencaoEl.dataset.nivel = nivel;
     // Poderes ativos com o tempo (só o texto muda).
+    for (const [n, ate] of poderesAtivos) if (ate <= agora && !c[`acabou.${n}`]) { c[`acabou.${n}`] = true; aoPoderAcabou?.(n); }
     if (poderesAtivos.size) {
       const txt = [...poderesAtivos].filter(([, ate]) => ate > agora).map(([n, ate]) => `${n} ${Math.ceil((ate - agora) / 1000)} s`).join(' · ');
       if (poderesAtivosEl.textContent !== txt) poderesAtivosEl.textContent = txt;
@@ -1239,6 +1265,18 @@ export function montarCena(raiz, {
     }
     ultimo = agora;
 
+    // Pausa (rodada 27): o mundo congela e todos os prazos andam junto com a pausa.
+    if (pausado) {
+      if (caca) for (const k of Object.keys(caca)) if ((k === 't0' || /Ate$/.test(k)) && typeof caca[k] === 'number') caca[k] += dtReal;
+      falaAte += dtReal;
+      if (balaoEscolha) balaoEscolha.ate += dtReal;
+      for (const [n, ate] of poderesAtivos) poderesAtivos.set(n, ate + dtReal);
+      vida.proximoPassante += dtReal; vida.proximaFalha += dtReal; vida.proximoFarol += dtReal; vida.falhaAte += dtReal;
+      if (medidor) custoLaco.push(performance.now() - inicioLaco);
+      requestAnimationFrame(quadro);
+      return;
+    }
+
     let dx = 0;
     let dy = 0;
     if (!camadaAberta() && !semPersonagem) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
@@ -1454,7 +1492,8 @@ export function montarCena(raiz, {
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); aoMostrarTudo?.(); return; }
     if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
     if (balaoEscolha && /^[1-9]$/.test(k) && caixaDaPergunta().querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
-    if (k === 'e' || k === 'enter' || k === ' ') {
+    if (k === ' ') { ev.preventDefault(); alternarPausa(); return; }
+    if (k === 'e' || k === 'enter') {
       if (perto) { ev.preventDefault(); interagir(perto); }
       return;
     }
@@ -1577,6 +1616,7 @@ export function montarCena(raiz, {
   function desmontar() {
     if (!vivo) return;
     vivo = false;
+    document.body.classList.remove('cena-pausada');
     window.removeEventListener('resize', medir);
     document.removeEventListener('keydown', aoApertar);
     document.removeEventListener('keyup', aoSoltar);
@@ -1631,6 +1671,11 @@ export function montarCena(raiz, {
     },
     marcarEscolha,
     lembrar,
+    pausar,
+    soltar,
+    alternarPausa,
+    pausado: () => pausado,
+    depoisDaPausa: (fn) => { if (pausado) aoSoltarPausa.push(fn); else fn(); },
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
   };

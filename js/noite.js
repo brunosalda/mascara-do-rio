@@ -16,7 +16,7 @@ import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } fr
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS, DETALHES_SENTIDOS, VANTAGENS_SENTIDOS } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
-import { registroDaNoite, registrar, anotarLinha, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
+import { registroDaNoite, registrar, anotarLinha, tempoRestante, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
 import { lerLeitura, gravarLeitura, cerimoniasCurtas, RITMOS } from './leitura.js';
 
@@ -118,8 +118,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const vit = caixas(p.estado?.vitalidade, calc.vitalidade);
   const von = caixas(p.estado?.vontade, calc.forcaVontade);
   const ferido = vit.max && vit.resta / vit.max <= 0.5;
-  const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
-  const barraPainel = (classe, nome, resta, max) => `<span class="barra ${classe}" title="${nome}: ${resta} de ${max}" style="--v:${max ? (resta / max).toFixed(3) : 0}"><i></i><em>${resta}/${max}</em><small>${nome}</small></span>`;
+  const humanidade = p.estado?.humanidade ?? calc.humanidade ?? 0;
+  const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="placa" d="M4 36 L28 60 L4 84 L-20 60 Z"/><path class="placa-dentro" d="M4 47 L17 60 L4 73 L-9 60 Z"/><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
+  const barraPainel = (classe, nome, sigla, resta, max) => `<span class="barra ${classe}" title="${nome}: ${resta} de ${max}" style="--v:${max ? (resta / max).toFixed(3) : 0}"><i></i><em>${resta}/${max}</em><small>${sigla}</small></span>`;
   raiz.innerHTML = `
     <div class="tela-jogo bg2${paineisOcultos ? ' paineis-ocultos' : ''}" style="--retrato:url('${esc(new URL(retrato, location.href).href)}')">
       <div class="palco"></div>
@@ -157,15 +158,18 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         </button>
         <b class="retrato-nome">${esc(p.nome)}</b>
         <div class="barras">
-          ${barraPainel('barra-vit', 'Vitalidade', vit.resta, vit.max)}
-          ${barraPainel('barra-von', 'Força de Vontade', von.resta, von.max)}
-          ${barraPainel('barra-fome', 'Fome', fome, 5)}
+          ${barraPainel('barra-vit', 'Vitalidade', 'V', vit.resta, vit.max)}
+          ${barraPainel('barra-von', 'Força de Vontade', 'FV', von.resta, von.max)}
+          ${barraPainel('barra-fome', 'Fome', 'F', fome, 5)}
         </div>
+        <div class="selos-estado" aria-label="Estado"></div>
+        ${humanidade ? `<div class="humanidade-bolinhas" title="Humanidade: ${humanidade} de 10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < humanidade ? 'cheia' : ''}"></i>`).join('')}</div>` : ''}
       </aside>
       <section class="painel-baixo" aria-label="Registro da noite">
         <ol class="registro-noite" aria-live="polite"></ol>
         <div class="painel-pergunta"></div>
       </section>
+      <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
       <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
       <aside class="hud-plano" aria-live="polite"></aside>
       <div class="barra-disciplinas" hidden role="toolbar" aria-label="Disciplinas"></div>
@@ -658,6 +662,15 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   async function usarDisciplina(id) {
     const def = poderesCena.find((x) => x.id === id);
     if (!def || !cena) return;
+    // Pausado: o poder fica marcado e dispara ao soltar (rodada 27).
+    if (cena.pausado?.()) {
+      if (filaPausa.has(id)) return;
+      filaPausa.add(id);
+      raiz.querySelector(`.barra-disciplinas [data-poder="${id}"]`)?.classList.add('na-fila');
+      anotar('VOCÊ', `${nomePoder(id)}: ao soltar a pausa.`);
+      cena.depoisDaPausa(() => { filaPausa.delete(id); raiz.querySelector(`.barra-disciplinas [data-poder="${id}"]`)?.classList.remove('na-fila'); usarDisciplina(id); });
+      return;
+    }
     if (def.quando === 'caca' && !emCaca) { aviso('Esse poder só serve durante a caçada na hora.'); return; }
     let avisado = false;
     try { avisado = localStorage.getItem(chaveSangue) === '1'; } catch { /* sem armazenamento */ }
@@ -684,6 +697,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       }, 1000);
     }
     alternarBarra(false);
+    if (def.dur) { poderesComTempo.set(nome, Date.now() + def.dur * 1000); desenharSelos(); }
     if (emCaca && def.dur) cena.mostrarPoderAtivo(nome, def.dur);
     else if (emCaca) cena.mostrarPoderAtivo(nome, 999);
     if (emCaca) {
@@ -827,6 +841,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function saidasDeQuemFoiVisto() {
     if (!emCaca || emCaca.visto) return;
     emCaca.visto = true;
+    if (pausaAuto().visto) cena.pausar('viram você');
     // No máximo 3 escolhas: disfarçar, o poder que mais serve agora e seguir assim.
     const est = cena.estadoCaca() || {};
     const tem = (id) => meusPoderes.has(id);
@@ -917,6 +932,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     camadas.classList.add('pulso-fome');
     setTimeout(() => camadas.classList.remove('pulso-fome'), 1100);
     const viu = emCaca.visto && !emCaca.esqueceu;
+    if (viu) { try { localStorage.setItem(chaveRisco, '1'); } catch { /* sem armazenamento */ } desenharSelos(); }
     emCaca = null;
     fomeDesperta(false);
     cena.atualizarPontos(montarPontos());
@@ -1032,6 +1048,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             ${grupoLeitura('ritmo', 'Velocidade das palavras', Object.entries({ lenta: 'Lenta', normal: 'Normal', rapida: 'Rápida', instantanea: 'Instantânea' }).map(([k, v]) => [String(RITMOS[k]), v]))}
             ${grupoLeitura('cerimonias', 'Cerimônias', [['completas', 'Completas'], ['curtas', 'Curtas']])}
           </div>
+          <div class="opcoes-leitura">
+            <span class="grupo-rotulo">Pausa automática</span>
+            ${[['visto', 'Quando viram você'], ['presa', 'Quando a presa começa a ir embora'], ['poder', 'Quando um poder acaba']].map(([k, nome]) => `<div class="leitura-grupo" role="group" aria-label="${nome}"><span>${nome}</span><div><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="1" aria-pressed="${!!pausaAuto()[k]}">Pausar</button><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="0" aria-pressed="${!pausaAuto()[k]}">Não</button></div></div>`).join('')}
+            <p class="nota">Espaço pausa e solta a cena a qualquer momento. Pausado, dá para marcar o destino e escolher um poder: tudo acontece ao soltar.</p>
+          </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
         corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); await banco.sair(); };
@@ -1040,6 +1061,15 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             const campo = b.dataset.leitura;
             gravarLeitura({ [campo]: campo === 'ritmo' ? Number(b.dataset.valor) : b.dataset.valor });
             corpo.querySelectorAll(`[data-leitura="${campo}"]`).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          };
+        });
+        corpo.querySelectorAll('[data-pausa]').forEach((b) => {
+          b.onclick = () => {
+            const k = b.dataset.pausa;
+            const atualP = pausaAuto();
+            atualP[k] = b.dataset.valor === '1';
+            try { localStorage.setItem('mascara.pausaAuto', JSON.stringify(atualP)); } catch { /* sem armazenamento */ }
+            corpo.querySelectorAll(`[data-pausa="${k}"]`).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
           };
         });
         corpo.querySelector('[data-m="legenda"]').onclick = () => { camada.fechar(); abrirLegenda(); };
@@ -1060,6 +1090,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       case 'disciplinas': alternarBarra(); break;
       case 'menu': abrirMenu(); break;
       case 'paineis': alternarPaineis(); break;
+      case 'pausa': cena?.alternarPausa?.(); break;
       case 'legenda': abrirLegenda(); break;
       case 'recolher':
         quadroRecolhido = !quadroRecolhido;
@@ -1116,9 +1147,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const ini = noite.abre_em ? new Date(noite.abre_em).getTime() : fim - 3 * 86400000;
     const resta = Math.max(0, fim - Date.now());
     const f = Math.min(1, Math.max(0, 1 - resta / Math.max(1, fim - ini)));
-    const h = Math.floor(resta / 3.6e6);
-    const m = Math.floor((resta % 3.6e6) / 60000);
-    const texto = resta <= 0 ? 'o sol chegou' : h >= 48 ? `faltam ${Math.floor(h / 24)} dias até o sol` : `faltam ${h} h ${String(m).padStart(2, '0')} até o sol`;
+    const curtoT = tempoRestante(resta);
+    const texto = resta <= 0 ? 'o sol chegou' : `faltam ${curtoT} até o sol · a noite fecha ${quandoCurto(noite.fecha_em)}`;
     relogio.title = texto;
     relogio.setAttribute('aria-label', `Relógio da noite: ${texto}`);
     relogio.classList.toggle('amanhecendo', f > 0.85);
@@ -1130,7 +1160,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           <g class="sol"><circle cx="32" cy="48" r="6"/><path d="M32 38v-2M32 60v-2M22 48h-2M44 48h-2M25 41l-1.5-1.5M40.5 56.5 39 55M25 55l-1.5 1.5M40.5 39.5 39 41"/></g>
         </g>
         <path class="horizonte" d="M2 32h60"/><circle class="ponteiro" cx="32" cy="5" r="2.4"/>
-      </svg><small>${resta <= 0 ? 'amanheceu' : h >= 48 ? `${Math.floor(h / 24)} dias` : `${h} h ${String(m).padStart(2, '0')}`}</small>`;
+      </svg><small>${resta <= 0 ? 'amanheceu' : curtoT}</small>`;
   }
   desenharRelogio();
   const relogioTimer = setInterval(() => { if (!relogio.isConnected) { clearInterval(relogioTimer); return; } desenharRelogio(); }, 60000);
@@ -1140,6 +1170,72 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     try { localStorage.setItem('mascara.paineis', paineisOcultos ? 'ocultos' : 'visiveis'); } catch { /* sem armazenamento */ }
     // A cena mede a área livre de novo (a moldura muda o tamanho do palco).
     window.dispatchEvent(new Event('resize'));
+  }
+  // Selos de estado embaixo das barras: Faminto, Ferido, Máscara em risco e os poderes ativos com o tempo.
+  const selosEl = raiz.querySelector('.selos-estado');
+  const poderesComTempo = new Map(); // nome → até quando (ms)
+  const chaveRisco = `mascara.mascaraRisco.${noite?.id || 'sem-noite'}`;
+  let selosTimer = null;
+  function desenharSelos() {
+    if (!selosEl) return;
+    let risco = false;
+    try { risco = localStorage.getItem(chaveRisco) === '1'; } catch { /* sem armazenamento */ }
+    const agora = Date.now();
+    for (const [n, ate] of poderesComTempo) if (ate <= agora) poderesComTempo.delete(n);
+    const selos = [];
+    if (fome >= 4) selos.push(['faminto', 'Faminto: a Fome está alta', '♦', '']);
+    if (ferido) selos.push(['ferido', 'Ferido: metade da Vitalidade ou menos', '✚', '']);
+    if (risco) selos.push(['risco', 'Máscara em risco: alguém viu você esta noite', '◉', '']);
+    for (const [n, ate] of poderesComTempo) selos.push(['poder', `${n}: ativo`, '❖', `${Math.ceil((ate - agora) / 1000)}s`]);
+    selosEl.innerHTML = selos.map(([c, t, g, tempo]) => `<span class="selo selo-${c}" title="${esc(t)}"><b aria-hidden="true">${g}</b>${tempo ? `<small>${tempo}</small>` : ''}<span class="sr">${esc(t)}</span></span>`).join('');
+    clearTimeout(selosTimer);
+    if (poderesComTempo.size && selosEl.isConnected) selosTimer = setTimeout(desenharSelos, 1000);
+  }
+  // Pausa e pausa automática (rodada 27). As opções ficam no aparelho; "viram você" vem ligada.
+  const filaPausa = new Set();
+  const pausaAuto = () => { try { return { visto: true, presa: false, poder: false, ...(JSON.parse(localStorage.getItem('mascara.pausaAuto')) || {}) }; } catch { return { visto: true, presa: false, poder: false }; } };
+  function aoPausa(pausadoAgora, motivo) {
+    const b = raiz.querySelector('.botao-pausa');
+    if (b) { b.setAttribute('aria-pressed', String(pausadoAgora)); b.title = pausadoAgora ? 'Soltar (espaço)' : 'Pausar (espaço)'; }
+    if (pausadoAgora) anotar('PAUSA', motivo ? `${motivo}.` : 'o mundo parou. Espaço solta.');
+  }
+  // Tela de passagem (rodada 27): ao trocar de lugar, um cartão com a pintura do destino escurecida, o
+  // nome gravado e uma dica. No mínimo 0,8 s (ou o tempo de carregar a pintura); um clique pula.
+  const DICAS_PASSAGEM = [
+    'Na caçada, o espaço pausa tudo.',
+    'Tab mostra o que dá para examinar.',
+    'O sol não perdoa: veja o relógio da noite.',
+    'H esconde os painéis e deixa só a cena.',
+    'Clique no chão para andar; clique duas vezes para correr.',
+    'Na sombra, a presa não vê você. Na luz, vê.',
+    'O registro embaixo guarda tudo o que você viu esta noite.',
+    'Pausado, escolha um poder: ele dispara ao soltar.',
+  ];
+  function mostrarPassagem() {
+    let anterior = null;
+    try { anterior = sessionStorage.getItem('mascara.ultimoLugar'); sessionStorage.setItem('mascara.ultimoLugar', lugarId || ''); } catch { /* sem armazenamento */ }
+    if (!anterior || anterior === (lugarId || '')) return;
+    let usadas = [];
+    try { usadas = JSON.parse(localStorage.getItem('mascara.dicasVistas')) || []; } catch { /* sem armazenamento */ }
+    let livres = DICAS_PASSAGEM.map((_, i) => i).filter((i) => !usadas.includes(i));
+    if (!livres.length) { usadas = []; livres = DICAS_PASSAGEM.map((_, i) => i); }
+    const i = livres[Math.floor(Math.random() * livres.length)];
+    try { localStorage.setItem('mascara.dicasVistas', JSON.stringify([...usadas, i])); } catch { /* sem armazenamento */ }
+    const cartao = document.createElement('div');
+    cartao.className = 'cartao-passagem';
+    cartao.setAttribute('role', 'status');
+    cartao.style.setProperty('--fundo', `url('${new URL(imagem, location.href).href}')`);
+    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2><p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><span class="cartao-pular">clique para seguir</span></div>`;
+    camadas.appendChild(cartao);
+    const t0 = performance.now();
+    let carregou = false;
+    const img = new Image();
+    const tirar = () => { if (!cartao.isConnected) return; cartao.classList.add('saindo'); setTimeout(() => cartao.remove(), 350); };
+    const talvezTirar = () => { if (carregou && performance.now() - t0 >= 800) tirar(); };
+    img.onload = img.onerror = () => { carregou = true; setTimeout(talvezTirar, Math.max(0, 800 - (performance.now() - t0))); };
+    img.src = imagem;
+    setTimeout(() => { carregou = true; talvezTirar(); }, 2500);
+    cartao.addEventListener('click', tirar);
   }
   let numerosAte = 0;
   function mostrarNumeros() {
@@ -1153,6 +1249,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     painel: raiz.querySelector('.painel-pergunta'),
     aoFalar: (voz, texto) => anotar(voz, texto),
     aoMostrarTudo: () => mostrarNumeros(),
+    aoPausa,
+    aoPresaVai: () => { if (pausaAuto().presa) cena.pausar('a presa começa a ir embora'); },
+    aoPoderAcabou: (n) => { if (pausaAuto().poder) cena.pausar(`${n} acabou`); },
     cla: p.ficha?.cla,
     sprite: p.sprite,
     imagem,
@@ -1182,6 +1281,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   });
   desenharPlano();
   mostrarLembranca();
+  desenharSelos();
+  mostrarPassagem();
   // Só no modo de depuração: a cena fica acessível no console, para os testes.
   if (location.hash.includes('depurar')) window.__cena = cena;
   if (noite && acao?.encerrada_em) fonte.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
