@@ -377,6 +377,53 @@ export function montarCena(raiz, {
     if (vx || vy) camLivre.suave = false;
   }
   function centrarCamera() { camLivre.centrar = true; }
+  // Setas das bordas: tocar rola a câmera mais de meia tela para aquele lado.
+  const bordaMais = {};
+  for (const lado of ['esq', 'dir']) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `borda-mais borda-mais-${lado}`;
+    b.hidden = true;
+    b.setAttribute('aria-label', lado === 'esq' ? 'Ver mais à esquerda' : 'Ver mais à direita');
+    b.innerHTML = lado === 'esq' ? '‹' : '›';
+    b.addEventListener('click', (ev) => { ev.stopPropagation(); camLivre.x += (lado === 'esq' ? 1 : -1) * vw * 0.6; camLivre.suave = true; });
+    cena.appendChild(b);
+    bordaMais[lado] = b;
+  }
+  // Visão geral: a pintura inteira de uma vez, com o personagem, a gente, os pontos à vista e o trecho que
+  // está na tela. Tocar num lugar leva a câmera até lá.
+  function visaoGeral() {
+    if (!geo.alto || cena.querySelector('.visao-geral')) return;
+    const W = mw * cam.z; const H = mh * cam.z;
+    const marca = (x, y, classe, titulo = '') => `<i class="${classe}" style="left:${pct(x)};top:${pct(y)}"${titulo ? ` title="${esc(titulo)}"` : ''}></i>`;
+    const vista = { x: -camLivre.x / W, y: -camLivre.y / H, w: vw / W, h: vh / H };
+    const el = document.createElement('div');
+    el.className = 'visao-geral';
+    el.innerHTML = `<div class="vg-caixa" role="dialog" aria-label="Visão geral">
+        <header><b class="placa-bronze">Visão geral</b><button type="button" class="vg-fechar" aria-label="Fechar">✕</button></header>
+        <div class="vg-mapa" style="background-image:url('${fundoUrl}');aspect-ratio:${ASPECTO}">
+          <span class="vg-vista" style="left:${pct(vista.x)};top:${pct(vista.y)};width:${pct(vista.w)};height:${pct(vista.h)}"></span>
+          ${gente.map((p) => marca(p.x, p.y, 'vg-pessoa', p.rotulo)).join('')}
+          ${lista.filter((p) => !p.discreto && p.tipo !== 'detalhe').map((p) => marca(p.x, p.y, `vg-ponto vg-${p.tipo}`, p.rotulo)).join('')}
+          ${marca(pos.x, pos.y, 'vg-eu', 'Você')}
+        </div>
+        <p class="vg-legenda"><i class="vg-eu"></i> você <i class="vg-pessoa"></i> gente <i class="vg-ponto"></i> o que fazer · Toque num lugar para ir com a câmera até lá.</p>
+      </div>`;
+    cena.appendChild(el);
+    const fechar = () => el.remove();
+    el.querySelector('.vg-fechar').addEventListener('click', (ev) => { ev.stopPropagation(); fechar(); });
+    el.addEventListener('click', (ev) => { if (ev.target === el) fechar(); ev.stopPropagation(); });
+    el.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    el.querySelector('.vg-mapa').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const r = ev.currentTarget.getBoundingClientRect();
+      const fx = (ev.clientX - r.left) / r.width; const fy = (ev.clientY - r.top) / r.height;
+      camLivre.x = limitar(vw / 2 - fx * W, vw - W, 0);
+      camLivre.y = limitar(vh / 2 - fy * H, vh - H, 0);
+      camLivre.suave = true;
+      fechar();
+    });
+  }
   // Zoom em três degraus (rodada 32): da área toda até perto, sem nunca mostrar a pintura maior que
   // 1,35 vez o tamanho original (o aumento feito no computador não cria detalhe novo).
   camLivre.nivel = 1;
@@ -1750,6 +1797,9 @@ export function montarCena(raiz, {
       }
       camLivre.x = limitar(camLivre.x, vw - W, 0);
       camLivre.y = limitar(camLivre.y, vh - H, 0);
+      // Setas discretas nas bordas quando há mais cena para aquele lado (celular, ordem de 17/10).
+      bordaMais.esq.hidden = camLivre.x > -4;
+      bordaMais.dir.hidden = camLivre.x < vw - W + 4;
       alvoX = camLivre.x;
       alvoY = camLivre.y;
     } else if (conversa && !estreito && ladoDialogo === 'baixo') {
@@ -2150,6 +2200,7 @@ export function montarCena(raiz, {
     if (k === 'shift') { teclas.add('shift'); return; }
     if (geo.alto && k.startsWith('arrow')) { camLivre.setas.add(k); atualizarVelCamera(); ev.preventDefault(); return; }
     if (geo.alto && (k === 'c' || k === 'home')) { centrarCamera(); ev.preventDefault(); return; }
+    if (geo.alto && k === 'v') { visaoGeral(); ev.preventDefault(); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); aoMostrarTudo?.(); return; }
     if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
@@ -2369,6 +2420,7 @@ export function montarCena(raiz, {
     alternarPausa,
     pausado: () => pausado,
     centrarCamera,
+    visaoGeral,
     virarPessoaPara,
     vistaDoAlto: !!geo.alto,
     depoisDaPausa: (fn) => { if (pausado) aoSoltarPausa.push(fn); else fn(); },

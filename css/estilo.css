@@ -3535,3 +3535,28 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 /* Celular (ordem de 17/10), item 1: a cena fica com o toque (o navegador não rouba o arrasto); a página não
    rola nem puxa para atualizar por trás da cena. */
 .cena.vista-alto { touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* Celular, item 2: visão geral (a pintura inteira) e setas nas bordas quando há mais cena para os lados. */
+.botao-visao { position: absolute; z-index: 260; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 70%); border: 1.5px solid #c9a25a; color: #f0dcb0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  top: auto; bottom: calc(var(--baixo, 46px) + 8px); right: 140px; }
+.botao-visao[hidden] { display: none; }
+.botao-visao svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+@media (min-width: 761px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-visao { bottom: 106px; right: calc(var(--col-d) / 2 - 22px); } }
+.borda-mais { position: absolute; z-index: 240; top: 50%; translate: 0 -50%; width: 36px; height: 72px; padding: 0; border: 0; cursor: pointer;
+  color: rgba(246, 234, 214, 0.85); font: 400 2.2rem/1 var(--titulo); background: linear-gradient(90deg, rgba(10, 8, 6, 0.55), transparent); }
+.borda-mais-esq { left: 0; border-radius: 0 8px 8px 0; }
+.borda-mais-dir { right: 0; border-radius: 8px 0 0 8px; background: linear-gradient(270deg, rgba(10, 8, 6, 0.55), transparent); }
+.borda-mais[hidden] { display: none; }
+.visao-geral { position: absolute; inset: 0; z-index: 3000; display: grid; place-items: center; padding: 12px; background: rgba(6, 4, 3, 0.72); }
+.vg-caixa { width: min(100%, 1100px); padding: 0.7rem 0.8rem 0.8rem; background: linear-gradient(180deg, #2a1f14, #16100b); border: 2px solid #c9a25a; box-shadow: 0 0 0 3px #1c150f, 0 16px 40px rgba(0, 0, 0, 0.8); }
+.vg-caixa header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.vg-fechar { width: 48px; height: 48px; font-size: 1.4rem; color: #f0dcb0; background: none; border: 1.5px solid #8a6a36; border-radius: 50%; cursor: pointer; }
+.vg-mapa { position: relative; width: 100%; background-size: 100% 100%; border: 1px solid #8a6a36; cursor: pointer; }
+.vg-mapa i, .vg-legenda i { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; }
+.vg-legenda i { position: static; display: inline-block; margin: 0 0.2rem 0 0.6rem; vertical-align: middle; }
+.vg-eu { background: #ff4a5a; box-shadow: 0 0 0 2px #fff, 0 0 10px #ff4a5a; width: 12px !important; height: 12px !important; }
+.vg-pessoa { background: #f0d590; box-shadow: 0 0 0 1.5px #1c150f; }
+.vg-ponto { background: #8fd0ff; box-shadow: 0 0 0 1.5px #1c150f; }
+.vg-vista { position: absolute; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25); pointer-events: none; }
+.vg-legenda { margin: 0.5rem 0 0; font: 400 0.95rem var(--texto-livro); color: #e8dcc4; }
