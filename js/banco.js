@@ -97,6 +97,18 @@ export async function noiteAberta() {
   return data;
 }
 
+// A noite mais recente, em qualquer estado (aberta, fechada ou resolvida): para o quadro entre noites.
+export async function ultimaNoite() {
+  const { data, error } = await sb
+    .from('noites')
+    .select('id, numero, status, fecha_em, resolvida_em')
+    .order('numero', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  falha(error, 'Não foi possível carregar a noite.');
+  return data;
+}
+
 export async function noitesResolvidas() {
   const { data, error } = await sb
     .from('noites')

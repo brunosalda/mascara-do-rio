@@ -238,6 +238,12 @@ export const som = {
     reagendarBatimento();
     montarCamadaDoLugar();
   },
+  // Abertura da noite: um acorde grave que fica no ar.
+  acorde() {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.02;
+    for (const [f, v] of [[55, 0.09], [82.4, 0.05], [110, 0.04], [130.8, 0.025]]) tom(audio, t, f, { tipo: 'triangle', dur: 2.6, volume: v });
+  },
   // Durante a conversa, o som do lugar fica mais baixo.
   abafar(sim) {
     abafado = !!sim;

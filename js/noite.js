@@ -49,10 +49,11 @@ export function gravarPosicao(p, noite, id) {
 
 export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
-  const [noite, narracoes, resolvidas] = await Promise.all([
+  const [noite, narracoes, resolvidas, ultima] = await Promise.all([
     banco.noiteAberta(),
     banco.narracoesDoPersonagem(p.id),
     banco.noitesResolvidas(),
+    banco.ultimaNoite().catch(() => null),
   ]);
   let acao = noite ? await banco.minhaAcao(noite.id, p.id) : null;
 
@@ -153,8 +154,17 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     try { const v = localStorage.getItem('mascara.quadroRecolhido'); return v == null ? !!celular : v === '1'; } catch { return !!celular; }
   })();
   let abertoAte = 0;
+  // Entre noites, o quadro mostra em que ponto o ciclo está e o que dá para fazer enquanto isso.
+  function desenharCiclo() {
+    const lida = (() => { if (!narrNoite) return true; try { return localStorage.getItem(`mascara.lido.${narrNoite.id}`) === '1'; } catch { return true; } })();
+    const { estado, html } = htmlCiclo(ultima, lida);
+    caixaPlano.hidden = false;
+    caixaPlano.className = `hud-plano quadro-noite quadro-ciclo ciclo-${estado}`;
+    caixaPlano.innerHTML = html;
+  }
+
   function desenharPlano() {
-    if (!noite) { caixaPlano.hidden = true; return; }
+    if (!noite) { desenharCiclo(); return; }
     const enviado = acao && !alterado;
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
@@ -521,6 +531,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       case 'linha-principal': if (opcoes.length && !emOutroLugar) abrirHistoria(false); else abrirEscrita(); break;
       case 'linha-cacada': abrirCacada(); break;
       case 'linha-curtas': abrirEscrita(); break;
+      case 'ler-noite': abrirHistoria(false, () => desenharPlano()); break;
       case 'efeitos': efeitos.alternar(); raiz.querySelector('[data-hud="efeitos"]').setAttribute('aria-pressed', String(efeitos.ligados())); break;
       case 'som': som.alternar(); raiz.querySelector('[data-hud="som"]').setAttribute('aria-pressed', String(som.ligado())); break;
       default: break;
@@ -576,7 +587,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
 
   // Ao entrar: se há narração nova, ela abre sozinha, revelada aos poucos (e a legenda vem depois).
   if (!emOutroLugar && atual && !lido) {
-    abrirHistoria(true, noite && !legendaVista ? () => { marcarLegenda(); setTimeout(abrirLegenda, 250); } : undefined);
+    // Cartão de abertura: "NOITE N", o lugar e o tempo, por um instante, antes da narração nova.
+    const depoisDaHistoria = () => { desenharPlano(); if (noite && !legendaVista) { marcarLegenda(); setTimeout(abrirLegenda, 250); } };
+    const tituloCartao = atual === preludio ? 'Prelúdio' : `Noite ${ultimaNoite?.numero}`;
+    const tempoCartao = { garoa: 'garoa', lua: 'noite de lua', tempestade: 'tempestade', nevoa: 'névoa' }[tempoDaNoite(atual === preludio ? noite?.numero || 0 : ultimaNoite?.numero || 0)];
+    cartaoDeAbertura(camadas, tituloCartao, `${lugarNome} · ${tempoCartao}`, () => abrirHistoria(true, depoisDaHistoria));
   }
   // Recado de chegada só logo depois de viajar pelo mapa (não a cada recarga), e nunca para quem
   // pediu para não ver mais.
@@ -590,6 +605,44 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     });
     recado.el.querySelector('[data-nao-mostrar]').onclick = () => { recadoDeChegada(false); recado.fechar(); };
   }
+}
+
+// Quadro entre noites: em que ponto o ciclo está (fechou, resolvida, nenhuma) e o que fazer enquanto isso.
+export function htmlCiclo(ult, lida = true) {
+  let estado;
+  let linha;
+  if (ult?.status === 'fechada') {
+    estado = 'fechada';
+    linha = `<b>Noite ${ult.numero} fechou</b> · o Narrador está escrevendo o que aconteceu`;
+  } else if (ult?.status === 'resolvida') {
+    estado = 'resolvida';
+    linha = `<b>Noite ${ult.numero} resolvida</b> · <button type="button" class="btn-texto ciclo-ler" data-hud="ler-noite">leia o que aconteceu</button>${lida ? '' : ' <span class="selo-novo">novo</span>'}`;
+  } else {
+    estado = 'espera';
+    linha = '<b>A cidade dorme</b> · nenhuma noite aberta';
+  }
+  return {
+    estado,
+    html: `
+      <div class="ciclo-linha">${linha}</div>
+      <div class="ciclo-linha"><span class="quadro-nome">Próxima noite</span> abre quando o Narrador terminar</div>
+      <div class="ciclo-linha ciclo-enquanto"><span class="quadro-nome">Enquanto isso</span> explore, examine os detalhes, releia o diário</div>`,
+  };
+}
+
+// Cartão de abertura da noite: o título grande, o lugar e o tempo, com um acorde grave. Some sozinho
+// (1,5 s) ou com um clique; com menos movimento ou sem efeitos, aparece mais curto e sem animação.
+function cartaoDeAbertura(raiz, titulo, sub, depois) {
+  const curto = document.body.classList.contains('sem-efeitos') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const el = document.createElement('div');
+  el.className = `cartao-abertura${curto ? ' sem-animacao' : ''}`;
+  el.innerHTML = `<b>${esc(titulo)}</b><small>${esc(sub)}</small>`;
+  raiz.appendChild(el);
+  som.acorde?.();
+  let feito = false;
+  const fechar = () => { if (feito) return; feito = true; el.classList.add('saindo'); setTimeout(() => { el.remove(); depois(); }, 250); };
+  el.addEventListener('click', fechar);
+  setTimeout(fechar, curto ? 900 : 1500);
 }
 
 const TEMPOS = ['garoa', 'lua', 'tempestade', 'nevoa'];
@@ -664,7 +717,7 @@ export async function telaEspera(raiz, p, { aoEditar } = {}) {
   const camada = abrirDialogo(camadas, {
     rotulo: 'Ficha enviada',
     fechavel: false,
-    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
+    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p>Costuma levar até 2 horas: o Narrador confere o jogo a cada 2 horas, das 7h à 1h. Você vai ver o seu prelúdio aqui assim que ele chegar.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
       <ol class="escolhas">
         <li><button type="button" data-ver><span class="escolha-num">1.</span> — Ver minha ficha</button></li>
         <li><button type="button" data-editar><span class="escolha-num">2.</span> — Voltar a editar</button></li>
