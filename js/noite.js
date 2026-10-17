@@ -1543,6 +1543,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }
   }, 1800);
 
+  // Só na demonstração (?depurar): atalhos para abrir as caixas, para a folha de capturas.
+  if (/[?&]depurar\b/.test(location.hash)) window.__noiteDemo = { historia: () => abrirHistoria(false), outra: () => abrirEscrita(), enviado: () => cerimoniaDoEnvio() };
+
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {
     nome: p.nome,

@@ -3496,3 +3496,21 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
   .faixa-feito { animation: none !important; }
   .pessoa-figura, .pessoa.pessoa-pintada .pessoa-figura img { animation: none !important; }
 }
+
+/* Rodada 42, item 2: as caixas da noite com a mesma cara (título em placa de bronze, caixa chanfrada com
+   borda de bronze, letra grande): o que aconteceu, outra ideia, a legenda do ?, Opções, glossário, a
+   confirmação antes do envio e o aviso depois. O painel de baixo já fica dentro da moldura. */
+.tela-jogo .dialogo-cena:not(.dialogo-baixo), .janela-fundo .janela, .glossario-balao {
+  border: 2px solid #a8823e; background: linear-gradient(180deg, rgba(42, 31, 20, 0.97), rgba(20, 14, 9, 0.97));
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  box-shadow: inset 0 0 0 3px #1c150f, inset 0 0 0 4px rgba(201, 162, 90, 0.4); }
+.tela-jogo .dialogo-cena .dialogo-cabeca .grupo-rotulo, .janela-fundo .janela-cabeca h2 {
+  display: inline-block; padding: 0.25rem 1rem; margin: 0; color: #fbeccb; text-shadow: 0 1px 0 #2a1a08;
+  font: italic 600 1.08rem var(--titulo); letter-spacing: 0.03em; text-transform: none;
+  background: linear-gradient(180deg, #a8823e, #6e5229 55%, #4a3518); border-top: 1px solid #f0d590;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+.janela-fundo .janela-cabeca h2 { font-size: 1.25rem; }
+.tela-jogo .dialogo-cena .dialogo-corpo, .janela-fundo .janela-corpo, .glossario-balao { font-size: 1.08rem; line-height: 1.5; }
+.letreiro-envio { border: 2px solid #a8823e; background: linear-gradient(180deg, rgba(42, 31, 20, 0.97), rgba(20, 14, 9, 0.97)) !important;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px); }
+.letreiro-envio b { font-size: 1.2rem; }

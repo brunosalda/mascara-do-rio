@@ -170,8 +170,34 @@ async function demoCena(raiz) {
   };
   // O registro da noite fictícia começa limpo a cada carregamento.
   try { localStorage.removeItem('mascara.registro.990003'); } catch { /* sem armazenamento */ }
+  if (params.get('caixa')) {
+    // Para a folha de capturas: a legenda da primeira noite, a faixa dos feitos e as dicas já vistas.
+    try {
+      localStorage.setItem('mascara.legenda.990003', '1');
+      localStorage.setItem('mascara.feitos-vistos.demo-cena', JSON.stringify(['Primeiro gole', 'Becos da Lapa']));
+      localStorage.setItem('mascara.ensinouAlto', '1');
+    } catch { /* sem armazenamento */ }
+  }
   await telaNoite(raiz, p, { lugar, vista, pintura, fonte: fonteFicticia(), irPara });
   raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('noite fictícia; nada vai ao banco'));
+  // Rodada 42: &caixa=historia | outra | legenda | opcoes | glossario | plano | enviado abre a caixa sozinha
+  // (para a folha de capturas das caixas).
+  const caixa = params.get('caixa');
+  if (caixa) setTimeout(() => abrirCaixaDemo(raiz, caixa), 1200);
+}
+
+function abrirCaixaDemo(raiz, caixa) {
+  raiz.querySelectorAll('.cartao-passagem').forEach((el) => el.remove());
+  const porTexto = (t) => [...raiz.querySelectorAll('button')].find((b) => b.offsetParent && b.textContent.trim().startsWith(t));
+  const porTitulo = (t) => raiz.querySelector(`[title="${t}"]`);
+  const tecla = (key) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  if (caixa === 'historia') window.__noiteDemo?.historia();
+  else if (caixa === 'outra') window.__noiteDemo?.outra();
+  else if (caixa === 'legenda') porTitulo('Como funciona a noite')?.click();
+  else if (caixa === 'opcoes') porTitulo('Mais opções')?.click();
+  else if (caixa === 'glossario') { porTitulo('Ficha (F)')?.click(); setTimeout(() => raiz.querySelector('.janela .termo')?.click(), 1500); }
+  else if (caixa === 'plano') tecla('p');
+  else if (caixa === 'enviado') window.__noiteDemo?.enviado();
 }
 
 // Parâmetros da demonstração (depurar, raf, ficha) mantidos ao trocar de tela; troca só o que vier.
