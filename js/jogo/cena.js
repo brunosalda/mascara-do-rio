@@ -466,8 +466,11 @@ export function montarCena(raiz, {
     cena.addEventListener('pointerdown', (ev) => {
       const toque = ev.pointerType === 'touch';
       if (!toque && ev.button !== 0 && ev.button !== 2) return;
-      if (ev.target.closest('button, a, input, textarea, .balao-voz, .painel-pergunta')) return;
-      if (!toque && ev.target.closest('[data-ponto]')) return;
+      // No dedo, o arrasto pode começar em cima de um ponto ou de uma pessoa (deitado, os rótulos cobrem
+      // boa parte da cena); se o dedo não se mexer, vale o toque normal no ponto.
+      const noMundo = ev.target.closest('[data-ponto], .pessoa, .recado-marca');
+      if (ev.target.closest('button, a, input, textarea, .balao-voz, .painel-pergunta') && !(toque && noMundo)) return;
+      if (!toque && noMundo) return;
       cancelAnimationFrame(inercia);
       if (toque) {
         // Toque duplo (dois toques rápidos no mesmo lugar) centraliza no personagem.
