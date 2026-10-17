@@ -3224,3 +3224,4 @@ body.sem-efeitos .pessoa.acena .pessoa-figura { animation: none !important; }
 @keyframes refugio-chove { to { background-position: -8px 40px; } }
 @keyframes refugio-chega { from { opacity: 0; } to { opacity: 1; } }
 body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: none; }
+.refugio-sem-luz { position: absolute; display: block; pointer-events: none; }

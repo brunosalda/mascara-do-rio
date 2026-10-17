@@ -124,6 +124,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // Plano da noite: o que já foi enviado, mais o rascunho guardado no aparelho.
   let plano = { principal: '', cacada: '', nao_cacar: false, curta_1: '', curta_2: '', esforco: false, ...(acao || {}) };
   try { plano = { ...plano, ...(JSON.parse(localStorage.getItem(chavePlano(noite, p))) || {}) }; } catch { /* sem rascunho */ }
+  // O marcador de fio solto é só para o Narrador: sai do que o jogador lê e volta no envio.
+  plano.fios = plano.fios || [];
+  for (const k of ['curta_1', 'curta_2']) {
+    if (plano[k]?.endsWith(' [fio solto]')) { plano[k] = plano[k].slice(0, -12); if (!plano.fios.includes(plano[k])) plano.fios.push(plano[k]); }
+  }
+  const comFio = (t) => (t && plano.fios.includes(t) ? `${t} [fio solto]` : t);
   let alterado = false;
 
   // Poderes que funcionam na cena: só os que a ficha tem (nas demonstrações, p._poderes).
@@ -326,7 +332,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal))
         + (plano.disciplina_principal && plano.disciplina_de === plano.principal ? ` [usou ${plano.disciplina_principal} (Despertar)]` : '')
         + (plano.poderes_cena?.length ? ` [usou ${plano.poderes_cena.join(', ')} (Despertar)]` : ''), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
-      curta_1: (plano.curta_1 || '').trim(), curta_2: (plano.curta_2 || '').trim(), esforco: !!plano.esforco,
+      curta_1: comFio((plano.curta_1 || '').trim()), curta_2: comFio((plano.curta_2 || '').trim()), esforco: !!plano.esforco,
     };
     try {
       acao = await fonte.salvarAcao(noite.id, p.id, campos, acao?.id);
@@ -817,7 +823,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       escolherPresa({ id: `presa-${pt.id}`, rotulo: t.rotulo, repara: t.repara, vulneravel: t.vulneravel, x: pt.x, y: pt.y, tipo: 'presa', icone: '♦', acao: `Escolher: ${t.rotulo}`, temperamento: temperamentoDe(`${pt.id}.${noite?.numero || 0}`) });
       return;
     }
-    // Nome no bairro "De casa" (nível 3) ou mais: a figura fala de outro jeito (falas do roteirista).
+    // Nome no bairro "De casa" (índice 2, contando Estranho como 0) ou mais: a figura fala de outro jeito (falas do roteirista).
     const nivelBairro = p.estado?.bairros?.[lugarId] ?? 0;
     const fala = nivelBairro >= 2 && FALAS_DE_CASA[pt.tipoGente] ? FALAS_DE_CASA[pt.tipoGente] : t.falas[Math.floor(Math.random() * t.falas.length)];
     // A primeira fala da pessoa já vai para o registro (a pergunta no painel não registra sozinha).
@@ -849,11 +855,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     });
   }
   // Pedidos do elenco (fase 3): no máximo 2 ativos; aceitar vira uma ação curta, que o Narrador resolve
-  // no fechamento (recompensa em favor, nome no bairro e às vezes item). Os de "fio solto" vão marcados.
+  // no fechamento (recompensa em favor, nome no bairro e às vezes item). Os de "fio solto" vão marcados só para o Narrador.
   const chavePedidos = `mascara.pedidos.${noite?.id || 'sem-noite'}.${p.id}`;
   const lerPedidos = () => { try { return JSON.parse(localStorage.getItem(chavePedidos)) || []; } catch { return []; } };
-  // O jogador não vê as paradas de dados ("Carisma + Manha"): elas ficam para o Narrador.
-  const semDados = (t) => String(t || '').replace(/\s*\([^)]*\+[^)]*\)/g, '').replace(/\s+([.,;])/g, '$1');
   // Pedidos resolvidos pelo Narrador (ganhos.pedidos, ou estado.pedidos_resolvidos na demonstração).
   const pedidosResolvidos = new Set([
     ...(p.estado?.pedidos_resolvidos || []),
@@ -869,13 +873,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       aoEscolher: (i) => {
         if (i !== 0) return;
         if (ativos.length >= 2) { aviso('Já há 2 pedidos nesta noite. Termine um antes de aceitar outro.'); return; }
-        const texto = `Ajudar ${t.rotulo.replace(/,.*$/, '')} (${lugarNome}): ${pedido.fala.replace(/[.!?]$/, '')}.${pedido.fioSolto ? ' [fio solto]' : ''}`;
+        const texto = `${(pedido.plano || pedido.nome).replace(/[.!?]$/, '')} (${lugarNome}).`;
+        if (pedido.fioSolto && !plano.fios.includes(texto)) plano.fios.push(texto);
         if (!plano.curta_1?.trim()) plano.curta_1 = texto;
         else if (!plano.curta_2?.trim()) plano.curta_2 = texto;
         else { aviso('As duas ações curtas já estão ocupadas. Troque uma no plano para aceitar o pedido.'); return; }
         try { localStorage.setItem(chavePedidos, JSON.stringify([...ativos, pt.tipoGente])); } catch { /* sem armazenamento */ }
         guardarRascunho();
-        anotar('VOCÊ', `aceita o pedido: ${semDados(pedido.resolver.split('.')[0])}.`);
+        anotar('VOCÊ', `aceita o pedido: ${(pedido.plano || pedido.nome).replace(/^./, (c) => c.toLowerCase()).replace(/[.!?]$/, '')}.`);
         aviso('Pedido aceito: foi para as ações curtas. O Narrador resolve no fechamento.');
       },
     }), 700);

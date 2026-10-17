@@ -442,10 +442,14 @@ export function telaRegistro(raiz, p) {
       return `<div class="refugio-obj${ok ? ' tem' : ''}" style="left:${m.x}%;top:${m.y}%;width:${m.w}%;height:${m.h}%" title="${esc(ok ? m.nome : `Falta: ${m.nome}. ${m.como}`)}">
         ${ok ? `<img src="img/refugio/${m.id}.png" alt="${esc(m.nome)}">` : `<span>${esc(m.falta)}</span>`}</div>`;
     }).join('');
+    // Com a cortina fechada, a luz da janela da esquerda some da parede, do sofá e do chão.
+    const semLuz = tem(MELHORIAS_REFUGIO.find((m) => m.id === 'cortina'))
+      ? '<img class="refugio-sem-luz" src="img/refugio/sem-luz.png" alt="" style="left:12.202%;top:15.625%;width:35.491%;height:82.292%">' : '';
     pagina.innerHTML = `
       <div class="refugio-cena">
         <div class="refugio-sala">
           <img class="refugio-fundo" src="img/refugio/sala.jpg" alt="A sala do refúgio vista do alto">
+          ${semLuz}
           ${objetos}
           <div class="refugio-chuva" aria-hidden="true"></div>
         </div>

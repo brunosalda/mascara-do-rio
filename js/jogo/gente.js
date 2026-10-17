@@ -58,12 +58,12 @@ export const TIPOS_GENTE = {
   // ----- Lapa -----
   sambista: {
     nome: 'Sambista', rotulo: 'um sambista com o pandeiro, encostado num pilar dos Arcos', presa: true,
-    falas: ['A roda começa quando o último chegar.', 'Pandeiro molhado não canta, parceiro.', 'Sabe algum samba? Então senta.'],
+    falas: ['A roda começa quando o último chegar.', 'Pandeiro molhado não canta.', 'Sabe algum samba? Então senta.'],
     repara: 'conhece pelo nome todo mundo que passa embaixo dos Arcos',
   },
   'dona-do-bar': {
     nome: 'Dona do bar', rotulo: 'a dona do bar, de avental, na porta', presa: false,
-    falas: ['Fiado, só pra quem eu conheço.', 'Entra que vai chover, meu filho.', 'Hoje tá calmo. Calmo demais.'],
+    falas: ['Fiado, só pra quem eu conheço.', 'Entra que vai chover.', 'Hoje tá calmo. Calmo demais.'],
     repara: 'lembra de cada rosto que já pagou uma conta ali',
   },
 
@@ -82,7 +82,7 @@ export const TIPOS_GENTE = {
   // ----- Santa Teresa -----
   motorneiro: {
     nome: 'Motorneiro', rotulo: 'o motorneiro do bonde, de uniforme, ao lado do bonde', presa: true,
-    falas: ['Última viagem já foi, amigo.', 'Esse bonde tem mais idade que eu.', 'Segura firme na descida.'],
+    falas: ['A última viagem já foi.', 'Esse bonde tem mais idade que eu.', 'Segura firme na descida.'],
     repara: 'sabe quem mora em cada casarão da linha',
   },
   'senhora-cachorro': {
@@ -131,7 +131,7 @@ export const TIPOS_GENTE = {
   // ----- Morro -----
   mototaxista: {
     nome: 'Mototaxista', rotulo: 'um mototaxista de colete, sentado na moto, na base da escadaria', presa: true,
-    falas: ['Subir é dez, descer é cinco.', 'Capacete tá no banco, pode pegar.', 'Pra onde, chefe?'],
+    falas: ['Subir é dez, descer é cinco.', 'Capacete tá no banco, pode pegar.', 'Vai pra onde?'],
     repara: 'conhece todo mundo que sobe e todo mundo que não deveria subir',
   },
   'mulher-laje': {
@@ -155,7 +155,7 @@ export const TIPOS_GENTE = {
   // ----- Porto -----
   estivador: {
     nome: 'Estivador', rotulo: 'um estivador de colete refletivo, perto do armazém', presa: true,
-    falas: ['O navio atrasou, tô aqui até cedo.', 'Contêiner não tem hora pra chegar.', 'Isso aqui é área restrita, parceiro.'],
+    falas: ['O navio atrasou, tô aqui até cedo.', 'Contêiner não tem hora pra chegar.', 'Isso aqui é área restrita.'],
     repara: 'conhece cada porta do armazém e de quem é cada chave',
   },
   grafiteiro: {
