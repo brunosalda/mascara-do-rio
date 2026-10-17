@@ -1867,3 +1867,21 @@ body.sem-efeitos .respingo { display: none; }
   .hud-svg { width: 20px; height: 20px; }
   .hud-com-icone .hud-nome { position: static; translate: none; padding: 0; background: none; border: 0; opacity: 1; font-size: 0.62rem; line-height: 1; }
 }
+
+/* --- Rodada 9: opções de leitura (tamanho do texto, velocidade, cerimônias). --- */
+.texto-narracao, .dialogo-corpo .texto-narracao { font-size: calc(1rem * var(--escala-texto, 1)); }
+.escolhas button { font-size: calc(1rem * var(--escala-texto, 1)); }
+.quadro-valor { font-size: calc(0.86rem * var(--escala-texto, 1)); }
+.balao-voz { font-size: calc(0.86rem * var(--escala-texto, 1)); }
+.opcoes-leitura { display: grid; gap: 0.7rem; margin: 0.4rem 0 1rem; padding-top: 0.6rem; border-top: 1px solid var(--linha); }
+.leitura-grupo { display: grid; gap: 0.3rem; }
+.leitura-grupo > span { font-family: var(--sans); font-size: 0.8rem; font-weight: 600; color: var(--texto-suave); }
+.leitura-grupo > div { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip-leitura { min-height: 40px; padding: 0.3rem 0.8rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--linha-forte); color: var(--texto); font-family: var(--sans); cursor: pointer; }
+.chip-leitura[aria-pressed='true'] { border-color: var(--acento); color: var(--acento-claro); background: rgba(226, 112, 62, 0.12); }
+/* Cerimônias curtas escolhidas pelo jogador: os mesmos tempos de "menos movimento". */
+body.cerimonias-curtas .gota-envio { animation-name: gota-aparecer; animation-duration: 0.9s; }
+body.cerimonias-curtas .letreiro-envio { animation-name: letreiro-surgir; }
+body.cerimonias-curtas .tela-jogo.clareando { animation: none; }
+body.cerimonias-curtas .faixa-chegada { animation-name: faixa-simples; }
+body.cerimonias-curtas .brilho-luz { animation: none; }

@@ -8,6 +8,7 @@ import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
 import { geografia, dentro, maisPertoDentro } from './lugares.js';
+import { cerimoniasCurtas } from '../leitura.js';
 
 const ASPECTO = 1344 / 752;     // proporção das pinturas
 const VEL_X = 0.18;             // larguras da pintura por segundo, no tamanho de referência
@@ -28,7 +29,7 @@ const TECLAS = {
 
 const limitar = (v, min, max) => Math.max(min, Math.min(max, v));
 const dist = (ax, ay, bx, by) => Math.hypot((ax - bx) * ASPECTO, ay - by);
-const reduzido = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const reduzido = () => cerimoniasCurtas();
 const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const pct = (v) => `${(v * 100).toFixed(2)}%`;
 

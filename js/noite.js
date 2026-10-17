@@ -15,6 +15,7 @@ import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas } from './jogo/detalhes.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
+import { lerLeitura, gravarLeitura, cerimoniasCurtas, RITMOS } from './leitura.js';
 
 const MAX_MARCADORES = 5; // à vista ao entrar; o resto aparece de perto ou com Tab
 const comentadosNaSessao = new Set(); // reserva, se o aparelho não guardar nada
@@ -502,9 +503,22 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
             <button type="button" class="btn-secundario so-celular" data-m="som">${som.ligado() ? 'Desligar' : 'Ligar'} o som</button>
             <button type="button" class="btn-secundario" data-m="sair">Sair da conta</button>
           </div>
+          <div class="opcoes-leitura">
+            <span class="grupo-rotulo">Leitura</span>
+            ${grupoLeitura('tamanho', 'Tamanho do texto', [['normal', 'Normal'], ['grande', 'Grande'], ['muito-grande', 'Muito grande']])}
+            ${grupoLeitura('ritmo', 'Velocidade das palavras', Object.entries({ lenta: 'Lenta', normal: 'Normal', rapida: 'Rápida', instantanea: 'Instantânea' }).map(([k, v]) => [String(RITMOS[k]), v]))}
+            ${grupoLeitura('cerimonias', 'Cerimônias', [['completas', 'Completas'], ['curtas', 'Curtas']])}
+          </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
         corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); await banco.sair(); };
+        corpo.querySelectorAll('[data-leitura]').forEach((b) => {
+          b.onclick = () => {
+            const campo = b.dataset.leitura;
+            gravarLeitura({ [campo]: campo === 'ritmo' ? Number(b.dataset.valor) : b.dataset.valor });
+            corpo.querySelectorAll(`[data-leitura="${campo}"]`).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          };
+        });
         corpo.querySelector('[data-m="legenda"]').onclick = () => { camada.fechar(); abrirLegenda(); };
         corpo.querySelector('[data-m="efeitos"]').onclick = () => { camada.fechar(); acao_('efeitos'); };
         corpo.querySelector('[data-m="som"]').onclick = () => { camada.fechar(); acao_('som'); };
@@ -635,7 +649,7 @@ export function htmlCiclo(ult, lida = true) {
 // Cartão de abertura da noite: o título grande, o lugar e o tempo, com um acorde grave. Some sozinho
 // (1,5 s) ou com um clique; com menos movimento ou sem efeitos, aparece mais curto e sem animação.
 function cartaoDeAbertura(raiz, titulo, sub, depois) {
-  const curto = document.body.classList.contains('sem-efeitos') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const curto = document.body.classList.contains('sem-efeitos') || cerimoniasCurtas();
   const el = document.createElement('div');
   el.className = `cartao-abertura${curto ? ' sem-animacao' : ''}`;
   el.innerHTML = `<b>${esc(titulo)}</b><small>${esc(sub)}</small>`;
@@ -645,6 +659,16 @@ function cartaoDeAbertura(raiz, titulo, sub, depois) {
   const fechar = () => { if (feito) return; feito = true; el.classList.add('saindo'); setTimeout(() => { el.remove(); depois(); }, 250); };
   el.addEventListener('click', fechar);
   setTimeout(fechar, curto ? 900 : 1500);
+}
+
+// Um grupo de botões de opção para as opções de leitura (o atual fica marcado).
+function grupoLeitura(campo, titulo, opcoes) {
+  const atual = String(lerLeitura()[campo]);
+  return `
+    <div class="leitura-grupo" role="group" aria-label="${titulo}">
+      <span>${titulo}</span>
+      <div>${opcoes.map(([valor, nome]) => `<button type="button" class="chip-leitura" data-leitura="${campo}" data-valor="${valor}" aria-pressed="${String(valor) === atual}">${nome}</button>`).join('')}</div>
+    </div>`;
 }
 
 const TEMPOS = ['garoa', 'lua', 'tempestade', 'nevoa'];

@@ -2,6 +2,7 @@
 import * as v5 from './motor/v5.js';
 import { CENARIO_PADRAO } from './cidade.js';
 import { som } from './ambiente.js';
+import { ritmoDasPalavras } from './leitura.js';
 
 export function esc(texto) {
   return String(texto ?? '')
@@ -97,9 +98,10 @@ export function narracaoComPaineis(texto, paineis, { cenario, classe = '' } = {}
 // fica marcada no aparelho e aparece inteira nas próximas visitas.
 
 // As palavras de um parágrafo surgem uma a uma, como se estivessem sendo escritas.
-const RITMO_PALAVRA = 34;
 
 function escreverPalavras(p) {
+  const RITMO_PALAVRA = ritmoDasPalavras();
+  if (RITMO_PALAVRA <= 0) { p.classList.add('pronto'); return 0; } // instantânea
   const nos = [];
   const andar = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
   while (andar.nextNode()) nos.push(andar.currentNode);
@@ -125,7 +127,7 @@ function testeEmDoisTempos(p, imediato) {
   for (const res of p.querySelectorAll('.teste-res')) {
     const palavras = [...p.querySelectorAll('.palavra')];
     const antes = palavras.findIndex((w) => res.contains(w));
-    const espera = (imediato || antes < 0 ? 0 : antes * RITMO_PALAVRA) + 650;
+    const espera = (imediato || antes < 0 ? 0 : antes * ritmoDasPalavras()) + 650;
     res.classList.add('aguardando');
     setTimeout(() => {
       res.classList.remove('aguardando');

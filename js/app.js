@@ -7,6 +7,7 @@ import { telaNoite, telaMapa, telaEspera } from './noite.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
 import { fecharTudo } from './jogo/camadas.js';
 import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos } from './ambiente.js';
+import { aplicarLeitura } from './leitura.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
 
@@ -189,6 +190,7 @@ async function aoMudarSessao(sessao) {
 
 async function iniciar() {
   iniciarAmbiente();
+  aplicarLeitura();
   const botaoSom = document.getElementById('som');
   const atualizarBotaoSom = () => {
     botaoSom.setAttribute('aria-pressed', String(som.ligado()));

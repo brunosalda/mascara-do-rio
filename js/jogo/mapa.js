@@ -5,6 +5,7 @@ import { COR_CLA } from './silhueta.js';
 import { camadaAberta, teclaNaCamada } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc } from '../ui.js';
+import { cerimoniasCurtas } from '../leitura.js';
 
 const LARGURA = 1920;
 const ALTURA = 1080;
@@ -118,7 +119,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
       if (k < 1) requestAnimationFrame(passo);
       else {
         // Passagem de cena: escurece em 250 ms antes de abrir o bairro (com menos movimento, só o corte).
-        const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        const reduzido = cerimoniasCurtas();
         if (reduzido) { viajando = false; entrar(id); return; }
         const veu = document.createElement('div');
         veu.className = 'veu-passagem';

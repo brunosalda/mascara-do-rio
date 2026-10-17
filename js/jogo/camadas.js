@@ -2,6 +2,7 @@
 // Uma pilha decide quem recebe o teclado: a camada do topo; sem camadas, o teclado move o personagem.
 import { revelarAosPoucos } from '../ui.js';
 import { som } from '../ambiente.js';
+import { cerimoniasCurtas } from '../leitura.js';
 
 const pilha = [];
 
@@ -49,7 +50,7 @@ function desempilhar(camada) {
 
 // Escolha com cerimônia: a fala escolhida acende e sobe, toca um som grave, e só então a ação segue.
 export function confirmarEscolha(botao, depois) {
-  const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const reduzido = cerimoniasCurtas();
   botao?.classList.add('escolhida-agora');
   botao?.closest('.escolhas')?.classList.add('decidido');
   som.escolha?.();
