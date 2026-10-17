@@ -3266,3 +3266,28 @@ body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: 
 /* Rodada 36, item 3: com a Fome alta, a pessoa recua meio passo quando o vampiro chega perto. */
 .pessoa.pessoa-pintada .pessoa-figura { transition: translate 0.5s ease-out; }
 .pessoa.recua .pessoa-figura { translate: var(--recuo, 18%) 0; }
+
+/* Rodada 36, item 4: as pinturas de foto se mexem sozinhas (néon que falha, água que tremula, onda, bonde
+   ou VLT que passa, janela que acende, lanterna do vigia, fumaça, brilho nas poças). */
+.vivos { position: absolute; inset: 0; pointer-events: none; z-index: 1; container-type: size; }
+.vivo { position: absolute; display: block; pointer-events: none; }
+.vivo-neon { translate: -50% -50%; border-radius: 50%; background: radial-gradient(closest-side, var(--cor), transparent); mix-blend-mode: screen; opacity: 0.55; animation: vivo-neon 7s steps(1, end) infinite; }
+@keyframes vivo-neon { 0%, 62%, 66%, 70%, 100% { opacity: 0.55; } 64%, 68% { opacity: 0.08; } 69% { opacity: 0.3; } }
+.vivo-agua { background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(255, 220, 160, 0.35) 18px 20px, transparent 20px 41px); background-size: 41px 100%; mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent); animation: vivo-agua 4.5s ease-in-out infinite; }
+@keyframes vivo-agua { 0%, 100% { opacity: 0.25; transform: translateX(0) scaleY(1); } 50% { opacity: 0.6; transform: translateX(6px) scaleY(1.4); } }
+.vivo-onda { height: 0.8%; border-radius: 50%; background: linear-gradient(90deg, transparent, rgba(240, 245, 255, 0.7) 30%, rgba(240, 245, 255, 0.5) 70%, transparent); mix-blend-mode: screen; transform-origin: 50% 50%; animation: vivo-onda 6s ease-out infinite; }
+@keyframes vivo-onda { 0% { opacity: 0; transform: translateY(-160%) scaleX(0.7); } 25% { opacity: 0.85; } 70% { opacity: 0.35; transform: translateY(80%) scaleX(1); } 100% { opacity: 0; transform: translateY(120%) scaleX(1.02); } }
+.vivo-veiculo { width: 8px; height: 4px; margin: -2px 0 0 -4px; animation: vivo-veiculo 30s linear infinite; }
+.vivo-veiculo::before, .vivo-veiculo::after { content: ''; position: absolute; top: 0; width: 4px; height: 4px; border-radius: 50%; background: var(--cor); box-shadow: 0 0 6px 2px var(--cor); }
+.vivo-veiculo::before { left: -1px; } .vivo-veiculo::after { right: -1px; }
+@keyframes vivo-veiculo { 0% { opacity: 0; transform: translate(0, 0); } 6% { opacity: 1; } 55% { opacity: 1; transform: translate(var(--dx), var(--dy)); } 60%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+.vivo-janela { width: 0.7%; height: 1.2%; background: #ffd27a; box-shadow: 0 0 6px rgba(255, 200, 110, 0.8); opacity: 0; animation: vivo-janela 23s ease-in-out infinite; }
+@keyframes vivo-janela { 0%, 40% { opacity: 0; } 46%, 80% { opacity: 0.85; } 86%, 100% { opacity: 0; } }
+.vivo-lanterna { width: 9%; height: 2.2%; transform-origin: 0 50%; border-radius: 0 50% 50% 0; background: linear-gradient(90deg, rgba(255, 240, 200, 0.55), transparent); mix-blend-mode: screen; animation: vivo-lanterna 8s ease-in-out infinite alternate; }
+@keyframes vivo-lanterna { 0% { transform: rotate(150deg); opacity: 0.4; } 50% { opacity: 0.75; } 100% { transform: rotate(30deg); opacity: 0.4; } }
+.vivo-fumaca { width: 2.5%; height: 6%; margin: -6% 0 0 -1.25%; border-radius: 50%; background: radial-gradient(closest-side, rgba(200, 190, 180, 0.35), transparent); filter: blur(3px); animation: vivo-fumaca 4s ease-out infinite; }
+@keyframes vivo-fumaca { 0% { opacity: 0; transform: translateY(40%) scale(0.6); } 30% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(-60%) scale(1.6); } }
+.vivo-poca { width: 3.2%; height: 0.9%; translate: -50% -50%; border-radius: 50%; background: radial-gradient(closest-side, var(--cor), transparent); mix-blend-mode: screen; animation: vivo-poca 3.1s ease-in-out infinite; }
+@keyframes vivo-poca { 0%, 100% { opacity: 0.18; transform: scaleX(1); } 40% { opacity: 0.42; transform: scaleX(1.25); } 70% { opacity: 0.25; transform: scaleX(0.9); } }
+body.sem-efeitos .vivo { animation: none !important; opacity: 0 !important; }

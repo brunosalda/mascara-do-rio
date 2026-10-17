@@ -19,6 +19,7 @@
 
 import { MARCACAO } from './marcacao.js';
 import { ALTOS } from './lugares-alto.js';
+import { VIVOS_ALTO } from './vivos-alto.js';
 
 export const LUGARES = {
   lapa: {
@@ -384,7 +385,7 @@ for (const [id, a] of Object.entries(ALTOS)) {
     alto: true, aspecto: 1344 / 576, imagem: `img/cidade/alto/${id}.jpg`,
     horizonte: a.escala ? a.escala[0] : 0.2, k: a.escala ? a.escala[1] : 0.17, chao: a.chao, obstaculos: a.obstaculos || [], entrada: a.entrada || [0.45, 0.88], saida: a.saida || [0.32, 0.97],
     ancoras, frente: a.frente ? [{ base: 0.995, poligono: a.frente }] : [], luzes: a.luzes, pontosLivres: a.pontos, gente: a.gente,
-    vida: { passantes: [] },
+    vida: { passantes: [] }, vivos: VIVOS_ALTO[id]?.vivos || [], reacoes: VIVOS_ALTO[id]?.reacoes || [],
   };
 }
 

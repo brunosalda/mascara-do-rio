@@ -58,6 +58,24 @@ function htmlBoneco(sprite) {
     </div>`;
 }
 
+// Rodada 36: o que se mexe sozinho nas pinturas de foto (vivos-alto.js) e o brilho que tremula na poça
+// embaixo de cada luz pequena. Tudo com transform e opacity, num atraso diferente para cada um.
+function htmlVivos(geo) {
+  const p = (v) => `${(v * 100).toFixed(2)}%`;
+  const vivos = (geo.vivos || []).map((v, i) => {
+    const atraso = `animation-delay:${(-i * 2.3).toFixed(1)}s`;
+    if (v.tipo === 'veiculo') {
+      const [x0, y0] = v.de; const [x1, y1] = v.ate;
+      return `<span class="vivo vivo-veiculo" style="left:${p(x0)};top:${p(y0)};--dx:${((x1 - x0) * 100).toFixed(2)}cqw;--dy:${((y1 - y0) * 100).toFixed(2)}cqh;--cor:${v.cor || '#fff0c0'};animation-duration:${v.dur || 30}s;${atraso}"></span>`;
+    }
+    const caixa = v.w ? `width:${p(v.w)};height:${p(v.h || v.w * 0.2)};` : '';
+    return `<span class="vivo vivo-${v.tipo}" style="left:${p(v.x)};top:${p(v.y)};${caixa}${v.cor ? `--cor:${v.cor};` : ''}${atraso}"></span>`;
+  });
+  const pocas = geo.luzes.filter((l) => l.raio < 0.5 && l.y < 0.93).slice(0, 6)
+    .map((l, i) => `<span class="vivo vivo-poca" style="left:${p(l.x)};top:${p(Math.min(0.97, l.y + 0.06))};--cor:${l.cor};animation-delay:${(-i * 0.9).toFixed(1)}s"></span>`);
+  return `<div class="vivos" aria-hidden="true">${vivos.join('')}${pocas.join('')}</div>`;
+}
+
 // Modo de edição (#/noite?editar): mostra chão, objetos, âncoras e luzes, e a coordenada de cada clique.
 function htmlDepuracao(geo) {
   const pontos = (pol) => pol.map(([x, y]) => `${x},${y}`).join(' ');
@@ -93,6 +111,7 @@ export function montarCena(raiz, {
         <div class="pintura-fundo" style="background-image:url('${fundoUrl}');--horizonte:${(geo.horizonte * 100).toFixed(1)}%" aria-hidden="true"></div>
         <div class="pintura-cinza" style="background-image:url('${fundoUrl}')" aria-hidden="true"></div>
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
+        ${geo.alto ? htmlVivos(geo) : ''}
         <div class="nevoa-cena" aria-hidden="true"></div>
         <canvas class="veu-area" aria-hidden="true" hidden></canvas>
         <canvas class="veu-longe" aria-hidden="true" hidden></canvas>
