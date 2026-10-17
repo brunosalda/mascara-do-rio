@@ -1984,3 +1984,4 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
 .msg-info { color: var(--texto-suave); }
 .btn-link-destaque { font: inherit; padding: 0; border: 0; background: none; color: var(--texto-claro); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .btn-link-destaque:hover, .btn-link-destaque:focus-visible { color: #fff; outline: none; }
+.personagem.sem-personagem { display: none; }

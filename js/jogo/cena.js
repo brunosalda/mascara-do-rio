@@ -3,7 +3,7 @@
 // lugar e interage com os pontos (E, Enter ou clique). Pintura, objetos, pontos e personagem ficam
 // num mesmo "mundo" do tamanho da pintura, que a câmera move e aproxima nas conversas.
 // A geografia de cada pintura (chão, perspectiva, objetos, luzes) está em lugares.js.
-import { silhueta, SOMBRA_GENERICA, COR_CLA } from './silhueta.js';
+
 import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
@@ -33,14 +33,16 @@ const reduzido = () => cerimoniasCurtas();
 const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const pct = (v) => `${(v * 100).toFixed(2)}%`;
 
-function htmlBoneco(cla, sprite, generica = false) {
-  if (!sprite?.url) return `<div class="personagem">${silhueta(cla)}</div>`;
-  const vars = `--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}${generica ? `;--cor-cla:${COR_CLA[cla] || '#a39a8c'}` : ''}`;
+function htmlBoneco(sprite) {
+  // Sem caminhada própria (antes de o Narrador ativar a ficha), o personagem não aparece na cena:
+  // nem sombra nem silhueta (pedido do Bruno, 17/10/2026). O jogador clica direto nos pontos.
+  if (!sprite?.url) return '<div class="personagem sem-personagem" aria-hidden="true"></div>';
+  const vars = `--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}`;
   const folha = `background-image:url('${sprite.url}')`;
   const mascara = `-webkit-mask-image:url('${sprite.url}');mask-image:url('${sprite.url}')`;
   // Corpo, mais uma camada de tinta com a cor da luz do lugar, recortada pela própria figura.
   return `
-    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}${generica ? ' sombra-generica' : ''}" style="${vars}">
+    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}" style="${vars}">
       <span class="sombra-pe"></span>
       <span class="sprite reflexo" style="${folha}"></span>
       <span class="sprite corpo-sprite" style="${folha}"></span>
@@ -66,9 +68,9 @@ export function montarCena(raiz, {
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
 } = {}) {
   const geo = geografia(lugar);
-  // Sem caminhada própria: a sombra pintada (folha genérica escurecida, contorno na cor do clã).
-  const generica = !sprite?.url;
-  if (generica) sprite = SOMBRA_GENERICA;
+  // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
+  // neles abre a conversa direto (sem andar até lá).
+  const semPersonagem = !sprite?.url;
   // Nas rotas de demonstração (#/demo/...?depurar) a cena aparece como no jogo, sem o modo de edição.
   const depurar = /[?&](editar|depurar)\b/.test(location.hash) && !/^#\/demo\//.test(location.hash);
   const fundoUrl = String(imagem || '').replace(/'/g, '%27');
@@ -79,9 +81,11 @@ export function montarCena(raiz, {
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
-        ${sprite?.url && geo.vida?.passantes?.length ? `<span class="passante" style="background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}" hidden></span>` : ''}
+        ${''/* Passantes desligados a pedido do Bruno (17/10/2026): eram a caminhada do próprio jogador
+             escurecida, e ele via "a própria sombra" andando no fundo. Voltam quando houver uma folha
+             própria de passante, diferente da do jogador. */}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
-        ${htmlBoneco(cla, sprite, generica)}
+        ${htmlBoneco(sprite)}
         <div class="balao-voz" hidden></div>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
@@ -99,12 +103,7 @@ export function montarCena(raiz, {
   const tinta = boneco.querySelector('.tinta');
   const reflexo = boneco.querySelector('.reflexo');
   const sombra = boneco.querySelector('.sombra-pe');
-  // Reserva: se a folha da sombra não carregar, volta a silhueta vetorial.
-  if (generica) {
-    const teste = new Image();
-    teste.onerror = () => { boneco.classList.add('sem-folha'); boneco.insertAdjacentHTML('beforeend', silhueta(cla)); };
-    teste.src = sprite.url;
-  }
+
   const balao = cena.querySelector('.balao-voz');
   const dica = cena.querySelector('.dica-interagir');
   const setaEsq = cena.querySelector('.seta-esq');
@@ -189,7 +188,7 @@ export function montarCena(raiz, {
   }
 
   function alcanceEm(y) { return ALCANCE * limitar(altura(y) / ALTURA_REF, 0.6, 1.2); }
-  const visivel = (p, agora) => !p.discreto || agora < mostrarTudoAte || dist(p.x, p.y, pos.x, pos.y) < PERTO_VER;
+  const visivel = (p, agora) => semPersonagem || !p.discreto || agora < mostrarTudoAte || dist(p.x, p.y, pos.x, pos.y) < PERTO_VER;
 
   function maisPerto(agora) {
     let melhor = null;
@@ -561,7 +560,7 @@ export function montarCena(raiz, {
 
     let dx = 0;
     let dy = 0;
-    if (!camadaAberta()) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
+    if (!camadaAberta() && !semPersonagem) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
     if (dx || dy) alvo = null;
     let correndo = teclas.has('shift');
     if (alvo) {
@@ -752,13 +751,14 @@ export function montarCena(raiz, {
     if (botao) {
       const p = lista.find((x) => x.id === botao.dataset.ponto);
       if (!p) return;
-      if (p === perto) { interagir(p); return; }
+      if (p === perto || semPersonagem) { interagir(p); return; }
       const [x, y] = maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
       alvo = { x, y, ponto: p };
       semProgresso = 0;
       return;
     }
     // Clique no chão: anda até lá (fora do chão, até o ponto de chão mais perto).
+    if (semPersonagem) return;
     const [x, y] = maisPertoDentro([px, py], geo.chao, ASPECTO);
     alvo = { x, y };
     semProgresso = 0;

@@ -7,17 +7,7 @@ export const COR_CLA = {
   ministerio: '#e0a03a', ravnos: '#4fc7c0', salubri: '#f0e6c8', tzimisce: '#b05a8a', caitiff: '#a39a8c', 'sangue-fraco': '#ff6b5a',
 };
 
-// Sombra pintada: a folha de caminhada em vídeo (perfil, frente, costas e respiração) escurecida até
-// virar sombra, para quem ainda não tem caminhada própria (a ficha não foi ativada). A cena acende o
-// contorno na cor do clã. Gerada sem crédito a partir da primeira folha de vídeo do jogo.
-export const SOMBRA_GENERICA = {
-  url: 'img/sprites/sombra-perfil.png', quadros: 10, largura: 154, altura: 300, parado: 5,
-  frente: { url: 'img/sprites/sombra-frente.png', quadros: 10, largura: 112, altura: 300, parado: 4 },
-  costas: { url: 'img/sprites/sombra-costas.png', quadros: 10, largura: 110, altura: 300, parado: 1 },
-  respira: { url: 'img/sprites/sombra-respira.png', quadros: 8, largura: 78, altura: 300 },
-};
-
-// Silhueta vetorial: só de reserva, se nenhuma folha carregar.
+// Silhueta vetorial antiga: a cena não a usa mais (sem caminhada própria, o personagem não aparece).
 export function silhueta(cla) {
   const cor = COR_CLA[cla] || '#e2703e';
   return `
