@@ -81,7 +81,7 @@ export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
           <span class="grupo-rotulo">${esc(c?.nome || '')}${pr ? ` · ${esc(pr.nome)}` : ''}</span>
           <h2>${esc(f.nome || f.origem?.nomeEmVida || 'Sem nome')}</h2>
           <p>${esc(f.origem?.conceito || '')}</p>
-          ${f.origem?.bairro ? `<p class="nota">Vivia em ${esc(f.origem.bairro)}${f.origem?.abraco ? `; Abraçado ${esc(f.origem.abraco)}` : ''}.</p>` : ''}
+          ${f.origem?.bairro ? `<p class="nota">Bairro: ${esc(f.origem.bairro)}${f.origem?.abraco ? ` · Abraçado ${esc(f.origem.abraco)}` : ''}.</p>` : ''}
         </div>
       </div>
       <div class="ficha-secao"><h3>Atributos</h3><div class="tres-colunas">${atributos}</div></div>

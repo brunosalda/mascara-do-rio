@@ -1,9 +1,10 @@
 // Painel da noite: o que aconteceu (texto, vozes, HQ), escolhas, estado e envio das ações.
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
-import { esc, narracao, escolhas, quadrinhos, dataLonga, dataCurta, aviso, on } from './ui.js';
+import { esc, narracao, escolhas, quadrinhos, revelarAosPoucos, dataLonga, dataCurta, aviso, on } from './ui.js';
 import { painelEstado, lerTecnica, cabecalhoPersonagem } from './ficha.js';
 import { imagemDoLocal } from './cidade.js';
+import { som } from './ambiente.js';
 
 function blocoAconteceu(p, ultimaNoite, narrNoite, preludio, opcoes) {
   const cenario = imagemDoLocal(p.estado?.local);
@@ -97,6 +98,30 @@ export async function telaNoite(raiz, p) {
     </section>`;
 
   const form = raiz.querySelector('#form-acoes');
+
+  // A narração aparece fala por fala; o formulário só depois da última.
+  const artigo = raiz.querySelector('.narracao');
+  const chaveLeitura = narrNoite && ultimaNoite ? narrNoite.id : preludio?.id;
+  if (form) form.hidden = true;
+  const leitura = artigo && chaveLeitura
+    ? revelarAosPoucos(artigo, chaveLeitura, { aoAvancar: () => som.toque(), aoTerminar: () => { if (form) form.hidden = false; } })
+    : (form && (form.hidden = false), null);
+
+  // Teclado: espaço ou Enter continua a leitura; números escolhem a fala.
+  const teclas = (ev) => {
+    if (!raiz.isConnected) { document.removeEventListener('keydown', teclas); return; }
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
+    if ((ev.key === ' ' || ev.key === 'Enter') && leitura && !leitura.terminou()) {
+      if (document.activeElement?.tagName === 'BUTTON') return; // o próprio botão já trata
+      ev.preventDefault();
+      leitura.avancar();
+      return;
+    }
+    const n = Number(ev.key);
+    if (n >= 1 && n <= 9 && (!leitura || leitura.terminou())) raiz.querySelector(`[data-escolha="${n - 1}"]`)?.click();
+  };
+  document.addEventListener('keydown', teclas);
+
   if (!form) return;
 
   on(raiz, 'click', '[data-escolha]', (_e, el) => {

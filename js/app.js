@@ -2,10 +2,12 @@
 import * as banco from './banco.js';
 import { esc, aviso, on } from './ui.js';
 import { telaCriacao } from './criacao.js';
+import { telaEntrevista } from './entrevista.js';
 import { telaNoite } from './noite.js';
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
+import { iniciarAmbiente, definirClima, som } from './ambiente.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
 
@@ -104,6 +106,14 @@ function definirCenario(tipoTela, p) {
     el.dataset.url = url;
     el.style.backgroundImage = `url('${url}')`;
   }
+  // A Fome do personagem avermelha a tela e acelera o batimento.
+  const fome = tipoTela === 'jogo' ? (p?.estado?.fome ?? null) : null;
+  document.body.dataset.fome = fome ?? '';
+  definirClima({ tela: tipoTela, fome });
+}
+
+function modoDeCriacao(p) {
+  return p?.ficha?._modo || (p?.ficha?._etapa != null ? 'detalhado' : 'conversa');
 }
 
 // --- Roteamento ------------------------------------------------------------
@@ -117,13 +127,17 @@ async function desenhar() {
   desenharCabecalho(rota);
 
   const p = estado.atual;
-  const emCriacao = !estado.sessao || rota === 'novo' || !p || p.status === 'criacao' || p.status === 'revisao';
+  const novo = rota === 'novo' || rota === 'detalhado';
+  const emCriacao = !estado.sessao || novo || !p || p.status === 'criacao' || p.status === 'revisao';
   definirCenario(!estado.sessao ? 'login' : emCriacao ? 'criacao' : 'jogo', p);
 
   if (!estado.sessao) return telaLogin(tela);
 
   try {
-    if (rota === 'novo' || !p) return await telaCriacao(tela, null);
+    // Criação: por conversa (padrão) ou pela ficha detalhada.
+    if (rota === 'detalhado') return await telaCriacao(tela, null);
+    if (rota === 'novo' || !p) return await telaEntrevista(tela, null);
+    if (p.status === 'criacao' && modoDeCriacao(p) === 'conversa') return await telaEntrevista(tela, p);
     if (p.status === 'criacao' || p.status === 'revisao') return await telaCriacao(tela, p);
     if (rota === 'ficha') return await telaFicha(tela, p);
     if (rota === 'diario') return await telaDiario(tela, p);
@@ -145,6 +159,14 @@ async function aoMudarSessao(sessao) {
 }
 
 async function iniciar() {
+  iniciarAmbiente();
+  const botaoSom = document.getElementById('som');
+  const atualizarBotaoSom = () => {
+    botaoSom.setAttribute('aria-pressed', String(som.ligado()));
+    botaoSom.title = som.ligado() ? 'Desligar o som' : 'Ligar o som ambiente';
+  };
+  botaoSom.onclick = () => { som.alternar(); atualizarBotaoSom(); };
+  atualizarBotaoSom();
   window.addEventListener('hashchange', desenhar);
   banco.aoMudarSessao((s) => { if ((s?.user?.id || null) !== (estado.sessao?.user?.id || null)) aoMudarSessao(s); });
   await aoMudarSessao(await banco.sessaoAtual());

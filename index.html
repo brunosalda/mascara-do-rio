@@ -14,12 +14,21 @@
 </head>
 <body>
   <div id="cenario" aria-hidden="true"></div>
+  <canvas id="chuva" aria-hidden="true"></canvas>
+  <div id="relampago" aria-hidden="true"></div>
+  <div id="vinheta" aria-hidden="true"></div>
   <header class="topo">
     <a href="#/noite" class="marca" aria-label="A Máscara do Rio, início">
       <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c4 7 9 11 9 17a9 9 0 0 1-18 0c0-6 5-10 9-17z"/></svg>
       <span>A Máscara do Rio</span>
     </a>
-    <nav id="nav" aria-label="Principal"></nav>
+    <div class="topo-direita">
+      <nav id="nav" aria-label="Principal"></nav>
+      <button type="button" id="som" class="botao-som" aria-pressed="false" title="Ligar o som ambiente">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="alto" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="onda" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path class="mudo" d="M16 9l5 6M21 9l-5 6"/></svg>
+        <span class="sr">Som</span>
+      </button>
+    </div>
   </header>
 
   <main id="app">

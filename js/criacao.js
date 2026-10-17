@@ -407,7 +407,10 @@ export async function telaCriacao(raiz, personagem) {
     const nome = nomeEtapa();
     raiz.innerHTML = `
       <section class="assistente">
-        <p class="sobretitulo">Criação de personagem · ${etapa + 1} de ${v5.ETAPAS.length}</p>
+        <div class="linha-titulo">
+          <p class="sobretitulo">Criação de personagem · ${etapa + 1} de ${v5.ETAPAS.length}</p>
+          <button type="button" class="btn-texto" data-conversa>Criar pela conversa (mais rápido)</button>
+        </div>
         <h1>${ROTULOS[nome]}</h1>
         <ol class="trilha" aria-label="Etapas">
           ${v5.ETAPAS.map((e, i) => `<li><button type="button" data-etapa="${i}" class="${i === etapa ? 'atual' : ''} ${v5.pendencias(e, ficha).length ? '' : 'ok'}" aria-current="${i === etapa ? 'step' : 'false'}" title="${ROTULOS[e]}"><span>${ROTULOS[e]}</span></button></li>`).join('')}
@@ -448,6 +451,7 @@ export async function telaCriacao(raiz, personagem) {
 
   async function salvar(status) {
     ficha._etapa = etapa;
+    ficha._modo = 'detalhado';
     if (!p) {
       p = await banco.criarPersonagem(ficha);
       await recarregarPersonagens(p.id);
@@ -476,6 +480,21 @@ export async function telaCriacao(raiz, personagem) {
   on(raiz, 'input', '[data-campo]', (_e, el) => { gravar(ficha, el.dataset.campo, el.value); atualizarRodape(); });
   on(raiz, 'change', 'select[data-campo]', (_e, el) => { gravar(ficha, el.dataset.campo, el.value); atualizarRodape(); });
 
+  // Troca para a conversa; a ficha montada no fim dela substitui este rascunho.
+  on(raiz, 'click', '[data-conversa]', async () => {
+    if (ocupado) return;
+    if (!p) { ir('novo'); return; }
+    ocupado = true;
+    try {
+      await banco.salvarFicha(p.id, { ...ficha, _modo: 'conversa' });
+      await recarregarPersonagens(p.id);
+      ir('noite');
+    } catch (err) {
+      aviso(err.message, 'erro');
+    } finally {
+      ocupado = false;
+    }
+  });
   on(raiz, 'click', '[data-ver-pendencias]', () => {
     raiz.querySelector('#pendencias')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });

@@ -60,6 +60,55 @@ export function narracao(texto) {
     .join('');
 }
 
+// --- Revelação aos poucos ----------------------------------------------------------------
+// A narração aparece fala por fala, com "Continuar" (ou espaço/Enter). Depois de lida até o fim,
+// fica marcada no aparelho e aparece inteira nas próximas visitas.
+
+export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) {
+  const itens = [...artigo.querySelectorAll('h3, .hq, .texto-narracao > p, .escolhas')];
+  let lido = false;
+  try { lido = localStorage.getItem(`mascara.lido.${chave}`) === '1'; } catch { /* sem armazenamento */ }
+  if (lido || itens.length < 3) { aoTerminar?.(); return { avancar() { return false; }, terminou: () => true }; }
+
+  itens.forEach((el) => el.classList.add('oculto'));
+  const barra = document.createElement('div');
+  barra.className = 'continuar';
+  barra.innerHTML = '<button type="button" class="btn-continuar">Continuar <span aria-hidden="true">▸</span></button><button type="button" class="btn-texto" data-tudo>Mostrar tudo</button>';
+  let i = 0;
+  let fim = false;
+
+  function terminar() {
+    fim = true;
+    barra.remove();
+    try { localStorage.setItem(`mascara.lido.${chave}`, '1'); } catch { /* sem armazenamento */ }
+    aoTerminar?.();
+  }
+
+  function mostrar() {
+    // Um título aparece junto com o item seguinte.
+    while (i < itens.length) {
+      const el = itens[i++];
+      el.classList.remove('oculto');
+      el.classList.add('surgir');
+      if (el.tagName !== 'H3') break;
+    }
+    aoAvancar?.();
+    if (i >= itens.length) { terminar(); return; }
+    itens[i - 1].after(barra);
+    barra.querySelector('.btn-continuar').focus({ preventScroll: true });
+    barra.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  barra.querySelector('.btn-continuar').onclick = mostrar;
+  barra.querySelector('[data-tudo]').onclick = () => {
+    itens.forEach((el) => el.classList.remove('oculto'));
+    i = itens.length;
+    terminar();
+  };
+  mostrar();
+  return { avancar() { if (fim) return false; mostrar(); return true; }, terminou: () => fim };
+}
+
 // --- Escolhas numeradas (como as falas de diálogo) ---------------------------------
 
 export function escolhas(opcoes) {
