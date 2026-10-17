@@ -107,8 +107,8 @@ export function telaLogin(raiz, { demo = false } = {}) {
   }
   const MENSAGENS = {
     convidado: () => mensagem('erro', campo('email'), 'Este e-mail não está na lista de convidados. Peça ao Bruno para adicionar o seu e-mail.'),
-    senha: () => mensagem('erro', campo('senha'), 'E-mail ou senha incorretos. Tente de novo ou <button type="button" class="btn-link-destaque" data-pedir-link>receba um link de acesso por e-mail</button>.'),
-    link: () => mensagem('ok', botaoLink, 'Link enviado. Abra o e-mail neste mesmo aparelho; o link vale por pouco tempo.'),
+    senha: () => mensagem('erro', campo('senha'), 'E-mail ou senha incorretos. Ainda sem senha? <button type="button" class="btn-link-destaque" data-pedir-link>Entre pelo link e crie a sua senha</button>.'),
+    link: () => mensagem('ok', botaoLink, 'Link enviado. Abra o e-mail neste mesmo aparelho; o link vale por pouco tempo. Depois de entrar, crie a sua senha em Opções.'),
   };
   // Erros que vêm do banco: o texto decide o campo e o próximo passo.
   const mostrarErro = (err) => {

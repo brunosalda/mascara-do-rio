@@ -3376,3 +3376,8 @@ body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }
   background: linear-gradient(180deg, rgba(120, 165, 230, 0.95) 0%, rgba(150, 180, 225, 0.6) 22%, rgba(110, 135, 185, 0.28) 45%, rgba(70, 85, 125, 0.14) 100%); }
 .tela-jogo.ultima-hora .brilho-luz, .tela-jogo.ultima-hora .vivo-poca, .tela-jogo.ultima-hora .vivo-neon { opacity: 0.35; }
 .relogio-noite.ultima-hora .aro { stroke: #ff8a2a; stroke-width: 3; }
+
+/* Criar ou trocar a senha. */
+.form-senha { display: grid; gap: 0.6rem; max-width: 26rem; }
+.form-senha input { width: 100%; padding: 0.5rem; font: inherit; }
+.cartao-senha { margin-top: 0.3rem; }

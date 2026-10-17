@@ -2,6 +2,7 @@
 // pontos de interesse e monta o plano da noite. Narração, escolhas e janelas aparecem por cima da cena.
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
+import { formSenha } from './senha.js';
 import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
 import { telaFicha, telaRegistro } from './ficha.js';
 import { telaDiario } from './diario.js';
@@ -1173,6 +1174,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         corpo.innerHTML = `
           <div class="menu-opcoes">
             ${geo.alto ? '<button type="button" class="btn-secundario" data-m="recado">Deixar um recado aqui</button>' : ''}
+            <button type="button" class="btn-secundario" data-m="senha">Criar ou trocar a senha</button>
             <button type="button" class="btn-secundario" data-m="novo">Criar outro personagem</button>
             <button type="button" class="btn-secundario so-celular" data-m="legenda">Como funciona a noite</button>
             <button type="button" class="btn-secundario so-celular" data-m="efeitos">${efeitos.ligados() ? 'Desligar' : 'Ligar'} chuva e efeitos</button>
@@ -1195,6 +1197,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); irPara('novo'); };
+        corpo.querySelector('[data-m="senha"]').onclick = () => formSenha(corpo, { demo: irPara !== ir, aoFim: () => camada.fechar() });
         const botaoRecado = corpo.querySelector('[data-m="recado"]');
         if (botaoRecado) botaoRecado.onclick = () => {
           corpo.innerHTML = `<form class="form-recado"><label>Recado para quem passar depois (uma frase curta, como marca no muro)<input name="texto" maxlength="80" required autocomplete="off" placeholder="O dono do bar sabe mais do que diz."></label><p class="nota">Fica no ponto onde você está. Quem passar lê o recado e o nome que você usa nas ruas, nada mais.</p><div class="cartao-botoes"><button type="submit" class="btn">Deixar o recado</button><button type="button" class="btn-texto" data-cancelar>Cancelar</button></div></form>`;
@@ -1440,6 +1443,18 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cartao.style.setProperty('--fundo', `url('${new URL(imagemCartao, location.href).href}')`);
     cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é <b>${esc((NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '').toLowerCase())}</b></p>` : ''}${primeiraVez ? `<ul class="cartao-tres-dicas">${[['Clique no chão para andar', 'toque'], ['Mouse na borda ou setas para olhar em volta', 'arraste com dois dedos'], ['Tab mostra quem está aqui', 'toque longo']].map(([pc, cel]) => `<li>${esc(pc)} <small>· no celular: ${esc(cel)}</small></li>`).join('')}</ul>` : `<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p>`}<div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
     camadas.appendChild(cartao);
+    // Quem entrou pelo link do e-mail vê, no fim do cartão, o convite para criar a senha.
+    if (irPara === ir) {
+      banco.entrouPorLink().then((sim) => {
+        if (!sim || !cartao.isConnected) return;
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'btn-texto cartao-senha';
+        botao.dataset.cartao = 'senha';
+        botao.textContent = 'Criar uma senha para entrar direto';
+        cartao.querySelector('.cartao-botoes')?.after(botao);
+      });
+    }
     const t0 = performance.now();
     const tirar = () => {
       if (!cartao.isConnected) return;
@@ -1456,6 +1471,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     document.addEventListener('keydown', teclaCartao, true);
     cartao.addEventListener('click', (ev) => {
       if (!pronto()) return;
+      if (ev.target.closest('[data-cartao="senha"]')) {
+        tirar();
+        abrirJanela(camadas, { titulo: 'Criar ou trocar a senha', montar: (corpo, camada) => formSenha(corpo, { aoFim: () => camada.fechar() }) });
+        return;
+      }
       if (ev.target.closest('[data-cartao="nunca"]')) {
         try { localStorage.setItem(`mascara.semDica.${lugarId}`, '1'); } catch { /* sem armazenamento */ }
         aviso(`A dica não aparece mais ao chegar ${localAtual?.em || 'aqui'}. Em Opções dá para mostrar de novo.`);

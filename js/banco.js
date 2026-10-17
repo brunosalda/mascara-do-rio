@@ -40,6 +40,26 @@ export async function entrarComLink(email) {
   }
 }
 
+// Criar ou trocar a senha de quem já entrou (pelo link ou pela senha antiga). A senha vai só para a
+// autenticação do Supabase; o site não guarda nem registra nada dela.
+export async function trocarSenha(senha) {
+  const { error } = await sb.auth.updateUser({ password: senha });
+  if (!error) return;
+  if (/same|different/i.test(error.message)) throw new Error('Essa já é a sua senha. Escolha outra, ou feche se não quer trocar.');
+  if (/weak|short|characters|at least/i.test(error.message)) throw new Error('Senha fraca demais. Use pelo menos 8 caracteres, misturando letras e números.');
+  if (/session|auth/i.test(error.message)) throw new Error('A sessão expirou. Entre de novo pelo link e crie a senha logo em seguida.');
+  throw new Error('Não deu para salvar a senha agora. Tente de novo em instantes.');
+}
+
+// Entrou pelo link do e-mail nesta sessão? (o token diz o método: otp ou magiclink)
+export async function entrouPorLink() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const carga = JSON.parse(atob(data.session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return (carga.amr || []).some((m) => /otp|magiclink|email/i.test(m.method || ''));
+  } catch { return false; }
+}
+
 export async function sair() {
   await sb.auth.signOut();
 }
