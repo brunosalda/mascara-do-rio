@@ -162,7 +162,7 @@ export function montarCena(raiz, {
   // --- Pontos ----------------------------------------------------------------------------------
   function desenharPontos(recemFeitos = new Set()) {
     camadaPontos.innerHTML = lista.map((p) => `
-      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}" data-ponto="${esc(p.id)}"
+      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}" data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-anel"></span>
         <span class="ponto-icone">${p.icone || '!'}</span>

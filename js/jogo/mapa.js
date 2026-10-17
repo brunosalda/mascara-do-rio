@@ -20,8 +20,8 @@ export const POSICOES = {
 function desenhoDoMapa() {
   return `
     <defs>
-      <radialGradient id="nevoa-lugar"><stop offset="0" stop-color="#c9d3db" stop-opacity="0.55"/><stop offset="1" stop-color="#c9d3db" stop-opacity="0"/></radialGradient>
-      <clipPath id="recorte-retrato"><circle r="28"/></clipPath>
+      <radialGradient id="nevoa-lugar"><stop offset="0" stop-color="#05070a" stop-opacity="0.78"/><stop offset="0.6" stop-color="#0a0e12" stop-opacity="0.55"/><stop offset="1" stop-color="#0a0e12" stop-opacity="0"/></radialGradient>
+      <clipPath id="recorte-retrato"><circle r="38"/></clipPath>
       <radialGradient id="brilho-lugar"><stop offset="0" stop-color="#ffb070" stop-opacity="0.6"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient></defs>
     <image href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice"/>
     <rect width="${LARGURA}" height="${ALTURA}" fill="rgba(5, 8, 10, 0.18)"/>
@@ -47,11 +47,12 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 ${novo ? '<circle class="mapa-nevoa" r="70" fill="url(#nevoa-lugar)"/>' : ''}
                 <circle class="mapa-brilho" r="60" fill="url(#brilho-lugar)"/>
                 ${l.id === atual && retrato
-                  ? `<circle class="mapa-voce" r="34"/><image class="mapa-retrato" href="${esc(retrato)}" x="-28" y="-28" width="56" height="56" clip-path="url(#recorte-retrato)" preserveAspectRatio="xMidYMid slice"/>`
+                  ? `<circle class="mapa-voce" r="46"/><image class="mapa-retrato" href="${esc(retrato)}" x="-38" y="-38" width="76" height="76" clip-path="url(#recorte-retrato)" preserveAspectRatio="xMidYMid slice"/>`
                   : `<circle class="mapa-ponto" r="9"/>${l.id === atual ? '<circle class="mapa-voce" r="18"/>' : ''}`}
-                <text class="mapa-nome" y="${l.id === atual && retrato ? -42 : -20}">${esc(l.nome)}</text>
-                ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 52 : 34}">você está aqui</text>` : ''}
-                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 74 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `detalhes descobertos: ${d.vistos} de ${d.total}` : ''}</text>
+                <text class="mapa-nome" y="${l.id === atual && retrato ? -54 : -20}">${esc(l.nome)}</text>
+                ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 66 : 34}">você está aqui</text>` : ''}
+                ${!novo && d?.total ? `<g class="mapa-selo" transform="translate(${l.id === atual && retrato ? 44 : 16} ${l.id === atual && retrato ? -40 : -44})"><rect x="0" y="-17" width="${String(d.vistos).length + String(d.total).length > 2 ? 58 : 48}" height="26" rx="4"/><text x="8" y="2">${d.vistos}/${d.total}</text></g>` : ''}
+                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 90 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `detalhes descobertos: ${d.vistos} de ${d.total}` : ''}</text>
               </g>`;
           }).join('')}
         </g>

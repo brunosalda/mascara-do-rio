@@ -13,6 +13,7 @@ import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas } from './jogo/detalhes.js';
+import { registroDaNoite, registrar, prazoRestante, quandoCurto } from './jogo/registro.js';
 
 const MAX_MARCADORES = 5; // à vista ao entrar; o resto aparece de perto ou com Tab
 const comentadosNaSessao = new Set(); // reserva, se o aparelho não guardar nada
@@ -76,7 +77,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   const tempo = tempoDaNoite(noite?.numero || 0);
   definirTempo(tempo);
   definirSomDoLugar(lugarId);
-  if (lugarId) marcarVisitado(lugarId);
+  if (lugarId) { marcarVisitado(lugarId); registrar(noite?.id, 'visitados', lugarId); }
+  // Descobertas deste lugar nesta noite (os detalhes sorteados), para o HUD.
+  const descobertasDoLugar = () => ({ vistos: achados.detalhes.filter((d) => visto(d.id)).length, total: achados.detalhes.length });
   const chaveVisto = (id) => `mascara.visto.${lugarId}.${id}`;
   const visto = (id) => { try { return localStorage.getItem(chaveVisto(id)) === '1'; } catch { return false; } };
 
@@ -101,7 +104,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
           <img src="${esc(retrato)}" alt="">
           <span>
             <b>${esc(p.nome)}</b>
-            <small>${esc(v5.cla(p.ficha?.cla)?.nome || '')} · ${esc(lugarNome)}</small>
+            <small>${esc(v5.cla(p.ficha?.cla)?.nome || '')} · ${esc(lugarNome)}<span class="hud-descobertas" title="Detalhes para examinar neste lugar, nesta noite"></span></small>
             <span class="gotas" aria-label="Fome">${Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('')}</span>
           </span>
         </button>
@@ -114,6 +117,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
           <button type="button" data-hud="diario" title="Diário (J)">Diário <kbd>J</kbd></button>
           <button type="button" data-hud="efeitos" class="hud-icone" aria-pressed="${efeitos.ligados()}" title="Chuva e efeitos">☂</button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente">♪</button>
+          <button type="button" data-hud="legenda" class="hud-icone" title="Como funciona a noite">?</button>
           <button type="button" data-hud="menu" class="hud-icone" title="Mais opções">⋯</button>
         </nav>
       </header>
@@ -133,22 +137,43 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
 
   // Selo compacto do plano, no alto à direita: a ação principal e o estado (a escolher, pronto, enviado).
   // O plano completo abre no clique ou com P; o envio fica no próprio selo quando há algo para enviar.
+  // Quadro da noite: as três partes da noite (ação principal, caçada, ações curtas), o que já foi
+  // escolhido em cada uma, o que falta e quanto tempo resta. Cada linha abre o lugar certo.
+  const partes = () => {
+    const curtas = [plano.curta_1, plano.curta_2].filter((x) => x?.trim()).length;
+    const principal = !!plano.principal?.trim();
+    const cacada = !!(plano.cacada?.trim() || plano.nao_cacar);
+    return { principal, cacada, curtas, prontas: (principal ? 1 : 0) + (cacada ? 1 : 0) };
+  };
+  let quadroRecolhido = (() => { try { return localStorage.getItem('mascara.quadroRecolhido') === '1'; } catch { return false; } })();
   function desenharPlano() {
     if (!noite) { caixaPlano.hidden = true; return; }
     const enviado = acao && !alterado;
-    const pronto = !!plano.principal?.trim();
-    const estado = enviado ? 'enviado' : pronto ? 'pronto' : 'vazio';
-    const selo = enviado ? `Enviado ${esc(dataCurta(acao.atualizado_em))}` : pronto ? (acao ? 'Mudanças não enviadas' : 'Não enviado') : 'A escolher';
-    caixaPlano.className = `hud-plano plano-${estado}`;
+    const pt = partes();
+    const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
+    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))} <i>✓</i>` : '<em>falta escolher</em>';
+    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome sobe)</small>';
+    const pe = enviado
+      ? `<span class="quadro-enviado">Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}</span>`
+      : `<span>${acao ? 'Mudanças não enviadas' : 'Não enviado'} · ${esc(prazoRestante(noite.fecha_em))}</span>`;
+    caixaPlano.className = `hud-plano quadro-noite plano-${estado}${quadroRecolhido ? ' recolhido' : ''}`;
     caixaPlano.innerHTML = `
-      <button type="button" class="plano-selo" data-hud="plano" title="Ver o plano completo (P)">
-        <span class="plano-marca" aria-hidden="true">${enviado ? '✓' : pronto ? '!' : '…'}</span>
-        <span class="plano-texto">
-          <small>Plano da noite ${noite.numero} · ${selo}</small>
-          <b>${pronto ? esc(curto(plano.principal, 9)) : 'Ande pela cena e escolha o que fazer'}</b>
-        </span>
+      <button type="button" class="quadro-cabeca" data-hud="recolher" aria-expanded="${!quadroRecolhido}">
+        <span class="plano-marca" aria-hidden="true">${enviado ? '✓' : pt.prontas}</span>
+        <span><b>Noite ${noite.numero}</b> · ${enviado ? 'plano enviado' : `${pt.prontas} de 2 obrigatórias prontas`}</span>
+        <span class="quadro-seta" aria-hidden="true">${quadroRecolhido ? '▸' : '▾'}</span>
       </button>
-      ${pronto && !enviado ? `<button type="button" class="btn plano-enviar" data-hud="enviar">${acao ? 'Reenviar' : 'Enviar'}</button>` : ''}`;
+      <ol class="quadro-linhas">
+        <li class="${pt.principal ? 'ok' : 'falta'}"><button type="button" data-hud="linha-principal"><span class="quadro-nome">Ação principal <small>obrigatória</small></span><span class="quadro-valor">${linhaPrincipal}</span></button></li>
+        <li class="${pt.cacada ? 'ok' : 'falta'}"><button type="button" data-hud="linha-cacada"><span class="quadro-nome">Caçada <small>obrigatória</small></span><span class="quadro-valor">${linhaCacada}</span></button></li>
+        <li class="${pt.curtas ? 'ok' : 'opcional'}"><button type="button" data-hud="linha-curtas"><span class="quadro-nome">Ações curtas <small>opcional</small></span><span class="quadro-valor">${pt.curtas} de 2</span></button></li>
+      </ol>
+      <div class="quadro-pe">${pe}${pt.principal && !enviado ? `<button type="button" class="btn plano-enviar${pt.cacada ? ' destaque' : ''}" data-hud="enviar">${acao ? 'Reenviar' : 'Enviar'}</button>` : ''}</div>`;
+    const hd = raiz.querySelector('.hud-descobertas');
+    if (hd) {
+      const d = descobertasDoLugar();
+      hd.textContent = d.total ? ` · descobertas ${d.vistos} de ${d.total}` : '';
+    }
   }
 
   async function enviar() {
@@ -202,7 +227,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     if (!emOutroLugar && atual) pedidos.push({ id: 'historia', tipo: 'historia', icone: '❦', rotulo: 'O que aconteceu', acao: 'Relembrar o que aconteceu', papel: 'memoria' });
     if (noite && atual) {
       if (!emOutroLugar) {
-        opcoes.forEach((o, i) => pedidos.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o }));
+        opcoes.forEach((o, i) => pedidos.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o, alternativa: !!plano.principal?.trim() && plano.principal !== o }));
       } else {
         const l = visitado;
         [
@@ -210,7 +235,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
           { id: 'procurar', rotulo: 'Procurar alguém aqui', texto: `Ir ${l.a} e procurar alguém.`, livre: true },
         ].forEach((o) => pedidos.push({ ...o, tipo: 'acao', icone: '!', acao: o.rotulo, feito: plano.principal === o.texto }));
       }
-      pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), papel: 'escuro' });
+      pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), falta: !(plano.cacada || plano.nao_cacar), papel: 'escuro' });
       pedidos.push({ id: 'escrever', tipo: 'escrever', icone: '✎', rotulo: 'Outra ideia', acao: 'Escrever o que fazer', papel: 'livre' });
     }
     const ancoras = distribuirAncoras(geo, pedidos);
@@ -218,7 +243,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       { id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: geo.saida[0], y: geo.saida[1] },
       ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82 }; }),
     ];
-    pts.forEach((pt, i) => { if (i >= MAX_MARCADORES) pt.discreto = true; });
+    // A caçada é obrigatória: fica sempre à vista; o limite de 5 vale para os outros.
+    let vistos = 0;
+    pts.forEach((pt) => { if (pt.id === 'cacar' || vistos < MAX_MARCADORES - (pts.some((x) => x.id === 'cacar') ? 1 : 0)) { if (pt.id !== 'cacar') vistos++; } else pt.discreto = true; });
     achados.detalhes.forEach((d) => pts.push({
       id: `detalhe-${d.id}`, tipo: 'detalhe', icone: visto(d.id) ? '·' : '?', rotulo: d.rotulo, acao: `Examinar: ${d.rotulo}`,
       x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d,
@@ -235,7 +262,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       rodape: '<span class="nota"><span class="so-teclado"><kbd>Esc</kbd> fecha · </span>ande pela cena para descobrir mais</span>',
       aoFechar: () => {
         try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
+        registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
         cena?.atualizarPontos(montarPontos());
+        desenharPlano();
+        const hd = raiz.querySelector('.hud-descobertas');
+        if (hd) { hd.classList.remove('subiu'); void hd.offsetWidth; hd.classList.add('subiu'); }
       },
     });
   }
@@ -249,7 +280,25 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       if (localStorage.getItem(k)) return false;
       localStorage.setItem(k, '1');
     } catch { /* sem armazenamento: vale a memória da sessão */ }
+    registrar(noite?.id, 'comentarios', { lugar: lugarId, id: c.id, voz: c.voz, texto: c.texto });
     return true;
+  }
+
+  // Legenda da noite: na primeira entrada de cada noite (e no botão "?"), o que se faz numa noite.
+  function abrirLegenda() {
+    const prazo = noite ? `Envie até ${esc(quandoCurto(noite.fecha_em))} (${esc(prazoRestante(noite.fecha_em))}).` : '';
+    const camada = abrirDialogo(camadas, {
+      rotulo: noite ? `Como funciona a noite ${noite.numero}` : 'Como funciona a noite',
+      html: `
+        <div class="legenda-noite">
+          <div class="legenda-cartao"><span class="legenda-icone">1</span><b>Ação principal</b><p>Obrigatória. Os pontos numerados são as opções desta noite; o lápis (✎) deixa você escrever outra ideia.</p></div>
+          <div class="legenda-cartao"><span class="legenda-icone ic-caca">♦</span><b>Caçada</b><p>Obrigatória. Diga onde e como seu vampiro se alimenta. Sem caçar, a Fome sobe.</p></div>
+          <div class="legenda-cartao"><span class="legenda-icone ic-curta">✎</span><b>Ações curtas</b><p>Opcionais, até 2: uma ligação, passar num lugar, observar alguém.</p></div>
+        </div>
+        <p class="nota">Os pontos com <b>?</b> são detalhes para examinar. O quadro no canto mostra o que já está pronto e o que falta. ${prazo}</p>
+        <ol class="escolhas"><li><button type="button" data-principal><span class="escolha-num">1.</span> — Entendi</button></li></ol>`,
+    });
+    camada.el.querySelector('[data-principal]').onclick = () => camada.fechar();
   }
 
   // --- Diálogos ------------------------------------------------------------------------------
@@ -322,7 +371,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     });
     camada.el.querySelector('[data-principal]').onclick = (ev) => {
       const t = camada.el.querySelector('[data-cacada]').value.trim();
-      plano.cacada = t || (emOutroLugar ? `Caçar ${visitado.em}` : '');
+      plano.cacada = t || (emOutroLugar ? `Caçar ${visitado.em}` : 'Do meu jeito de sempre');
       plano.nao_cacar = camada.el.querySelector('[data-nao-cacar]').checked;
       confirmarEscolha(ev.currentTarget, () => { guardarRascunho(); camada.fechar(); });
     };
@@ -350,26 +399,46 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     };
   }
 
+  // Janela do plano (P): as três partes da noite como lista, com o estado de cada uma e onde mudar.
   function abrirPlano() {
     abrirJanela(camadas, {
       titulo: noite ? `Plano da noite ${noite.numero}` : 'Plano da noite',
       montar: (corpo, camada) => {
-        corpo.innerHTML = `
-          <p class="nota">${noite ? `A noite fecha ${esc(dataLonga(noite.fecha_em))}, ou antes, se todos enviarem.` : 'A próxima noite ainda não abriu.'}</p>
-          <label>Ação principal<textarea data-f="principal" rows="4" maxlength="1500">${esc(plano.principal || '')}</textarea></label>
-          <label>Caçada<textarea data-f="cacada" rows="2" maxlength="800">${esc(plano.cacada || '')}</textarea></label>
-          <label class="radio"><input type="checkbox" data-f="nao_cacar" ${plano.nao_cacar ? 'checked' : ''}> Não vou caçar esta noite</label>
-          <label>Ação curta 1<input data-f="curta_1" maxlength="500" value="${esc(plano.curta_1 || '')}"></label>
-          <label>Ação curta 2<input data-f="curta_2" maxlength="500" value="${esc(plano.curta_2 || '')}"></label>
-          <label class="radio"><input type="checkbox" data-f="esforco" ${plano.esforco ? 'checked' : ''}> Se for preciso, gaste minha Força de Vontade</label>
-          <div class="botoes"><span></span><button type="button" class="btn" data-enviar-plano ${noite ? '' : 'disabled'}>Enviar ações</button></div>`;
-        corpo.addEventListener('input', (ev) => {
-          const f = ev.target.dataset.f;
-          if (!f) return;
-          plano[f] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value;
-          guardarRascunho();
+        const desenhar = () => {
+          const pt = partes();
+          const enviado = acao && !alterado;
+          const item = (ok, nome, tipo, valor, botoes) => `
+            <li class="plano-item ${ok ? 'ok' : tipo === 'opcional' ? 'opcional' : 'falta'}">
+              <div class="plano-item-cabeca"><span class="plano-item-marca">${ok ? '✓' : tipo === 'opcional' ? '·' : '!'}</span><b>${nome}</b><small>${tipo}</small></div>
+              <p>${valor}</p>
+              <div class="plano-item-botoes">${botoes}</div>
+            </li>`;
+          corpo.innerHTML = `
+            <p class="nota">${noite ? `${esc(prazoRestante(noite.fecha_em))}, ou antes, se todos enviarem.` : 'A próxima noite ainda não abriu.'}</p>
+            <ol class="plano-lista">
+              ${item(pt.principal, 'Ação principal', 'obrigatória', pt.principal ? esc(plano.principal) : '<em>Falta escolher. Ande até um ponto numerado ou escreva a sua ideia.</em>',
+                `${opcoes.length && !emOutroLugar ? '<button type="button" class="btn-secundario" data-ir="opcoes">Escolher entre as opções</button>' : '<button type="button" class="btn-secundario" data-ir="cena">Escolher na cena</button>'}<button type="button" class="btn-texto" data-ir="escrever">Escrever do meu jeito</button>`)}
+              ${item(pt.cacada, 'Caçada', 'obrigatória', plano.nao_cacar ? 'Não vou caçar esta noite (a Fome sobe).' : pt.cacada ? esc(plano.cacada) : '<em>Falta decidir. Em branco, você caça do seu jeito de sempre; sem caçar, a Fome sobe.</em>',
+                '<button type="button" class="btn-secundario" data-ir="cacada">Decidir a caçada</button>')}
+              ${item(pt.curtas > 0, 'Ações curtas', 'opcional', pt.curtas ? [plano.curta_1, plano.curta_2].filter((x) => x?.trim()).map((x) => `• ${esc(x)}`).join('<br>') : 'Nenhuma. Até 2, se quiser: uma ligação, passar num lugar, observar alguém.',
+                '<button type="button" class="btn-texto" data-ir="escrever">Escrever ações curtas</button>')}
+            </ol>
+            ${plano.esforco ? '<p class="nota">Se for preciso, sua Força de Vontade será gasta para tentar de novo.</p>' : ''}
+            <div class="botoes"><span class="nota">${enviado ? `Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}` : acao ? 'Mudanças não enviadas.' : 'Ainda não enviado.'}</span>
+              <button type="button" class="btn" data-enviar-plano ${noite && pt.principal && !enviado ? '' : 'disabled'}>${acao ? 'Reenviar' : 'Enviar'}</button></div>`;
+        };
+        desenhar();
+        corpo.addEventListener('click', async (ev) => {
+          const ir = ev.target.closest('[data-ir]')?.dataset.ir;
+          if (ir) {
+            camada.fechar();
+            if (ir === 'opcoes') abrirHistoria(false);
+            else if (ir === 'cacada') abrirCacada();
+            else if (ir === 'escrever') abrirEscrita();
+            return;
+          }
+          if (ev.target.closest('[data-enviar-plano]')) { await enviar(); if (acao && !alterado) camada.fechar(); else desenhar(); }
         });
-        corpo.querySelector('[data-enviar-plano]').onclick = async () => { await enviar(); if (acao && !alterado) camada.fechar(); };
       },
     });
   }
@@ -379,7 +448,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   }
 
   function abrirDiario() {
-    abrirJanela(camadas, { titulo: 'Diário', classe: 'janela-larga', montar: (corpo) => telaDiario(corpo, p) });
+    abrirJanela(camadas, { titulo: 'Diário', classe: 'janela-larga', montar: (corpo) => telaDiario(corpo, p, { noite, plano }) });
   }
 
   function abrirMenu() {
@@ -409,6 +478,15 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       case 'plano': abrirPlano(); break;
       case 'enviar': enviar(); break;
       case 'menu': abrirMenu(); break;
+      case 'legenda': abrirLegenda(); break;
+      case 'recolher':
+        quadroRecolhido = !quadroRecolhido;
+        try { localStorage.setItem('mascara.quadroRecolhido', quadroRecolhido ? '1' : '0'); } catch { /* sem armazenamento */ }
+        desenharPlano();
+        break;
+      case 'linha-principal': if (opcoes.length && !emOutroLugar) abrirHistoria(false); else abrirEscrita(); break;
+      case 'linha-cacada': abrirCacada(); break;
+      case 'linha-curtas': abrirEscrita(); break;
       case 'efeitos': efeitos.alternar(); raiz.querySelector('[data-hud="efeitos"]').setAttribute('aria-pressed', String(efeitos.ligados())); break;
       case 'som': som.alternar(); raiz.querySelector('[data-hud="som"]').setAttribute('aria-pressed', String(som.ligado())); break;
       default: break;
@@ -448,6 +526,15 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
 
   if (abrir === 'ficha') { abrirFicha(); return; }
   if (abrir === 'diario') { abrirDiario(); return; }
+
+  // Primeira entrada de cada noite: a legenda de como a noite funciona (depois, só pelo botão "?").
+  let legendaVista = true;
+  try { legendaVista = localStorage.getItem(`mascara.legenda.${noite?.id}`) === '1'; } catch { /* sem armazenamento */ }
+  if (noite && !legendaVista) {
+    try { localStorage.setItem(`mascara.legenda.${noite.id}`, '1'); } catch { /* sem armazenamento */ }
+    abrirLegenda();
+    return;
+  }
 
   // Ao entrar: se há narração nova, ela abre sozinha, revelada aos poucos.
   if (!emOutroLugar && atual) {
@@ -503,7 +590,7 @@ export async function telaMapa(raiz, p) {
     <div class="tela-jogo tela-mapa">
       <div class="palco"></div>
       <header class="hud-topo">
-        <div class="hud-noite"><b>Mapa do Rio</b><small><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou </span>clique num bairro para viajar</small></div>
+        <div class="hud-noite"><b>Mapa do Rio</b><small class="mapa-visitados">Visitados nesta noite: ${registroDaNoite(noite?.id).visitados.length} de ${LOCAIS.length}</small><small><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou </span>clique num bairro para viajar</small></div>
         <nav class="hud-botoes"><button type="button" data-voltar>Voltar à cena <kbd>M</kbd></button></nav>
       </header>
       <footer class="hud-dicas"><kbd>E</kbd> entrar no bairro · <kbd>M</kbd> ou <kbd>Esc</kbd> volta · visitar outro bairro deixa você planejar o que fazer lá</footer>
