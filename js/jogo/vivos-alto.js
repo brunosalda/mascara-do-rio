@@ -5,7 +5,8 @@
 //   neon    { x, y, w, h, cor }      brilho de néon que falha de vez em quando;
 //   agua    { x, y, w, h }           reflexos que tremulam na água da baía ou do mar;
 //   onda    { x, y, w }              espuma que chega na areia e some;
-//   veiculo { de: [x, y], ate: [x, y], dur, cor }  par de luzes que atravessa (bonde, VLT, trem, carro, barco);
+//   veiculo { de: [x, y], ate: [x, y], dur, cor, som }  par de luzes que atravessa (bonde, VLT, trem, carro, barco);
+//           som: 'bonde' (padrão) ou 'motor'.
 //   janela  { x, y }                 janela que acende e apaga devagar;
 //   lanterna{ x, y }                 facho que varre o chão (o vigia);
 //   fumaca  { x, y }                 fumaça que sobe (o churrasquinho).
@@ -56,7 +57,7 @@ export const VIVOS_ALTO = {
       { tipo: 'onda', x: 0.02, y: 0.5, w: 0.5 },
       { tipo: 'onda', x: 0.2, y: 0.4, w: 0.45 },
       { tipo: 'agua', x: 0.05, y: 0.22, w: 0.55, h: 0.12 },
-      { tipo: 'veiculo', de: [0.9, 0.56], ate: [0.6, 0.99], dur: 14, cor: '#fff4d8' },
+      { tipo: 'veiculo', som: 'motor', de: [0.9, 0.56], ate: [0.6, 0.99], dur: 14, cor: '#fff4d8' },
     ],
     reacoes: [
       { x: 0.5, y: 0.8, raio: 0.07, quando: 'passar', som: 'onda', efeito: 'onda' },
@@ -67,7 +68,7 @@ export const VIVOS_ALTO = {
     vivos: [
       { tipo: 'onda', x: 0.68, y: 0.44, w: 0.3 },
       { tipo: 'agua', x: 0.74, y: 0.3, w: 0.25, h: 0.1 },
-      { tipo: 'veiculo', de: [0.52, 0.36], ate: [0.63, 0.99], dur: 12, cor: '#fff4d8' },
+      { tipo: 'veiculo', som: 'motor', de: [0.52, 0.36], ate: [0.63, 0.99], dur: 12, cor: '#fff4d8' },
       { tipo: 'janela', x: 0.3, y: 0.15 },
       { tipo: 'janela', x: 0.05, y: 0.25 },
     ],
@@ -140,7 +141,7 @@ export const VIVOS_ALTO = {
   niteroi: {
     vivos: [
       { tipo: 'agua', x: 0.08, y: 0.45, w: 0.45, h: 0.12 },
-      { tipo: 'veiculo', de: [0.08, 0.38], ate: [0.5, 0.4], dur: 70, cor: '#fff0c0' },
+      { tipo: 'veiculo', som: 'motor', de: [0.08, 0.38], ate: [0.5, 0.4], dur: 70, cor: '#fff0c0' },
       { tipo: 'neon', x: 0.8, y: 0.53, w: 0.12, h: 0.05, cor: '#ff3030' },
     ],
     reacoes: [
@@ -150,7 +151,7 @@ export const VIVOS_ALTO = {
   },
   'aeroporto-rio': {
     vivos: [
-      { tipo: 'veiculo', de: [0.62, 0.36], ate: [0.98, 0.3], dur: 30, cor: '#fff6e0' },
+      { tipo: 'veiculo', som: 'motor', de: [0.62, 0.36], ate: [0.98, 0.3], dur: 30, cor: '#fff6e0' },
       { tipo: 'agua', x: 0.72, y: 0.43, w: 0.27, h: 0.06 },
     ],
     reacoes: [

@@ -1409,6 +1409,26 @@ export function montarCena(raiz, {
     if (reflexo) { reflexo.classList.remove('onda'); void reflexo.offsetWidth; reflexo.classList.add('onda'); }
   }
 
+  // Rodada 37: som das coisas vivas da pintura (néon que falha, onda, bonde ou carro que passa), tonal e
+  // curto, do lado certo, preso ao momento da animação; só quando acontece perto do personagem. A lanterna,
+  // a água, as janelas e a fumaça ficam mudas.
+  if (geo.alto) {
+    const els = [...mundo.querySelectorAll('.vivos .vivo:not(.vivo-poca)')];
+    (geo.vivos || []).forEach((v, i) => {
+      const el = els[i];
+      const momento = { neon: [7, 0.64, 'zumbido'], onda: [6, 0.22, 'onda'], veiculo: [v.dur || 30, 0.06, v.som || 'bonde'] }[v.tipo];
+      if (!el || !momento) return;
+      const [dur, fracao, nome] = momento;
+      const x = v.tipo === 'veiculo' ? (v.de[0] + v.ate[0]) / 2 : v.x + (v.w || 0) / 2;
+      const tocar = () => {
+        if (!raiz.isConnected || pausado) return;
+        if (Math.abs(x - pos.x) > 0.45) return;
+        som.reacao?.(nome, limitar((x - pos.x) * 2.2, -1, 1));
+      };
+      el.addEventListener('animationiteration', () => setTimeout(tocar, dur * fracao * 1000));
+    });
+  }
+
   // --- Vida dentro da pintura ------------------------------------------------------------------
   // Coisas da pintura que respondem (sem efeito na regra): copo que tilinta, poça que ondula, poste
   // que pisca quando ele para embaixo. Cada uma com um som curto do lado em que acontece.
