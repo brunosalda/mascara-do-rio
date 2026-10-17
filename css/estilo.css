@@ -3666,3 +3666,11 @@ body.celular .registro-noite, body.celular .registro-noite::before, body.celular
 /* Celular deitado também mostra, em Mais, o som, a chuva e a ajuda (que saíram da barra). */
 body.celular .menu-opcoes .so-celular { display: block; }
 body.celular .menu-opcoes button { min-height: 48px; }
+
+/* Celular: o mapa fica com o arrasto do dedo (o navegador não rouba) e um botão mostra o mapa inteiro. */
+.mapa-svg { touch-action: none; }
+.mapa-inteiro { position: absolute; z-index: 30; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); translate: -50% 0; min-height: 48px; padding: 0 1.2rem;
+  font: 700 0.95rem var(--sans); letter-spacing: 0.04em; color: #fbeccb; cursor: pointer; border: 2px solid #c9a25a; border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 75%); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7); }
+.mapa-inteiro[hidden] { display: none; }
+.mapa-inteiro { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); }

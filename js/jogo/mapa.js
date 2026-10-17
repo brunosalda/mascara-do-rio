@@ -122,11 +122,13 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
   // Enquadramento: no computador, todos os bairros inteiros; numa tela estreita (celular em pé), a
   // altura toda, centrada no bairro atual, e o dedo arrasta para os lados.
   let desloc = null;
+  // Celular (ordem de 17/10): "Ver o mapa inteiro" mostra todos os bairros de uma vez; tocar de novo aproxima.
+  let inteiro = false;
   function enquadrar() {
     const largura = svg.clientWidth || window.innerWidth;
     const altura = svg.clientHeight || window.innerHeight;
     const aspecto = largura / Math.max(1, altura);
-    if (aspecto >= 1.3) {
+    if (aspecto >= 1.3 || inteiro) {
       desloc = null;
       svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       svg.setAttribute('viewBox', `${AREA.x} ${AREA.y} ${AREA.w} ${AREA.h}`);
@@ -143,9 +145,21 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
   }
   enquadrar();
   window.addEventListener('resize', enquadrar);
+  const botaoInteiro = document.createElement('button');
+  botaoInteiro.type = 'button';
+  botaoInteiro.className = 'mapa-inteiro';
+  const rotularInteiro = () => {
+    const estreito = (svg.clientWidth || window.innerWidth) / Math.max(1, svg.clientHeight || window.innerHeight) < 1.3;
+    botaoInteiro.hidden = !estreito;
+    botaoInteiro.textContent = inteiro ? 'Aproximar' : 'Ver o mapa inteiro';
+  };
+  botaoInteiro.addEventListener('click', (ev) => { ev.stopPropagation(); inteiro = !inteiro; if (!inteiro) desloc = null; enquadrar(); rotularInteiro(); });
+  caixaMapa.appendChild(botaoInteiro);
+  rotularInteiro();
+  window.addEventListener('resize', rotularInteiro);
   let arraste = null;
   let arrastou = false;
-  svg.addEventListener('pointerdown', (ev) => { if (desloc != null) { arraste = { x: ev.clientX, d: desloc }; arrastou = false; } });
+  svg.addEventListener('pointerdown', (ev) => { arrastou = false; if (desloc != null && !inteiro) arraste = { x: ev.clientX, d: desloc }; });
   svg.addEventListener('pointermove', (ev) => {
     if (!arraste) return;
     const dx = ev.clientX - arraste.x;
@@ -155,7 +169,8 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     desloc = arraste.d - dx * escala;
     enquadrar();
   });
-  const soltar = () => { arraste = null; };
+  // Depois de arrastar, só o clique que vem junto é ignorado (no toque, às vezes nem vem).
+  const soltar = () => { arraste = null; if (arrastou) setTimeout(() => { arrastou = false; }, 50); };
   svg.addEventListener('pointerup', soltar);
   svg.addEventListener('pointercancel', soltar);
   const vampiro = raiz.querySelector('.mapa-vampiro');
