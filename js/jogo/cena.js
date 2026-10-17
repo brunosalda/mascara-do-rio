@@ -2035,6 +2035,32 @@ export function montarCena(raiz, {
     cena.addEventListener('pointerup', cancelar, { once: true });
   });
 
+  // Rodada 37: no toque, cada pessoa e cada ponto têm uma área invisível de pelo menos 44 × 44 px em
+  // volta (o desenho não muda). Um toque que não acertou o desenho vai para o alvo mais perto do dedo.
+  const toqueGrosso = window.matchMedia?.('(pointer: coarse)').matches;
+  cena.addEventListener('click', (ev) => {
+    if (ignorarClique || camadaAberta() || !ev.isTrusted) return;
+    if (!(ev.pointerType === 'touch' || (toqueGrosso && ev.pointerType !== 'mouse'))) return;
+    if (ev.target.closest('.pessoa, [data-ponto], button, a, .balao-voz, .painel-pergunta, input')) return;
+    let melhor = null; let menor = Infinity;
+    for (const el of mundo.querySelectorAll('.pessoa, [data-ponto]')) {
+      if (el.hidden || el.offsetParent === null) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) continue;
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const meiaL = Math.max(22, r.width / 2);
+      const meiaA = Math.max(22, r.height / 2);
+      if (Math.abs(ev.clientX - cx) > meiaL || Math.abs(ev.clientY - cy) > meiaA) continue;
+      const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+      if (d < menor) { menor = d; melhor = el; }
+    }
+    if (!melhor) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    melhor.click();
+  }, true);
+
   cena.addEventListener('click', (ev) => {
     if (ignorarClique) { ignorarClique = false; return; }
     if (camadaAberta()) return;
