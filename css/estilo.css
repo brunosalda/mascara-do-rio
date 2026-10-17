@@ -2998,12 +2998,12 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
 }
 .dialogo-cena.dialogo-baixo .dialogo-corpo > *, .dialogo-cena.dialogo-baixo .dialogo-escolhas > *,
 .dialogo-cena.dialogo-baixo .dialogo-rodape > *, .dialogo-cena.dialogo-baixo .dialogo-cabeca {
-  max-width: 72ch; margin-left: auto; margin-right: auto;
+  max-width: 36em; margin-left: auto; margin-right: auto;
 }
 .dialogo-cena.dialogo-baixo .dialogo-cabeca { width: 100%; box-sizing: border-box; }
 .dialogo-cena.dialogo-baixo .dialogo-corpo { min-height: 7.5em; }
 .dialogo-cena.dialogo-baixo .dialogo-escolhas { max-height: 40%; }
-.dialogo-cena.dialogo-baixo .hq, .dialogo-cena.dialogo-baixo .hq-solto { max-width: 72ch; }
+.dialogo-cena.dialogo-baixo .hq, .dialogo-cena.dialogo-baixo .hq-solto { max-width: 36em; }
 .dialogo-cena.dialogo-baixo .hq-solto .painel { aspect-ratio: 16 / 7; }
 /* Com as opções na tela, a HQ encolhe para uma faixa baixa e o texto fica com o espaço. */
 .dialogo-cena.dialogo-baixo.lido .hq .painel, .dialogo-cena.dialogo-baixo.lido .hq-solto .painel { max-height: 14vh; aspect-ratio: auto; height: 14vh; }
@@ -3519,3 +3519,6 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 .passo-titulo { margin: 0.7rem 0 0; font: 700 0.92rem var(--sans); letter-spacing: 0.04em; color: #f0dcb0; }
 .passo-titulo b { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; margin-right: 0.4rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); border: 1.5px solid #c9a25a; color: #fff; font-size: 0.8rem; }
 #form-pedir-link textarea { width: 100%; min-height: 4.5rem; padding: 0.5rem; font: 400 0.95rem var(--sans); color: var(--texto-claro); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(201, 162, 90, 0.5); text-transform: none; letter-spacing: 0; resize: vertical; }
+
+/* Rodada 43: a coluna de leitura da narração com no máximo cerca de 70 letras por linha, em todas as caixas. */
+.texto-narracao > p, .texto-narracao > .fala { max-width: 36em; } /* cerca de 67 letras com esta fonte (62ch dava 83) */
