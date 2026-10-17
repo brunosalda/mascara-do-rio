@@ -47,33 +47,19 @@ const OPCOES_PRELUDIO = [
   'Ir embora da Lapa antes que ele volte.',
 ];
 
-function demoPreludio(raiz) {
-  raiz.innerHTML = '<div class="tela-jogo"><div class="palco"></div></div>';
-  const camadas = raiz.querySelector('.tela-jogo');
-  const p = personagemFicticio();
-  montarCena(raiz.querySelector('.palco'), { cla: p.ficha.cla, sprite: null, imagem: CENARIO_ABERTURA, lugar: 'lapa', pontos: [], inicio: [0.45, 0.8] });
-  camadas.insertAdjacentHTML('beforeend', faixaDemo('prelúdio fictício; as escolhas não são gravadas'));
+// Rodada 40: o prelúdio abre como a noite de verdade (vista do alto da Lapa, moldura de pedra e bronze,
+// narração no painel de baixo, a gente da área); o cartão de abertura usa a pintura antiga.
+async function demoPreludio(raiz) {
+  const base = personagemFicticio();
+  const p = { ...base, id: 'demo-preludio', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 1, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
   // A revelação aos poucos guarda no aparelho o que já foi lido: a demonstração começa sempre do zero.
-  const chave = 'demo-preludio';
-  try { localStorage.removeItem(`mascara.lido.${chave}`); } catch { /* sem armazenamento */ }
-  cartaoDeAbertura(camadas, 'Prelúdio', 'Lapa · garoa', () => {
-    const camada = abrirDialogo(camadas, {
-      rotulo: 'Prelúdio',
-      html: `${narracaoComPaineis(PRELUDIO, [], { cenario: CENARIO_ABERTURA, classe: 'privada' })}${escolhas(OPCOES_PRELUDIO)}`,
-      chave,
-      aoAvancar: () => som.toque(),
-      rodape: `<span class="nota">Escolha uma fala<span class="so-teclado"> (1 a ${OPCOES_PRELUDIO.length})</span> ou feche e ande pela cena.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>`,
-    });
-    camada.el.addEventListener('click', (ev) => {
-      const b = ev.target.closest('[data-escolha]');
-      if (b && !b.closest('.decidido')) {
-        confirmarEscolha(b, () => {
-          aviso('Demonstração: na tela real, esta fala vira a ação principal da noite.');
-          camada.fechar();
-        });
-      }
-    });
-  });
+  try { localStorage.removeItem('mascara.lido.demo-preludio'); localStorage.removeItem('mascara.registro.990001'); } catch { /* sem armazenamento */ }
+  const irPara = (rota) => {
+    if (rota === 'mapa') { location.hash = `#/demo/mapa?${paramsDemo({ lugar: 'lapa' })}`; return; }
+    aviso('Na demonstração, isso fica fora: nada sai do prelúdio fictício.');
+  };
+  await telaNoite(raiz, p, { lugar: 'lapa', vista: 'alto', fonte: fonteFicticia({ preludio: true }), irPara });
+  raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('prelúdio fictício; as escolhas não são gravadas'));
 }
 
 function demoEntrada(raiz) {
@@ -117,19 +103,23 @@ const CAMINHADA_DO_BRUNO = {
   respira: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-respira.png', quadros: 8, largura: 78, altura: 300 },
 };
 
-function fonteFicticia() {
-  const noite = { id: 990003, numero: 3, status: 'aberta', fecha_em: new Date(Date.now() + 2 * 86400000).toISOString() };
-  const narracao = {
-    id: 'demo-noite-2', tipo: 'noite', noite_id: 990002, paineis: [],
-    texto: PRELUDIO,
-    opcoes: [...OPCOES_PRELUDIO, 'Procurar o dono do bar e perguntar pelo homem de terno.'],
-  };
+function fonteFicticia({ preludio = false } = {}) {
+  const noite = preludio
+    ? { id: 990001, numero: 1, status: 'aberta', fecha_em: new Date(Date.now() + 2 * 86400000).toISOString() }
+    : { id: 990003, numero: 3, status: 'aberta', fecha_em: new Date(Date.now() + 2 * 86400000).toISOString() };
+  const narracao = preludio
+    ? { id: 'demo-preludio', tipo: 'preludio', paineis: [], texto: PRELUDIO, opcoes: OPCOES_PRELUDIO }
+    : {
+      id: 'demo-noite-2', tipo: 'noite', noite_id: 990002, paineis: [],
+      texto: PRELUDIO,
+      opcoes: [...OPCOES_PRELUDIO, 'Procurar o dono do bar e perguntar pelo homem de terno.'],
+    };
   const resolvida = { id: 990002, numero: 2, status: 'resolvida', narracao_publica: 'A chuva não parou a noite inteira. Na Lapa, falaram de um homem de terno que não pisca.', paineis: [] };
   let acao = null;
   return {
     noiteAberta: async () => noite,
     narracoesDoPersonagem: async () => [narracao],
-    noitesResolvidas: async () => [resolvida],
+    noitesResolvidas: async () => (preludio ? [] : [resolvida]),
     ultimaNoite: async () => noite,
     minhaAcao: async () => acao,
     salvarAcao: async (_n, _p, campos) => { acao = { id: 'demo-acao', ...campos, atualizado_em: new Date().toISOString(), encerrada_em: null }; return acao; },
