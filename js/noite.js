@@ -13,7 +13,7 @@ import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas } from './jogo/detalhes.js';
-import { registroDaNoite, registrar, prazoRestante, quandoCurto } from './jogo/registro.js';
+import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
 import { lerLeitura, gravarLeitura, cerimoniasCurtas, RITMOS } from './leitura.js';
 
@@ -641,7 +641,7 @@ export function htmlCiclo(ult, lida = true) {
     estado,
     html: `
       <div class="ciclo-linha">${linha}</div>
-      <div class="ciclo-linha"><span class="quadro-nome">Próxima noite</span> abre quando o Narrador terminar</div>
+      <div class="ciclo-linha"><span class="quadro-nome">Próxima noite</span> abre quando o Narrador terminar, ${quandoONarradorVolta()}</div>
       <div class="ciclo-linha ciclo-enquanto"><span class="quadro-nome">Enquanto isso</span> explore, examine os detalhes, releia o diário</div>`,
   };
 }
@@ -733,7 +733,7 @@ export async function telaEspera(raiz, p, { aoEditar } = {}) {
   const camada = abrirDialogo(camadas, {
     rotulo: 'Ficha enviada',
     fechavel: false,
-    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p>Costuma levar até 2 horas: o Narrador confere o jogo a cada 2 horas, das 7h à 1h. Você vai ver o seu prelúdio aqui assim que ele chegar.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
+    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p>O Narrador volta ${quandoONarradorVolta()}. Você vai ver o seu prelúdio aqui assim que ele chegar.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
       <ol class="escolhas">
         <li><button type="button" data-ver><span class="escolha-num">1.</span> — Ver minha ficha</button></li>
         <li><button type="button" data-editar><span class="escolha-num">2.</span> — Voltar a editar</button></li>

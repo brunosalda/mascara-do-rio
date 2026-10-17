@@ -75,6 +75,22 @@ export function termo(nome, def) {
 
 export const termoDe = (tipo, id, nome) => termo(nome, definicao(tipo, id));
 
+// Na primeira vez que uma ficha aparece, uma linha discreta ensina que os termos abrem uma explicação.
+// A tela pode ser desenhada mais de uma vez na mesma visita: a decisão vale para a visita inteira.
+const CHAVE_DICA = 'mascara.dicaGlossario';
+let dicaNestaVisita = null;
+export function dicaDoGlossario() {
+  if (dicaNestaVisita === null) {
+    try {
+      dicaNestaVisita = localStorage.getItem(CHAVE_DICA) !== '1';
+      localStorage.setItem(CHAVE_DICA, '1');
+    } catch { dicaNestaVisita = true; /* sem armazenamento: mostra sempre */ }
+  }
+  if (!dicaNestaVisita) return '';
+  const gesto = window.matchMedia?.('(hover: hover)').matches ? 'Passe o mouse ou clique' : 'Toque';
+  return `<p class="dica-glossario">${gesto} nos termos sublinhados para entender o que significam.</p>`;
+}
+
 // Um balão só para a página inteira, ligado uma vez.
 let balao = null;
 let dono = null;

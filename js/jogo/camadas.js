@@ -131,13 +131,18 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
 // Pergunta numa caixa do jogo, com escolhas numeradas, no lugar de confirm(). Resolve com o índice
 // escolhido, ou null se o jogador fechar (Esc ou ✕). Fora da cena (na criação), a própria caixa
 // escuta o teclado.
+// Uma pergunta por vez: um segundo clique enquanto ela está aberta não abre outra (resolve com null).
+let perguntaAberta = false;
 export function perguntar(raiz, { rotulo = '', texto = '', opcoes = [] } = {}) {
+  if (perguntaAberta) return Promise.resolve(null);
+  perguntaAberta = true;
   return new Promise((resolver) => {
     let feito = false;
     let ouvinte = null;
     const terminar = (valor) => {
       if (feito) return;
       feito = true;
+      perguntaAberta = false;
       if (ouvinte) document.removeEventListener('keydown', ouvinte, true);
       resolver(valor);
     };

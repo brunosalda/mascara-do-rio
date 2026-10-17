@@ -1890,7 +1890,7 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
 /* Termo da V5 com frase ao toque: sublinhado de leve, sem cara de botão. */
 .termo {
   font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: help;
-  text-decoration: underline dotted rgba(216, 208, 192, 0.45); text-underline-offset: 3px; text-decoration-thickness: 1px;
+  text-decoration: underline dotted rgba(255, 180, 138, 0.6); text-underline-offset: 3px; text-decoration-thickness: 1.5px;
   text-align: inherit; letter-spacing: inherit; text-transform: inherit;
 }
 .termo:hover, .termo:focus-visible { text-decoration-color: var(--acento-claro); color: var(--texto-claro); outline: none; }
@@ -1921,6 +1921,8 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
 .fim-dobra > summary:hover { color: var(--texto-claro); }
 .fim-dobra[open] > summary { color: var(--acento-claro); }
 .sugestao-explica { margin: 0.2rem 0 0.6rem; }
+.dica-glossario { margin: 0.2rem 0 0.5rem; font-size: 0.88rem; color: var(--acento-claro); opacity: 0.85; }
+.dica-glossario::before { content: '· '; }
 @media (max-width: 700px) {
   .fim-dossie { grid-template-columns: 96px 1fr; gap: 0.8rem; margin-top: 0.3rem; }
   .fim-nome { font-size: 1.6rem; }
@@ -1928,7 +1930,7 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
   .fim-texto { display: contents; }
   .fim-texto > .grupo-rotulo, .fim-nome, .em-vida, .fim-conceito { grid-column: 2; }
   .fim-retrato { grid-row: 1 / span 4; }
-  .fim-frases { grid-column: 1 / -1; }
+  .fim-frases, .fim-texto > .dica-glossario { grid-column: 1 / -1; }
   .fim-abertura .texto-narracao { font-size: 0.95em; }
 }
 

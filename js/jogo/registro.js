@@ -44,3 +44,18 @@ export function prazoRestante(iso) {
   if (horas >= 1) return `fecha em ${Math.floor(horas)} h (${quando})`;
   return `fecha em ${Math.max(1, Math.round(ms / 60000))} min`;
 }
+
+// Quando o Narrador volta: a tarefa dele roda às 7h07 e a cada 2 horas até 1h07 (horário de Brasília);
+// entre 1h07 e 7h07 não roda. Devolve "por volta das 9h", "por volta da 1h" ou, de madrugada,
+// "por volta das 7h da manhã". Uma função só para o envio da ficha, a espera e o quadro entre noites.
+const RODADAS_NARRADOR = [1, 7, 9, 11, 13, 15, 17, 19, 21, 23].map((h) => h * 60 + 7);
+const fmtRelogio = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Sao_Paulo' });
+export function quandoONarradorVolta(agora = new Date()) {
+  const [h, m] = fmtRelogio.format(agora).split(':').map(Number);
+  const minutos = h * 60 + m;
+  const proxima = RODADAS_NARRADOR.find((r) => r > minutos) ?? RODADAS_NARRADOR[0];
+  const hora = Math.floor(proxima / 60);
+  if (hora === 1) return 'por volta da 1h';
+  if (hora === 7) return 'por volta das 7h da manhã';
+  return `por volta das ${hora}h`;
+}

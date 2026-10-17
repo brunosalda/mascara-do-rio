@@ -2,7 +2,7 @@
 import * as v5 from './motor/v5.js';
 import { esc, pontos } from './ui.js';
 import { retratoDe, retratoProvisorio, localDe } from './cidade.js';
-import { termo, termoDe, ligarGlossario } from './glossario.js';
+import { termo, termoDe, ligarGlossario, dicaDoGlossario } from './glossario.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
 // Até o Narrador pintar o retrato do personagem, mostra o retrato provisório (silhueta do clã).
@@ -191,6 +191,7 @@ export async function telaFicha(raiz, p) {
           <span class="grupo-rotulo">${esc(v5.cla(f.cla)?.nome || '')}${local ? ` · ${esc(localDe(local)?.nome || local)}` : ''}</span>
           <h1 class="nome-personagem">${esc(p.nome || 'Sem nome')}</h1>
           ${linhaEmVida({ ...f, nome: p.nome })}
+          ${dicaDoGlossario()}
           ${f.origem?.conceito ? `<p class="dossie-conceito">${esc(f.origem.conceito)}</p>` : ''}
           ${painelEstado(p.estado, { tecnica })}
           <label class="interruptor"><input type="checkbox" id="tecnica" ${tecnica ? 'checked' : ''}> Ficha técnica (com pontos)</label>

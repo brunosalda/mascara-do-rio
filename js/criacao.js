@@ -5,6 +5,7 @@ import { esc, aviso, on, pontos } from './ui.js';
 import { recarregarPersonagens, ir } from './app.js';
 import { resumoFicha } from './ficha.js';
 import { imagemDoCla } from './cidade.js';
+import { quandoONarradorVolta } from './jogo/registro.js';
 
 const ROTULOS = {
   origem: 'Quem você era',
@@ -376,7 +377,7 @@ function telaRevisao(raiz, p) {
       <p class="sobretitulo">Ficha enviada</p>
       <h1>${esc(p.nome)}</h1>
       <div class="cartao destaque">
-        <p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever seu prelúdio, e a primeira noite se abre para você.</p>
+        <p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever seu prelúdio, e a primeira noite se abre para você. Ele volta ${quandoONarradorVolta()}.</p>
         <button class="btn-secundario" id="voltar-editar">Voltar a editar</button>
       </div>
       ${resumoFicha(p.ficha)}

@@ -8,7 +8,8 @@ import { estado as app, recarregarPersonagens, ir } from './app.js';
 import { resumoFicha, fortesEFracos, itemFortesFracos, linhaEmVida, pedraDeToque, semPontoFinal } from './ficha.js';
 import { imagemDoCla, retratoProvisorio } from './cidade.js';
 import { som } from './ambiente.js';
-import { termoDe } from './glossario.js';
+import { termoDe, dicaDoGlossario } from './glossario.js';
+import { quandoONarradorVolta } from './jogo/registro.js';
 import { perguntar } from './jogo/camadas.js';
 
 const PERGUNTAS = CENAS.filter((c) => c.tipo !== 'fim').length;
@@ -117,6 +118,7 @@ function htmlFim(ficha, ok, e) {
         <h2 class="fim-nome">${esc(semPontoFinal(ficha.nome) || 'Sem nome')}</h2>
         ${linhaEmVida(ficha)}
         ${ficha.origem?.conceito ? `<p class="fim-conceito">${esc(ficha.origem.conceito)}</p>` : ''}
+        ${dicaDoGlossario()}
         <div class="fim-colunas">
           <div><h3>Seus pontos fortes</h3><ul class="lista-palavras compacta">${fortes.map(itemFortesFracos).join('')}</ul></div>
           <div><h3>Seus pontos fracos</h3><ul class="lista-palavras compacta">${fracos.map(itemFortesFracos).join('')}</ul></div>
@@ -130,7 +132,7 @@ function htmlFim(ficha, ok, e) {
     </div>
     <div class="fim-envio surgir" style="animation-delay:800ms">
       ${ok ? '' : '<p class="nota">Faltou algum detalhe na ficha. Use "Ajustar detalhes" para completar.</p>'}
-      <p class="fim-depois">Depois de enviar, o Narrador lê sua ficha, encaixa você na cidade e escreve o seu prelúdio. Costuma levar até 2 horas. Até ele começar, você ainda pode ajustar.</p>
+      <p class="fim-depois">Depois de enviar, o Narrador lê sua ficha, encaixa você na cidade e escreve o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode ajustar.</p>
       <div class="botoes final-conversa">
         <button type="button" class="btn-secundario" data-ajustar>Ajustar detalhes</button>
         <button type="button" class="btn" data-enviar-conversa ${ok ? '' : 'disabled'}>Enviar para o Narrador</button>
@@ -297,7 +299,7 @@ export async function telaEntrevista(raiz, personagem) {
     if (ocupado) return;
     const r = await perguntar(raiz.querySelector('.tela-criacao') || raiz, {
       rotulo: 'Enviar a ficha',
-      texto: '<p>O Narrador vai ler sua ficha e escrever o seu prelúdio. Até ele começar, você ainda pode voltar e ajustar.</p>',
+      texto: `<p>O Narrador vai ler sua ficha e escrever o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode voltar e ajustar.</p>`,
       opcoes: ['Enviar ao Narrador', 'Revisar mais um pouco'],
     });
     if (r !== 0 || ocupado) return;
