@@ -1489,7 +1489,16 @@ export function montarCena(raiz, {
       if (camLivre.centrar || !cameraPronta) {
         // Na chegada, enquadra o personagem e a gente da área juntos (ninguém do elenco escondido); o C
         // depois centraliza só no personagem.
-        const fxInicial = !cameraPronta && gente.length ? ((pos.x + gente.reduce((sm, q) => sm + q.x, 0)) / (gente.length + 1)) * W : fx;
+        // Na tela estreita (celular), se o elenco não cabe, enquadra o personagem com a pessoa mais perto.
+        let fxInicial = fx;
+        if (!cameraPronta && gente.length) {
+          const xs = [pos.x, ...gente.map((q) => q.x)];
+          if ((Math.max(...xs) - Math.min(...xs)) * W <= vw * 0.8) fxInicial = (xs.reduce((sm, x) => sm + x, 0) / xs.length) * W;
+          else {
+            const perto = gente.reduce((m, q) => (Math.abs(q.x - pos.x) < Math.abs(m.x - pos.x) ? q : m));
+            fxInicial = Math.abs(perto.x - pos.x) * W <= vw * 0.8 ? ((pos.x + perto.x) / 2) * W : fx;
+          }
+        }
         camLivre.x = vw * 0.5 - (camLivre.centrar ? fx : fxInicial);
         camLivre.y = vh * 0.55 - fy;
         if (camLivre.centrar && cameraPronta) camLivre.suave = true;

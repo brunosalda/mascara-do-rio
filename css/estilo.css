@@ -3225,3 +3225,26 @@ body.sem-efeitos .pessoa.acena .pessoa-figura { animation: none !important; }
 @keyframes refugio-chega { from { opacity: 0; } to { opacity: 1; } }
 body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: none; }
 .refugio-sem-luz { position: absolute; display: block; pointer-events: none; }
+/* Celular (375 px): a ficha rola inteira numa coluna só; abas roláveis; retrato e dados aparecem; nada passa da largura. */
+@media (max-width: 760px) {
+  .janela-registro .registro-pj { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content max-content max-content; overflow-y: auto; overflow-x: hidden; }
+  .janela-registro .rp-corpo, .janela-registro .rp-lado { min-height: max-content; }
+  .janela-registro .rp-corpo { grid-template-rows: auto auto; }
+  .janela-registro .rp-pagina { height: auto; max-height: none; overflow: visible; padding: 0.8rem 0.9rem; }
+  .janela-registro .rp-lado { overflow: visible; grid-template-columns: 96px minmax(0, 1fr); column-gap: 0.8rem; }
+  .janela-registro .rp-retrato { width: 96px; }
+  .rp-abas { overflow-x: auto; scrollbar-width: none; }
+  .rp-abas button { flex: none; padding: 0.45rem 0.75rem 0.35rem; font-size: 0.85rem; }
+  .rp-trilhas { gap: 0.6rem; }
+  .rp-coluna li, .rp-lista li { min-width: 0; }
+  .refugio-texto { padding: 0.8rem; }
+  .janela-registro .rp-lado > * { grid-column: 2; }
+  .janela-registro .rp-lado > .rp-retrato { grid-column: 1; grid-row: 1 / span 6; align-self: start; }
+  .janela-registro .rp-lado > .rp-dados, .janela-registro .rp-lado > .rp-status, .janela-registro .rp-lado > .rp-titulo, .janela-registro .rp-lado > dl { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .diario-abas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .diario-abas button { flex: none; }
+  .diario-carimbo { justify-self: start; }
+  .diario-feito b.voz { font-size: 1.05rem; font-family: var(--texto-livro); font-weight: 700; }
+}
