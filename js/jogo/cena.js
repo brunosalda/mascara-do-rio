@@ -533,13 +533,27 @@ export function montarCena(raiz, {
   });
   // Rodada 39: rastros de quem passou por aqui nesta noite (só o nome das ruas e o clã aparente) e
   // recados deixados nos pontos. Com Auspícios, os rastros ficam nítidos e dizem há quanto tempo.
-  function desenharRastroAmigo(r) {
+  // Rodada 40: o rastro fica num ponto de passagem (porta, calçada, beco, esquina), nunca no meio do largo,
+  // e some devagar ao longo da noite: mais nítido se a pessoa passou há pouco (r.minutos).
+  const PASSAGEM = /calcada|beco|esquina|porta|escada|ponto|parada|mureta/;
+  const pontosDePassagem = Object.entries(geo.ancoras || {}).filter(([nome, a]) => a.porta || PASSAGEM.test(nome)).map(([, a]) => a);
+  function ondePassou(r, i) {
+    if (!pontosDePassagem.length) return [r.x, r.y];
+    const perto = pontosDePassagem.slice().sort((a, b) => dist(a.x, a.y, r.x, r.y) - dist(b.x, b.y, r.x, r.y))[i % Math.min(2, pontosDePassagem.length)];
+    let x = perto.x + (i % 2 ? 0.025 : -0.025);
+    const y = perto.y;
+    if (gente.some((g) => dist(g.x, g.y, x, y) < 0.03)) x += i % 2 ? 0.03 : -0.03;
+    return [limitar(x, 0.04, 0.95), y];
+  }
+  function desenharRastroAmigo(r, i = 0) {
+    [r.x, r.y] = ondePassou(r, i);
     const el = document.createElement('span');
     el.className = `rastro-amigo${nitido ? ' nitido' : ''}`;
     el.style.left = pct(r.x);
     el.style.top = pct(r.y);
     el.style.height = `${(altura(r.y) * 100).toFixed(2)}%`;
     el.style.zIndex = String(Math.round(r.y * 1000) - 2);
+    if (r.minutos != null) el.style.setProperty('--frescor', limitar(1 - r.minutos / 480, 0.25, 1).toFixed(2));
     el.title = `${r.nome}${r.cla ? `, ${/^[AEIOU]/.test(r.cla) ? 'uma' : 'um'} ${r.cla},` : ''} passou por aqui${nitido && r.ha ? ` há ${r.ha}` : ''}.`;
     el.innerHTML = `${VULTO}<span class="rastro-nome">${esc(r.nome)}${r.cla ? `<small>${esc(r.cla)}</small>` : ''}</span>`;
     mundo.appendChild(el);
@@ -556,7 +570,7 @@ export function montarCena(raiz, {
     el.addEventListener('click', (ev) => { ev.stopPropagation(); falar(`RECADO${r.de ? ` DE ${r.de.toUpperCase()}` : ''}`, r.texto, 4200); });
     mundo.appendChild(el);
   }
-  if (geo.alto) { rastros.forEach(desenharRastroAmigo); recados.forEach(desenharRecado); }
+  if (geo.alto) { rastros.forEach((r, i) => desenharRastroAmigo({ ...r }, i)); recados.forEach(desenharRecado); }
 
   function posicionarPessoa(p) {
     p.el.style.left = pct(p.x);
