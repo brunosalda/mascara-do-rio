@@ -305,18 +305,39 @@ label.radio input { width: auto; margin: 0.3rem 0 0; accent-color: var(--acento)
 .trilha button.ok { background: #6f5a4a; }
 .trilha button.atual { background: var(--acento); }
 
+/* Barra fixa no rodapé: opaca e baixa (uma linha de resumo + botões), para não cobrir o conteúdo. */
 .rodape-assistente {
   position: sticky;
   bottom: 0;
-  margin: 2rem -16px 0;
-  padding: 0.8rem 16px calc(0.8rem + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(10, 10, 11, 0), rgba(10, 10, 11, 0.97) 30%);
+  z-index: 5;
+  margin: 1.5rem -16px 0;
+  padding: 0.6rem 16px calc(0.7rem + env(safe-area-inset-bottom));
+  background: #0b0b0c;
+  border-top: 1px solid var(--linha-forte);
+  box-shadow: 0 -12px 24px -12px #000;
 }
-@media (min-width: 860px) { .rodape-assistente { margin: 2rem -2rem 0; padding-left: 2rem; padding-right: 2rem; } }
-.rodape-assistente .botoes { margin-top: 0.4rem; }
-.pendencias { list-style: none; margin: 0; padding: 0; color: var(--texto-suave); font-size: 0.9rem; }
+@media (min-width: 860px) { .rodape-assistente { margin: 1.5rem -2rem 0; padding-left: 2rem; padding-right: 2rem; } }
+.rodape-assistente .botoes { margin-top: 0.5rem; }
+.resumo-pendencias { margin: 0; min-height: 1.4em; font-size: 0.92rem; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link-pendencias {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--texto-suave);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.link-pendencias:hover { color: var(--texto-claro); }
+.tudo-certo { color: var(--ok); }
+.bloco-pendencias { margin: 2rem 0 0; padding: 0.8rem 1rem; border-left: 2px solid var(--acento); background: rgba(226, 112, 62, 0.06); }
+.pendencias { list-style: none; margin: 0; padding: 0; color: var(--texto); font-size: 0.95rem; }
+.pendencias li + li { margin-top: 0.25rem; }
 .pendencias li::before { content: '· '; color: var(--acento); }
-.pendencias:empty { display: none; }
 
 .grade-opcoes { display: grid; gap: 0.7rem; }
 @media (min-width: 640px) {
@@ -336,6 +357,21 @@ label.radio input { width: auto; margin: 0.3rem 0 0; accent-color: var(--acento)
   transition: border-color 0.15s, background 0.15s;
 }
 div.opcao { cursor: default; padding: 0; }
+.opcao { overflow: hidden; }
+.opcao-imagem {
+  display: block;
+  width: calc(100% + 2rem);
+  max-width: none;
+  margin: -0.9rem -1rem 0.5rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center 28%;
+  border-bottom: 1px solid var(--linha);
+  filter: saturate(0.92);
+  transition: filter 0.2s;
+}
+.opcao:hover .opcao-imagem, .opcao.escolhida .opcao-imagem { filter: saturate(1.08) contrast(1.05); }
+@media (min-width: 900px) { .grade-opcoes.clas { grid-template-columns: repeat(3, 1fr); } }
 .opcao:hover { border-color: var(--linha-forte); }
 .opcao.escolhida { border-color: var(--acento); background: linear-gradient(180deg, rgba(158, 58, 31, 0.28), var(--superficie) 70%); }
 .opcao-cabeca { display: flex; flex-direction: column; gap: 0.35rem; text-align: left; background: none; border: 0; padding: 0.9rem 1rem; cursor: pointer; width: 100%; }
@@ -468,6 +504,7 @@ div.opcao { cursor: default; padding: 0; }
 .cabecalho-personagem .nota { margin: 0; }
 
 .ficha { margin-top: 1rem; }
+.ficha-cabeca { display: flex; align-items: center; gap: 1rem; }
 .ficha-cabeca h2 { font-size: 1.8rem; margin: 0.1rem 0 0.2rem; }
 .ficha-cabeca p { margin: 0.2rem 0; color: var(--texto-suave); }
 .ficha-secao { padding: 0.4rem 0 0.6rem; }

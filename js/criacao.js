@@ -4,6 +4,7 @@ import * as banco from './banco.js';
 import { esc, aviso, on, pontos } from './ui.js';
 import { recarregarPersonagens, ir } from './app.js';
 import { resumoFicha } from './ficha.js';
+import { imagemDoCla } from './cidade.js';
 
 const ROTULOS = {
   origem: 'Quem você era',
@@ -66,11 +67,12 @@ function etapaOrigem(f) {
 function etapaCla(f) {
   return `
     <p class="lead">O clã é a linhagem do sangue de quem te Abraçou. Define seus dons (disciplinas), sua maldição (perdição) e o impulso que a Besta desperta (compulsão).</p>
-    <div class="grade-opcoes">
+    <div class="grade-opcoes clas">
       ${v5.CLAS.map((c) => {
         const discs = c.livre ? 'Qualquer disciplina' : c.disciplinas.map((d) => v5.DISCIPLINAS[d].nome).join(' · ');
         return `
           <button type="button" class="opcao ${f.cla === c.id ? 'escolhida' : ''}" data-cla="${c.id}" aria-pressed="${f.cla === c.id}">
+            <img class="opcao-imagem" src="${imagemDoCla(c.id)}" alt="" loading="lazy">
             <span class="opcao-nome">${c.nome}</span>
             <span class="opcao-desc">${c.desc}</span>
             <span class="opcao-meta">${discs}</span>
@@ -411,8 +413,12 @@ export async function telaCriacao(raiz, personagem) {
           ${v5.ETAPAS.map((e, i) => `<li><button type="button" data-etapa="${i}" class="${i === etapa ? 'atual' : ''} ${v5.pendencias(e, ficha).length ? '' : 'ok'}" aria-current="${i === etapa ? 'step' : 'false'}" title="${ROTULOS[e]}"><span>${ROTULOS[e]}</span></button></li>`).join('')}
         </ol>
         <div class="etapa">${DESENHO[nome](ficha)}</div>
+        <div class="bloco-pendencias" id="pendencias">
+          <span class="grupo-rotulo">Antes de continuar</span>
+          <ul class="pendencias"></ul>
+        </div>
         <div class="rodape-assistente">
-          <ul class="pendencias" aria-live="polite"></ul>
+          <p class="resumo-pendencias" aria-live="polite"></p>
           <div class="botoes">
             ${etapa > 0 ? '<button type="button" class="btn-secundario" data-voltar>Voltar</button>' : '<span></span>'}
             ${nome === 'final'
@@ -430,7 +436,12 @@ export async function telaCriacao(raiz, personagem) {
     const pend = nome === 'final'
       ? v5.ETAPAS.flatMap((e) => v5.pendencias(e, ficha).map((x) => (e === 'final' ? x : `${ROTULOS[e]}: ${x}`)))
       : v5.pendencias(nome, ficha);
+    // Lista completa no fim da etapa; na barra fixa, só um resumo de uma linha.
     raiz.querySelector('.pendencias').innerHTML = pend.map((x) => `<li>${esc(x)}</li>`).join('');
+    raiz.querySelector('.bloco-pendencias').hidden = pend.length === 0;
+    raiz.querySelector('.resumo-pendencias').innerHTML = pend.length
+      ? `<button type="button" class="link-pendencias" data-ver-pendencias>Falta${pend.length > 1 ? `m ${pend.length} itens` : ' 1 item'}: ${esc(pend[0])}</button>`
+      : '<span class="tudo-certo">Tudo certo nesta etapa.</span>';
     const btn = raiz.querySelector('[data-avancar], [data-enviar]');
     if (btn) btn.disabled = pend.length > 0 || ocupado;
   }
@@ -465,6 +476,9 @@ export async function telaCriacao(raiz, personagem) {
   on(raiz, 'input', '[data-campo]', (_e, el) => { gravar(ficha, el.dataset.campo, el.value); atualizarRodape(); });
   on(raiz, 'change', 'select[data-campo]', (_e, el) => { gravar(ficha, el.dataset.campo, el.value); atualizarRodape(); });
 
+  on(raiz, 'click', '[data-ver-pendencias]', () => {
+    raiz.querySelector('#pendencias')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
   on(raiz, 'click', '[data-etapa]', (_e, el) => mudarEtapa(Number(el.dataset.etapa)));
   on(raiz, 'click', '[data-voltar]', () => mudarEtapa(etapa - 1));
   on(raiz, 'click', '[data-avancar]', () => mudarEtapa(etapa + 1));

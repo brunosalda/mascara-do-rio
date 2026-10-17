@@ -1,13 +1,14 @@
 // Ficha do personagem em palavras (e, se pedido, a ficha técnica com pontos).
 import * as v5 from './motor/v5.js';
 import { esc, pontos } from './ui.js';
-import { RETRATO_PADRAO, localDe } from './cidade.js';
+import { imagemDoCla, localDe } from './cidade.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
+// Até o Narrador pintar o retrato do personagem, mostra a imagem do clã.
 export function cabecalhoPersonagem(p) {
   const f = p.ficha || {};
   const c = v5.cla(f.cla);
-  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : RETRATO_PADRAO;
+  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(f.cla);
   const local = p.estado?.local;
   return `
     <header class="cabecalho-personagem">
@@ -75,6 +76,7 @@ export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
   return `
     <div class="ficha">
       <div class="ficha-cabeca" ${semCabeca ? 'hidden' : ''}>
+        <img class="retrato" src="${imagemDoCla(f.cla)}" alt="">
         <div>
           <span class="grupo-rotulo">${esc(c?.nome || '')}${pr ? ` · ${esc(pr.nome)}` : ''}</span>
           <h2>${esc(f.nome || f.origem?.nomeEmVida || 'Sem nome')}</h2>

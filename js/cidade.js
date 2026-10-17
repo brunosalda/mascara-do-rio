@@ -20,7 +20,17 @@ export const LOCAIS = [
   { id: 'niteroi', nome: 'Niterói', imagem: 'img/cidade/niteroi.jpg', termos: ['niteroi', 'icarai', 'mac'] },
 ];
 
-const semAcento = (s) => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+// Retratos que representam cada clã (Higgsfield, 17/10/2026), em img/clas/<id>.jpg.
+const CLAS_COM_IMAGEM = new Set([
+  'brujah', 'gangrel', 'malkaviano', 'nosferatu', 'toreador', 'tremere', 'ventrue', 'banu-haqim',
+  'hecata', 'lasombra', 'ministerio', 'ravnos', 'salubri', 'tzimisce', 'caitiff', 'sangue-fraco',
+]);
+
+export function imagemDoCla(id) {
+  return CLAS_COM_IMAGEM.has(id) ? `img/clas/${id}.jpg` : RETRATO_PADRAO;
+}
+
+const semAcento =(s) => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 export function localDe(texto) {
   const t = semAcento(texto);
