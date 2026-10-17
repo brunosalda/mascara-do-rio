@@ -2,21 +2,20 @@
 // pontos de interesse e monta o plano da noite. Narração, escolhas e janelas aparecem por cima da cena.
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
-import { esc, escolhas, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
+import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
-import { imagemDoCla, imagemDoLocal, localDe, LOCAIS } from './cidade.js';
+import { imagemDoCla, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
 import { som, efeitos } from './ambiente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
-import { abrirDialogo, abrirJanela, fecharTudo } from './jogo/camadas.js';
+import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
+import { geografia, distribuirAncoras } from './jogo/lugares.js';
+import { descobertas } from './jogo/detalhes.js';
 
-// Posições dos pontos na cena (x na largura, y na faixa do chão).
-const VAGAS = [
-  { x: 0.2, y: 0.25 }, { x: 0.36, y: 0.75 }, { x: 0.5, y: 0.3 }, { x: 0.64, y: 0.8 },
-  { x: 0.78, y: 0.35 }, { x: 0.3, y: 0.05 }, { x: 0.58, y: 0.55 }, { x: 0.86, y: 0.75 },
-];
+const MAX_MARCADORES = 5; // à vista ao entrar; o resto aparece de perto ou com Tab
+const comentadosNaSessao = new Set(); // reserva, se o aparelho não guardar nada
 
 const curto = (t, n = 5) => {
   const palavras = String(t).replace(/[.!?]$/, '').split(/\s+/);
@@ -68,6 +67,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   const visitado = lugar ? LOCAIS.find((l) => l.id === lugar) : null;
   const emOutroLugar = visitado && visitado.id !== localAtual?.id;
   const lugarNome = emOutroLugar ? visitado.nome : (localAtual?.nome || p.estado?.local || 'Rio de Janeiro');
+  // Geografia da pintura (chão, âncoras, objetos, luzes) e o que dá para descobrir no lugar.
+  const lugarId = emOutroLugar ? visitado.id : (localAtual?.id || null);
+  const geo = geografia(lugarId);
+  const achados = descobertas(lugarId);
+  const chaveVisto = (id) => `mascara.visto.${lugarId}.${id}`;
+  const visto = (id) => { try { return localStorage.getItem(chaveVisto(id)) === '1'; } catch { return false; } };
 
   // Fundo da cena: o lugar visitado ou onde o personagem está.
   const fundo = document.getElementById('cenario');
@@ -107,7 +112,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         </nav>
       </header>
       <aside class="hud-plano" aria-live="polite"></aside>
-      <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · clique para ir · <kbd>E</kbd> interagir · <kbd>M</kbd> mapa · <kbd>P</kbd> plano · <kbd>F</kbd> ficha · <kbd>J</kbd> diário</footer>
+      <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>E</kbd> interagir · <kbd>Tab</kbd> mostrar tudo · <kbd>M</kbd> mapa · <kbd>P</kbd> plano · <kbd>F</kbd> ficha · <kbd>J</kbd> diário</footer>
     </div>`;
   const palco = raiz.querySelector('.palco');
   const caixaPlano = raiz.querySelector('.hud-plano');
@@ -150,35 +155,95 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       acao = await banco.salvarAcao(noite.id, p.id, campos, acao?.id);
       alterado = false;
       try { localStorage.removeItem(chavePlano(noite, p)); } catch { /* sem armazenamento */ }
-      som.toque();
-      aviso('Ações enviadas. O Narrador resolve quando a noite fechar.');
       desenharPlano();
+      cerimoniaDoEnvio();
     } catch (err) {
       aviso(err.message, 'erro');
     }
   }
 
+  // Enviar o plano é o momento mais importante da noite: uma gota de sangue cai sobre o selo,
+  // um som marca o envio e uma frase curta confirma. Outros módulos podem ouvir 'mascara:plano-enviado'.
+  function cerimoniaDoEnvio() {
+    document.dispatchEvent(new CustomEvent('mascara:plano-enviado', { detail: { noite: noite?.id } }));
+    som.selo?.();
+    const base = camadas.getBoundingClientRect();
+    const marca = (caixaPlano.querySelector('.plano-marca') || caixaPlano).getBoundingClientRect();
+    const gota = document.createElement('span');
+    gota.className = 'gota-envio';
+    gota.style.left = `${marca.left - base.left + marca.width / 2}px`;
+    gota.style.top = `${marca.top - base.top + marca.height / 2}px`;
+    camadas.appendChild(gota);
+    setTimeout(() => gota.remove(), 1400);
+    setTimeout(() => {
+      caixaPlano.classList.add('selo-mudou');
+      setTimeout(() => caixaPlano.classList.remove('selo-mudou'), 900);
+    }, 420);
+    const letreiro = document.createElement('div');
+    letreiro.className = 'letreiro-envio';
+    letreiro.setAttribute('role', 'status');
+    letreiro.innerHTML = '<b>O Rio vai saber o que você fez esta noite.</b><small>O Narrador resolve quando a noite fechar.</small>';
+    camadas.appendChild(letreiro);
+    setTimeout(() => letreiro.remove(), 4200);
+  }
+
   // --- Pontos de interesse ------------------------------------------------------------------
+  // Cada ponto fica numa âncora da pintura: o que aconteceu num lugar de memória, a caçada num canto
+  // escuro, as opções da noite no lugar de que falam ("bar" na porta do bar). No máximo 5 à vista ao
+  // entrar; os outros e os detalhes para examinar aparecem quando o personagem chega perto (ou com Tab).
   function montarPontos() {
-    const pts = [];
-    let v = 0;
-    const vaga = () => VAGAS[v++ % VAGAS.length];
-    if (!emOutroLugar && atual) pts.push({ id: 'historia', tipo: 'historia', icone: '❦', rotulo: 'O que aconteceu', acao: 'Relembrar o que aconteceu', ...vaga() });
+    const pedidos = [];
+    if (!emOutroLugar && atual) pedidos.push({ id: 'historia', tipo: 'historia', icone: '❦', rotulo: 'O que aconteceu', acao: 'Relembrar o que aconteceu', papel: 'memoria' });
     if (noite && atual) {
       if (!emOutroLugar) {
-        opcoes.forEach((o, i) => pts.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o, ...vaga() }));
+        opcoes.forEach((o, i) => pedidos.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o }));
       } else {
         const l = visitado;
         [
           { id: 'explorar', rotulo: `Explorar ${l.em.replace(/^(na|no|em) /, '')}`, texto: `Ir ${l.a} e explorar a região, de olho em quem manda ali.` },
           { id: 'procurar', rotulo: 'Procurar alguém aqui', texto: `Ir ${l.a} e procurar alguém.`, livre: true },
-        ].forEach((o) => pts.push({ ...o, tipo: 'acao', icone: '!', acao: o.rotulo, feito: plano.principal === o.texto, ...vaga() }));
+        ].forEach((o) => pedidos.push({ ...o, tipo: 'acao', icone: '!', acao: o.rotulo, feito: plano.principal === o.texto }));
       }
-      pts.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), ...vaga() });
-      pts.push({ id: 'escrever', tipo: 'escrever', icone: '✎', rotulo: 'Outra ideia', acao: 'Escrever o que fazer', ...vaga() });
+      pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), papel: 'escuro' });
+      pedidos.push({ id: 'escrever', tipo: 'escrever', icone: '✎', rotulo: 'Outra ideia', acao: 'Escrever o que fazer', papel: 'livre' });
     }
-    pts.push({ id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: 0.95, y: 0.5 });
+    const ancoras = distribuirAncoras(geo, pedidos);
+    const pts = [
+      { id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: geo.saida[0], y: geo.saida[1] },
+      ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82 }; }),
+    ];
+    pts.forEach((pt, i) => { if (i >= MAX_MARCADORES) pt.discreto = true; });
+    achados.detalhes.forEach((d) => pts.push({
+      id: `detalhe-${d.id}`, tipo: 'detalhe', icone: visto(d.id) ? '·' : '?', rotulo: d.rotulo, acao: `Examinar: ${d.rotulo}`,
+      x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d,
+    }));
     return pts;
+  }
+
+  // Detalhe examinado: uma fala curta de voz interior, sem mudar regras. Fica marcado no aparelho.
+  function abrirDetalhe(pt) {
+    const d = pt.detalhe;
+    abrirDialogo(camadas, {
+      rotulo: d.rotulo,
+      html: `<div class="texto-narracao">${narracao(`[${d.voz}] ${d.texto}`)}</div>`,
+      rodape: '<span class="nota"><kbd>Esc</kbd> fecha · ande pela cena para descobrir mais</span>',
+      aoFechar: () => {
+        try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
+        cena?.atualizarPontos(montarPontos());
+      },
+    });
+  }
+
+  // Voz interior que comenta ao passar perto: cada comentário uma vez por noite.
+  function podeComentar(c) {
+    const k = `mascara.comentou.${noite?.id || 'sem-noite'}.${lugarId}.${c.id}`;
+    if (comentadosNaSessao.has(k)) return false;
+    comentadosNaSessao.add(k);
+    try {
+      if (localStorage.getItem(k)) return false;
+      localStorage.setItem(k, '1');
+    } catch { /* sem armazenamento: vale a memória da sessão */ }
+    return true;
   }
 
   // --- Diálogos ------------------------------------------------------------------------------
@@ -210,7 +275,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     });
     camada.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-escolha]');
-      if (b && noite) escolherPrincipal(opcoes[Number(b.dataset.escolha)], camada);
+      if (b && noite && !b.closest('.decidido')) confirmarEscolha(b, () => escolherPrincipal(opcoes[Number(b.dataset.escolha)], camada));
     });
   }
 
@@ -227,9 +292,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         </ol>`,
       rodape: plano.principal && plano.principal !== texto ? `<span class="nota">Isto substitui a ação principal atual: “${esc(curto(plano.principal, 10))}”.</span>` : '',
     });
-    camada.el.querySelector('[data-principal]').onclick = () => {
+    camada.el.querySelector('[data-principal]').onclick = (ev) => {
       const livre = camada.el.querySelector('[data-livre]');
-      escolherPrincipal(livre ? livre.value.trim() : texto, camada);
+      const escolhido = livre ? livre.value.trim() : texto;
+      confirmarEscolha(ev.currentTarget, () => escolherPrincipal(escolhido, camada));
     };
     camada.el.querySelector('[data-fechar-dialogo]').onclick = () => camada.fechar();
     camada.el.querySelector('[data-livre]')?.focus();
@@ -249,12 +315,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         <label class="radio"><input type="checkbox" data-nao-cacar ${plano.nao_cacar ? 'checked' : ''}> Não vou caçar esta noite (a Fome sobe)</label>
         <ol class="escolhas"><li><button type="button" data-principal><span class="escolha-num">1.</span> — Confirmar a caçada</button></li></ol>`,
     });
-    camada.el.querySelector('[data-principal]').onclick = () => {
+    camada.el.querySelector('[data-principal]').onclick = (ev) => {
       const t = camada.el.querySelector('[data-cacada]').value.trim();
       plano.cacada = t || (emOutroLugar ? `Caçar ${visitado.em}` : '');
       plano.nao_cacar = camada.el.querySelector('[data-nao-cacar]').checked;
-      guardarRascunho();
-      camada.fechar();
+      confirmarEscolha(ev.currentTarget, () => { guardarRascunho(); camada.fechar(); });
     };
   }
 
@@ -271,13 +336,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         <ol class="escolhas"><li><button type="button" data-principal><span class="escolha-num">1.</span> — Guardar no plano</button></li></ol>`,
     });
     camada.el.querySelector('[data-livre]').focus();
-    camada.el.querySelector('[data-principal]').onclick = () => {
+    camada.el.querySelector('[data-principal]').onclick = (ev) => {
       plano.principal = camada.el.querySelector('[data-livre]').value.trim();
       plano.curta_1 = camada.el.querySelector('[data-c1]').value.trim();
       plano.curta_2 = camada.el.querySelector('[data-c2]').value.trim();
       plano.esforco = camada.el.querySelector('[data-esforco]').checked;
-      guardarRascunho();
-      camada.fechar();
+      confirmarEscolha(ev.currentTarget, () => { guardarRascunho(); camada.fechar(); });
     };
   }
 
@@ -355,13 +419,17 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   const cena = montarCena(palco, {
     cla: p.ficha?.cla,
     sprite: p.sprite,
+    imagem,
+    lugar: lugarId,
     pontos: montarPontos(),
-    inicio: { x: 0.1, y: 0.6 },
+    comentarios: achados.comentarios,
+    comentar: podeComentar,
     aoInteragir: (pt) => {
       if (pt.tipo === 'historia') abrirHistoria(false);
       else if (pt.tipo === 'acao') abrirOpcao(pt);
       else if (pt.tipo === 'cacar') abrirCacada();
       else if (pt.tipo === 'escrever') abrirEscrita();
+      else if (pt.tipo === 'detalhe') abrirDetalhe(pt);
       else if (pt.tipo === 'saida') acao_('mapa');
     },
     aoTecla: (ev) => {
@@ -435,7 +503,7 @@ export async function telaMapa(raiz, p) {
 export async function telaEspera(raiz, p, { aoEditar } = {}) {
   raiz.innerHTML = '<div class="tela-jogo"><div class="palco"></div></div>';
   const camadas = raiz.querySelector('.tela-jogo');
-  montarCena(raiz.querySelector('.palco'), { cla: p.ficha?.cla, sprite: p.sprite, pontos: [], inicio: { x: 0.45, y: 0.6 } });
+  montarCena(raiz.querySelector('.palco'), { cla: p.ficha?.cla, sprite: p.sprite, imagem: CENARIO_ABERTURA, lugar: 'lapa', pontos: [], inicio: [0.45, 0.8] });
   const camada = abrirDialogo(camadas, {
     rotulo: 'Ficha enviada',
     fechavel: false,

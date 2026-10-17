@@ -879,24 +879,82 @@ kbd {
   background: rgba(0, 0, 0, 0.35);
 }
 
-/* --- Cena: chão, pontos e personagem --- */
-.cena { position: absolute; inset: 0; cursor: crosshair; }
-.cena-pontos { position: absolute; inset: 0; }
+/* --- Cena: um "mundo" do tamanho da pintura, com objetos da frente, luzes, personagem e pontos.
+       A câmera é o transform de .mundo (vem do JS); largura, altura e --mh também. --- */
+.cena { position: absolute; inset: 0; overflow: hidden; cursor: crosshair; touch-action: manipulation; }
+.cena::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(5, 5, 6, 0.5) 0%, rgba(5, 5, 6, 0) 17%, rgba(5, 5, 6, 0) 78%, rgba(5, 5, 6, 0.45) 100%);
+}
+.mundo { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+/* A pintura e os objetos da frente usam a mesma imagem, no mesmo tamanho e com o mesmo filtro,
+   para o recorte (clip-path) encaixar sem emenda. */
+.pintura, .frente {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  filter: saturate(0.92) contrast(1.05);
+  transition: filter 0.15s;
+}
+body.clarao .pintura, body.clarao .frente { filter: brightness(1.9) contrast(1.15) saturate(0.7); }
+
+/* Fontes de luz que respiram (postes, néon, vitrines). */
+.brilho-luz {
+  position: absolute;
+  z-index: 1;
+  width: calc(var(--raio, 0.2) * var(--mh, 700px) * 1.2);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cor) 60%, transparent) 0%, color-mix(in srgb, var(--cor) 18%, transparent) 38%, transparent 68%);
+  mix-blend-mode: screen;
+  opacity: 0.2;
+  pointer-events: none;
+  animation: respirar-luz 7s ease-in-out infinite;
+}
+@keyframes respirar-luz {
+  0%, 100% { opacity: 0.18; } 45% { opacity: 0.32; } 47% { opacity: 0.14; } 49% { opacity: 0.3; } 75% { opacity: 0.24; }
+}
+
+/* --- Pontos: presos ao chão (o pé do marcador fica na âncora), rótulo acima do ícone. --- */
+.cena-pontos { position: absolute; inset: 0; z-index: 3000; pointer-events: none; }
 .ponto {
   position: absolute;
-  transform: translate(-50%, -50%) scale(var(--escala, 1));
-  display: grid;
-  justify-items: center;
+  transform: translate(-50%, -100%) scale(var(--escala, 1));
+  transform-origin: 50% 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
   gap: 0.3rem;
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 0 6px;
   cursor: pointer;
   color: var(--texto-claro);
+  pointer-events: auto;
+  transition: opacity 0.35s ease;
+}
+.ponto::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 40px;
+  height: 10px;
+  margin-left: -20px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6), transparent 70%);
+  z-index: -1;
 }
 .ponto-anel {
   position: absolute;
-  top: 0;
+  bottom: 6px;
   left: 50%;
   width: 46px;
   height: 46px;
@@ -905,6 +963,7 @@ kbd {
   border: 2px solid var(--acento);
   box-shadow: 0 0 18px rgba(226, 112, 62, 0.6), inset 0 0 12px rgba(226, 112, 62, 0.4);
   animation: anel 2s ease-in-out infinite;
+  pointer-events: none;
 }
 @keyframes anel { 50% { transform: scale(1.25); opacity: 0.45; } }
 .ponto-icone {
@@ -914,28 +973,34 @@ kbd {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: rgba(10, 8, 8, 0.72);
+  background: rgba(10, 8, 8, 0.74);
   font-family: var(--sans);
   font-weight: 700;
   font-size: 1.15rem;
   color: var(--acento-claro);
+  transition: background 0.2s, color 0.2s;
 }
 .ponto-rotulo {
-  max-width: 190px;
+  max-width: 200px;
   padding: 0.2rem 0.55rem;
-  background: rgba(6, 6, 7, 0.78);
+  background: rgba(6, 6, 7, 0.8);
   border: 1px solid var(--linha-forte);
   font-family: var(--sans);
   font-weight: 600;
   font-size: 0.86rem;
   line-height: 1.2;
   text-align: center;
-  opacity: 0.8;
-  transition: opacity 0.2s, border-color 0.2s;
+  opacity: 0.82;
+  transition: opacity 0.2s, border-color 0.2s, translate 0.25s;
 }
+.ponto.rotulo-dir .ponto-rotulo { translate: 38% 0; }
+.ponto.rotulo-esq .ponto-rotulo { translate: -38% 0; }
 .ponto:hover .ponto-rotulo, .ponto.perto .ponto-rotulo { opacity: 1; border-color: var(--acento); color: #fff; }
 .ponto:hover .ponto-icone, .ponto.perto .ponto-icone { background: var(--acento); color: #1a0d07; }
 .ponto.perto .ponto-anel { border-color: #ffd2b0; animation-duration: 0.9s; }
+/* Com o personagem em cima do ponto, o rótulo some (a dica embaixo já diz a ação) para não cobrir o corpo dele. */
+.ponto.perto .ponto-rotulo { opacity: 0; }
+.ponto.perto { opacity: 0.85; }
 .ponto-historia .ponto-anel { border-color: #e9e0cf; box-shadow: 0 0 18px rgba(233, 224, 207, 0.5); }
 .ponto-historia .ponto-icone { color: #f2e9d8; }
 .ponto-cacar .ponto-anel { border-color: var(--sangue-vivo); box-shadow: 0 0 18px rgba(216, 33, 61, 0.7); }
@@ -945,14 +1010,35 @@ kbd {
 .ponto-saida .ponto-anel { border-style: dashed; border-color: var(--texto-suave); box-shadow: none; }
 .ponto.feito .ponto-icone::after { content: '✓'; position: absolute; right: -4px; top: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--ok); color: #0b1a10; font-size: 0.7rem; display: grid; place-items: center; }
 
-/* Personagem: a altura vem da profundidade (--altura); --virar = 1 (direita) ou -1 (esquerda). */
+/* Detalhes para examinar: menores e discretos; depois de vistos, mais apagados. */
+.ponto-detalhe .ponto-anel { width: 34px; height: 34px; margin-left: -17px; border: 1px dashed rgba(233, 224, 207, 0.7); box-shadow: 0 0 12px rgba(233, 224, 207, 0.25); animation-duration: 3s; }
+.ponto-detalhe .ponto-icone { width: 34px; height: 34px; font-family: var(--texto-livro); font-size: 1rem; color: #efe4cf; background: rgba(10, 8, 8, 0.6); }
+.ponto-detalhe .ponto-rotulo { font-weight: 500; font-style: italic; font-size: 0.8rem; }
+.ponto-detalhe::after { width: 28px; margin-left: -14px; }
+.ponto.visto { filter: saturate(0.4); }
+.ponto.visto .ponto-anel { animation: none; opacity: 0.45; }
+
+/* Pontos discretos: só aparecem de perto, com Tab ou com toque longo. */
+.ponto.discreto { opacity: 0; pointer-events: none; }
+.ponto.discreto.revelado, .cena.mostrar-tudo .ponto.discreto { opacity: 1; pointer-events: auto; }
+.ponto.visto.revelado { opacity: 0.6; }
+
+/* Ao interagir, o anel do ponto se expande e some; ao virar "feito", o ícone dá um pulo. */
+.ponto.acionado .ponto-anel { animation: acionar 0.45s ease-out forwards; }
+.ponto.acionado .ponto-icone { background: var(--acento); color: #1a0d07; }
+@keyframes acionar { from { transform: scale(1); opacity: 1; border-width: 3px; } to { transform: scale(2.3); opacity: 0; border-width: 1px; } }
+.ponto.recem-feito .ponto-icone { animation: pulo-feito 0.7s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes pulo-feito { 0% { translate: 0 0; box-shadow: 0 0 0 0 rgba(124, 191, 143, 0.8); } 35% { translate: 0 -10px; } 100% { translate: 0 0; box-shadow: 0 0 0 16px rgba(124, 191, 143, 0); } }
+
+/* --- Personagem: altura em px (--altura); posição, escala e profundidade vêm do JS.
+       --virar vai de 1 (direita) a -1 (esquerda) passando por 0 (compressão ao virar). --- */
 .personagem {
   position: absolute;
   left: 0;
   top: 0;
   height: var(--altura, 31vh);
   width: calc(var(--altura, 31vh) * 0.4);
-  transform-origin: 50% 100%;   /* a posição e a escala vêm do JS, por translate3d (placa de vídeo) */
+  transform-origin: 50% 100%;
   will-change: transform;
   pointer-events: none;
 }
@@ -966,33 +1052,51 @@ kbd {
   background-repeat: no-repeat;
   background-size: calc(var(--quadros, 6) * 100%) 100%;
 }
-.corpo-sprite {
+.corpo-sprite, .tinta {
   top: 0;
   transform: scaleX(var(--virar, 1)) rotate(var(--inclinar, 0deg));
   transform-origin: 50% 100%;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5)) brightness(0.94) contrast(1.05);
 }
+/* Brilho da pintura em volta (--brilho) e contorno na cor da luz principal (--rim-*), do lado dela. */
+.corpo-sprite {
+  filter: brightness(var(--brilho, 0.94)) contrast(1.05)
+    drop-shadow(var(--rim-x, 0px) 0 0 var(--rim-cor, transparent))
+    drop-shadow(0 0 1px rgba(0, 0, 0, 0.85)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+/* Tinta: a cor da luz do lugar, recortada pela própria figura (máscara = folha de quadros). */
+.tinta {
+  -webkit-mask-size: calc(var(--quadros, 6) * 100%) 100%;
+  mask-size: calc(var(--quadros, 6) * 100%) 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  transition: opacity 0.4s, background-color 0.4s;
+}
+/* Parado, ele respira (1,2% da altura em 3,5 s) e muda o peso de perna devagar. */
+.personagem.parado .corpo-sprite, .personagem.parado .tinta { animation: respirar-figura 3.5s ease-in-out infinite, peso 7.3s ease-in-out infinite; }
+@keyframes respirar-figura { 0%, 100% { scale: 1 1; } 50% { scale: 1.004 1.012; } }
+@keyframes peso { 0%, 100% { translate: 0 0; } 50% { translate: 0.8% 0; } }
 /* Reflexo no chão molhado: a mesma figura, virada de cabeça para baixo e esmaecendo. */
 .reflexo {
   top: 100%;
   transform: scaleX(var(--virar, 1)) scaleY(-1);
   transform-origin: 50% 50%;
   opacity: 0.28;
-  filter: blur(1.2px) brightness(0.75) saturate(1.2);
+  filter: blur(1.2px) brightness(calc(var(--brilho, 0.94) * 0.8)) saturate(1.2);
   -webkit-mask-image: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
   mask-image: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
 }
 .sombra-pe {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -0.6vh;
-  height: 1.8vh;
+  left: 4%;
+  right: 4%;
+  bottom: -1.5%;
+  height: 5%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7), transparent 70%);
-  transition: transform 0.2s;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75), transparent 70%);
+  transition: transform 0.25s, opacity 0.25s;
 }
-.andando .sombra-pe { transform: scaleX(1.1); }
 .silhueta { width: 100%; height: 100%; overflow: visible; }
 .silhueta .sombra { fill: rgba(0, 0, 0, 0.55); }
 .silhueta .casaco, .silhueta .braco path, .silhueta .perna path, .silhueta .cabeca, .silhueta .cabelo, .silhueta .gola {
@@ -1017,6 +1121,31 @@ kbd {
 @keyframes passo { 0%, 50%, 100% { transform: translateY(0); } 25%, 75% { transform: translateY(-3px); } }
 @keyframes balanco { 0% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } 100% { transform: rotate(16deg); } }
 
+/* --- Voz interior que comenta ao passar perto: balão acima da cabeça (posição vem do JS). --- */
+.balao-voz {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2500;
+  width: max-content;
+  max-width: 270px;
+  padding: 0.45rem 0.75rem 0.5rem;
+  background: rgba(8, 8, 9, 0.9);
+  border: 1px solid var(--linha-forte);
+  border-left: 3px solid var(--cor-voz, var(--voz-outra));
+  box-shadow: 0 12px 30px -12px #000;
+  font-family: var(--texto-livro);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--texto);
+  pointer-events: none;
+  animation: surgir-balao 0.35s ease-out;
+  transition: opacity 0.4s;
+}
+.balao-voz b { display: block; margin-bottom: 0.1rem; font-family: var(--sans); font-size: 0.74rem; letter-spacing: 0.08em; color: var(--cor-voz, var(--voz-outra)); }
+.balao-voz.sumindo { opacity: 0; }
+@keyframes surgir-balao { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+
 .dica-interagir {
   position: absolute;
   left: 50%;
@@ -1031,6 +1160,16 @@ kbd {
   z-index: 150;
   pointer-events: none;
 }
+
+/* --- Modo de edição (#/noite?editar): chão, objetos, horizonte, luzes e âncoras por cima. --- */
+svg.depuracao { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5000; pointer-events: none; overflow: visible; }
+.dep-chao { fill: rgba(90, 210, 120, 0.14); stroke: #7dff9a; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.dep-frente { fill: rgba(90, 150, 255, 0.22); stroke: #8fb4ff; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.dep-base { stroke: #8fb4ff; stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.dep-horizonte { stroke: #ffe066; stroke-width: 1.5; stroke-dasharray: 8 5; vector-effect: non-scaling-stroke; }
+.dep-luz { fill: none; stroke-width: 1.5; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.dep-ancora { position: absolute; z-index: 5001; translate: -50% -50%; padding: 1px 5px; background: rgba(0, 0, 0, 0.78); border: 1px solid #ffe066; color: #ffe066; font: 600 11px/1.3 var(--sans); white-space: nowrap; pointer-events: none; }
+pre.depuracao-coord { position: absolute; left: 12px; bottom: 44px; z-index: 6000; margin: 0; padding: 6px 9px; background: rgba(0, 0, 0, 0.82); border: 1px solid #7dff9a; color: #9dffb0; font: 12px/1.45 ui-monospace, Consolas, monospace; pointer-events: none; white-space: pre; }
 
 /* --- HUD --- */
 .hud-topo {
@@ -1135,7 +1274,10 @@ kbd {
   pointer-events: none;
 }
 
-/* --- Caixa de diálogo sobre a cena --- */
+/* --- Caixa de diálogo sobre a cena ---
+   Computador: abre do lado oposto ao personagem (.dialogo-esquerda / .dialogo-direita), presa embaixo e
+   crescendo para cima até o HUD; a câmera aproxima e põe o personagem do outro lado.
+   Celular: folha que sobe de baixo até 60% da altura. As escolhas ficam presas no pé, sempre à vista. */
 .dialogo-cena {
   position: absolute;
   left: 0;
@@ -1147,24 +1289,193 @@ kbd {
   max-height: min(62vh, 640px);
   display: flex;
   flex-direction: column;
-  background: rgba(8, 8, 9, 0.9);
+  background: linear-gradient(180deg, rgba(10, 9, 10, 0.93), rgba(7, 7, 8, 0.95));
   border: 1px solid var(--linha-forte);
   border-top: 2px solid var(--acento);
-  box-shadow: 0 20px 60px -20px #000;
-  backdrop-filter: blur(5px);
+  box-shadow: 0 24px 70px -20px #000, 0 0 0 1px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
 }
+.dialogo-cena.surgir { animation: surgir-dialogo 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes surgir-dialogo { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
+@media (orientation: landscape) and (min-width: 760px) {
+  .dialogo-esquerda, .dialogo-direita {
+    width: min(45vw, 620px);
+    max-height: calc(100vh - 7.6rem);
+    margin: 0;
+  }
+  .dialogo-esquerda { left: 2vw; right: auto; }
+  .dialogo-direita { right: 2vw; left: auto; }
+  .dialogo-esquerda.surgir { animation-name: surgir-esquerda; }
+  .dialogo-direita.surgir { animation-name: surgir-direita; }
+}
+@keyframes surgir-esquerda { from { opacity: 0; translate: -28px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes surgir-direita { from { opacity: 0; translate: 28px 0; } to { opacity: 1; translate: 0 0; } }
 .dialogo-cabeca, .janela-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 1.1rem 0.3rem; }
 .dialogo-cabeca .grupo-rotulo { margin: 0; color: var(--acento); }
 .fechar-camada { cursor: pointer; background: none; border: 1px solid var(--linha); color: var(--texto-suave); font-family: var(--sans); font-size: 0.78rem; padding: 0.15rem 0.5rem; }
 .fechar-camada:hover { color: var(--texto-claro); border-color: var(--texto-suave); }
-.dialogo-corpo { overflow-y: auto; padding: 0.2rem 1.3rem 0.6rem; overscroll-behavior: contain; }
+.dialogo-corpo { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.2rem 1.3rem 0.6rem; overscroll-behavior: contain; scrollbar-width: thin; }
 .dialogo-corpo .texto-narracao { font-size: 1rem; }
 .dialogo-corpo .hq-solto .painel { aspect-ratio: 21 / 9; }
 .dialogo-corpo label { margin-top: 0.6rem; }
-.dialogo-rodape { padding: 0.4rem 1.3rem 0.8rem; }
+.dialogo-escolhas { flex: none; max-height: 45%; overflow-y: auto; padding: 0.15rem 0.9rem 0.2rem; border-top: 1px solid var(--linha); background: rgba(226, 112, 62, 0.03); }
+.dialogo-escolhas:empty { display: none; }
+.dialogo-escolhas .escolhas { margin: 0.35rem 0; }
+.dialogo-rodape { flex: none; padding: 0.4rem 1.3rem 0.8rem; }
 .dialogo-rodape:empty { display: none; }
 .rodape-recado { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .rodape-recado .btn-texto { padding: 0.3rem 0; text-transform: none; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Durante a conversa, a cena dá a vez à caixa: o selo e as dicas somem e os pontos esmaecem. */
+.hud-plano, .hud-dicas, .cena-pontos, .dica-interagir { transition: opacity 0.3s; }
+body.em-conversa .hud-plano, body.em-conversa .hud-dicas, body.em-conversa .dica-interagir { opacity: 0; pointer-events: none; }
+body.em-conversa .cena-pontos { opacity: 0.2; }
+body.em-conversa #cenario::after { background: rgba(5, 5, 6, 0.85); }
+
+/* --- Quem fala tem rosto: medalhão com a inicial, na cor da voz (pessoa em tom neutro). --- */
+.voz-mental, .balao-voz.voz-mental { --cor-voz: var(--voz-mental); }
+.voz-social, .balao-voz.voz-social { --cor-voz: var(--voz-social); }
+.voz-fisico, .balao-voz.voz-fisico { --cor-voz: var(--voz-fisico); }
+.voz-disciplina, .balao-voz.voz-disciplina { --cor-voz: var(--voz-disciplina); }
+.voz-besta, .balao-voz.voz-besta { --cor-voz: var(--voz-besta); }
+.voz-alma, .balao-voz.voz-alma { --cor-voz: var(--voz-alma); }
+.voz-outra, .balao-voz.voz-outra { --cor-voz: var(--voz-outra); }
+.voz:has(> .rosto), .fala:has(> .rosto) { position: relative; padding-left: 2.7rem; min-height: 2.2rem; }
+.rosto {
+  position: absolute;
+  left: 0;
+  top: 0.12rem;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--cor-voz, var(--linha-forte));
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--cor-voz, #888) 22%, transparent), rgba(0, 0, 0, 0.55) 70%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cor-voz, #000) 35%, transparent);
+  font-family: var(--titulo);
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--cor-voz, var(--texto-claro));
+}
+.fala .rosto { --cor-voz: #d8cdb8; border-color: rgba(216, 205, 184, 0.55); box-shadow: none; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.6) 70%); }
+.voz-besta .rosto { animation: pulsar-rosto 1.6s ease-in-out infinite; }
+@keyframes pulsar-rosto { 50% { box-shadow: 0 0 18px rgba(255, 61, 51, 0.6); } }
+
+/* --- Teste à vista em dois tempos: a dificuldade, uma pausa, o resultado. --- */
+.teste-res { display: inline; transition: opacity 0.3s; }
+.teste-res.aguardando { opacity: 0; }
+.teste-res.revelado { animation: revelar-teste 0.7s ease-out; }
+@keyframes revelar-teste { 0% { opacity: 0; text-shadow: 0 0 0 transparent; } 30% { opacity: 1; text-shadow: 0 0 16px currentColor; } 100% { text-shadow: 0 0 0 transparent; } }
+.voz-teste .teste-sucesso { color: #8fdca6; }
+.voz-teste .teste-falha { color: #ff6b6b; }
+
+/* --- Cerimônias: escolher, enviar o plano. --- */
+.escolhas button.escolhida-agora {
+  color: var(--texto-claro);
+  border-left-color: var(--acento);
+  background: rgba(226, 112, 62, 0.18);
+  animation: escolher 0.26s ease-out forwards;
+}
+@keyframes escolher {
+  0% { translate: 0 0; box-shadow: 0 0 0 rgba(226, 112, 62, 0); }
+  55% { translate: 0 -3px; box-shadow: 0 0 26px rgba(226, 112, 62, 0.5); }
+  100% { translate: 0 -2px; box-shadow: 0 0 14px rgba(226, 112, 62, 0.3); }
+}
+.escolhas.decidido button:not(.escolhida-agora) { opacity: 0.3; transition: opacity 0.2s; pointer-events: none; }
+
+/* Gota de sangue que cai sobre o selo do plano e respinga. */
+.gota-envio {
+  position: absolute;
+  z-index: 450;
+  width: 14px;
+  height: 18px;
+  margin: -12px 0 0 -7px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(circle at 35% 30%, #ff6a7d, var(--sangue-vivo) 45%, #6d0716);
+  box-shadow: 0 0 10px rgba(216, 33, 61, 0.6);
+  pointer-events: none;
+  animation: gota-cair 1.2s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+.gota-envio::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  border: 2px solid var(--sangue-vivo);
+  opacity: 0;
+  animation: respingo 1.2s ease-out forwards;
+}
+@keyframes gota-cair {
+  0% { translate: 0 -90px; opacity: 0; scale: 0.6 0.9; }
+  12% { opacity: 1; }
+  40% { translate: 0 0; scale: 0.9 1.15; }
+  48% { scale: 1.9 0.35; }
+  100% { translate: 0 0; scale: 2.6 0.1; opacity: 0; }
+}
+@keyframes respingo { 0%, 40% { opacity: 0; transform: scale(0.4); } 48% { opacity: 1; } 100% { opacity: 0; transform: scale(5.5); } }
+.hud-plano.selo-mudou { animation: selo-mudou 0.9s ease-out; }
+@keyframes selo-mudou {
+  0% { box-shadow: 0 0 0 0 rgba(216, 33, 61, 0.75); border-color: var(--sangue-vivo); }
+  100% { box-shadow: 0 0 0 20px rgba(216, 33, 61, 0); }
+}
+.hud-plano.selo-mudou .plano-marca { animation: marca-selada 0.9s ease-out; }
+@keyframes marca-selada { 0% { background: var(--sangue-vivo); color: #fff; scale: 1.35; } 100% { background: transparent; scale: 1; } }
+
+/* Frase do envio, no meio da tela, que sai sozinha. */
+.letreiro-envio {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  z-index: 500;
+  translate: -50% -50%;
+  width: min(92vw, 760px);
+  text-align: center;
+  pointer-events: none;
+  animation: letreiro-envio 4.2s ease-out forwards;
+}
+.letreiro-envio b {
+  display: block;
+  font-family: var(--titulo);
+  font-weight: 700;
+  font-size: clamp(1.7rem, 4.2vw, 2.8rem);
+  line-height: 1.15;
+  color: var(--texto-claro);
+  text-shadow: 0 2px 20px #000, 0 0 40px rgba(216, 33, 61, 0.55);
+}
+.letreiro-envio small {
+  display: block;
+  margin-top: 0.5rem;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+  text-shadow: 0 1px 8px #000;
+}
+@keyframes letreiro-envio {
+  0% { opacity: 0; translate: -50% -38%; letter-spacing: 0.06em; filter: blur(6px); }
+  14% { opacity: 1; translate: -50% -50%; letter-spacing: 0; filter: none; }
+  78% { opacity: 1; }
+  100% { opacity: 0; translate: -50% -56%; }
+}
+
+/* Quem pede menos movimento no sistema (no Windows: efeitos de animação desligados) ainda vê as
+   cerimônias, mas curtas e quase sem deslocamento: a gota só aparece e respinga, a frase só surge. */
+@media (prefers-reduced-motion: reduce) {
+  .gota-envio { animation-name: gota-aparecer; animation-duration: 0.9s; }
+  .letreiro-envio { animation-name: letreiro-surgir; }
+  .brilho-luz { animation: none; }
+}
+@keyframes gota-aparecer { 0% { opacity: 0; } 25% { opacity: 1; scale: 1; } 45% { scale: 1.8 0.4; } 100% { opacity: 0; scale: 2.4 0.1; } }
+@keyframes letreiro-surgir { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
+body.sem-efeitos .brilho-luz, body.sem-efeitos .personagem.parado .corpo-sprite, body.sem-efeitos .personagem.parado .tinta { animation: none !important; }
 
 /* --- Janelas (ficha, diário, plano, opções) --- */
 .janela-fundo { position: absolute; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px); padding: 3vh 3vw; }
@@ -1217,9 +1528,19 @@ body[data-tela='criacao'] main {
   .hud-botoes kbd { display: none; }
   .hud-plano { top: auto; bottom: 0.6rem; right: 50%; transform: translateX(50%); max-width: 92vw; }
   .hud-dicas { display: none; }
-  .dialogo-cena { bottom: 0.4rem; max-height: 70vh; }
+  .hud-personagem img { width: 40px; height: 50px; }
+  .hud-personagem b { max-width: 42vw; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hud-personagem small { max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Conversa: folha que sobe de baixo, com a cena visível em cima. */
+  .dialogo-cena { left: 0; right: 0; bottom: 0; width: 100%; max-height: 60vh; border-left: 0; border-right: 0; padding-bottom: env(safe-area-inset-bottom); }
+  .dialogo-cena.surgir { animation-name: surgir-folha; }
+  .dialogo-corpo { padding-inline: 1rem; }
   .ponto-rotulo { max-width: 130px; font-size: 0.78rem; }
+  .ponto-icone, .ponto-anel { width: 40px; height: 40px; }
+  .ponto-anel { margin-left: -20px; }
+  .balao-voz { max-width: 210px; font-size: 0.8rem; }
 }
+@keyframes surgir-folha { from { translate: 0 100%; } to { translate: 0 0; } }
 
 /* --- Aviso flutuante ------------------------------------------------------------------- */
 

@@ -159,6 +159,38 @@ function pulso(a, quando, freq, volume) {
   o.stop(quando + 0.2);
 }
 
+// Nota curta: oscilador com ataque rápido e queda suave; ate = frequência final (deslize).
+function tom(a, quando, freq, { tipo = 'sine', dur = 0.4, volume = 0.05, ate = null } = {}) {
+  const o = a.ctx.createOscillator();
+  const g = a.ctx.createGain();
+  o.type = tipo;
+  o.frequency.setValueAtTime(freq, quando);
+  if (ate) o.frequency.exponentialRampToValueAtTime(ate, quando + dur * 0.8);
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  o.connect(g).connect(a.mestre);
+  o.start(quando);
+  o.stop(quando + dur + 0.05);
+}
+
+// Sopro: ruído filtrado curto (voz interior, respingo).
+function sopro(a, quando, { freq = 1800, q = 1.2, dur = 0.35, volume = 0.04 } = {}) {
+  const fonte = a.ctx.createBufferSource();
+  fonte.buffer = ruido(a.ctx, dur + 0.1, 'branco');
+  const filtro = a.ctx.createBiquadFilter();
+  filtro.type = 'bandpass';
+  filtro.frequency.value = freq;
+  filtro.Q.value = q;
+  const g = a.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + dur * 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  fonte.connect(filtro).connect(g).connect(a.mestre);
+  fonte.start(quando);
+  fonte.stop(quando + dur + 0.1);
+}
+
 // Batimento: só no jogo, acelera e fica mais forte com a Fome.
 function reagendarBatimento() {
   if (!audio) return;
@@ -217,6 +249,52 @@ export const som = {
   passo() {
     if (!audio || !this.ligado()) return;
     pulso(audio, audio.ctx.currentTime + 0.01, 95 + Math.random() * 25, 0.06);
+  },
+  // Interagir com um ponto: um toque de sino curto, como um copo tocado.
+  anel() {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    tom(audio, t, 740, { dur: 0.5, volume: 0.045 });
+    tom(audio, t, 1110, { dur: 0.35, volume: 0.02 });
+  },
+  // Escolher uma fala: um baque grave e uma nota que fica no ar.
+  escolha() {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    pulso(audio, t, 90, 0.12);
+    tom(audio, t + 0.02, 220, { tipo: 'triangle', dur: 0.9, volume: 0.04 });
+    tom(audio, t + 0.02, 330, { tipo: 'sine', dur: 0.7, volume: 0.02 });
+  },
+  // Resultado de teste: sucesso sobe, falha desce, o resto fica neutro.
+  teste(sucesso = false, falha = false) {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    if (sucesso) {
+      tom(audio, t, 523, { dur: 0.3, volume: 0.04 });
+      tom(audio, t + 0.12, 784, { dur: 0.6, volume: 0.045 });
+    } else if (falha) {
+      tom(audio, t, 311, { tipo: 'triangle', dur: 0.35, volume: 0.045 });
+      tom(audio, t + 0.14, 233, { tipo: 'triangle', dur: 0.7, volume: 0.05, ate: 196 });
+    } else {
+      tom(audio, t, 440, { dur: 0.4, volume: 0.035 });
+    }
+  },
+  // Voz interior que comenta: um sussurro curto.
+  voz() {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    sopro(audio, t, { freq: 2400, q: 2.5, dur: 0.45, volume: 0.03 });
+    tom(audio, t + 0.05, 1320, { dur: 0.25, volume: 0.008 });
+  },
+  // Enviar o plano: a gota que cai (nota que desce), o baque no selo e o eco grave.
+  selo() {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    tom(audio, t, 1400, { dur: 0.45, volume: 0.03, ate: 500 });
+    pulso(audio, t + 0.48, 70, 0.22);
+    sopro(audio, t + 0.48, { freq: 900, q: 0.8, dur: 0.3, volume: 0.05 });
+    tom(audio, t + 0.5, 110, { tipo: 'triangle', dur: 2.2, volume: 0.05 });
+    tom(audio, t + 0.5, 165, { tipo: 'sine', dur: 1.8, volume: 0.025 });
   },
 };
 

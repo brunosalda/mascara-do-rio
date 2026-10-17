@@ -1,8 +1,20 @@
 // Camadas por cima da cena: a caixa de diálogo (narração e escolhas) e as janelas (ficha, diário, plano).
 // Uma pilha decide quem recebe o teclado: a camada do topo; sem camadas, o teclado move o personagem.
 import { revelarAosPoucos } from '../ui.js';
+import { som } from '../ambiente.js';
 
 const pilha = [];
+
+// A cena montada se registra aqui: diz de que lado a conversa deve abrir (o oposto ao personagem)
+// e é avisada quando uma conversa abre ou fecha (para aproximar a câmera).
+let cenaAtual = null;
+export function registrarCena(api) {
+  cenaAtual = api;
+  // Devolve true se esta cena ainda era a registrada (uma cena nova pode já ter tomado o lugar).
+  return () => { if (cenaAtual !== api) return false; cenaAtual = null; return true; };
+}
+
+const temDialogo = () => pilha.some((c) => c.dialogo);
 
 export function camadaAberta() {
   return pilha.length > 0;
@@ -32,13 +44,25 @@ function empilhar(camada) {
 function desempilhar(camada) {
   const i = pilha.indexOf(camada);
   if (i >= 0) pilha.splice(i, 1);
+  if (camada.dialogo && !temDialogo()) cenaAtual?.conversa(false);
+}
+
+// Escolha com cerimônia: a fala escolhida acende e sobe, toca um som grave, e só então a ação segue.
+export function confirmarEscolha(botao, depois) {
+  const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  botao?.classList.add('escolhida-agora');
+  botao?.closest('.escolhas')?.classList.add('decidido');
+  som.escolha?.();
+  setTimeout(depois, reduzido ? 160 : 230);
 }
 
 // --- Caixa de diálogo ------------------------------------------------------------------------
 // html: conteúdo (narração, escolhas). chave: se dada, revela aos poucos e marca como lida.
+// As escolhas (.escolhas) ficam presas ao pé da caixa, sempre à vista; o texto rola acima delas.
 export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodape = '', fechavel = true, aoTerminar, aoFechar, aoAvancar } = {}) {
+  const lado = cenaAtual?.lado?.() || 'centro';
   const el = document.createElement('section');
-  el.className = 'dialogo-cena surgir';
+  el.className = `dialogo-cena dialogo-${lado} surgir`;
   el.setAttribute('role', 'dialog');
   el.innerHTML = `
     <header class="dialogo-cabeca">
@@ -46,13 +70,19 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
       ${fechavel ? '<button type="button" class="fechar-camada" data-fechar aria-label="Fechar">Esc ✕</button>' : ''}
     </header>
     <div class="dialogo-corpo">${html}</div>
+    <div class="dialogo-escolhas"></div>
     <footer class="dialogo-rodape">${rodape}</footer>`;
-  raiz.appendChild(el);
   const corpo = el.querySelector('.dialogo-corpo');
+  const presas = el.querySelector('.dialogo-escolhas');
+  // Só a lista de escolhas do fim (não as que estão dentro de um formulário) vai para o pé.
+  const lista = [...corpo.querySelectorAll('.escolhas')].filter((ol) => !ol.closest('label')).at(-1);
+  if (lista) presas.appendChild(lista);
+  raiz.appendChild(el);
   let leitura = null;
 
   const camada = empilhar({
     el,
+    dialogo: true,
     fechar() {
       desempilhar(camada);
       if (!el.isConnected) return;
@@ -70,20 +100,23 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
       }
       const n = Number(k);
       if (n >= 1 && n <= 9) {
-        const b = el.querySelector(`[data-escolha="${n - 1}"]:not(.oculto *)`);
+        const b = el.querySelector(`[data-escolha="${n - 1}"]`);
         if (b && !b.closest('.oculto')) { b.click(); return true; }
+        const ordem = [...presas.querySelectorAll('button')][n - 1];
+        if (ordem && !ordem.closest('.oculto')) { ordem.click(); return true; }
       }
       if ((k === 'e' || k === 'E') && (!leitura || leitura.terminou())) {
         const principal = el.querySelector('[data-principal]');
         if (principal) { principal.click(); return true; }
       }
-      return ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k);
+      return ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(k);
     },
   });
+  cenaAtual?.conversa(true);
 
   el.querySelector('[data-fechar]')?.addEventListener('click', () => camada.fechar());
   if (chave) {
-    leitura = revelarAosPoucos(corpo, chave, {
+    leitura = revelarAosPoucos(el, chave, {
       aoAvancar: () => { aoAvancar?.(); corpo.scrollTo({ top: corpo.scrollHeight, behavior: 'smooth' }); },
       aoTerminar: () => { el.classList.add('lido'); aoTerminar?.(camada); },
     });

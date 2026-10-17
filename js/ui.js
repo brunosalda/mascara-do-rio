@@ -1,6 +1,7 @@
 // Utilitários de interface: escapar texto, formatar narração (vozes, falas, HQ), datas e avisos.
 import * as v5 from './motor/v5.js';
 import { CENARIO_PADRAO } from './cidade.js';
+import { som } from './ambiente.js';
 
 export function esc(texto) {
   return String(texto ?? '')
@@ -22,7 +23,12 @@ v5.ATRIBUTOS.forEach((a) => GRUPO_VOZ.set(normal(a.nome), a.grupo));
 v5.HABILIDADES.forEach((h) => GRUPO_VOZ.set(normal(h.nome), h.grupo));
 Object.values(v5.DISCIPLINAS).forEach((d) => GRUPO_VOZ.set(normal(d.nome), 'disciplina'));
 ['A BESTA', 'BESTA', 'A FOME', 'FOME'].forEach((n) => GRUPO_VOZ.set(n, 'besta'));
-['O SANGUE', 'SANGUE', 'A MASCARA', 'MASCARA', 'HUMANIDADE', 'A CONSCIENCIA', 'CONSCIENCIA', 'O TOUCHSTONE'].forEach((n) => GRUPO_VOZ.set(n, 'alma'));
+['O SANGUE', 'SANGUE', 'A MASCARA', 'MASCARA', 'HUMANIDADE', 'A CONSCIENCIA', 'CONSCIENCIA', 'O TOUCHSTONE', 'FORCA DE VONTADE', 'VONTADE'].forEach((n) => GRUPO_VOZ.set(n, 'alma'));
+// Nomes comuns que não estão na lista de habilidades (o Narrador pode usar): mesmo grupo da habilidade parecida.
+[['PERCEPCAO', 'mental'], ['LOGICA', 'mental'], ['ENCICLOPEDIA', 'mental'], ['MEMORIA', 'mental'], ['RACIOCINIO RAPIDO', 'mental'],
+  ['EMPATIA', 'social'], ['RETORICA', 'social'], ['AUTORIDADE', 'social'], ['DRAMA', 'social'], ['SANGUE FRIO', 'social'], ['CHARME', 'social'],
+  ['REFLEXOS', 'fisico'], ['RESISTENCIA', 'fisico'], ['AGILIDADE', 'fisico'], ['FORCA BRUTA', 'fisico']]
+  .forEach(([n, g]) => { if (!GRUPO_VOZ.has(n)) GRUPO_VOZ.set(n, g); });
 
 export function grupoVoz(nome) {
   return GRUPO_VOZ.get(normal(nome)) || 'outra';
@@ -35,17 +41,29 @@ function inline(texto) {
     .replace(/\n/g, '<br>');
 }
 
+// Medalhão com a inicial de quem fala (voz interior na cor do grupo; pessoa em tom neutro).
+const inicial = (nome) => esc(String(nome).replace(/^(A|O|AS|OS)\s+/i, '').trim().charAt(0).toUpperCase());
+
+// Teste à vista: "Difícil: Sucesso" aparece em dois tempos (a dificuldade, uma pausa, o resultado).
+function htmlTeste(teste) {
+  const [dif, ...resto] = teste.trim().split(/\s*:\s*/);
+  if (!resto.length) return `<span class="voz-teste">[${esc(dif)}]</span>`;
+  const res = resto.join(': ');
+  const tipo = /FALH|FRACASS|ERR/.test(normal(res)) ? 'falha' : /SUCESSO|CRITIC|ACERT/.test(normal(res)) ? 'sucesso' : 'outro';
+  return `<span class="voz-teste">[<span class="teste-dif">${esc(dif)}</span><span class="teste-res teste-${tipo}">: ${esc(res)}</span>]</span>`;
+}
+
 function paragrafo(p) {
   const voz = p.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
   if (voz) {
     const [, cabeca, resto] = voz;
     const [nome, teste] = cabeca.split(/\s*[—|]\s*/, 2);
-    return `<p class="voz voz-${grupoVoz(nome)}"><span class="voz-nome">${esc(nome.trim().toUpperCase())}</span>${teste ? ` <span class="voz-teste">[${esc(teste.trim())}]</span>` : ''} — ${inline(resto.replace(/^[—–-]\s*/, ''))}</p>`;
+    return `<p class="voz voz-${grupoVoz(nome)}"><span class="rosto" aria-hidden="true">${inicial(nome)}</span><span class="voz-nome">${esc(nome.trim().toUpperCase())}</span>${teste ? ` ${htmlTeste(teste)}` : ''} — ${inline(resto.replace(/^[—–-]\s*/, ''))}</p>`;
   }
   // Fala de NPC: "**Seu Antônio** — texto"
   const fala = p.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]*)$/);
   if (fala) {
-    return `<p class="fala"><span class="falante">${esc(fala[1].toUpperCase())}</span> — ${inline(fala[2])}</p>`;
+    return `<p class="fala"><span class="rosto" aria-hidden="true">${inicial(fala[1])}</span><span class="falante">${esc(fala[1].toUpperCase())}</span> — ${inline(fala[2])}</p>`;
   }
   return `<p>${inline(p)}</p>`;
 }
@@ -102,6 +120,21 @@ function escreverPalavras(p) {
   return i * RITMO_PALAVRA + 350;
 }
 
+// O resultado do teste aparece só depois da dificuldade, com um som (sucesso sobe, falha desce).
+function testeEmDoisTempos(p, imediato) {
+  for (const res of p.querySelectorAll('.teste-res')) {
+    const palavras = [...p.querySelectorAll('.palavra')];
+    const antes = palavras.findIndex((w) => res.contains(w));
+    const espera = (imediato || antes < 0 ? 0 : antes * RITMO_PALAVRA) + 650;
+    res.classList.add('aguardando');
+    setTimeout(() => {
+      res.classList.remove('aguardando');
+      res.classList.add('revelado');
+      som.teste?.(res.classList.contains('teste-sucesso'), res.classList.contains('teste-falha'));
+    }, espera);
+  }
+}
+
 export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) {
   const itens = [...artigo.querySelectorAll('h3, .hq, .texto-narracao > p, .escolhas')];
   let lido = false;
@@ -114,6 +147,7 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
   barra.innerHTML = '<button type="button" class="btn-continuar">Continuar <span aria-hidden="true">▸</span></button><button type="button" class="btn-texto" data-tudo>Mostrar tudo</button>';
   let i = 0;
   let fim = false;
+  let primeira = true;   // a primeira fala aparece inteira, na hora (sem caixa vazia esperando)
   let escrevendo = null; // { el, ate }
 
   function terminar() {
@@ -135,9 +169,11 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
       const el = itens[i++];
       el.classList.remove('oculto');
       el.classList.add('surgir');
-      if (el.tagName === 'P') escrevendo = { el, ate: Date.now() + escreverPalavras(el) };
+      if (el.tagName === 'P' && primeira) { el.classList.add('pronto'); testeEmDoisTempos(el, true); }
+      else if (el.tagName === 'P') { escrevendo = { el, ate: Date.now() + escreverPalavras(el) }; testeEmDoisTempos(el, false); }
       if (el.tagName !== 'H3') break;
     }
+    primeira = false;
     aoAvancar?.();
     if (i >= itens.length) { terminar(); return; }
     itens[i - 1].after(barra);
@@ -148,6 +184,7 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
   barra.querySelector('.btn-continuar').onclick = mostrar;
   barra.querySelector('[data-tudo]').onclick = () => {
     itens.forEach((el) => { el.classList.remove('oculto'); el.classList.add('pronto'); });
+    artigo.querySelectorAll('.teste-res.aguardando').forEach((r) => r.classList.remove('aguardando'));
     i = itens.length;
     terminar();
   };
