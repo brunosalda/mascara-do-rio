@@ -78,11 +78,11 @@ export function telaLogin(raiz, { demo = false } = {}) {
         <div class="dialogo-corpo">
           <p class="nota">Entre com o e-mail que recebeu o convite.</p>
           <form id="form-login">
-            <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
-            <label>Senha<input type="password" name="senha" autocomplete="current-password"></label>
+            <label data-campo-login="email">E-mail<input type="email" name="email" autocomplete="email" required></label>
+            <label data-campo-login="senha">Senha<input type="password" name="senha" autocomplete="current-password"></label>
             <button class="btn" type="submit">Entrar</button>
             <button class="btn-texto" type="button" id="link-email">Prefiro receber um link de acesso por e-mail</button>
-            <p class="nota" id="msg-login" role="status"></p>
+            <p class="msg-login" id="msg-login" role="status" hidden></p>
           </form>
           <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
         </div>
@@ -90,31 +90,59 @@ export function telaLogin(raiz, { demo = false } = {}) {
     </div>`;
   const form = raiz.querySelector('#form-login');
   const msg = raiz.querySelector('#msg-login');
+  const botaoLink = raiz.querySelector('#link-email');
+  const campo = (nome) => raiz.querySelector(`[data-campo-login="${nome}"]`);
+  // Mensagem junto do campo a que se refere: erro em tom de sangue, com ícone e anunciado (alert);
+  // sucesso em tom de ok; o resto (entrando, enviando) discreto. Cada uma diz o próximo passo.
+  const ICONES = {
+    erro: '<svg class="msg-icone" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="M8 4.4v4.4M8 11v.6"/></svg>',
+    ok: '<svg class="msg-icone" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="M5 8.2l2 2 4-4.4"/></svg>',
+  };
+  function mensagem(tipo, perto, html) {
+    msg.hidden = false;
+    msg.className = `msg-login msg-${tipo}`;
+    msg.setAttribute('role', tipo === 'erro' ? 'alert' : 'status');
+    msg.innerHTML = `${ICONES[tipo] || ''}<span>${html}</span>`;
+    perto.after(msg);
+  }
+  const MENSAGENS = {
+    convidado: () => mensagem('erro', campo('email'), 'Este e-mail não está na lista de convidados. Peça ao Bruno para adicionar o seu e-mail.'),
+    senha: () => mensagem('erro', campo('senha'), 'E-mail ou senha incorretos. Tente de novo ou <button type="button" class="btn-link-destaque" data-pedir-link>receba um link de acesso por e-mail</button>.'),
+    link: () => mensagem('ok', botaoLink, 'Link enviado. Abra o e-mail neste mesmo aparelho; o link vale por pouco tempo.'),
+  };
+  // Erros que vêm do banco: o texto decide o campo e o próximo passo.
+  const mostrarErro = (err) => {
+    const t = String(err?.message || '');
+    if (/convidados/i.test(t)) MENSAGENS.convidado();
+    else if (/incorretos/i.test(t)) MENSAGENS.senha();
+    else mensagem('erro', botaoLink, esc(t || 'Não deu para entrar agora. Tente de novo em instantes.'));
+  };
+  form.addEventListener('click', (ev) => { if (ev.target.closest('[data-pedir-link]')) botaoLink.click(); });
   if (demo) {
-    const MENSAGENS = ['Este e-mail não está na lista de convidados.', 'E-mail ou senha incorretos.', 'Pronto. Abra o link que chegou no seu e-mail neste mesmo aparelho.'];
+    const ordem = ['convidado', 'senha', 'link'];
     let i = 0;
-    const proxima = (e) => { e?.preventDefault(); msg.textContent = MENSAGENS[i++ % MENSAGENS.length]; };
+    const proxima = (e) => { e?.preventDefault(); MENSAGENS[ordem[i++ % ordem.length]](); };
     form.email.value = 'convidado@exemplo.com';
     form.onsubmit = proxima;
-    raiz.querySelector('#link-email').onclick = proxima;
+    botaoLink.onclick = proxima;
     return;
   }
   form.onsubmit = async (e) => {
     e.preventDefault();
     const email = form.email.value;
     const senha = form.senha.value;
-    if (!senha) { msg.textContent = 'Digite a senha, ou peça um link por e-mail.'; return; }
-    msg.textContent = 'Entrando…';
-    try { await banco.entrarComSenha(email, senha); msg.textContent = ''; } catch (err) { msg.textContent = err.message; }
+    if (!senha) { mensagem('erro', campo('senha'), 'Digite a senha, ou <button type="button" class="btn-link-destaque" data-pedir-link>receba um link de acesso por e-mail</button>.'); return; }
+    mensagem('info', botaoLink, 'Entrando…');
+    try { await banco.entrarComSenha(email, senha); msg.hidden = true; } catch (err) { mostrarErro(err); }
   };
-  raiz.querySelector('#link-email').onclick = async () => {
+  botaoLink.onclick = async () => {
     const email = form.email.value;
-    if (!form.email.checkValidity() || !email) { msg.textContent = 'Digite seu e-mail primeiro.'; return; }
-    msg.textContent = 'Enviando…';
+    if (!form.email.checkValidity() || !email) { mensagem('erro', campo('email'), 'Digite o e-mail que recebeu o convite primeiro.'); return; }
+    mensagem('info', botaoLink, 'Enviando…');
     try {
       await banco.entrarComLink(email);
-      msg.textContent = 'Pronto. Abra o link que chegou no seu e-mail neste mesmo aparelho.';
-    } catch (err) { msg.textContent = err.message; }
+      MENSAGENS.link();
+    } catch (err) { mostrarErro(err); }
   };
 }
 

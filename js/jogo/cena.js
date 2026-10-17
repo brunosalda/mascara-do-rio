@@ -3,7 +3,7 @@
 // lugar e interage com os pontos (E, Enter ou clique). Pintura, objetos, pontos e personagem ficam
 // num mesmo "mundo" do tamanho da pintura, que a câmera move e aproxima nas conversas.
 // A geografia de cada pintura (chão, perspectiva, objetos, luzes) está em lugares.js.
-import { silhueta } from './silhueta.js';
+import { silhueta, SOMBRA_GENERICA, COR_CLA } from './silhueta.js';
 import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
@@ -33,14 +33,14 @@ const reduzido = () => cerimoniasCurtas();
 const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const pct = (v) => `${(v * 100).toFixed(2)}%`;
 
-function htmlBoneco(cla, sprite) {
+function htmlBoneco(cla, sprite, generica = false) {
   if (!sprite?.url) return `<div class="personagem">${silhueta(cla)}</div>`;
-  const vars = `--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}`;
+  const vars = `--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}${generica ? `;--cor-cla:${COR_CLA[cla] || '#a39a8c'}` : ''}`;
   const folha = `background-image:url('${sprite.url}')`;
   const mascara = `-webkit-mask-image:url('${sprite.url}');mask-image:url('${sprite.url}')`;
   // Corpo, mais uma camada de tinta com a cor da luz do lugar, recortada pela própria figura.
   return `
-    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}" style="${vars}">
+    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}${generica ? ' sombra-generica' : ''}" style="${vars}">
       <span class="sombra-pe"></span>
       <span class="sprite reflexo" style="${folha}"></span>
       <span class="sprite corpo-sprite" style="${folha}"></span>
@@ -66,6 +66,9 @@ export function montarCena(raiz, {
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
 } = {}) {
   const geo = geografia(lugar);
+  // Sem caminhada própria: a sombra pintada (folha genérica escurecida, contorno na cor do clã).
+  const generica = !sprite?.url;
+  if (generica) sprite = SOMBRA_GENERICA;
   // Nas rotas de demonstração (#/demo/...?depurar) a cena aparece como no jogo, sem o modo de edição.
   const depurar = /[?&](editar|depurar)\b/.test(location.hash) && !/^#\/demo\//.test(location.hash);
   const fundoUrl = String(imagem || '').replace(/'/g, '%27');
@@ -78,7 +81,7 @@ export function montarCena(raiz, {
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
         ${sprite?.url && geo.vida?.passantes?.length ? `<span class="passante" style="background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}" hidden></span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
-        ${htmlBoneco(cla, sprite)}
+        ${htmlBoneco(cla, sprite, generica)}
         <div class="balao-voz" hidden></div>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
@@ -96,6 +99,12 @@ export function montarCena(raiz, {
   const tinta = boneco.querySelector('.tinta');
   const reflexo = boneco.querySelector('.reflexo');
   const sombra = boneco.querySelector('.sombra-pe');
+  // Reserva: se a folha da sombra não carregar, volta a silhueta vetorial.
+  if (generica) {
+    const teste = new Image();
+    teste.onerror = () => { boneco.classList.add('sem-folha'); boneco.insertAdjacentHTML('beforeend', silhueta(cla)); };
+    teste.src = sprite.url;
+  }
   const balao = cena.querySelector('.balao-voz');
   const dica = cena.querySelector('.dica-interagir');
   const setaEsq = cena.querySelector('.seta-esq');

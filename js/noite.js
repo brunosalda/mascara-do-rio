@@ -725,20 +725,73 @@ export async function telaMapa(raiz, p) {
   });
 }
 
-// Tela de espera enquanto o Narrador revisa a ficha.
+// Tela de espera enquanto o Narrador revisa a ficha. A Lapa fica aberta para explorar: os detalhes
+// e os comentários dela (os da primeira noite), com o contador. O que for examinado aqui fica marcado
+// no aparelho pelo lugar e pelo detalhe, e continua valendo nas noites seguintes.
 export async function telaEspera(raiz, p, { aoEditar } = {}) {
-  raiz.innerHTML = '<div class="tela-jogo"><div class="palco"></div></div>';
+  raiz.innerHTML = `
+    <div class="tela-jogo">
+      <div class="palco"></div>
+      <aside class="hud-plano quadro-noite quadro-ciclo quadro-espera" aria-live="polite"></aside>
+    </div>`;
   const camadas = raiz.querySelector('.tela-jogo');
-  montarCena(raiz.querySelector('.palco'), { cla: p.ficha?.cla, sprite: p.sprite, imagem: CENARIO_ABERTURA, lugar: 'lapa', pontos: [], inicio: [0.45, 0.8] });
+  const quadro = raiz.querySelector('.quadro-espera');
+  const lugarId = 'lapa';
+  const achados = descobertas(lugarId, 0);
+  const chaveVisto = (id) => `mascara.visto.${lugarId}.${id}`;
+  const visto = (id) => { try { return localStorage.getItem(chaveVisto(id)) === '1'; } catch { return false; } };
+  const contagem = () => ({ vistos: achados.detalhes.filter((d) => visto(d.id)).length, total: achados.detalhes.length });
+
+  const verFicha = () => abrirJanela(camadas, { titulo: 'Ficha', classe: 'janela-larga', montar: (corpo) => telaFicha(corpo, p) });
+  function desenharQuadro(subiu = false) {
+    const d = contagem();
+    quadro.innerHTML = `
+      <div class="ciclo-linha"><b>Ficha com o Narrador</b> · ele volta ${quandoONarradorVolta()}</div>
+      <div class="ciclo-linha"><span class="quadro-nome">Enquanto isso</span> examine os detalhes da Lapa: <b class="espera-contador${subiu ? ' subiu' : ''}">${d.vistos} de ${d.total}</b></div>
+      <div class="ciclo-linha quadro-espera-botoes"><button type="button" class="btn-texto" data-espera="ficha">Ver minha ficha</button><button type="button" class="btn-texto" data-espera="editar">Voltar a editar</button></div>`;
+  }
+  quadro.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-espera]');
+    if (!b) return;
+    if (b.dataset.espera === 'ficha') verFicha();
+    else aoEditar?.();
+  });
+
+  const pontos = () => achados.detalhes.map((d) => ({
+    id: `detalhe-${d.id}`, tipo: 'detalhe', icone: visto(d.id) ? '·' : '?', rotulo: d.rotulo, acao: `Examinar: ${d.rotulo}`,
+    x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d,
+  }));
+  const comentados = new Set();
+  const cena = montarCena(raiz.querySelector('.palco'), {
+    cla: p.ficha?.cla, sprite: p.sprite, imagem: CENARIO_ABERTURA, lugar: lugarId, inicio: [0.45, 0.8],
+    pontos: pontos(),
+    comentarios: achados.comentarios,
+    comentar: (c) => { if (comentados.has(c.id)) return false; comentados.add(c.id); return true; },
+    aoInteragir: (pt) => {
+      if (pt.tipo !== 'detalhe') return;
+      const d = pt.detalhe;
+      try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
+      desenharQuadro(true);
+      abrirDialogo(camadas, {
+        rotulo: d.rotulo,
+        html: `<div class="texto-narracao">${narracao(`[${d.voz}] ${d.texto}`)}</div>`,
+        rodape: '<span class="nota"><span class="so-teclado"><kbd>Esc</kbd> fecha · </span>ande pela cena para descobrir mais</span>',
+        aoFechar: () => cena?.atualizarPontos(pontos()),
+      });
+    },
+  });
+  desenharQuadro();
+
   const camada = abrirDialogo(camadas, {
     rotulo: 'Ficha enviada',
-    fechavel: false,
-    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p>O Narrador volta ${quandoONarradorVolta()}. Você vai ver o seu prelúdio aqui assim que ele chegar.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
+    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p>O Narrador volta ${quandoONarradorVolta()}. Você vai ver o seu prelúdio aqui assim que ele chegar.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span> e examine os detalhes marcados com <b>?</b>. O que você descobrir aqui continua valendo depois.</p></div>
       <ol class="escolhas">
-        <li><button type="button" data-ver><span class="escolha-num">1.</span> — Ver minha ficha</button></li>
-        <li><button type="button" data-editar><span class="escolha-num">2.</span> — Voltar a editar</button></li>
+        <li><button type="button" data-explorar><span class="escolha-num">1.</span> — Explorar a Lapa enquanto isso</button></li>
+        <li><button type="button" data-ver><span class="escolha-num">2.</span> — Ver minha ficha</button></li>
+        <li><button type="button" data-editar><span class="escolha-num">3.</span> — Voltar a editar</button></li>
       </ol>`,
   });
-  camada.el.querySelector('[data-ver]').onclick = () => abrirJanela(camadas, { titulo: 'Ficha', classe: 'janela-larga', montar: (corpo) => telaFicha(corpo, p) });
+  camada.el.querySelector('[data-explorar]').onclick = () => camada.fechar();
+  camada.el.querySelector('[data-ver]').onclick = verFicha;
   camada.el.querySelector('[data-editar]').onclick = () => aoEditar?.();
 }

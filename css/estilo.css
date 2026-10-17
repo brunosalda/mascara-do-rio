@@ -1956,3 +1956,31 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
   color: #1a1206; background: var(--voz-fisico); box-shadow: 0 6px 18px -8px #000; pointer-events: none; text-align: center;
 }
 .sem-quebra { white-space: nowrap; }
+
+/* --- Rodada 13: sombra pintada, mensagens da entrada, espera com detalhes ---------------------- */
+/* Quem ainda não tem caminhada própria: a sombra pintada, com o contorno na cor do clã (do lado da luz
+   e, mais fraco, do outro lado). A tinta da luz do lugar fica bem leve, para a figura continuar sombra. */
+.sombra-generica .corpo-sprite {
+  filter: brightness(calc(var(--brilho, 0.94) * 1.1)) contrast(1.1)
+    drop-shadow(var(--rim-x, 1.5px) 0 1.5px var(--cor-cla))
+    drop-shadow(calc(var(--rim-x, 1.5px) * -0.6) 0 1px color-mix(in srgb, var(--cor-cla) 45%, transparent))
+    drop-shadow(0 0 6px color-mix(in srgb, var(--cor-cla) 25%, transparent));
+}
+.sombra-generica .tinta { opacity: 0.18; }
+.sombra-generica .reflexo { filter: blur(1.4px) brightness(0.9); opacity: 0.5; }
+.sem-folha .sprite { display: none; }
+
+.quadro-espera { top: max(14px, env(safe-area-inset-top)); }
+.quadro-espera-botoes { display: flex; gap: 1rem; flex-wrap: wrap; }
+.quadro-espera-botoes .btn-texto { padding: 0; color: var(--acento-claro); text-decoration: underline; text-underline-offset: 3px; text-transform: none; letter-spacing: 0; }
+.espera-contador.subiu { animation: selo-mudou 0.9s ease-out; display: inline-block; }
+
+/* Mensagens da entrada: junto do campo, com o próximo passo. */
+.msg-login { display: flex; gap: 0.5rem; align-items: flex-start; margin: -0.3rem 0 0.7rem; padding: 0.5rem 0.65rem; font-size: 0.92rem; line-height: 1.4; border-left: 3px solid var(--linha-forte); background: rgba(255, 255, 255, 0.03); }
+.msg-login[hidden] { display: none; }
+.msg-icone { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.msg-erro { color: #ffb3bd; border-left-color: var(--sangue-vivo); background: rgba(163, 18, 42, 0.18); }
+.msg-ok { color: #bfe6c9; border-left-color: var(--ok); background: rgba(124, 191, 143, 0.12); }
+.msg-info { color: var(--texto-suave); }
+.btn-link-destaque { font: inherit; padding: 0; border: 0; background: none; color: var(--texto-claro); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.btn-link-destaque:hover, .btn-link-destaque:focus-visible { color: #fff; outline: none; }
