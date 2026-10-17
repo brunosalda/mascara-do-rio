@@ -52,7 +52,7 @@ export function gravarPosicao(p, noite, id) {
 }
 
 // fonte: de onde vêm a noite, as narrações e a ação (o banco; nas demonstrações, dados fictícios).
-export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco } = {}) {
+export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco, vista = null } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
   const [noite, narracoes, resolvidas, ultima] = await Promise.all([
     fonte.noiteAberta(),
@@ -77,8 +77,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const lugarNome = emOutroLugar ? visitado.nome : (localAtual?.nome || p.estado?.local || 'Rio de Janeiro');
   // Geografia da pintura (chão, âncoras, objetos, luzes) e o que dá para descobrir no lugar.
   const lugarId = emOutroLugar ? visitado.id : (localAtual?.id || null);
-  const geo = geografia(lugarId);
+  // Fase 2: com vista 'alto' e uma pintura vista do alto para o lugar, usa a geografia dela; os detalhes
+  // do lugar vão para os pontos livres dessa pintura.
+  const geoAlto = vista === 'alto' ? geografia(`${lugarId}-alto`) : null;
+  const geo = geoAlto?.alto ? geoAlto : geografia(lugarId);
   const achados = descobertas(lugarId, noite?.numero || 0);
+  if (geo.alto && geo.pontosLivres) achados.detalhes = achados.detalhes.map((d, i) => ({ ...d, x: geo.pontosLivres[i % geo.pontosLivres.length][0], y: geo.pontosLivres[i % geo.pontosLivres.length][1] }));
   // Cada noite tem um tempo (garoa, tempestade, lua, névoa), sorteado pelo número dela: o mesmo para
   // todos os jogadores, diferente de uma noite para outra.
   const tempo = tempoDaNoite(noite?.numero || 0);
@@ -93,7 +97,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   // Fundo da cena: o lugar visitado ou onde o personagem está.
   const fundo = document.getElementById('cenario');
-  const imagem = emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local);
+  const imagem = geo.imagem || (emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local));
   if (fundo) { fundo.style.backgroundImage = `url('${imagem}')`; fundo.dataset.url = imagem; }
 
   // Plano da noite: o que já foi enviado, mais o rascunho guardado no aparelho.
@@ -169,6 +173,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         <ol class="registro-noite" aria-live="polite"></ol>
         <div class="painel-pergunta"></div>
       </section>
+      <button type="button" class="botao-centrar" data-hud="centrar" hidden title="Centralizar no personagem (C)" aria-label="Centralizar no personagem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
       <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
       <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
       <aside class="hud-plano" aria-live="polite"></aside>
@@ -1098,6 +1103,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       case 'menu': abrirMenu(); break;
       case 'paineis': alternarPaineis(); break;
       case 'pausa': cena?.alternarPausa?.(); break;
+      case 'centrar': cena?.centrarCamera?.(); break;
       case 'legenda': abrirLegenda(); break;
       case 'recolher':
         quadroRecolhido = !quadroRecolhido;
@@ -1272,7 +1278,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cla: p.ficha?.cla,
     sprite: p.sprite,
     imagem,
-    lugar: lugarId,
+    lugar: geo.alto ? `${lugarId}-alto` : lugarId,
     pontos: montarPontos(),
     // Comentários do lugar, mais os detalhes escondidos que a ficha deixa perceber (sem dados).
     comentarios: [...achados.comentarios, ...escondidosPara(lugarId, (() => { try { return v5.calcular(p.ficha || {}).habilidades; } catch { return {}; } })())],
@@ -1297,6 +1303,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     },
   });
   desenharPlano();
+  if (cena.vistaDoAlto) raiz.querySelector('.botao-centrar').hidden = false;
   mostrarLembranca();
   desenharSelos();
   mostrarPassagem();

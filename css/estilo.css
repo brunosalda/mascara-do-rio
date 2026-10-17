@@ -2949,3 +2949,15 @@ body.cena-pausada #chuva, body.cena-pausada #chuva *, body.cena-pausada #nevoa, 
 .veu-area[hidden] { display: none; }
 .ponto.sob-veu { opacity: 0 !important; pointer-events: none; }
 body.sem-efeitos .veu-area { filter: none; }
+
+/* Fase 2: vista do alto. A câmera rola (arrastar, borda, setas); C ou o botão centraliza no personagem. */
+.cena.vista-alto.arrastando, .cena.vista-alto.arrastando * { cursor: grabbing !important; }
+.botao-centrar {
+  position: absolute; z-index: 270; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; cursor: pointer; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 70%); border: 1.5px solid #c9a25a; color: #f0dcb0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  top: 10px; right: 10px;
+}
+.botao-centrar[hidden] { display: none; }
+.botao-centrar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+@media (min-width: 761px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-centrar { top: auto; bottom: 58px; right: calc(var(--col-d) / 2 - 16px); } }
+@media (max-width: 760px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-centrar { top: auto; bottom: calc(var(--baixo, 46px) + 8px); right: 88px; } }

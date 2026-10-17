@@ -20,6 +20,39 @@
 import { MARCACAO } from './marcacao.js';
 
 export const LUGARES = {
+  // Fase 2 (vista do alto, em três quartos): pintura de teste da Lapa. alto: true liga a câmera que
+  // rola pela área e o personagem pequeno. pontosLivres: onde ficam os detalhes nesta pintura.
+  'lapa-alto': {
+    alto: true,
+    imagem: 'img/cidade/lapa-alto-teste.jpg',
+    horizonte: 0.21,
+    k: 0.14,
+    chao: [[0.12, 0.56], [0.33, 0.48], [0.5, 0.42], [0.56, 0.4], [0.6, 0.42], [0.66, 0.48], [0.74, 0.58], [0.85, 0.68],
+      [0.93, 0.75], [0.97, 0.99], [0.3, 0.99], [0.2, 0.86], [0.1, 0.68]],
+    entrada: [0.46, 0.86],
+    saida: [0.4, 0.97],
+    ancoras: {
+      arcos: { x: 0.3, y: 0.5, papel: 'memoria', termos: ['arcos', 'aqueduto', 'bonde', 'bondinho'] },
+      bar: { x: 0.79, y: 0.63, termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
+      rua: { x: 0.47, y: 0.72, papel: 'livre', termos: ['rua', 'praca', 'gente', 'multidao', 'policia', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
+      fundo: { x: 0.57, y: 0.43, termos: ['seguir', 'centro', 'caminho', 'andar', 'ir ', 'procurar', 'encontrar'] },
+      beco: { x: 0.92, y: 0.88, papel: 'escuro', termos: ['beco', 'escondido', 'sombra', 'esconder', 'vigiar', 'observar'] },
+      calcada: { x: 0.2, y: 0.62, termos: [] },
+    },
+    pontosLivres: [[0.36, 0.6], [0.62, 0.66], [0.25, 0.53], [0.7, 0.9], [0.52, 0.53], [0.84, 0.77]],
+    frente: [],
+    luzes: [
+      { x: 0.083, y: 0.6, cor: '#ffb04a', raio: 0.14, forca: 0.9 },              // lampião da sacada
+      { x: 0.45, y: 0.39, cor: '#ffc46a', raio: 0.12, forca: 0.7 },              // poste do fundo
+      { x: 0.45, y: 0.69, cor: '#ffc46a', raio: 0.12, forca: 0.8 },              // poste da praça
+      { x: 0.71, y: 0.48, cor: '#ff2c3c', raio: 0.16, forca: 1, falha: true },   // néon do bar
+      { x: 0.77, y: 0.56, cor: '#ff3a2a', raio: 0.14, forca: 0.9 },              // néon de baixo
+      { x: 0.22, y: 0.45, cor: '#ffb04a', raio: 0.12, forca: 0.7 },              // luminárias dos arcos
+      { x: 0.91, y: 0.62, cor: '#ffc46a', raio: 0.12, forca: 0.7 },              // poste da calçada
+    ],
+    vida: { passantes: [{ y: 0.52, x0: 0.26, x1: 0.56 }] },
+  },
+
   lapa: {
     horizonte: 0.568,
     k: 1.12,

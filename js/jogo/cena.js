@@ -24,6 +24,9 @@ const VULTO = '<svg viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy=
 const FIGURA = 0.94;            // a figura ocupa 94% da altura do quadro da folha
 const PASSADA = 0.9;            // uma passada completa anda 0,9 altura do boneco
 const ZOOM = 1.06;
+const ZOOM_ALTO = 1.55;          // vista do alto: a área é maior que a tela e a câmera rola por ela
+const ZOOM_ALTO_CELULAR = 1.15;
+const VEL_CAMERA = 900;          // px por segundo, com setas ou na borda da tela
 const ZOOM_CONVERSA = 1.2;
 const TECLAS = {
   w: [0, -1], arrowup: [0, -1], s: [0, 1], arrowdown: [0, 1],
@@ -332,6 +335,72 @@ export function montarCena(raiz, {
   };
   balao.addEventListener('click', cliqueResposta);
   painel?.addEventListener('click', cliqueResposta);
+
+  // --- Câmera livre da vista do alto (Fase 2) -----------------------------------------------------------
+  const camLivre = { x: 0, y: 0, vx: 0, vy: 0, centrar: false, suave: false, arrastando: false, setas: new Set(), borda: { x: 0, y: 0 } };
+  function atualizarVelCamera() {
+    let vx = camLivre.borda.x;
+    let vy = camLivre.borda.y;
+    if (camLivre.setas.has('arrowleft')) vx += 1;
+    if (camLivre.setas.has('arrowright')) vx -= 1;
+    if (camLivre.setas.has('arrowup')) vy += 1;
+    if (camLivre.setas.has('arrowdown')) vy -= 1;
+    camLivre.vx = limitar(vx, -1, 1) * VEL_CAMERA;
+    camLivre.vy = limitar(vy, -1, 1) * VEL_CAMERA;
+    if (vx || vy) camLivre.suave = false;
+  }
+  function centrarCamera() { camLivre.centrar = true; }
+  if (geo.alto) {
+    cena.classList.add('vista-alto');
+    // Borda da tela (só mouse): perto da borda, a câmera rola para aquele lado.
+    cena.addEventListener('pointermove', (ev) => {
+      if (ev.pointerType !== 'mouse') return;
+      const r = cena.getBoundingClientRect();
+      const m = 28;
+      const bx = ev.clientX - r.left < m ? 1 : r.right - ev.clientX < m ? -1 : 0;
+      const by = ev.clientY - r.top < m ? 1 : r.bottom - ev.clientY < m ? -1 : 0;
+      if (bx !== camLivre.borda.x || by !== camLivre.borda.y) { camLivre.borda = { x: bx, y: by }; atualizarVelCamera(); }
+      cena.classList.toggle('rolando-borda', !!(bx || by));
+    });
+    cena.addEventListener('pointerleave', () => { camLivre.borda = { x: 0, y: 0 }; atualizarVelCamera(); cena.classList.remove('rolando-borda'); });
+    // Arrastar: mais de 8 px com o botão apertado rola a área (e o clique que soltou não anda).
+    cena.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0 || ev.target.closest('[data-ponto], button')) return;
+      const x0 = ev.clientX; const y0 = ev.clientY; const c0 = { x: camLivre.x, y: camLivre.y };
+      const mover = (e) => {
+        if (!camLivre.arrastando && Math.hypot(e.clientX - x0, e.clientY - y0) < 8) return;
+        camLivre.arrastando = true;
+        cena.classList.add('arrastando');
+        camLivre.x = c0.x + (e.clientX - x0);
+        camLivre.y = c0.y + (e.clientY - y0);
+      };
+      const soltar = (e) => {
+        cena.removeEventListener('pointermove', mover);
+        if (e && Math.hypot(e.clientX - x0, e.clientY - y0) >= 8) mover(e);
+        if (camLivre.arrastando) { ignorarClique = true; setTimeout(() => { ignorarClique = false; }, 0); }
+        camLivre.arrastando = false;
+        cena.classList.remove('arrastando');
+      };
+      cena.addEventListener('pointermove', mover);
+      window.addEventListener('pointerup', soltar, { once: true });
+    });
+  }
+  // Desvio simples: se a linha reta até o destino sai do chão, passa por um canto do chão (puxado um
+  // pouco para dentro) de onde as duas retas ficam no chão.
+  const retaNoChao = (a, b) => { for (let i = 1; i < 12; i++) { const t = i / 12; if (!dentro([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], geo.chao)) return false; } return true; };
+  const centroChao = geo.chao.reduce((c, q) => [c[0] + q[0] / geo.chao.length, c[1] + q[1] / geo.chao.length], [0, 0]);
+  const cantos = geo.chao.map(([x, y]) => [x + (centroChao[0] - x) * 0.08, y + (centroChao[1] - y) * 0.08]).filter((q) => dentro(q, geo.chao));
+  function caminho(de, ate) {
+    if (retaNoChao(de, ate)) return [];
+    let melhor = null;
+    let menor = Infinity;
+    for (const q of cantos) {
+      if (!retaNoChao(de, q) || !retaNoChao(q, ate)) continue;
+      const d = dist(de[0], de[1], q[0], q[1]) + dist(q[0], q[1], ate[0], ate[1]);
+      if (d < menor) { menor = d; melhor = q; }
+    }
+    return melhor ? [melhor] : [];
+  }
 
   // --- Interação no mundo (rodada 26) ---------------------------------------------------------------
   // Marca no destino: um círculo pequeno pulsa onde ele vai parar e some quando ele chega.
@@ -1146,7 +1215,7 @@ export function montarCena(raiz, {
     // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
     const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
     const foco = focoBeijo || (focoEscolha && performance.now() < focoEscolha.ate ? focoEscolha : null);
-    const zAlvo = focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
+    const zAlvo = geo.alto && !foco && !conversa ? (estreito ? ZOOM_ALTO_CELULAR : ZOOM_ALTO) : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
@@ -1155,7 +1224,22 @@ export function montarCena(raiz, {
     const fy = (pos.y - h * 0.5) * H;
     let alvoX;
     let alvoY;
-    if (conversa && !estreito && ladoDialogo === 'baixo') {
+    if (geo.alto && !conversa && !foco) {
+      // Vista do alto (Fase 2): a câmera é livre. Rola com arrastar, borda da tela e setas; C (ou o botão)
+      // volta para o personagem. Ao entrar, começa centrada nele.
+      if (camLivre.centrar || !cameraPronta) {
+        camLivre.x = vw * 0.5 - fx;
+        camLivre.y = vh * 0.55 - fy;
+        if (camLivre.centrar && cameraPronta) camLivre.suave = true;
+        camLivre.centrar = false;
+      }
+      camLivre.x += camLivre.vx * dt;
+      camLivre.y += camLivre.vy * dt;
+      camLivre.x = limitar(camLivre.x, vw - W, 0);
+      camLivre.y = limitar(camLivre.y, vh - H, 0);
+      alvoX = camLivre.x;
+      alvoY = camLivre.y;
+    } else if (conversa && !estreito && ladoDialogo === 'baixo') {
       // O diálogo sobe do painel de baixo: o personagem vai para o alto, no meio.
       alvoX = vw * 0.5 - fx;
       alvoY = vh * 0.34 - fy;
@@ -1179,7 +1263,8 @@ export function montarCena(raiz, {
     }
     alvoX = limitar(alvoX, vw - W, 0);
     alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H, 0);
-    const k = cameraPronta ? Math.min(1, dt * 3) : 1;
+    const k = !cameraPronta || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));
+    if (geo.alto && camLivre.suave && Math.abs(alvoX - cam.x) + Math.abs(alvoY - cam.y) < 2) camLivre.suave = false;
     cam.x += (alvoX - cam.x) * k;
     cam.y += (alvoY - cam.y) * k;
     cameraPronta = true;
@@ -1329,11 +1414,14 @@ export function montarCena(raiz, {
     if (!camadaAberta() && !semPersonagem) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
     if (dx || dy) alvo = null;
     let correndo = teclas.has('shift');
+    if (alvo && !alvo.via) alvo.via = caminho([pos.x, pos.y], [alvo.x, alvo.y]);
+    if (alvo?.via?.length && dist(alvo.via[0][0], alvo.via[0][1], pos.x, pos.y) < 0.015) alvo.via.shift();
     if (alvo) {
       correndo ||= !!alvo.correr;
-      const ax = alvo.x - pos.x;
-      const ay = alvo.y - pos.y;
-      const d = dist(alvo.x, alvo.y, pos.x, pos.y);
+      const [tx, ty] = alvo.via?.length ? alvo.via[0] : [alvo.x, alvo.y];
+      const ax = tx - pos.x;
+      const ay = ty - pos.y;
+      const d = alvo.via?.length ? 1 : dist(alvo.x, alvo.y, pos.x, pos.y);
       const chegouPerto = alvo.ponto && !alvo.ponto.parada && !alvo.aproximar && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
       if (d < 0.008 || chegouPerto || semProgresso > 0.5) {
         const ponto = alvo.ponto;
@@ -1351,7 +1439,7 @@ export function montarCena(raiz, {
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
     const norma = Math.hypot(dx, dy) || 1;
-    const fator = limitar(altura(pos.y) / ALTURA_REF, 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1);
+    const fator = limitar(altura(pos.y) / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1);
     const desejadoX = (dx / norma) * VEL_X * fator;
     const desejadoY = (dy / norma) * VEL_Y * fator;
     const k = Math.min(1, dt * ACELERACAO);
@@ -1537,6 +1625,8 @@ export function montarCena(raiz, {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
     const k = ev.key.toLowerCase();
     if (k === 'shift') { teclas.add('shift'); return; }
+    if (geo.alto && k.startsWith('arrow')) { camLivre.setas.add(k); atualizarVelCamera(); ev.preventDefault(); return; }
+    if (geo.alto && (k === 'c' || k === 'home')) { centrarCamera(); ev.preventDefault(); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); aoMostrarTudo?.(); return; }
     if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
@@ -1548,8 +1638,12 @@ export function montarCena(raiz, {
     }
     aoTecla?.(ev);
   };
-  const aoSoltar = (ev) => teclas.delete(ev.key.toLowerCase());
-  const aoPerderFoco = () => teclas.clear();
+  const aoSoltar = (ev) => {
+    const k = ev.key.toLowerCase();
+    teclas.delete(k);
+    if (camLivre.setas.delete(k)) atualizarVelCamera();
+  };
+  const aoPerderFoco = () => { teclas.clear(); camLivre.setas.clear(); atualizarVelCamera(); };
 
   // Toque longo (celular) mostra todos os pontos por 2 segundos.
   let pressao = null;
@@ -1724,6 +1818,8 @@ export function montarCena(raiz, {
     soltar,
     alternarPausa,
     pausado: () => pausado,
+    centrarCamera,
+    vistaDoAlto: !!geo.alto,
     depoisDaPausa: (fn) => { if (pausado) aoSoltarPausa.push(fn); else fn(); },
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
