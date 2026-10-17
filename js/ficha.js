@@ -430,21 +430,41 @@ export function telaRegistro(raiz, p) {
     b.textContent = 'Vai para as ações curtas';
     b.disabled = true;
   });
-  // Refúgio como cena: a pintura do bairro onde ele dorme, com o que se sabe do lugar.
+  // Refúgio como cena vista do alto: a sala, com cada melhoria como objeto quando o personagem a tem.
+  // Quem ainda não tem, vê o lugar marcado. As melhorias vêm de refugio.melhorias (Narrador) ou do texto do refúgio.
   pagina.addEventListener('click', (ev) => { if (ev.target.closest('[data-refugio]')) abrirRefugio(); });
   const abrirRefugio = () => {
     const r = est.refugio || {};
-    const fundo = localDe(r.bairro || est.local)?.imagem || retratoDe(p);
+    const texto = `${r.local || ''} ${r.nota || ''} ${(r.melhorias || []).join(' ')}`.toLowerCase();
+    const tem = (m) => (r.melhorias || []).includes(m.id) || m.palavras.test(texto);
+    const objetos = MELHORIAS_REFUGIO.map((m) => {
+      const ok = tem(m);
+      return `<div class="refugio-obj${ok ? ' tem' : ''}" style="left:${m.x}%;top:${m.y}%;width:${m.w}%;height:${m.h}%" title="${esc(ok ? m.nome : `Falta: ${m.nome}. ${m.como}`)}">
+        ${ok ? `<img src="img/refugio/${m.id}.png" alt="${esc(m.nome)}">` : `<span>${esc(m.falta)}</span>`}</div>`;
+    }).join('');
     pagina.innerHTML = `
-      <div class="refugio-cena" style="--fundo:url('${esc(new URL(fundo, location.href).href)}')">
+      <div class="refugio-cena">
+        <div class="refugio-sala">
+          <img class="refugio-fundo" src="img/refugio/sala.jpg" alt="A sala do refúgio vista do alto">
+          ${objetos}
+          <div class="refugio-chuva" aria-hidden="true"></div>
+        </div>
         <div class="refugio-texto">
           <h4>Refúgio</h4>
           <p>${esc(r.local || 'Ainda sem refúgio fixo: dorme onde dá.')}</p>
           <dl class="rp-status"><dt>Segurança</dt><dd>${esc(r.seguranca || 'nenhuma')}</dd><dt>Rebanho</dt><dd>${esc(r.rebanho || 'nenhum')}</dd>${r.nota ? `<dt>O que tem</dt><dd>${esc(r.nota)}</dd>` : ''}</dl>
-          <p class="nota">O refúgio melhora com o tempo, pelo Narrador.</p>
+          <p class="nota">Cada melhoria aparece na sala quando você a tem. Os lugares marcados são as que faltam: peça ao Narrador numa ação da noite.</p>
         </div>
       </div>`;
     raiz.querySelectorAll('[data-rp]').forEach((b) => b.setAttribute('aria-selected', 'false'));
   };
   ligarGlossario();
 }
+
+// Melhorias do refúgio: posição em % da sala (gerada por refugio.py junto com as imagens).
+const MELHORIAS_REFUGIO = [
+  { id: 'porta', nome: 'Porta reforçada com tranca', falta: 'lugar da tranca', como: 'Uma tranca de verdade deixa o dia e os curiosos do lado de fora.', palavras: /tranca|porta refor|fechadura/, x: 4.539, y: 7.465, w: 11.161, h: 74.826 },
+  { id: 'cortina', nome: 'Cortina pesada', falta: 'lugar da cortina', como: 'Tecido grosso na janela: nem um raio de sol entra.', palavras: /cortina|janela pintada|blackout/, x: 26.86, y: 0.0, w: 14.435, h: 40.451 },
+  { id: 'geladeira', nome: 'Geladeira com bolsas de sangue', falta: 'lugar da geladeira', como: 'Bolsas guardadas para as noites em que não dá para caçar.', palavras: /geladeira|bolsas/, x: 75.521, y: 27.083, w: 13.021, h: 48.09 },
+  { id: 'caixao', nome: 'Caixão', falta: 'lugar do caixão', como: 'Um lugar fechado para dormir longe da luz.', palavras: /caix[aã]o/, x: 69.122, y: 74.132, w: 21.652, h: 25.868 },
+];
