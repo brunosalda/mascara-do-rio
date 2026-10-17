@@ -7,6 +7,8 @@ import { som } from '../ambiente.js';
 import { esc } from '../ui.js';
 import { cerimoniasCurtas } from '../leitura.js';
 import { fraseDescobertas } from './detalhes.js';
+import { preCarregar } from './imagens.js';
+import { ALTOS } from './lugares-alto.js';
 
 const LARGURA = 1920;
 const ALTURA = 1080;
@@ -252,6 +254,14 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
   };
   const aoSoltar = (ev) => teclas.delete(ev.key.toLowerCase());
   const aoPerderFoco = () => teclas.clear();
+
+  // O lugar sob o mouse ou o dedo já começa a baixar a pintura (a troca não mostra a imagem em pedaços).
+  const preparar = (ev) => {
+    const id = ev.target.closest?.('[data-lugar]')?.dataset.lugar;
+    if (id && ALTOS[id]) preCarregar(`img/cidade/alto/${id}.jpg`);
+  };
+  svg.addEventListener('pointerover', preparar);
+  svg.addEventListener('pointerdown', preparar);
 
   let avisoFechado = null;
   svg.addEventListener('click', (ev) => {

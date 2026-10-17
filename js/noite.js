@@ -14,6 +14,7 @@ import { PEDIDOS, FALAS_DE_CASA, NIVEIS_NOME_BAIRRO } from './jogo/progressao-te
 import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
+import { pinturaLeve } from './jogo/imagens.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
@@ -118,7 +119,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   // Fundo da cena: o lugar visitado ou onde o personagem está.
   const fundo = document.getElementById('cenario');
-  const imagem = geo.imagens?.[pintura] || geo.imagem || (emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local));
+  const imagem = pinturaLeve(geo.imagens?.[pintura] || geo.imagem || (emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local)));
   if (fundo) { fundo.style.backgroundImage = `url('${imagem}')`; fundo.dataset.url = imagem; }
 
   // Plano da noite: o que já foi enviado, mais o rascunho guardado no aparelho.

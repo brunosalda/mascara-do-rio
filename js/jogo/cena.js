@@ -10,6 +10,7 @@ import { esc, grupoVoz } from '../ui.js';
 import { TIPOS_GENTE, figuraGente, FIGURAS_GENTE } from './gente.js';
 import { geografia, dentro as dentroPoligono, maisPertoDentro } from './lugares.js';
 import { cerimoniasCurtas } from '../leitura.js';
+import { pinturaLeve, figuraLeve } from './imagens.js';
 
 let ASPECTO = 1344 / 752;       // proporção da pintura (a vista do alto em 21:9 troca ao montar)
 const VEL_X = 0.18;             // larguras da pintura por segundo, no tamanho de referência
@@ -96,6 +97,7 @@ export function montarCena(raiz, {
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
+  imagem = pinturaLeve(imagem);
   // Obstáculos dentro do chão (o VLT parado no Centro): o ponto no chão só vale fora deles.
   const dentro = (q, pol) => dentroPoligono(q, pol) && !(pol === geo.chao && (geo.obstaculos || []).some((o) => dentroPoligono(q, o)));
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
@@ -513,7 +515,7 @@ export function montarCena(raiz, {
     const estado = ESTADOS_GENTE[(i * 7 + g.tipo.length) % ESTADOS_GENTE.length];
     // Integração na pintura (ordem do Bruno): sombra de contato, reflexo invertido no chão molhado, e a
     // figura tingida pela cor e pelo brilho da pintura em volta dos pés (amostrados quando a pintura carrega).
-    const src = figura ? `img/gente/${figura}.png` : '';
+    const src = figura ? figuraLeve(`img/gente/${figura}.png`) : '';
     el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
       ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-lado" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
       : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${temPedido?.(g.tipo) ? 'tem um pedido' : estado}</small></span>`;
