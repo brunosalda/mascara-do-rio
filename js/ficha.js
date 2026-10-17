@@ -299,25 +299,38 @@ function abaSangueRP(f, calc, est) {
   const palavraCusto = (custo) => (custo <= xp ? 'ao seu alcance' : custo <= xp + 6 ? 'falta pouco' : 'ainda longe');
   const caro = (pw) => /humanidade|fome|besta/i.test(pw.desc || '');
   if (!galhos.length) return '<p class="nota">O sangue ainda não despertou nenhuma disciplina.</p>';
+  // Rodada 38: árvore que cresce do tronco. A Potência do Sangue embaixo; cada disciplina é um galho que
+  // sobe, com os níveis (só os que têm poder escrito) como nós ligados por um traço de bronze. "Treinar"
+  // só aparece no próximo nó, ao passar o mouse ou tocar nele.
+  const potencia = Math.max(1, Number(est.potencia ?? f.potencia ?? f.potencia_sangue ?? 1) || 1);
+  const n = galhos.length;
+  const raizes = galhos.map((_, i) => {
+    const x = ((i + 0.5) / n) * 100;
+    return `<path d="M50 40 C50 22, ${x} 22, ${x} 0"/>`;
+  }).join('');
   return `
     <p class="rp-intro">Experiência guardada: <b>${xp >= 15 ? 'bastante' : xp >= 6 ? 'alguma' : xp > 0 ? 'pouca' : 'nenhuma'}</b>. O Narrador dá experiência no fechamento da noite.</p>
-    <div class="arvore-sangue">${galhos.map((id) => {
-      const d = v5.DISCIPLINAS[id];
-      const n = calc.disciplinas[id] || 0;
-      return `<section class="galho-sangue">
-        <h4>${termoDe('disciplina', id, d.nome)}<small>${doCla.includes(id) ? 'do clã' : 'do predador'}</small></h4>
-        <ol>${[1, 2, 3, 4, 5].map((nivel) => {
-          const estado = nivel <= n ? 'tem' : nivel === n + 1 ? 'proximo' : 'longe';
-          const poderes = d.poderes.filter((pw) => pw.nivel === nivel);
-          return `<li class="no-sangue no-${estado}${poderes.some(caro) ? ' no-caro' : ''}">
-            <span class="no-bolinha" aria-hidden="true"></span>
-            <span class="no-texto"><b>${nivel}º</b> ${poderes.map((pw) => `<span title="${esc(pw.desc || '')}">${esc(pw.nome)}</span>`).join(' · ') || '<i>sem poder neste nível</i>'}
-            ${estado === 'proximo' ? `<em class="no-custo">${palavraCusto(nivel * fator(id))}</em><button type="button" class="btn-texto no-treinar" data-treinar="${esc(d.nome)}">Treinar (ação curta)</button>` : ''}</span>
-          </li>`;
-        }).join('')}</ol>
-      </section>`;
-    }).join('')}</div>
-    <p class="tronco-sangue"><b>Potência do Sangue</b> (o tronco): sobe com experiência, com o tempo de história e até o teto da geração. O Narrador confere.</p>
+    <div class="arvore-sangue" style="--galhos:${n}">
+      <div class="arvore-copa">${galhos.map((id) => {
+        const d = v5.DISCIPLINAS[id];
+        const tem = calc.disciplinas[id] || 0;
+        const niveis = [1, 2, 3, 4, 5].filter((nivel) => d.poderes.some((pw) => pw.nivel === nivel));
+        return `<section class="galho-sangue">
+          <ol>${niveis.map((nivel) => {
+            const estado = nivel <= tem ? 'tem' : nivel === tem + 1 ? 'proximo' : 'longe';
+            const poderes = d.poderes.filter((pw) => pw.nivel === nivel);
+            return `<li class="no-sangue no-${estado}${poderes.some(caro) ? ' no-caro' : ''}" ${estado === 'proximo' ? 'tabindex="0"' : ''}>
+              <span class="no-bolinha" aria-hidden="true">${nivel}</span>
+              <span class="no-texto">${poderes.map((pw) => `<span title="${esc(pw.desc || '')}">${esc(pw.nome)}</span>`).join(' · ')}
+              ${estado === 'proximo' ? `<em class="no-custo">${palavraCusto(nivel * fator(id))}</em><button type="button" class="no-treinar" data-treinar="${esc(d.nome)}">Treinar</button>` : ''}</span>
+            </li>`;
+          }).join('')}</ol>
+          <h4>${termoDe('disciplina', id, d.nome)}<small>${doCla.includes(id) ? 'do clã' : 'do predador'}</small></h4>
+        </section>`;
+      }).join('')}</div>
+      <svg class="arvore-raizes" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${raizes}</svg>
+      <div class="arvore-tronco"><b>Potência do Sangue</b>${pontos(potencia, 5)}<small>O tronco: sobe com experiência e com o tempo de história, até o teto da geração. O Narrador confere.</small></div>
+    </div>
     <p class="nota">Comprar um nível acontece pelo Narrador, no fechamento; os poderes com moldura vermelha cobram um preço na Humanidade, na Fome ou na Besta. A Humanidade não se compra. Vantagens ✦ somam no máximo +2 dados por rolagem.</p>`;
 }
 
@@ -422,6 +435,12 @@ export function telaRegistro(raiz, p) {
   };
   raiz.querySelectorAll('[data-rp]').forEach((b) => { b.onclick = () => mostrar(b.dataset.rp); });
   mostrar('ficha');
+  pagina.addEventListener('click', (ev) => {
+    const no = ev.target.closest('.no-proximo');
+    if (!no || ev.target.closest('[data-treinar]')) return;
+    pagina.querySelectorAll('.no-proximo.escolhido').forEach((x) => { if (x !== no) x.classList.remove('escolhido'); });
+    no.classList.toggle('escolhido');
+  });
   // Treinar vira uma ação curta da noite (o Narrador confirma e desconta a experiência no fechamento).
   pagina.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-treinar]');
