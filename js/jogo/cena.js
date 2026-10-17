@@ -7,6 +7,7 @@
 import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
+import { TIPOS_GENTE, figuraGente } from './gente.js';
 import { geografia, dentro, maisPertoDentro } from './lugares.js';
 import { cerimoniasCurtas } from '../leitura.js';
 
@@ -402,6 +403,53 @@ export function montarCena(raiz, {
     return melhor ? [melhor] : [];
   }
 
+  // --- Gente da área (Fase 2) ---------------------------------------------------------------------
+  // Figuras provisórias paradas ou andando devagar. Clicar leva o personagem até a pessoa e abre a
+  // conversa (ou, na caçada, a escolha da presa), pelo aoInteragir com tipo 'pessoa'.
+  const gente = (geo.gente || []).map((g, i) => {
+    const t = TIPOS_GENTE[g.tipo];
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `pessoa pessoa-${g.tipo}`;
+    el.setAttribute('aria-label', t?.rotulo || g.tipo);
+    el.title = t?.nome || g.tipo;
+    el.innerHTML = `${figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}</span>`;
+    mundo.appendChild(el);
+    const p = { id: `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: t?.nome || g.tipo, acao: `Falar com: ${t?.nome || g.tipo}`, anda: g.anda, dir: 1, el, parado: 0 };
+    return p;
+  });
+  function posicionarPessoa(p) {
+    p.el.style.left = pct(p.x);
+    p.el.style.top = pct(p.y);
+    p.el.style.height = `${(altura(p.y) * 100).toFixed(2)}%`;
+    p.el.style.zIndex = String(Math.round(p.y * 1000));
+    p.el.classList.toggle('vira', p.dir < 0);
+  }
+  gente.forEach(posicionarPessoa);
+  function andarGente(dt) {
+    for (const p of gente) {
+      if (!p.anda || pausado) continue;
+      if (p.parado > 0) { p.parado -= dt; continue; }
+      p.x += p.dir * 0.012 * dt;
+      if (p.x > p.anda[1] || p.x < p.anda[0]) { p.dir *= -1; p.x = limitar(p.x, p.anda[0], p.anda[1]); p.parado = 1.5 + Math.random() * 2.5; }
+      posicionarPessoa(p);
+    }
+  }
+  mundo.addEventListener('click', (ev) => {
+    const el = ev.target.closest('.pessoa');
+    if (!el) return;
+    ev.stopPropagation();
+    const p = gente.find((g) => g.el === el);
+    if (!p || camadaAberta() || semPersonagem) return;
+    if (dist(p.x, p.y, pos.x, pos.y) < alcanceEm(pos.y) * 1.4) { interagir(p); return; }
+    const k = Math.min(1, 0.05 / Math.max(0.001, dist(p.x, p.y, pos.x, pos.y)));
+    const [x, y] = maisPertoDentro([p.x + (pos.x - p.x) * k, p.y + (pos.y - p.y) * k + 0.01], geo.chao, ASPECTO);
+    alvo = { x, y, ponto: p, aproximar: true, correr: false };
+    mostrarDestino?.(x, y, false);
+    virarPara(x < pos.x);
+    semProgresso = 0;
+  }, true);
+
   // --- Interação no mundo (rodada 26) ---------------------------------------------------------------
   // Marca no destino: um círculo pequeno pulsa onde ele vai parar e some quando ele chega.
   const marcaDestino = cena.querySelector('.marca-destino');
@@ -498,7 +546,7 @@ export function montarCena(raiz, {
     if (!veuCtx) return;
     if (veuUltimo && dist(veuUltimo.x, veuUltimo.y, pos.x, pos.y) < 0.012) return;
     veuUltimo = { x: pos.x, y: pos.y };
-    abrirVeu(pos.x, pos.y);
+    abrirVeu(pos.x, pos.y, geo.alto ? 0.12 : 0.16);
   }
   const sobVeu = (x, y) => {
     if (!veuCtx) return false;
@@ -1555,6 +1603,14 @@ export function montarCena(raiz, {
     }
 
     if (proximaLuz === 0 || (agora > proximaLuz && (andando || virando))) { iluminar(); proximaLuz = agora + 100; }
+    if (gente.length) andarGente(dt);
+    // Oito direções (vista do alto): a figura usa o perfil; de frente e de costas ela estreita um pouco,
+    // e de costas fica mais escura. Provisório, até haver folhas de caminhada nas oito direções.
+    if (geo.alto && andando) {
+      const ang = Math.atan2(vel.y / VEL_Y, vel.x / VEL_X);
+      const dir = ['l', 'se', 's', 'so', 'o', 'no', 'n', 'ne'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+      if (boneco.dataset.dir !== dir) boneco.dataset.dir = dir;
+    }
     animarVida(agora, dt);
 
     // Pontos: discretos aparecem de perto; o mais próximo acende. Checagem a cada 120 ms.

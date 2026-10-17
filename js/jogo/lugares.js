@@ -25,6 +25,16 @@ export const LUGARES = {
   'lapa-alto': {
     alto: true,
     imagem: 'img/cidade/lapa-alto-teste.jpg',
+    imagens: { realista: 'img/cidade/lapa-alto-realista.jpg' },
+    // Gente da área (figuras provisórias): parada ou andando devagar entre x0 e x1.
+    gente: [
+      { tipo: 'passante', x: 0.38, y: 0.64, anda: [0.3, 0.52] },
+      { tipo: 'ambulante', x: 0.27, y: 0.55 },
+      { tipo: 'bebado', x: 0.55, y: 0.78, anda: [0.5, 0.62] },
+      { tipo: 'seguranca', x: 0.74, y: 0.6 },
+      { tipo: 'policial', x: 0.6, y: 0.47, anda: [0.52, 0.64] },
+      { tipo: 'turista', x: 0.82, y: 0.82 },
+    ],
     horizonte: 0.21,
     k: 0.14,
     chao: [[0.12, 0.56], [0.33, 0.48], [0.5, 0.42], [0.56, 0.4], [0.6, 0.42], [0.66, 0.48], [0.74, 0.58], [0.85, 0.68],

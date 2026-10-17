@@ -2650,7 +2650,7 @@ body.sem-efeitos .retrato-grande .estado-cor { animation: none !important; }
 /* Cursores próprios: normal, falar, examinar, caçar, entrar e viajar. No toque não muda nada. */
 @media (pointer: fine) {
   .cena { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 3 L20 9 L13 12 L22 27 L18 29 L10 15 L5 21 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 3 L20 9 L13 12 L22 27 L18 29 L10 15 L5 21 Z' fill='%23c9a25a' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 3 3, crosshair; }
-  .cena .ponto-acao, .cena .ponto-historia, .cena .ponto-escrever { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='%232a1f14' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='16' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='21' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 6 6, pointer; }
+  .cena .ponto-acao, .cena .ponto-historia, .cena .ponto-escrever, .cena .pessoa { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='%232a1f14' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='16' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='21' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 6 6, pointer; }
   .cena .ponto-detalhe { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M2 16 Q16 4 30 16 Q16 28 2 16 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2 16 Q16 4 30 16 Q16 28 2 16 Z' fill='%232a1f14' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23c9a25a' stroke='%23120c08' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23120c08'/%3E%3C/svg%3E") 16 16, pointer; }
   .cena .ponto-presa, .cena .ponto-cacar { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M4 8 Q16 14 28 8 L26 12 Q16 18 6 12 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M4 8 Q16 14 28 8 L26 12 Q16 18 6 12 Z' fill='%237a1520' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M9 12 L11 24 L13 13 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M9 12 L11 24 L13 13 Z' fill='%23f6efe0' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M23 12 L21 24 L19 13 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M23 12 L21 24 L19 13 Z' fill='%23f6efe0' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 16 12, pointer; }
   .cena .ponto-saida { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='%234a3220' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='18' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 16 16, pointer; }
@@ -2961,3 +2961,31 @@ body.sem-efeitos .veu-area { filter: none; }
 .botao-centrar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 @media (min-width: 761px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-centrar { top: auto; bottom: 58px; right: calc(var(--col-d) / 2 - 16px); } }
 @media (max-width: 760px) { .tela-jogo.bg2:not(.paineis-ocultos) .botao-centrar { top: auto; bottom: calc(var(--baixo, 46px) + 8px); right: 88px; } }
+
+/* Fase 2: gente da área (figuras provisórias) e oito direções do personagem na vista do alto. */
+.pessoa {
+  position: absolute; padding: 0; border: 0; background: none; translate: -50% -100%; aspect-ratio: 48 / 108; cursor: pointer;
+  filter: drop-shadow(0 0 2px rgba(255, 240, 210, 0.35)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7));
+}
+.pessoa svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pessoa.vira svg { transform: scaleX(-1); }
+.pessoa .corpo-gente { fill: var(--casaco, #2a2a32); stroke: rgba(240, 225, 200, 0.55); stroke-width: 1.4; }
+.pessoa .acessorio { fill: var(--detalhe, #8a6a36); stroke: rgba(0, 0, 0, 0.6); stroke-width: 1; }
+.pessoa .acessorio-linha { stroke: #222; stroke-width: 2; }
+.pessoa-passante { --casaco: #3a3446; --detalhe: #1e1e24; }
+.pessoa-ambulante { --casaco: #5a4a2a; --detalhe: #d8d8e0; }
+.pessoa-bebado { --casaco: #4a3a30; --detalhe: #4a8a40; }
+.pessoa-bebado svg { rotate: 6deg; }
+.pessoa-seguranca { --casaco: #121216; --detalhe: #121216; }
+.pessoa-policial { --casaco: #26324a; --detalhe: #1a2234; }
+.pessoa-turista { --casaco: #6a4a5a; --detalhe: #9ad0ff; }
+.pessoa-nome {
+  position: absolute; left: 50%; bottom: 100%; translate: -50% -4px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  font: italic 600 0.95rem/1 var(--titulo); color: #f6ead6; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+}
+.pessoa:hover .pessoa-nome, .pessoa:focus-visible .pessoa-nome, .cena.mostrar-tudo .pessoa-nome { opacity: 1; }
+.pessoa:hover { filter: drop-shadow(0 0 4px rgba(255, 220, 150, 0.9)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7)); }
+.cena.em-caca .pessoa:hover { filter: drop-shadow(0 0 5px rgba(220, 40, 50, 0.95)); }
+body.cena-pausada .pessoa { animation-play-state: paused; }
+.cena.vista-alto .personagem[data-dir='n'] .sprite, .cena.vista-alto .personagem[data-dir='s'] .sprite { scale: 0.82 1; }
+.cena.vista-alto .personagem[data-dir='n'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='no'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='ne'] .corpo-sprite { filter: brightness(0.78); }

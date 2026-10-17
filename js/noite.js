@@ -9,6 +9,7 @@ import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './c
 import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
+import { TIPOS_GENTE } from './jogo/gente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
@@ -52,7 +53,7 @@ export function gravarPosicao(p, noite, id) {
 }
 
 // fonte: de onde vêm a noite, as narrações e a ação (o banco; nas demonstrações, dados fictícios).
-export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco, vista = null } = {}) {
+export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco, vista = null, pintura = null } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
   const [noite, narracoes, resolvidas, ultima] = await Promise.all([
     fonte.noiteAberta(),
@@ -97,7 +98,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   // Fundo da cena: o lugar visitado ou onde o personagem está.
   const fundo = document.getElementById('cenario');
-  const imagem = geo.imagem || (emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local));
+  const imagem = geo.imagens?.[pintura] || geo.imagem || (emOutroLugar ? (visitado.imagem || imagemDoLocal('')) : imagemDoLocal(p.estado?.local));
   if (fundo) { fundo.style.backgroundImage = `url('${imagem}')`; fundo.dataset.url = imagem; }
 
   // Plano da noite: o que já foi enviado, mais o rascunho guardado no aparelho.
@@ -778,6 +779,26 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cena.apresentar(3500);
     cena.falar('A FOME', 'Três. Escolha uma.', 3000);
   }
+  // Gente da área (vista do alto): na caçada, quem pode ser presa vira presa; fora dela, uma conversa curta.
+  function falarComPessoa(pt) {
+    const t = TIPOS_GENTE[pt.tipoGente];
+    if (!t) return;
+    if (emCaca && !emCaca.alvo) {
+      if (!t.presa) { cena.falar('A FOME', t.nome === 'Policial' ? 'Esse não. Farda chama atenção.' : 'Esse está de olho em tudo. Outro.', 2800); return; }
+      escolherPresa({ id: `presa-${pt.id}`, rotulo: t.rotulo, repara: t.repara, vulneravel: t.vulneravel, x: pt.x, y: pt.y, tipo: 'presa', icone: '♦', acao: `Escolher: ${t.rotulo}`, temperamento: temperamentoDe(`${pt.id}.${noite?.numero || 0}`) });
+      return;
+    }
+    const fala = t.falas[Math.floor(Math.random() * t.falas.length)];
+    cena.perguntarNoBalao({
+      voz: t.nome.toUpperCase(), texto: fala, opcoes: ['Puxar conversa', 'Deixar para lá'], perto: { x: pt.x, y: pt.y, raio: 0.3 },
+      aoEscolher: (i) => {
+        if (i !== 0) return;
+        anotar('VOCÊ', `conversa com ${t.rotulo}.`);
+        cena.falar(t.nome.toUpperCase(), t.falas.find((f) => f !== fala) || fala, 3200);
+        setTimeout(() => cena.falar('PRONTIDÃO', `${t.repara.charAt(0).toUpperCase()}${t.repara.slice(1)}.`, 3600), 1400);
+      },
+    });
+  }
   function escolherPresa(pr) {
     if (!emCaca) return;
     if (pr.vulneravel) cena.falar('HUMANIDADE', pr.vulneravel, 2600);
@@ -1292,6 +1313,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       else if (pt.tipo === 'escrever') abrirEscrita();
       else if (pt.tipo === 'detalhe') abrirDetalhe(pt);
       else if (pt.tipo === 'presa' && !pt.alvo) escolherPresa(pt);
+      else if (pt.tipo === 'pessoa') falarComPessoa(pt);
       else if (pt.tipo === 'saida') acao_('mapa');
     },
     aoTecla: (ev) => {
