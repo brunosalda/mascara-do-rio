@@ -2029,3 +2029,70 @@ body.toque .so-mouse { display: none; }
 .plano-encerrar { margin-top: 0.35rem; width: 100%; min-height: 40px; }
 .quadro-encerrada { color: var(--texto); }
 .quadro-encerrada b { color: var(--ok); font-family: var(--sans); letter-spacing: 0.03em; }
+
+/* --- Rodada 15: pontos que nascem da pintura ------------------------------------------------------
+   Sem ícone redondo: de longe, uma área um pouco mais clara e faíscas subindo da âncora; de perto (ou no
+   passar do mouse, ou com Tab), um contorno com brilho suave e o nome ao lado, em serifada, sem caixa. */
+.ponto { --cor-ponto: 255, 190, 125; width: 72px; height: 44px; padding: 0; display: block; transform: translate(-50%, -100%) scale(var(--escala, 1)); }
+.ponto::after, .ponto-anel, .ponto-icone { display: none; }
+.ponto-historia, .ponto-detalhe { --cor-ponto: 236, 226, 205; }
+.ponto-cacar { --cor-ponto: 236, 70, 90; }
+.ponto-escrever { --cor-ponto: 120, 190, 225; }
+.ponto-saida { --cor-ponto: 200, 195, 185; }
+.ponto-luz {
+  position: absolute; left: 50%; bottom: -14px; width: 120px; height: 64px; translate: -50% 0; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(var(--cor-ponto), 0.2), rgba(var(--cor-ponto), 0.06) 45%, transparent 70%);
+  mix-blend-mode: screen; pointer-events: none; animation: luz-ponto 3.6s ease-in-out infinite;
+}
+@keyframes luz-ponto { 50% { opacity: 0.55; transform: scale(0.92); } }
+.ponto-faiscas { position: absolute; left: 50%; bottom: 0; width: 60px; height: 70px; translate: -50% 0; pointer-events: none; }
+.ponto-faiscas i {
+  position: absolute; bottom: 0; width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(var(--cor-ponto), 0.95); box-shadow: 0 0 6px rgba(var(--cor-ponto), 0.9);
+  opacity: 0; animation: faisca 2.8s ease-out infinite;
+}
+.ponto-faiscas i:nth-child(1) { left: 22%; animation-delay: 0s; }
+.ponto-faiscas i:nth-child(2) { left: 48%; animation-delay: 0.7s; }
+.ponto-faiscas i:nth-child(3) { left: 70%; animation-delay: 1.4s; }
+.ponto-faiscas i:nth-child(4) { left: 36%; animation-delay: 2.1s; }
+@keyframes faisca { 0% { opacity: 0; transform: translate(0, 0); } 20% { opacity: 0.9; } 100% { opacity: 0; transform: translate(6px, -60px); } }
+.ponto-contorno {
+  position: absolute; left: 50%; bottom: -8px; width: 70px; height: 24px; translate: -50% 0; border-radius: 50%;
+  border: 1.5px solid rgba(var(--cor-ponto), 0.85); box-shadow: 0 0 14px rgba(var(--cor-ponto), 0.55), inset 0 0 10px rgba(var(--cor-ponto), 0.3);
+  opacity: 0; transform: scale(0.85); transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+}
+.ponto:hover .ponto-contorno, .ponto.perto .ponto-contorno, .ponto:focus-visible .ponto-contorno { opacity: 1; transform: scale(1); }
+.ponto-rotulo {
+  position: absolute; left: calc(50% + 30px); bottom: 2px; max-width: 240px; padding: 0; white-space: nowrap;
+  background: none; border: 0; text-align: left;
+  font: italic 600 1.08rem/1.2 var(--titulo); letter-spacing: 0.01em; color: #f6ead6;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.95), 0 1px 2px #000, 0 0 14px rgba(var(--cor-ponto), 0.35);
+  opacity: 0; transition: opacity 0.3s, translate 0.25s;
+}
+.ponto.rotulo-esq .ponto-rotulo { left: auto; right: calc(50% + 30px); text-align: right; translate: 0 var(--empilhar, 0); }
+.ponto.rotulo-dir .ponto-rotulo { translate: 0 var(--empilhar, 0); }
+.ponto:hover .ponto-rotulo, .ponto.perto .ponto-rotulo, .ponto:focus-visible .ponto-rotulo, .cena.mostrar-tudo .ponto .ponto-rotulo { opacity: 1; border: 0; color: #fff; }
+.ponto.perto { opacity: 1; }
+.ponto.feito .ponto-rotulo::after { content: ' ✓'; color: var(--ok); font-style: normal; }
+.ponto.feito .ponto-faiscas { display: none; }
+.ponto.falta .ponto-faiscas i { animation-duration: 1.6s; }
+.ponto.visto .ponto-faiscas, .ponto.visto .ponto-luz { opacity: 0.35; }
+.ponto.acionado .ponto-contorno { animation: contorno-acionado 0.45s ease-out; }
+@keyframes contorno-acionado { 0% { transform: scale(1); } 50% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); } }
+@media (max-width: 700px) { .ponto-rotulo { font-size: 0.95rem; max-width: 150px; white-space: normal; } }
+body.cerimonias-curtas .ponto-faiscas, body.sem-efeitos .ponto-faiscas { display: none; }
+
+/* Vulto ao fundo (rodada 15): genérico, desfocado e de baixo contraste; nunca a folha do jogador. */
+.passante.vulto { width: calc(var(--altura, 200px) * 0.4); background: none; filter: blur(1.4px); opacity: 0.5; }
+.passante.vulto svg { width: 100%; height: 100%; fill: rgba(14, 14, 18, 0.85); display: block; }
+
+/* Ação onde o personagem está (rodada 15): inclina para o objeto durante a conversa e uma linha fina
+   liga o objeto à caixa. Transições curtas (300 a 400 ms). */
+.personagem .corpo-sprite, .personagem .tinta { rotate: 0deg; transition: rotate 0.35s ease-out; transform-origin: 50% 100%; }
+.personagem.inclinado .corpo-sprite, .personagem.inclinado .tinta { rotate: var(--inclinacao, 3deg); }
+.linha-conversa { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 250; pointer-events: none; opacity: 0; transition: opacity 0.3s; overflow: visible; }
+.linha-conversa.visivel { opacity: 1; }
+.linha-conversa line { stroke: rgba(255, 210, 168, 0.55); stroke-width: 1.2; stroke-dasharray: 3 4; }
+.linha-conversa circle { fill: #ffd2a8; filter: drop-shadow(0 0 4px rgba(255, 180, 120, 0.9)); }
+@media (max-width: 700px) { .linha-conversa { display: none; } }
+body.cerimonias-curtas .personagem .corpo-sprite, body.cerimonias-curtas .personagem .tinta { transition: none; }

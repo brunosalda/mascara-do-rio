@@ -17,7 +17,10 @@ const CORRIDA = 1.7;            // Shift ou clique duplo
 const ACELERACAO = 9;           // quanto mais alto, mais rápido arranca e para
 const ALCANCE = 0.075;          // distância para interagir (em alturas da pintura)
 const PERTO_VER = 0.17;         // pontos discretos aparecem a esta distância
-const ALTURA_REF = 0.3;         // altura de referência do personagem (fração da pintura)
+const ALTURA_REF = 0.3;
+// Gente ao fundo: um vulto genérico desenhado aqui (casaco, guarda-chuva às vezes não), nunca a folha
+// do jogador. Fica desfocado, com pouco contraste, e só na faixa do fundo.
+const VULTO = '<svg viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy="12" rx="6.5" ry="7.5"/><path d="M11 22 Q20 17 29 22 L32 66 Q20 70 8 66 Z"/><path d="M14 64 L12 96 L18 96 L20 68 Z"/><path d="M26 64 L28 96 L22 96 L20 68 Z"/></svg>';         // altura de referência do personagem (fração da pintura)
 const FIGURA = 0.94;            // a figura ocupa 94% da altura do quadro da folha
 const PASSADA = 0.9;            // uma passada completa anda 0,9 altura do boneco
 const ZOOM = 1.06;
@@ -81,15 +84,14 @@ export function montarCena(raiz, {
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
-        ${''/* Passantes desligados a pedido do Bruno (17/10/2026): eram a caminhada do próprio jogador
-             escurecida, e ele via "a própria sombra" andando no fundo. Voltam quando houver uma folha
-             própria de passante, diferente da do jogador. */}
+        ${geo.vida?.passantes?.length ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
         ${htmlBoneco(sprite)}
         <div class="balao-voz" hidden></div>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
       </div>
+      <svg class="linha-conversa" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3.5" cx="0" cy="0"/></svg>
       <div class="dica-interagir" hidden></div>
       <button type="button" class="seta-borda seta-esq" hidden aria-label="Pontos à esquerda">‹ <b></b></button>
       <button type="button" class="seta-borda seta-dir" hidden aria-label="Pontos à direita"><b></b> ›</button>
@@ -161,6 +163,8 @@ export function montarCena(raiz, {
   let proximaLuz = 0;
   let proximaChecagem = 0;
   let conversa = false;
+  let pontoDaConversa = null; // o objeto com que o personagem está falando (para a linha e o recuo)
+  let recuo = null;           // meio passo para trás ao fechar a conversa: { dx, ate, t0 }
   let ladoDialogo = 'direita';
   let interagindo = false;
   let mostrarTudoAte = 0;
@@ -179,9 +183,10 @@ export function montarCena(raiz, {
     camadaPontos.innerHTML = lista.map((p) => `
       <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}" data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
-        <span class="ponto-anel"></span>
-        <span class="ponto-icone">${p.icone || '!'}</span>
-        <span class="ponto-rotulo">${esc(p.rotulo)}</span>
+        <span class="ponto-luz" aria-hidden="true"></span>
+        <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="ponto-contorno" aria-hidden="true"></span>
+        <span class="ponto-rotulo">${/^\d$/.test(p.icone || '') ? `${p.icone} · ` : ''}${esc(p.rotulo)}</span>
       </button>`).join('');
     perto = null;
     proximaChecagem = 0;
@@ -215,6 +220,10 @@ export function montarCena(raiz, {
     alvo = null;
     interagindo = true;
     virarPara(p.x < pos.x - 0.005);
+    // O personagem se inclina para o objeto enquanto a conversa estiver aberta.
+    pontoDaConversa = p;
+    boneco.style.setProperty('--inclinacao', `${p.x < pos.x - 0.005 ? -3.5 : 3.5}deg`);
+    boneco.classList.add('inclinado');
     const el = camadaPontos.querySelector(`[data-ponto="${CSS.escape(p.id)}"]`);
     if (el) { el.classList.remove('acionado'); void el.offsetWidth; el.classList.add('acionado'); }
     som.anel?.();
@@ -347,10 +356,10 @@ export function montarCena(raiz, {
         const h = altura(p.f.y);
         const v = 0.05 * limitar(h / ALTURA_REF, 0.3, 1.2);
         p.x += p.dir * v * dt;
-        p.fase += (v * mw * dt) / Math.max(1, (h * mh * PASSADA) / sprite.quadros);
-        const q = Math.floor(p.fase) % sprite.quadros;
-        passante.style.backgroundPosition = posicaoDoQuadro(q, sprite);
-        passante.style.transform = `translate3d(${(p.x * mw).toFixed(1)}px, ${(p.f.y * mh).toFixed(1)}px, 0) translate(-50%, -100%) scale(${(h / ALTURA_REF).toFixed(3)}) scaleX(${p.dir})`;
+        p.fase += dt * 2.2;
+        // Vulto: no máximo 40% da altura do personagem naquele ponto, com um balanço leve de passo.
+        const bal = Math.sin(p.fase * Math.PI * 2) * 0.6;
+        passante.style.transform = `translate3d(${(p.x * mw).toFixed(1)}px, ${(p.f.y * mh - Math.abs(bal) * 2).toFixed(1)}px, 0) translate(-50%, -100%) scale(${((h / ALTURA_REF) * 0.4).toFixed(3)}) scaleX(${p.dir}) rotate(${bal.toFixed(2)}deg)`;
         passante.style.zIndex = String(Math.round(p.f.y * 1000));
         if (p.x < p.f.x0 - 0.02 || p.x > p.f.x1 + 0.02 || !ligado) {
           vida.passante = null;
@@ -660,7 +669,17 @@ export function montarCena(raiz, {
     boneco.style.setProperty('--virar', virar.toFixed(3));
     boneco.style.setProperty('--inclinar', `${(olhandoEsquerda ? -1 : 1) * Math.min(1.3, rapidez) * (correndo ? 4 : 2.5)}deg`);
 
+    if (recuo) {
+      // 300 ms, desacelerando; só onde há chão.
+      const k = Math.min(1, (performance.now() - recuo.t0) / 300);
+      const alvoK = 1 - (1 - k) ** 2;
+      const passo = recuo.dx * (alvoK - recuo.feito);
+      recuo.feito = alvoK;
+      if (dentro([pos.x + passo, pos.y], geo.chao)) pos.x += passo;
+      if (k >= 1) recuo = null;
+    }
     atualizarCamera(dt);
+    if (conversa && pontoDaConversa) desenharLinha();
 
     // Balão da voz interior acima da cabeça.
     if (!balao.hidden) {
@@ -691,6 +710,28 @@ export function montarCena(raiz, {
       checarComentarios();
     }
     requestAnimationFrame(quadro);
+  }
+
+  // Linha fina do objeto até a borda da caixa de conversa (a caixa do jogo mais recente na tela).
+  const linha = cena.querySelector('.linha-conversa');
+  function desenharLinha() {
+    const caixa = [...document.querySelectorAll('.dialogo-cena:not(.dialogo-pergunta)')].at(-1);
+    if (!caixa) { linha.classList.remove('visivel'); return; }
+    const rc = cena.getBoundingClientRect();
+    const rd = caixa.getBoundingClientRect();
+    const px = cam.x + pontoDaConversa.x * mw * cam.z;
+    const py = cam.y + (pontoDaConversa.y - altura(pontoDaConversa.y) * 0.35) * mh * cam.z;
+    const esquerda = rd.left - rc.left;
+    const direita = rd.right - rc.left;
+    const ex = px < esquerda ? esquerda : px > direita ? direita : null;
+    if (ex == null) { linha.classList.remove('visivel'); return; }
+    const ey = limitar(py, rd.top - rc.top + 24, rd.bottom - rc.top - 24);
+    const l = linha.querySelector('line');
+    l.setAttribute('x1', px.toFixed(1)); l.setAttribute('y1', py.toFixed(1));
+    l.setAttribute('x2', ex.toFixed(1)); l.setAttribute('y2', ey.toFixed(1));
+    const c = linha.querySelector('circle');
+    c.setAttribute('cx', px.toFixed(1)); c.setAttribute('cy', py.toFixed(1));
+    linha.classList.add('visivel');
   }
 
   // --- Entrada --------------------------------------------------------------------------------------
@@ -775,6 +816,14 @@ export function montarCena(raiz, {
     lado: ladoLivre,
     conversa: (aberta) => {
       if (aberta && !conversa) ladoDialogo = ladoLivre();
+      if (!aberta && conversa && pontoDaConversa) {
+        // Ao fechar: endireita e dá meio passo para trás, sem virar de costas.
+        const dx = (pontoDaConversa.x < pos.x ? 1 : -1) * 0.012;
+        recuo = { dx, feito: 0, t0: performance.now() };
+        boneco.classList.remove('inclinado');
+        pontoDaConversa = null;
+        linha.classList.remove('visivel');
+      }
       conversa = aberta;
       document.body.classList.toggle('em-conversa', aberta);
       som.abafar?.(aberta);
