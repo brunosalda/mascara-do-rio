@@ -2989,3 +2989,33 @@ body.sem-efeitos .veu-area { filter: none; }
 body.cena-pausada .pessoa { animation-play-state: paused; }
 .cena.vista-alto .personagem[data-dir='n'] .sprite, .cena.vista-alto .personagem[data-dir='s'] .sprite { scale: 0.82 1; }
 .cena.vista-alto .personagem[data-dir='n'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='no'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='ne'] .corpo-sprite { filter: brightness(0.78); }
+
+/* Pedido do Bruno: a caixa da narração fica dentro da moldura, com o texto numa coluna de leitura
+   (até ~72 caracteres), a HQ na mesma largura e o fim do texto sempre à vista quando as opções aparecem. */
+@media (min-width: 761px) {
+  .tela-jogo.bg2:not(.paineis-ocultos) .dialogo-cena.dialogo-baixo { left: var(--col-e); right: var(--col-d); max-height: 62vh; padding-left: 0; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .dialogo-cena.dialogo-baixo::before { display: none; }
+}
+.dialogo-cena.dialogo-baixo .dialogo-corpo > *, .dialogo-cena.dialogo-baixo .dialogo-escolhas > *,
+.dialogo-cena.dialogo-baixo .dialogo-rodape > *, .dialogo-cena.dialogo-baixo .dialogo-cabeca {
+  max-width: 72ch; margin-left: auto; margin-right: auto;
+}
+.dialogo-cena.dialogo-baixo .dialogo-cabeca { width: 100%; box-sizing: border-box; }
+.dialogo-cena.dialogo-baixo .dialogo-corpo { min-height: 7.5em; }
+.dialogo-cena.dialogo-baixo .dialogo-escolhas { max-height: 40%; }
+.dialogo-cena.dialogo-baixo .hq, .dialogo-cena.dialogo-baixo .hq-solto { max-width: 72ch; }
+.dialogo-cena.dialogo-baixo .hq-solto .painel { aspect-ratio: 16 / 7; }
+/* Com as opções na tela, a HQ encolhe para uma faixa baixa e o texto fica com o espaço. */
+.dialogo-cena.dialogo-baixo.lido .hq .painel, .dialogo-cena.dialogo-baixo.lido .hq-solto .painel { max-height: 14vh; aspect-ratio: auto; height: 14vh; }
+.dialogo-cena.dialogo-baixo:has(.dialogo-escolhas .escolhas:not(.oculto)) .hq .painel,
+.dialogo-cena.dialogo-baixo:has(.dialogo-escolhas .escolhas:not(.oculto)) .hq-solto .painel { max-height: 14vh; aspect-ratio: auto; height: 14vh; }
+.cartao-botoes { display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; justify-content: center; align-items: center; margin-top: 0.5rem; }
+.cartao-botoes .btn-texto { color: #e8cf98; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; cursor: pointer; font: 600 0.95rem var(--sans); }
+/* A coluna de leitura vem do recuo das áreas (e não da largura de cada filho). */
+.dialogo-cena.dialogo-baixo .dialogo-corpo > *, .dialogo-cena.dialogo-baixo .dialogo-escolhas > *,
+.dialogo-cena.dialogo-baixo .dialogo-rodape > *, .dialogo-cena.dialogo-baixo .dialogo-cabeca { max-width: none; margin-left: 0; margin-right: 0; }
+.dialogo-cena.dialogo-baixo .dialogo-corpo, .dialogo-cena.dialogo-baixo .dialogo-escolhas,
+.dialogo-cena.dialogo-baixo .dialogo-rodape, .dialogo-cena.dialogo-baixo .dialogo-cabeca {
+  padding-left: max(1.3rem, calc((100% - 54rem) / 2)); padding-right: max(1.3rem, calc((100% - 54rem) / 2));
+}
+.dialogo-cena.dialogo-baixo .dialogo-corpo .texto-narracao, .dialogo-cena.dialogo-baixo .escolhas button { font-size: 1.2rem; }

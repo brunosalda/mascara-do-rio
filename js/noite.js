@@ -1078,6 +1078,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             <span class="grupo-rotulo">Pausa automática</span>
             ${[['visto', 'Quando viram você'], ['presa', 'Quando a presa começa a ir embora'], ['poder', 'Quando um poder acaba']].map(([k, nome]) => `<div class="leitura-grupo" role="group" aria-label="${nome}"><span>${nome}</span><div><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="1" aria-pressed="${!!pausaAuto()[k]}">Pausar</button><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="0" aria-pressed="${!pausaAuto()[k]}">Não</button></div></div>`).join('')}
             <div class="leitura-grupo" role="group" aria-label="Névoa nas áreas"><span>Névoa nas áreas (primeira visita da noite)</span><div><button type="button" class="chip-leitura" data-nevoa="1" aria-pressed="${nevoaLigada()}">Ligada</button><button type="button" class="chip-leitura" data-nevoa="0" aria-pressed="${!nevoaLigada()}">Desligada</button></div></div>
+            <div class="leitura-grupo" role="group" aria-label="Dicas"><span>Dicas ao chegar num bairro</span><div><button type="button" class="chip-leitura" data-m="dicas">Mostrar de novo todas as dicas</button></div></div>
             <p class="nota">Espaço pausa e solta a cena a qualquer momento. Pausado, dá para marcar o destino e escolher um poder: tudo acontece ao soltar.</p>
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
@@ -1090,6 +1091,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             corpo.querySelectorAll(`[data-leitura="${campo}"]`).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
           };
         });
+        corpo.querySelector('[data-m="dicas"]').onclick = () => {
+          try { Object.keys(localStorage).filter((k) => k.startsWith('mascara.semDica.') || k === 'mascara.dicasVistas').forEach((k) => localStorage.removeItem(k)); } catch { /* sem armazenamento */ }
+          aviso('As dicas voltam a aparecer ao chegar em cada bairro.');
+        };
         corpo.querySelectorAll('[data-nevoa]').forEach((b) => {
           b.onclick = () => {
             try { localStorage.setItem('mascara.nevoaAreas', b.dataset.nevoa); } catch { /* sem armazenamento */ }
@@ -1248,8 +1253,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   ];
   function mostrarPassagem() {
     let anterior = null;
-    try { anterior = sessionStorage.getItem('mascara.ultimoLugar'); sessionStorage.setItem('mascara.ultimoLugar', lugarId || ''); } catch { /* sem armazenamento */ }
+    try { anterior = sessionStorage.getItem('mascara.ultimoLugar'); } catch { /* sem armazenamento */ }
+    // Grava o lugar só depois de um tempo na cena: a tela pode ser montada duas vezes ao abrir, e a
+    // segunda montagem apagava o cartão da primeira (a dica "sumia rápido demais").
+    setTimeout(() => { if (camadas.isConnected) { try { sessionStorage.setItem('mascara.ultimoLugar', lugarId || ''); } catch { /* sem armazenamento */ } } }, 1500);
     if (!anterior || anterior === (lugarId || '')) return;
+    // Pedido do Bruno: a dica fica até o clique e pode ser desligada para este bairro.
+    try { if (localStorage.getItem(`mascara.semDica.${lugarId}`) === '1') return; } catch { /* sem armazenamento */ }
     let usadas = [];
     try { usadas = JSON.parse(localStorage.getItem('mascara.dicasVistas')) || []; } catch { /* sem armazenamento */ }
     let livres = DICAS_PASSAGEM.map((_, i) => i).filter((i) => !usadas.includes(i));
@@ -1260,17 +1270,30 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cartao.className = 'cartao-passagem';
     cartao.setAttribute('role', 'status');
     cartao.style.setProperty('--fundo', `url('${new URL(imagem, location.href).href}')`);
-    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2><p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><span class="cartao-pular">clique para seguir</span></div>`;
+    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2><p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
     camadas.appendChild(cartao);
     const t0 = performance.now();
-    let carregou = false;
-    const img = new Image();
-    const tirar = () => { if (!cartao.isConnected) return; cartao.classList.add('saindo'); setTimeout(() => cartao.remove(), 350); };
-    const talvezTirar = () => { if (carregou && performance.now() - t0 >= 800) tirar(); };
-    img.onload = img.onerror = () => { carregou = true; setTimeout(talvezTirar, Math.max(0, 800 - (performance.now() - t0))); };
-    img.src = imagem;
-    setTimeout(() => { carregou = true; talvezTirar(); }, 2500);
-    cartao.addEventListener('click', tirar);
+    const tirar = () => {
+      if (!cartao.isConnected) return;
+      document.removeEventListener('keydown', teclaCartao, true);
+      cartao.classList.add('saindo');
+      setTimeout(() => cartao.remove(), 350);
+    };
+    // O clique que trouxe o jogador até aqui não fecha o cartão: só vale depois de 400 ms.
+    const pronto = () => performance.now() - t0 > 400;
+    function teclaCartao(ev) {
+      if (!cartao.isConnected) { document.removeEventListener('keydown', teclaCartao, true); return; }
+      if (['Enter', ' ', 'Escape'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); if (pronto()) tirar(); }
+    }
+    document.addEventListener('keydown', teclaCartao, true);
+    cartao.addEventListener('click', (ev) => {
+      if (!pronto()) return;
+      if (ev.target.closest('[data-cartao="nunca"]')) {
+        try { localStorage.setItem(`mascara.semDica.${lugarId}`, '1'); } catch { /* sem armazenamento */ }
+        aviso(`A dica não aparece mais ao chegar ${localAtual?.em || 'aqui'}. Em Opções dá para mostrar de novo.`);
+      }
+      tirar();
+    });
   }
   // Névoa leve (rodada 29): só na primeira visita ao lugar em cada noite, e se a opção estiver ligada.
   const nevoaLigada = () => { try { return localStorage.getItem('mascara.nevoaAreas') !== '0'; } catch { return true; } };

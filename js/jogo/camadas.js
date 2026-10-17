@@ -61,7 +61,8 @@ export function confirmarEscolha(botao, depois) {
 // html: conteúdo (narração, escolhas). chave: se dada, revela aos poucos e marca como lida.
 // As escolhas (.escolhas) ficam presas ao pé da caixa, sempre à vista; o texto rola acima delas.
 export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodape = '', fechavel = true, aoTerminar, aoFechar, aoAvancar } = {}) {
-  const lado = cenaAtual?.lado?.() || 'centro';
+  const comPaineis = raiz.closest?.('.tela-jogo.bg2:not(.paineis-ocultos)') && window.innerWidth > 760 && window.innerWidth > window.innerHeight;
+  const lado = cenaAtual?.lado?.() || (comPaineis ? 'baixo' : 'centro');
   const el = document.createElement('section');
   el.className = `dialogo-cena dialogo-${lado} surgir`;
   el.setAttribute('role', 'dialog');
@@ -119,10 +120,18 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
   if (chave) {
     leitura = revelarAosPoucos(el, chave, {
       aoAvancar: () => { aoAvancar?.(); corpo.scrollTo({ top: corpo.scrollHeight, behavior: 'smooth' }); },
-      aoTerminar: () => { el.classList.add('lido'); aoTerminar?.(camada); },
+      aoTerminar: () => {
+        el.classList.add('lido');
+        aoTerminar?.(camada);
+        // As opções aparecem embaixo: o fim do texto continua à vista, logo acima delas.
+        requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
+        setTimeout(() => { corpo.scrollTop = corpo.scrollHeight; }, 350);
+      },
     });
   } else {
     aoTerminar?.(camada);
+    // Com escolhas embaixo, o fim do texto fica à vista logo acima delas.
+    if (presas.childElementCount) requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
   }
   camada.corpo = corpo;
   return camada;
