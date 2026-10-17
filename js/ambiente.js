@@ -1,5 +1,5 @@
 // Cenário vivo e som ambiente: chuva sobre a pintura, relâmpagos, vinheta da Fome,
-// e um som sintetizado no navegador (chuva, cidade ao longe, batimento, trovão). Sem arquivos de áudio.
+// e um som sintetizado no navegador, sem ruído: gotas tonais, acorde de cada bairro, batimento, trovão grave. Sem arquivos de áudio.
 
 const CHAVE_SOM = 'mascara.som';
 const CHAVE_EFEITOS = 'mascara.efeitos';
@@ -110,13 +110,21 @@ function iniciarRelampagos() {
 
 let audio = null;
 
-function ruido(ctx, segundos, tipo) {
-  const buf = ctx.createBuffer(1, ctx.sampleRate * segundos, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  let ultimo = 0;
-  for (let i = 0; i < d.length; i++) {
-    const branco = Math.random() * 2 - 1;
-    if (tipo === 'marrom') { ultimo = (ultimo + 0.02 * branco) / 1.02; d[i] = ultimo * 3.5; } else d[i] = branco;
+// Som sem chiado (rodada 15, pedido do Bruno: "o som está péssimo, parece um ruído"). Nada de ruído
+// contínuo: a chuva são gotas tonais curtas, cada bairro tem um acorde baixo de senoides com ataque
+// lento e um ou dois eventos tonais raros. Tudo passa por um eco leve e um compressor no fim.
+
+// Tons do acorde de abertura (lá menor): os acordes dos bairros e os eventos ficam nesta escala.
+const LA = 110;
+const ESCALA = { la: LA, do: 130.81, re: 146.83, mi: 164.81, sol: 196 };
+
+// Resposta de impulso do eco: um decaimento curto (só serve de "sala"; ninguém ouve isto sozinho).
+function respostaDeEco(ctx, segundos = 2.2) {
+  const n = Math.floor(ctx.sampleRate * segundos);
+  const buf = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let canal = 0; canal < 2; canal++) {
+    const d = buf.getChannelData(canal);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 3.2;
   }
   return buf;
 }
@@ -125,39 +133,56 @@ function montarAudio() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
   const ctx = new Ctx();
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -26;
+  compressor.knee.value = 18;
+  compressor.ratio.value = 4;
+  compressor.attack.value = 0.01;
+  compressor.release.value = 0.4;
   const mestre = ctx.createGain();
   mestre.gain.value = 0;
-  mestre.connect(ctx.destination);
-
-  // Chuva: ruído branco filtrado
-  const chuva = ctx.createBufferSource();
-  chuva.buffer = ruido(ctx, 3, 'branco');
-  chuva.loop = true;
-  const passaBanda = ctx.createBiquadFilter();
-  passaBanda.type = 'bandpass';
-  passaBanda.frequency.value = 1400;
-  passaBanda.Q.value = 0.6;
-  const volChuva = ctx.createGain();
-  volChuva.gain.value = 0.09;
-  chuva.connect(passaBanda).connect(volChuva).connect(mestre);
-  chuva.start();
-
-  // Cidade ao longe: ruído marrom grave
-  const cidade = ctx.createBufferSource();
-  cidade.buffer = ruido(ctx, 4, 'marrom');
-  cidade.loop = true;
-  const passaBaixa = ctx.createBiquadFilter();
-  passaBaixa.type = 'lowpass';
-  passaBaixa.frequency.value = 260;
-  const volCidade = ctx.createGain();
-  volCidade.gain.value = 0.22;
-  cidade.connect(passaBaixa).connect(volCidade).connect(mestre);
-  cidade.start();
-
-  return { ctx, mestre, batimento: null };
+  mestre.connect(compressor).connect(ctx.destination);
+  // Eco: um envio paralelo, baixo.
+  const eco = ctx.createConvolver();
+  eco.buffer = respostaDeEco(ctx);
+  const envio = ctx.createGain();
+  envio.gain.value = 0.22;
+  envio.connect(eco).connect(mestre);
+  // Tudo o que toca entra por "seco"; parte vai para o eco.
+  const seco = ctx.createGain();
+  seco.connect(mestre);
+  seco.connect(envio);
+  return { ctx, mestre, seco, batimento: null, gotas: null };
 }
 
-function pulso(a, quando, freq, volume) {
+const VOLUME_GERAL = 0.55;
+
+// Nota com envelope: ataque e queda, opcionalmente deslizando até outra frequência, com posição no
+// estéreo (pan de -1 a 1). dest: onde toca (padrão: a saída com eco).
+function tom(a, quando, freq, { tipo = 'sine', dur = 0.4, volume = 0.05, ate = null, ataque = 0.012, pan = 0, dest = null } = {}) {
+  const o = a.ctx.createOscillator();
+  const g = a.ctx.createGain();
+  o.type = tipo;
+  o.frequency.setValueAtTime(freq, quando);
+  if (ate) o.frequency.exponentialRampToValueAtTime(ate, quando + dur * 0.8);
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + ataque);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  let saida = g;
+  if (pan && a.ctx.createStereoPanner) {
+    const p = a.ctx.createStereoPanner();
+    p.pan.value = pan;
+    g.connect(p);
+    saida = p;
+  }
+  o.connect(g);
+  saida.connect(dest || a.seco);
+  o.start(quando);
+  o.stop(quando + dur + 0.05);
+}
+
+// Pulso grave curto (batimento, passo, baque).
+function pulso(a, quando, freq, volume, dest = null) {
   const o = a.ctx.createOscillator();
   const g = a.ctx.createGain();
   o.type = 'sine';
@@ -166,41 +191,25 @@ function pulso(a, quando, freq, volume) {
   g.gain.setValueAtTime(0.0001, quando);
   g.gain.exponentialRampToValueAtTime(volume, quando + 0.015);
   g.gain.exponentialRampToValueAtTime(0.0001, quando + 0.16);
-  o.connect(g).connect(a.mestre);
+  o.connect(g).connect(dest || a.seco);
   o.start(quando);
   o.stop(quando + 0.2);
 }
 
-// Nota curta: oscilador com ataque rápido e queda suave; ate = frequência final (deslize).
-function tom(a, quando, freq, { tipo = 'sine', dur = 0.4, volume = 0.05, ate = null } = {}) {
-  const o = a.ctx.createOscillator();
-  const g = a.ctx.createGain();
-  o.type = tipo;
-  o.frequency.setValueAtTime(freq, quando);
-  if (ate) o.frequency.exponentialRampToValueAtTime(ate, quando + dur * 0.8);
-  g.gain.setValueAtTime(0.0001, quando);
-  g.gain.exponentialRampToValueAtTime(volume, quando + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
-  o.connect(g).connect(a.mestre);
-  o.start(quando);
-  o.stop(quando + dur + 0.05);
-}
-
-// Sopro: ruído filtrado curto (voz interior, respingo).
-function sopro(a, quando, { freq = 1800, q = 1.2, dur = 0.35, volume = 0.04 } = {}) {
-  const fonte = a.ctx.createBufferSource();
-  fonte.buffer = ruido(a.ctx, dur + 0.1, 'branco');
-  const filtro = a.ctx.createBiquadFilter();
-  filtro.type = 'bandpass';
-  filtro.frequency.value = freq;
-  filtro.Q.value = q;
-  const g = a.ctx.createGain();
-  g.gain.setValueAtTime(0.0001, quando);
-  g.gain.exponentialRampToValueAtTime(volume, quando + dur * 0.3);
-  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
-  fonte.connect(filtro).connect(g).connect(a.mestre);
-  fonte.start(quando);
-  fonte.stop(quando + dur + 0.1);
+// Chuva: gotas tonais curtas e irregulares (1,5 a 3 kHz, 20 a 40 ms), mais densas na tempestade e
+// nenhuma na noite de lua.
+const GOTAS_POR_SEGUNDO = { garoa: 2.2, tempestade: 6, lua: 0, nevoa: 0.4 };
+function agendarGotas() {
+  if (!audio) return;
+  clearTimeout(audio.gotas);
+  const taxa = tempo == null ? 1.5 : (GOTAS_POR_SEGUNDO[tempo] ?? 1.5);
+  if (!som.ligado() || taxa <= 0 || clima.tela === 'login') { audio.gotas = setTimeout(agendarGotas, 2000); return; }
+  const t = audio.ctx.currentTime + 0.02;
+  const f = 1500 + Math.random() * 1500;
+  tom(audio, t, f, { dur: 0.02 + Math.random() * 0.02, volume: 0.004 + Math.random() * 0.008, ate: f * 0.82, ataque: 0.003, pan: Math.random() * 1.6 - 0.8 });
+  // Intervalo irregular (exponencial): às vezes duas gotas juntas, às vezes uma pausa.
+  const espera = (-Math.log(1 - Math.random()) / taxa) * 1000;
+  audio.gotas = setTimeout(agendarGotas, Math.max(40, espera));
 }
 
 // Batimento: só no jogo, acelera e fica mais forte com a Fome.
@@ -210,14 +219,25 @@ function reagendarBatimento() {
   const fome = clima.tela === 'jogo' ? clima.fome : null;
   if (fome == null || fome < 1 || !som.ligado()) return;
   const bpm = 50 + fome * 13;
-  const volume = 0.12 + fome * 0.07;
+  const volume = 0.1 + fome * 0.05;
   const bater = () => {
     const t = audio.ctx.currentTime + 0.02;
-    pulso(audio, t, 62, volume);
-    pulso(audio, t + 0.22, 52, volume * 0.7);
+    pulso(audio, t, 62, volume, audio.mestre);
+    pulso(audio, t + 0.22, 52, volume * 0.7, audio.mestre);
     audio.batimento = setTimeout(bater, 60000 / bpm);
   };
   bater();
+}
+
+function ligarAudio() {
+  audio ||= montarAudio();
+  if (!audio) return false;
+  audio.ctx.resume();
+  audio.mestre.gain.setTargetAtTime(VOLUME_GERAL, audio.ctx.currentTime, 0.6);
+  reagendarBatimento();
+  montarCamadaDoLugar();
+  agendarGotas();
+  return true;
 }
 
 export const som = {
@@ -227,14 +247,8 @@ export const som = {
   alternar() {
     const ligar = !this.ligado();
     try { localStorage.setItem(CHAVE_SOM, ligar ? '1' : '0'); } catch { /* sem armazenamento */ }
-    if (ligar) {
-      audio ||= montarAudio();
-      if (!audio) return;
-      audio.ctx.resume();
-      audio.mestre.gain.setTargetAtTime(0.9, audio.ctx.currentTime, 0.6);
-    } else if (audio) {
-      audio.mestre.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.3);
-    }
+    if (ligar) { ligarAudio(); return; }
+    if (audio) audio.mestre.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.3);
     reagendarBatimento();
     montarCamadaDoLugar();
   },
@@ -242,165 +256,124 @@ export const som = {
   acorde() {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.02;
-    for (const [f, v] of [[55, 0.09], [82.4, 0.05], [110, 0.04], [130.8, 0.025]]) tom(audio, t, f, { tipo: 'triangle', dur: 2.6, volume: v });
+    for (const [f, v] of [[55, 0.08], [82.41, 0.045], [110, 0.035], [130.81, 0.022]]) tom(audio, t, f, { tipo: 'triangle', dur: 2.8, volume: v, ataque: 0.08 });
   },
   // Durante a conversa, o som do lugar fica mais baixo.
   abafar(sim) {
     abafado = !!sim;
-    if (camada && audio) camada.g.gain.setTargetAtTime(abafado ? 0.25 : 1, audio.ctx.currentTime, 0.35);
+    if (camada && audio) camada.g.gain.setTargetAtTime(abafado ? 0.3 : 1, audio.ctx.currentTime, 0.35);
   },
+  // Trovão: um grave tonal longo que chega depois do clarão (sem ruído).
   trovao(intensidade = 1) {
     if (!audio || !this.ligado()) return;
-    const ctx = audio.ctx;
-    const fonte = ctx.createBufferSource();
-    fonte.buffer = ruido(ctx, 4, 'marrom');
-    const filtro = ctx.createBiquadFilter();
-    filtro.type = 'lowpass';
-    filtro.frequency.value = 140;
-    const g = ctx.createGain();
-    const t = ctx.currentTime + 0.3 + Math.random() * 0.8; // o som chega depois do clarão
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.6 * intensidade, t + 0.15);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
-    fonte.connect(filtro).connect(g).connect(audio.mestre);
-    fonte.start(t);
-    fonte.stop(t + 3.5);
+    const t = audio.ctx.currentTime + 0.3 + Math.random() * 0.8;
+    const v = Math.min(0.12, 0.05 * intensidade);
+    tom(audio, t, 49, { dur: 3.6, volume: v, ate: 38, ataque: 0.25 });
+    tom(audio, t + 0.08, 73.4, { dur: 2.8, volume: v * 0.45, ate: 61, ataque: 0.3, tipo: 'triangle' });
+    tom(audio, t + 0.4, 36.7, { dur: 3.2, volume: v * 0.6, ataque: 0.5 });
   },
   toque() {
     if (!audio || !this.ligado()) return;
-    pulso(audio, audio.ctx.currentTime + 0.01, 420, 0.05);
+    tom(audio, audio.ctx.currentTime + 0.01, 660, { dur: 0.18, volume: 0.025 });
   },
   passo() {
     if (!audio || !this.ligado()) return;
-    pulso(audio, audio.ctx.currentTime + 0.01, 95 + Math.random() * 25, 0.06);
+    pulso(audio, audio.ctx.currentTime + 0.01, 95 + Math.random() * 25, 0.05);
   },
   // Interagir com um ponto: um toque de sino curto, como um copo tocado.
   anel() {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
-    tom(audio, t, 740, { dur: 0.5, volume: 0.045 });
-    tom(audio, t, 1110, { dur: 0.35, volume: 0.02 });
+    tom(audio, t, 880, { dur: 0.6, volume: 0.035 });
+    tom(audio, t, 1318.5, { dur: 0.4, volume: 0.014 });
   },
   // Escolher uma fala: um baque grave e uma nota que fica no ar.
   escolha() {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
-    pulso(audio, t, 90, 0.12);
-    tom(audio, t + 0.02, 220, { tipo: 'triangle', dur: 0.9, volume: 0.04 });
-    tom(audio, t + 0.02, 330, { tipo: 'sine', dur: 0.7, volume: 0.02 });
+    pulso(audio, t, 90, 0.1);
+    tom(audio, t + 0.02, 220, { tipo: 'triangle', dur: 0.9, volume: 0.035 });
+    tom(audio, t + 0.02, 329.6, { dur: 0.7, volume: 0.018 });
   },
   // Resultado de teste: sucesso sobe, falha desce, o resto fica neutro.
   teste(sucesso = false, falha = false) {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
     if (sucesso) {
-      tom(audio, t, 523, { dur: 0.3, volume: 0.04 });
-      tom(audio, t + 0.12, 784, { dur: 0.6, volume: 0.045 });
+      tom(audio, t, 523.25, { dur: 0.3, volume: 0.035 });
+      tom(audio, t + 0.12, 783.99, { dur: 0.7, volume: 0.04 });
     } else if (falha) {
-      tom(audio, t, 311, { tipo: 'triangle', dur: 0.35, volume: 0.045 });
-      tom(audio, t + 0.14, 233, { tipo: 'triangle', dur: 0.7, volume: 0.05, ate: 196 });
+      tom(audio, t, 311.1, { tipo: 'triangle', dur: 0.35, volume: 0.04 });
+      tom(audio, t + 0.14, 233.1, { tipo: 'triangle', dur: 0.7, volume: 0.045, ate: 196 });
     } else {
-      tom(audio, t, 440, { dur: 0.4, volume: 0.035 });
+      tom(audio, t, 440, { dur: 0.45, volume: 0.03 });
     }
   },
-  // Voz interior que comenta: um sussurro curto.
+  // Voz interior que comenta: duas notas altas e suaves, como um pensamento.
   voz() {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
-    sopro(audio, t, { freq: 2400, q: 2.5, dur: 0.45, volume: 0.03 });
-    tom(audio, t + 0.05, 1320, { dur: 0.25, volume: 0.008 });
+    tom(audio, t, 1318.5, { dur: 0.5, volume: 0.009, ataque: 0.06 });
+    tom(audio, t + 0.09, 1760, { dur: 0.45, volume: 0.006, ataque: 0.06 });
   },
   // Enviar o plano: a gota que cai (nota que desce), o baque no selo e o eco grave.
   selo() {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
-    tom(audio, t, 1400, { dur: 0.45, volume: 0.03, ate: 500 });
-    pulso(audio, t + 0.48, 70, 0.22);
-    sopro(audio, t + 0.48, { freq: 900, q: 0.8, dur: 0.3, volume: 0.05 });
-    tom(audio, t + 0.5, 110, { tipo: 'triangle', dur: 2.2, volume: 0.05 });
-    tom(audio, t + 0.5, 165, { tipo: 'sine', dur: 1.8, volume: 0.025 });
+    tom(audio, t, 1400, { dur: 0.45, volume: 0.028, ate: 500 });
+    pulso(audio, t + 0.48, 70, 0.18);
+    tom(audio, t + 0.5, 110, { tipo: 'triangle', dur: 2.2, volume: 0.045 });
+    tom(audio, t + 0.5, 164.8, { dur: 1.8, volume: 0.022 });
   },
 };
 
 // --- Som de cada lugar -------------------------------------------------------------------------
-// Uma "cama" sonora sintetizada por bairro, por cima da chuva e da cidade ao longe.
+// Um acorde de fundo baixo (2 ou 3 senoides, ataque lento, no tom do acorde de abertura) e um ou dois
+// eventos tonais raros por bairro.
 
 const SOM_DO_LUGAR = {
-  lapa: ['burburinho', 'musica'],
-  baixada: ['burburinho', 'musica', 'cachorro'],
-  'zona-norte': ['burburinho', 'bateria'],
-  morro: ['cachorro', 'baixo'],
-  cemiterio: ['grilos', 'vento'],
-  porto: ['ondas', 'sino'],
-  'zona-sul': ['ondas'],
-  barra: ['ondas', 'vento'],
-  niteroi: ['ondas', 'sino'],
-  centro: ['vento', 'bonde'],
-  'santa-teresa': ['grilos', 'bonde'],
+  lapa: { acorde: ['la', 'mi'], eventos: ['surdo'] },
+  'zona-norte': { acorde: ['la', 'do', 'mi'], eventos: ['surdo'] },
+  baixada: { acorde: ['re', 'la'], eventos: ['surdo'] },
+  morro: { acorde: ['re', 'sol'], eventos: ['surdo'] },
+  cemiterio: { acorde: ['la', 'do'], eventos: ['grilos'] },
+  'santa-teresa': { acorde: ['do', 'sol'], eventos: ['grilos', 'bonde'] },
+  centro: { acorde: ['la', 're'], eventos: ['bonde'] },
+  porto: { acorde: ['mi', 'la'], eventos: ['sino'] },
+  niteroi: { acorde: ['la', 'mi', 'sol'], eventos: ['sino', 'gaivota'] },
+  'zona-sul': { acorde: ['do', 'mi', 'la'], eventos: ['gaivota'] },
+  barra: { acorde: ['sol', 're'], eventos: ['gaivota'] },
 };
 let lugarDoSom = null;
 let camada = null;
 let abafado = false;
 let trocaDeLugar = null;
 
-function laco(ctx, tipo, segundos = 4) {
-  const f = ctx.createBufferSource();
-  f.buffer = ruido(ctx, segundos, tipo);
-  f.loop = true;
-  return f;
-}
-
-// Batida curta num destino qualquer (grave, surdo, baixo).
-function batida(dest, quando, freq, volume, dur = 0.25) {
-  const o = audio.ctx.createOscillator();
-  const g = audio.ctx.createGain();
-  o.frequency.setValueAtTime(freq, quando);
-  o.frequency.exponentialRampToValueAtTime(freq * 0.55, quando + dur * 0.8);
-  g.gain.setValueAtTime(0.0001, quando);
-  g.gain.exponentialRampToValueAtTime(volume, quando + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
-  o.connect(g).connect(dest);
-  o.start(quando);
-  o.stop(quando + dur + 0.05);
-}
-
-function rajada(dest, quando, freq, q, volume, dur) {
-  const f = audio.ctx.createBufferSource();
-  f.buffer = ruido(audio.ctx, dur + 0.05, 'branco');
-  const filtro = audio.ctx.createBiquadFilter();
-  filtro.type = 'bandpass';
-  filtro.frequency.value = freq;
-  filtro.Q.value = q;
-  const g = audio.ctx.createGain();
-  g.gain.setValueAtTime(0.0001, quando);
-  g.gain.exponentialRampToValueAtTime(volume, quando + dur * 0.2);
-  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
-  f.connect(filtro).connect(g).connect(dest);
-  f.start(quando);
-  f.stop(quando + dur + 0.05);
-}
-
-function fundoContinuo(c, { tipo, filtroTipo, freq, q = 0.7, volume, lfo = 0, lfoForca = 0 }) {
+// Acorde de fundo: cada nota uma oitava abaixo do tom da escala, com um leve "respirar" de volume e
+// um desafino lento, para não soar como um tom de teste.
+function acordeDeFundo(c, notas) {
   const ctx = audio.ctx;
-  const fonte = laco(ctx, tipo, 4);
-  const filtro = ctx.createBiquadFilter();
-  filtro.type = filtroTipo;
-  filtro.frequency.value = freq;
-  filtro.Q.value = q;
-  const g = ctx.createGain();
-  g.gain.value = volume;
-  fonte.connect(filtro).connect(g).connect(c.g);
-  if (lfo) {
+  notas.forEach((nome, i) => {
+    const f = ESCALA[nome] / 2;
     const o = ctx.createOscillator();
-    o.frequency.value = lfo;
-    const og = ctx.createGain();
-    og.gain.value = lfoForca;
-    o.connect(og).connect(g.gain);
-    o.start();
-    c.fontes.push(o);
-  }
-  fonte.start();
-  c.fontes.push(fonte);
+    o.type = 'sine';
+    o.frequency.value = f;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.gain.setTargetAtTime(0.018 / (1 + i * 0.35), ctx.currentTime, 1.6); // ataque lento
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.05 + i * 0.023;
+    const lfoGanho = ctx.createGain();
+    lfoGanho.gain.value = 0.006;
+    lfo.connect(lfoGanho).connect(g.gain);
+    const desafino = ctx.createOscillator();
+    desafino.frequency.value = 0.07 + i * 0.03;
+    const desafinoGanho = ctx.createGain();
+    desafinoGanho.gain.value = 0.35;
+    desafino.connect(desafinoGanho).connect(o.frequency);
+    o.connect(g).connect(c.g);
+    [o, lfo, desafino].forEach((x) => { x.start(); c.fontes.push(x); });
+  });
 }
 
 function repetir(c, minimo, maximo, fn) {
@@ -410,43 +383,28 @@ function repetir(c, minimo, maximo, fn) {
   agenda();
 }
 
-const CAMADAS = {
-  ondas: (c) => fundoContinuo(c, { tipo: 'marrom', filtroTipo: 'lowpass', freq: 650, volume: 0.22, lfo: 0.09, lfoForca: 0.16 }),
-  vento: (c) => fundoContinuo(c, { tipo: 'marrom', filtroTipo: 'bandpass', freq: 320, q: 0.5, volume: 0.12, lfo: 0.05, lfoForca: 0.08 }),
-  burburinho: (c) => fundoContinuo(c, { tipo: 'branco', filtroTipo: 'bandpass', freq: 480, q: 0.9, volume: 0.035, lfo: 0.3, lfoForca: 0.012 }),
-  musica: (c) => repetir(c, 520, 560, (t) => batida(c.g, t, 58, 0.05, 0.3)),
-  baixo: (c) => repetir(c, 440, 500, (t) => batida(c.g, t, 46, 0.045, 0.35)),
-  bateria: (c) => {
-    repetir(c, 980, 1020, (t) => batida(c.g, t, 62, 0.07, 0.45));
-    repetir(c, 240, 260, (t) => rajada(c.g, t, 3200, 1.5, 0.01, 0.05));
-  },
-  cachorro: (c) => repetir(c, 8000, 20000, (t) => { rajada(c.g, t, 650, 3, 0.05, 0.13); rajada(c.g, t + 0.28, 600, 3, 0.04, 0.12); }),
-  grilos: (c) => repetir(c, 900, 1600, (t) => { for (let i = 0; i < 3; i++) batida(c.g, t + i * 0.05, 4600, 0.008, 0.03); }),
-  sino: (c) => repetir(c, 20000, 40000, (t) => {
-    for (const [f, v] of [[520, 0.05], [1040, 0.02], [1560, 0.008]]) {
-      const o = audio.ctx.createOscillator();
-      const g = audio.ctx.createGain();
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(v, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
-      o.connect(g).connect(c.g);
-      o.start(t);
-      o.stop(t + 3.3);
-    }
+const EVENTOS = {
+  // Sino de navio ao longe (porto, Niterói).
+  sino: (c) => repetir(c, 22000, 45000, (t) => {
+    for (const [f, v, d] of [[440, 0.03, 3.4], [880, 0.012, 2.6], [1318.5, 0.005, 1.8]]) tom(audio, t, f, { dur: d, volume: v, pan: -0.4, dest: c.g });
   }),
-  bonde: (c) => repetir(c, 25000, 50000, (t) => {
-    const o = audio.ctx.createOscillator();
-    const g = audio.ctx.createGain();
-    o.frequency.setValueAtTime(2300, t);
-    o.frequency.exponentialRampToValueAtTime(1700, t + 1.2);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.012, t + 0.2);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
-    o.connect(g).connect(c.g);
-    o.start(t);
-    o.stop(t + 1.4);
-    rajada(c.g, t, 120, 0.5, 0.08, 2.2);
+  // Surdo abafado de uma roda de samba distante: uma frase curta de vez em quando (Lapa, Zona Norte).
+  surdo: (c) => repetir(c, 14000, 30000, (t) => {
+    [0, 0.5, 1.0, 1.25, 1.5].forEach((dt, i) => pulso(audio, t + dt, i % 2 ? 49 : 55, 0.05, c.g));
+  }),
+  // Grilos tonais: três pios curtos e altos (cemitério, Santa Teresa).
+  grilos: (c) => repetir(c, 2500, 6000, (t) => {
+    const f = 3520 + Math.random() * 200;
+    for (let i = 0; i < 3; i++) tom(audio, t + i * 0.07, f, { dur: 0.035, volume: 0.004, ataque: 0.004, pan: 0.5, dest: c.g });
+  }),
+  // Gaivota: um deslize agudo que sobe e desce (Zona Sul, Barra, Niterói).
+  gaivota: (c) => repetir(c, 25000, 55000, (t) => {
+    tom(audio, t, 1480, { dur: 0.5, volume: 0.008, ate: 1100, ataque: 0.05, pan: 0.6, dest: c.g });
+    tom(audio, t + 0.55, 1320, { dur: 0.6, volume: 0.007, ate: 990, ataque: 0.05, pan: 0.6, dest: c.g });
+  }),
+  // Sinal do bonde: um apito que desce (Centro, Santa Teresa).
+  bonde: (c) => repetir(c, 30000, 60000, (t) => {
+    tom(audio, t, 1760, { dur: 1.2, volume: 0.007, ate: 1318.5, ataque: 0.15, pan: -0.5, dest: c.g });
   }),
 };
 
@@ -455,19 +413,21 @@ function desmontarCamada() {
   const velha = camada;
   camada = null;
   velha.timers.forEach(clearTimeout);
-  if (audio) velha.g.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.3);
-  setTimeout(() => { velha.fontes.forEach((f) => { try { f.stop(); } catch { /* já parou */ } }); velha.g.disconnect(); }, 1200);
+  if (audio) velha.g.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.4);
+  setTimeout(() => { velha.fontes.forEach((f) => { try { f.stop(); } catch { /* já parou */ } }); velha.g.disconnect(); }, 2000);
 }
 
 function montarCamadaDoLugar() {
   desmontarCamada();
-  if (!audio || !som.ligado() || !SOM_DO_LUGAR[lugarDoSom]) return;
+  const def = SOM_DO_LUGAR[lugarDoSom];
+  if (!audio || !som.ligado() || !def) return;
   const g = audio.ctx.createGain();
   g.gain.value = 0;
-  g.connect(audio.mestre);
-  g.gain.setTargetAtTime(abafado ? 0.25 : 1, audio.ctx.currentTime, 0.5);
+  g.connect(audio.seco);
+  g.gain.setTargetAtTime(abafado ? 0.3 : 1, audio.ctx.currentTime, 0.8);
   camada = { g, fontes: [], timers: [], lugar: lugarDoSom };
-  for (const t of SOM_DO_LUGAR[lugarDoSom]) CAMADAS[t]?.(camada);
+  acordeDeFundo(camada, def.acorde);
+  for (const e of def.eventos) EVENTOS[e]?.(camada);
 }
 
 // Troca o som do lugar (null: nenhum). Espera um instante, para uma tela que se redesenha no mesmo
@@ -493,13 +453,7 @@ export function iniciarAmbiente() {
   // Navegadores só tocam som depois de um gesto: se o som estava ligado, retoma no primeiro toque.
   if (som.ligado()) {
     const retomar = () => {
-      audio ||= montarAudio();
-      if (audio) {
-        audio.ctx.resume();
-        audio.mestre.gain.setTargetAtTime(0.9, audio.ctx.currentTime, 0.6);
-        reagendarBatimento();
-        montarCamadaDoLugar();
-      }
+      ligarAudio();
       window.removeEventListener('pointerdown', retomar);
       window.removeEventListener('keydown', retomar);
     };
