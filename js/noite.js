@@ -1545,6 +1545,40 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }
   }, 1800);
 
+  // Celular (ordem de 17/10): o quadro da noite e o registro numa folha que se recolhe embaixo, com alça.
+  const painelBaixo = raiz.querySelector('.painel-baixo');
+  if (painelBaixo && !painelBaixo.querySelector('.alca-folha')) {
+    const alca = document.createElement('button');
+    alca.type = 'button';
+    alca.className = 'alca-folha';
+    alca.setAttribute('aria-expanded', 'false');
+    alca.setAttribute('aria-label', 'Abrir o quadro da noite e o registro');
+    alca.innerHTML = '<i aria-hidden="true"></i>';
+    alca.addEventListener('click', () => {
+      const aberta = painelBaixo.classList.toggle('folha-aberta');
+      alca.setAttribute('aria-expanded', String(aberta));
+      alca.setAttribute('aria-label', aberta ? 'Recolher o quadro da noite e o registro' : 'Abrir o quadro da noite e o registro');
+    });
+    painelBaixo.prepend(alca);
+  }
+  // No celular, o quadro da noite mora dentro da folha; no computador, volta para o canto dele.
+  const quadroNoite = raiz.querySelector('.tela-jogo > .hud-plano, .painel-baixo > .hud-plano');
+  const lugarQuadro = quadroNoite?.parentElement;
+  const ajustarFolha = () => {
+    if (!quadroNoite || !palco.isConnected) { window.removeEventListener('resize', ajustarFolha); return; }
+    const celular = document.body.classList.contains('celular');
+    if (celular && quadroNoite.parentElement !== painelBaixo) painelBaixo.querySelector('.alca-folha').after(quadroNoite);
+    else if (!celular && quadroNoite.parentElement === painelBaixo) lugarQuadro.appendChild(quadroNoite);
+  };
+  ajustarFolha();
+  window.addEventListener('resize', ajustarFolha);
+  // Em pé, uma vez: sugerir virar o celular (sem bloquear).
+  setTimeout(() => {
+    if (!palco.isConnected || !document.body.classList.contains('celular') || document.body.classList.contains('deitado')) return;
+    try { if (localStorage.getItem('mascara.sugeriuVirar')) return; localStorage.setItem('mascara.sugeriuVirar', '1'); } catch { return; }
+    aviso('Vire o celular para ver a cena inteira.');
+  }, 6000);
+
   // Só na demonstração (?depurar): atalhos para abrir as caixas, para a folha de capturas.
   if (/[?&]depurar\b/.test(location.hash)) window.__noiteDemo = { historia: () => abrirHistoria(false), outra: () => abrirEscrita(), enviado: () => cerimoniaDoEnvio() };
 

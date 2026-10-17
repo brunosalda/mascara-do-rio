@@ -3560,3 +3560,109 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 .vg-ponto { background: #8fd0ff; box-shadow: 0 0 0 1.5px #1c150f; }
 .vg-vista { position: absolute; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25); pointer-events: none; }
 .vg-legenda { margin: 0.5rem 0 0; font: 400 0.95rem var(--texto-livro); color: #e8dcc4; }
+
+/* =====================================================================================================
+   Celular (ordem de 17/10, itens 3 a 7): leiaute próprio em pé e deitado (body.celular, body.deitado).
+   A cena ocupa a tela; 5 ferramentas de 48 px no alcance do polegar (embaixo em pé, do lado deitado);
+   retrato num selo pequeno; quadro e registro numa folha que se puxa; painéis em tela cheia com X grande;
+   alturas em dvh e margens seguras do iPhone. Camadas de efeito nunca roubam o toque.
+   ===================================================================================================== */
+body.celular { overscroll-behavior: none; }
+body.celular #chuva, body.celular #nevoa, body.celular #luzes, body.celular #vinheta, body.celular #relampago,
+body.celular .moldura, body.celular .moldura-tela, body.celular .vivos, body.celular .sombra-caca { pointer-events: none !important; }
+body.celular .tela-jogo { height: 100dvh; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) {
+  --barra: 62px; --folha: 58px;
+  --topo: max(4px, env(safe-area-inset-top)); --col-e: max(4px, env(safe-area-inset-left)); --col-d: max(4px, env(safe-area-inset-right));
+  --baixo: calc(var(--barra) + var(--folha) + env(safe-area-inset-bottom));
+}
+/* As 5 ferramentas (Mapa, Ficha, Diário, Sangue, Mais); som, chuva e ajuda ficam em Mais. */
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes {
+  position: fixed; z-index: 600; inset: auto 0 0 0; top: auto; transform: none; translate: none; width: auto; max-width: none;
+  display: flex; flex-direction: row; justify-content: space-around; align-items: stretch; gap: 4px;
+  height: calc(var(--barra) + env(safe-area-inset-bottom)); padding: 5px max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, #2a1f14, #120c08); border-top: 2px solid #8a6a36; box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.6);
+}
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button { flex: 1 1 0; width: auto; height: auto; min-width: 48px; min-height: 52px; max-width: 96px; margin: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; padding: 4px 2px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button:is([data-hud="efeitos"], [data-hud="som"], [data-hud="legenda"]) { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome { display: block; position: static; translate: none; opacity: 1; padding: 0; background: none; border: 0;
+  font: 600 0.78rem/1 var(--sans); letter-spacing: 0.02em; color: #f0dcb0; white-space: nowrap; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome kbd { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-svg { width: 24px; height: 24px; }
+/* Retrato num selo pequeno no alto à direita; relógio pequeno no alto à esquerda. */
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato { position: absolute; z-index: 250; top: calc(var(--topo) + 6px); right: calc(var(--col-d) + 6px); left: auto; bottom: auto;
+  width: 56px; height: auto; padding: 0; background: none; border: 0; box-shadow: none; display: block; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato > :not(.retrato-grande) { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .retrato-grande { width: 56px; height: 56px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite { position: absolute; z-index: 250; top: calc(var(--topo) + 6px); left: calc(var(--col-e) + 6px); right: auto; bottom: auto; width: 48px; height: 48px; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite small { font-size: 0.75rem; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-noite { display: none; }
+/* Quadro da noite e registro: folha que se recolhe embaixo, com alça. */
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo {
+  position: fixed; z-index: 590; left: 0; right: 0; bottom: calc(var(--barra) + env(safe-area-inset-bottom)); top: auto;
+  height: var(--folha); padding: 18px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left));
+  display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  background: linear-gradient(180deg, rgba(34, 25, 17, 0.97), rgba(18, 13, 9, 0.97)); border-top: 2px solid #8a6a36; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.55);
+  transition: height 0.25s ease-out;
+}
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo.folha-aberta { height: min(62dvh, 520px); overflow-y: auto; overscroll-behavior: contain; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::before, body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo::after { display: none; }
+.alca-folha { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .alca-folha { display: block; position: absolute; top: 0; left: 50%; translate: -50% 0; width: 96px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .alca-folha i { display: block; width: 44px; height: 5px; margin: 7px auto 0; border-radius: 3px; background: #c9a25a; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano { position: static; order: 1; inset: auto; transform: none; width: auto; max-width: none; max-height: none; overflow: visible;
+  background: none; border: 0; padding: 0; font-size: 1rem; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .hud-plano .quadro-linhas { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo.folha-aberta .hud-plano .quadro-linhas { display: block; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .registro-noite { order: 2; flex: none; height: auto; max-height: none; min-height: 6rem; font-size: 1rem; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .registro-noite { display: none; }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .btn, body.celular .tela-jogo.bg2:not(.paineis-ocultos) .plano-enviar { min-height: 44px; padding: 0 1rem; font-size: 0.95rem; }
+/* Perguntas rápidas (caçada, detalhes): sobem como folha acima da barra. */
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta {
+  position: fixed; z-index: 620; inset: auto 0 calc(var(--barra) + env(safe-area-inset-bottom)) 0; max-height: 55dvh; overflow-y: auto;
+  padding: 0.7rem max(12px, env(safe-area-inset-right)) 0.8rem max(12px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, #2a1f14, #16100b); border-top: 2px solid #c9a25a; font-size: 1.05rem; }
+body.celular .painel-pergunta button, body.celular .painel-respostas button, body.celular .escolhas button { min-height: 44px; }
+/* Botões da cena (visão geral, centralizar, pausa, painéis): 44 px, acima da folha. */
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) :is(.botao-visao, .botao-centrar, .botao-pausa, .mostrar-paineis) {
+  width: 44px; height: 44px; top: auto; bottom: calc(var(--baixo) + 10px); }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .botao-visao { right: calc(var(--col-d) + 160px); }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .botao-centrar { right: calc(var(--col-d) + 108px); }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .botao-pausa { right: calc(var(--col-d) + 56px); }
+body.celular .tela-jogo.bg2:not(.paineis-ocultos) .mostrar-paineis { right: calc(var(--col-d) + 6px); }
+body.celular :is(.botao-visao, .botao-centrar, .botao-pausa, .mostrar-paineis) svg { width: 20px; height: 20px; }
+/* Caixas de diálogo e painéis: folha de tela cheia com rolagem própria e X grande. */
+body.celular .dialogo-cena { position: fixed !important; z-index: 700; left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto !important; max-width: none !important;
+  max-height: 82dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+body.celular .janela-fundo { padding: 0 !important; }
+body.celular .janela-fundo .janela { position: fixed; inset: 0; width: 100vw !important; max-width: none !important; height: 100dvh !important; max-height: none !important; margin: 0;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); clip-path: none; }
+body.celular .janela-fundo .janela-corpo { overflow-y: auto; overscroll-behavior: contain; }
+body.celular .fechar-camada { min-width: 48px; min-height: 48px; font-size: 1.25rem; display: inline-flex; align-items: center; justify-content: center; }
+body.celular :is(.rp-abas, .diario-abas) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+body.celular :is(.rp-abas, .diario-abas) button { flex: none; min-height: 44px; padding: 0 0.9rem; font-size: 0.95rem; }
+/* Letra: nada abaixo de 14 px. */
+body.celular .rastro-nome { font-size: 0.9rem; }
+body.celular .rastro-nome small { font-size: 0.78rem; }
+body.celular .hud-plano, body.celular .hud-plano small, body.celular .quadro-noite { font-size: max(0.9rem, 14px); }
+/* Deitado: as ferramentas numa barra fina do lado direito (polegar); a folha embaixo, ao lado dela. */
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) {
+  --barra-lado: calc(66px + env(safe-area-inset-right));
+  --col-d: var(--barra-lado); --folha: 48px;
+  --baixo: calc(var(--folha) + env(safe-area-inset-bottom));
+}
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes { inset: 0 0 0 auto; width: var(--barra-lado); height: auto; flex-direction: column;
+  padding: max(4px, env(safe-area-inset-top)) env(safe-area-inset-right) max(4px, env(safe-area-inset-bottom)) 4px; border-top: 0; border-left: 2px solid #8a6a36; }
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button { min-height: 48px; max-width: none; }
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo { right: var(--barra-lado); bottom: env(safe-area-inset-bottom); }
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo.folha-aberta { height: min(78dvh, 420px); }
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta { right: var(--barra-lado); bottom: 0; max-height: 70dvh; }
+body.celular.deitado .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato { right: calc(var(--barra-lado) + 6px); }
+body.celular.deitado .dialogo-cena { right: var(--barra-lado, 0) !important; max-height: 88dvh; }
+/* Celular: janelas e caixas por cima da folha e da barra; o registro quebra a linha em vez de cortar. */
+body.celular .janela-fundo { z-index: 800 !important; }
+body.celular .registro-noite, body.celular .registro-noite::before, body.celular .registro-noite li { white-space: normal !important; text-overflow: clip !important; overflow-wrap: anywhere; }
+/* Celular deitado também mostra, em Mais, o som, a chuva e a ajuda (que saíram da barra). */
+body.celular .menu-opcoes .so-celular { display: block; }
+body.celular .menu-opcoes button { min-height: 48px; }

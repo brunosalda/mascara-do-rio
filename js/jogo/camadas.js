@@ -61,7 +61,7 @@ export function confirmarEscolha(botao, depois) {
 // html: conteúdo (narração, escolhas). chave: se dada, revela aos poucos e marca como lida.
 // As escolhas (.escolhas) ficam presas ao pé da caixa, sempre à vista; o texto rola acima delas.
 export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodape = '', fechavel = true, aoTerminar, aoFechar, aoAvancar } = {}) {
-  const comPaineis = raiz.closest?.('.tela-jogo.bg2:not(.paineis-ocultos)') && window.innerWidth > 760 && window.innerWidth > window.innerHeight;
+  const comPaineis = raiz.closest?.('.tela-jogo.bg2:not(.paineis-ocultos)') && window.innerWidth > 760 && window.innerWidth > window.innerHeight && !document.body.classList.contains('celular');
   const lado = cenaAtual?.lado?.() || (comPaineis ? 'baixo' : 'centro');
   const el = document.createElement('section');
   el.className = `dialogo-cena dialogo-${lado} surgir`;

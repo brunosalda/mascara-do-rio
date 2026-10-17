@@ -369,7 +369,20 @@ async function aoMudarSessao(sessao) {
   if (sessao && pediuSenha) abrirSenhaDireto();
 }
 
+// Celular (ordem de 17/10): toque com tela pequena, tela estreita ou baixa (deitado) liga o leiaute de
+// celular (body.celular), em pé e deitado (body.deitado). Atualiza ao girar ou redimensionar.
+function marcarCelular() {
+  const w = window.innerWidth; const h = window.innerHeight;
+  const toque = window.matchMedia?.('(pointer: coarse)').matches;
+  const celular = (toque && Math.min(w, h) <= 600) || w <= 760 || h <= 500;
+  document.body.classList.toggle('celular', celular);
+  document.body.classList.toggle('deitado', celular && w > h);
+}
+
 async function iniciar() {
+  marcarCelular();
+  window.addEventListener('resize', marcarCelular);
+  window.addEventListener('orientationchange', () => setTimeout(marcarCelular, 200));
   iniciarAmbiente();
   aplicarLeitura();
   const botaoSom = document.getElementById('som');
