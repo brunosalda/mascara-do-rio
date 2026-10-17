@@ -40,6 +40,10 @@ const GERAL = {
   desejo: 'O que você quer agora, nesta fase da história.',
   pedra: 'Uma pessoa viva que liga você à sua humanidade. Se ela sofrer, você sofre junto.',
   predador: 'O jeito como você caça: onde, de quem e como você bebe sangue.',
+  disciplinas: 'Os poderes que o sangue de vampiro dá: força, rapidez, controle da mente e outros.',
+  perdicao: 'A maldição do seu clã: uma fraqueza que todo vampiro dessa linhagem carrega.',
+  compulsao: 'O impulso que toma conta de você quando a Besta, o seu lado animal, aperta.',
+  especializacao: 'Uma área em que você é ainda melhor dentro de uma habilidade.',
 };
 
 const primeiraFrase = (t) => String(t || '').split(/(?<=\.)\s/)[0];

@@ -66,7 +66,8 @@ export function montarCena(raiz, {
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
 } = {}) {
   const geo = geografia(lugar);
-  const depurar = /[?&](editar|depurar)\b/.test(location.hash);
+  // Nas rotas de demonstração (#/demo/...?depurar) a cena aparece como no jogo, sem o modo de edição.
+  const depurar = /[?&](editar|depurar)\b/.test(location.hash) && !/^#\/demo\//.test(location.hash);
   const fundoUrl = String(imagem || '').replace(/'/g, '%27');
   raiz.innerHTML = `
     <div class="cena">

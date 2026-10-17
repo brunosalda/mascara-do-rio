@@ -648,7 +648,7 @@ export function htmlCiclo(ult, lida = true) {
 
 // Cartão de abertura da noite: o título grande, o lugar e o tempo, com um acorde grave. Some sozinho
 // (1,5 s) ou com um clique; com menos movimento ou sem efeitos, aparece mais curto e sem animação.
-function cartaoDeAbertura(raiz, titulo, sub, depois) {
+export function cartaoDeAbertura(raiz, titulo, sub, depois) {
   const curto = document.body.classList.contains('sem-efeitos') || cerimoniasCurtas();
   const el = document.createElement('div');
   el.className = `cartao-abertura${curto ? ' sem-animacao' : ''}`;

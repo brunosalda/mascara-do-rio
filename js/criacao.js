@@ -1,9 +1,12 @@
-// Assistente de criação de personagem, em etapas. Salva a ficha a cada avanço.
+// Assistente de criação de personagem, em etapas (a "ficha detalhada"). Salva a ficha a cada avanço.
+// Fica no mesmo palco da criação por conversa: a pintura em tela cheia e cada etapa numa caixa larga
+// do jogo, com avançar e voltar como escolhas numeradas. O fim é o mesmo dossiê da conversa.
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
 import { esc, aviso, on, pontos } from './ui.js';
 import { recarregarPersonagens, ir } from './app.js';
-import { resumoFicha } from './ficha.js';
+import { resumoFicha, dossieDoFim, linhaDepoisDoEnvio, confirmarEnvio } from './ficha.js';
+import { termo, termoDe, ligarGlossario } from './glossario.js';
 import { imagemDoCla } from './cidade.js';
 import { quandoONarradorVolta } from './jogo/registro.js';
 
@@ -67,7 +70,7 @@ function etapaOrigem(f) {
 
 function etapaCla(f) {
   return `
-    <p class="lead">O clã é a linhagem do sangue de quem te Abraçou. Define seus dons (disciplinas), sua maldição (perdição) e o impulso que a Besta desperta (compulsão).</p>
+    <p class="lead">O clã é a linhagem do sangue de quem te Abraçou. Define seus dons <span class="sem-quebra">(${termoDe('geral', 'disciplinas', 'disciplinas')})</span>, sua maldição <span class="sem-quebra">(${termoDe('geral', 'perdicao', 'perdição')})</span> e o impulso que a Besta desperta <span class="sem-quebra">(${termoDe('geral', 'compulsao', 'compulsão')})</span>.</p>
     <div class="grade-opcoes clas">
       ${v5.CLAS.map((c) => {
         const discs = c.livre ? 'Qualquer disciplina' : c.disciplinas.map((d) => v5.DISCIPLINAS[d].nome).join(' · ');
@@ -159,7 +162,7 @@ function etapaHabilidades(f) {
   const esp = h.especializacoes || [];
   const livre = esp.find((e) => e.origem === 'livre') || {};
   html += `
-    <h3>Especializações</h3>
+    <h3>${termoDe('geral', 'especializacao', 'Especializações')}</h3>
     <p class="nota">Uma especialização é um recorte em que você é ainda melhor: Manha na Lapa, Briga em roda de capoeira.</p>
     <div class="duas-colunas">
       <label>Especialização livre: em qual habilidade?
@@ -196,7 +199,7 @@ function nomeHab(id) { return v5.HABILIDADES.find((x) => x.id === id)?.nome || i
 function etapaPredador(f) {
   const c = v5.cla(f.cla);
   return `
-    <p class="lead">Todo vampiro precisa de sangue. Como você costuma consegui-lo diz muito sobre quem você é, e sobre os riscos que corre.</p>
+    <p class="lead">Todo vampiro precisa de sangue. Como você costuma consegui-lo (seu ${termoDe('geral', 'predador', 'tipo de predador')}) diz muito sobre quem você é, e sobre os riscos que corre.</p>
     <div class="grade-opcoes">
       ${v5.PREDADORES.map((p) => {
         const escolhido = f.predador?.id === p.id;
@@ -218,7 +221,7 @@ function etapaPredador(f) {
                   <fieldset>
                     <legend>Disciplina extra</legend>
                     ${discs.map((d) => `
-                      <label class="radio"><input type="radio" name="disc-predador" data-disc-predador="${d}" ${f.predador.disciplina === d ? 'checked' : ''}> ${v5.DISCIPLINAS[d].nome}</label>`).join('')}
+                      <label class="radio"><input type="radio" name="disc-predador" data-disc-predador="${d}" ${f.predador.disciplina === d ? 'checked' : ''}> ${termoDe('disciplina', d, v5.DISCIPLINAS[d].nome)}</label>`).join('')}
                   </fieldset>` : ''}
                 ${oQueVemJunto(p) ? `<div class="vem-junto"><span class="grupo-rotulo">Vem junto</span>${oQueVemJunto(p)}</div>` : ''}
               </div>` : ''}
@@ -232,7 +235,7 @@ function cartoesPoderes(disc, nivel, escolhidos) {
   const qtd = d.poderes.filter((pw) => escolhidos.includes(pw.id)).length;
   return `
     <div class="bloco-disciplina">
-      <h3>${d.nome} <span class="nivel-tag">${v5.palavra('disciplina', nivel)}</span></h3>
+      <h3>${termoDe('disciplina', disc, d.nome)} <span class="nivel-tag">${v5.palavra('disciplina', nivel)}</span></h3>
       <p class="nota">${d.desc} Escolha ${nivel} poder${nivel > 1 ? 'es' : ''} (${qtd} de ${nivel}).</p>
       <div class="grade-poderes">
         ${d.poderes.filter((pw) => pw.nivel <= nivel).map((pw) => {
@@ -336,7 +339,7 @@ function etapaConviccoes(f) {
       </div>
     </div>`).join('');
   return `
-    <p class="lead">O que ainda te prende à humanidade. Cada convicção se apoia em um mortal vivo (touchstone): se ele sofrer, você sofre junto.</p>
+    <p class="lead">O que ainda te prende à humanidade. Cada ${termoDe('geral', 'conviccao', 'convicção')} se apoia em um mortal vivo (a sua ${termoDe('geral', 'pedra', 'pedra de toque')}): se ele sofrer, você sofre junto.</p>
     ${linhas}
     ${campo(f, 'ambicao', 'Ambição: o que você quer conquistar a longo prazo', { tipo: 'textarea', max: 300, placeholder: 'Ex.: Tornar-me o dono da noite na Lapa' })}
     ${campo(f, 'desejo', 'Desejo: o que você quer agora, nas próximas noites', { tipo: 'textarea', max: 300, placeholder: 'Ex.: Descobrir quem me Abraçou e por quê' })}`;
@@ -354,7 +357,12 @@ function etapaFinal(f) {
     </fieldset>
     ${modo === 'descrito' ? campo(f, 'senhor.texto', 'Quem foi e como aconteceu', { tipo: 'textarea', max: 500 }) : ''}
     <h3>Sua ficha</h3>
-    ${resumoFicha(f)}`;
+    ${dossieDoFim(f)}
+    ${linhaDepoisDoEnvio()}
+    <details class="fim-dobra">
+      <summary>Ver a ficha completa</summary>
+      ${resumoFicha(f, { semCabeca: true })}
+    </details>`;
 }
 
 const DESENHO = {
@@ -406,33 +414,41 @@ export async function telaCriacao(raiz, personagem) {
 
   function desenhar(rolarTopo = false) {
     const nome = nomeEtapa();
+    const corpoAntes = raiz.querySelector('.dialogo-corpo');
+    const rolagem = rolarTopo ? 0 : corpoAntes?.scrollTop || 0;
+    const final = nome === 'final';
+    const escolha = (n, attr, texto) => `<li><button type="button" ${attr}><span class="escolha-num">${n}.</span> — ${texto}</button></li>`;
+    document.body.dataset.tela = 'cena';
     raiz.innerHTML = `
-      <section class="assistente">
-        <div class="linha-titulo">
-          <p class="sobretitulo">Criação de personagem · ${etapa + 1} de ${v5.ETAPAS.length}</p>
-          <button type="button" class="btn-texto" data-conversa>Criar pela conversa (mais rápido)</button>
-        </div>
-        <h1>${ROTULOS[nome]}</h1>
-        <ol class="trilha" aria-label="Etapas">
-          ${v5.ETAPAS.map((e, i) => `<li><button type="button" data-etapa="${i}" class="${i === etapa ? 'atual' : ''} ${v5.pendencias(e, ficha).length ? '' : 'ok'}" aria-current="${i === etapa ? 'step' : 'false'}" title="${ROTULOS[e]}"><span>${ROTULOS[e]}</span></button></li>`).join('')}
-        </ol>
-        <div class="etapa">${DESENHO[nome](ficha)}</div>
-        <div class="bloco-pendencias" id="pendencias">
-          <span class="grupo-rotulo">Antes de continuar</span>
-          <ul class="pendencias"></ul>
-        </div>
-        <div class="rodape-assistente">
-          <p class="resumo-pendencias" aria-live="polite"></p>
-          <div class="botoes">
-            ${etapa > 0 ? '<button type="button" class="btn-secundario" data-voltar>Voltar</button>' : '<span></span>'}
-            ${nome === 'final'
-              ? '<button type="button" class="btn" data-enviar>Enviar para o Narrador</button>'
-              : '<button type="button" class="btn" data-avancar>Salvar e continuar</button>'}
+      <div class="tela-jogo tela-criacao">
+        <section class="dialogo-cena dialogo-criacao dialogo-largo conversa assistente-jogo">
+          <header class="dialogo-cabeca">
+            <span class="grupo-rotulo rotulo-consciencia voz-alma"><span class="rosto" aria-hidden="true">F</span>Ficha detalhada · etapa ${etapa + 1} de ${v5.ETAPAS.length}</span>
+            <button type="button" class="btn-texto" data-conversa>Criar pela conversa (mais rápido)</button>
+          </header>
+          <ol class="trilha" aria-label="Etapas">
+            ${v5.ETAPAS.map((e, i) => `<li><button type="button" data-etapa="${i}" class="${i === etapa ? 'atual' : ''} ${v5.pendencias(e, ficha).length ? '' : 'ok'}" aria-current="${i === etapa ? 'step' : 'false'}" title="${ROTULOS[e]}"><span>${ROTULOS[e]}</span></button></li>`).join('')}
+          </ol>
+          <div class="dialogo-corpo">
+            <h2 class="etapa-titulo">${ROTULOS[nome]}</h2>
+            <div class="etapa">${DESENHO[nome](ficha)}</div>
+            <div class="bloco-pendencias" id="pendencias">
+              <span class="grupo-rotulo">Antes de continuar</span>
+              <ul class="pendencias"></ul>
+            </div>
           </div>
-        </div>
-      </section>`;
+          <div class="dialogo-escolhas">
+            <p class="resumo-pendencias" aria-live="polite"></p>
+            <ol class="escolhas">
+              ${final ? escolha(1, 'data-enviar', 'Enviar ao Narrador') : escolha(1, 'data-avancar', `Salvar e seguir para “${ROTULOS[v5.ETAPAS[etapa + 1]]}”`)}
+              ${etapa > 0 ? escolha(2, 'data-voltar', `Voltar para “${ROTULOS[v5.ETAPAS[etapa - 1]]}”`) : ''}
+            </ol>
+          </div>
+        </section>
+      </div>`;
     atualizarRodape();
-    if (rolarTopo) window.scrollTo({ top: 0, behavior: 'smooth' });
+    ligarGlossario();
+    raiz.querySelector('.dialogo-corpo').scrollTop = rolagem;
   }
 
   function atualizarRodape() {
@@ -445,7 +461,7 @@ export async function telaCriacao(raiz, personagem) {
     raiz.querySelector('.bloco-pendencias').hidden = pend.length === 0;
     raiz.querySelector('.resumo-pendencias').innerHTML = pend.length
       ? `<button type="button" class="link-pendencias" data-ver-pendencias>Falta${pend.length > 1 ? `m ${pend.length} itens` : ' 1 item'}: ${esc(pend[0])}</button>`
-      : '<span class="tudo-certo">Tudo certo nesta etapa.</span>';
+      : `<span class="tudo-certo">${nome === 'final' ? 'Ficha completa.' : 'Tudo certo nesta etapa.'}</span>`;
     const btn = raiz.querySelector('[data-avancar], [data-enviar]');
     if (btn) btn.disabled = pend.length > 0 || ocupado;
   }
@@ -504,6 +520,7 @@ export async function telaCriacao(raiz, personagem) {
   on(raiz, 'click', '[data-avancar]', () => mudarEtapa(etapa + 1));
   on(raiz, 'click', '[data-enviar]', async (_e, el) => {
     if (!v5.fichaCompleta(ficha) || ocupado) return;
+    if (!(await confirmarEnvio(raiz.querySelector('.tela-criacao') || raiz)) || ocupado) return;
     ocupado = true;
     el.disabled = true;
     try {
@@ -672,6 +689,15 @@ export async function telaCriacao(raiz, personagem) {
 
   // Senhor
   on(raiz, 'change', '[data-senhor]', (_e, el) => { (ficha.senhor ||= {}).modo = el.dataset.senhor; desenhar(); });
+
+  // Teclado: 1 e 2 escolhem avançar e voltar, como nas falas do jogo (fora dos campos de texto).
+  const teclas = (ev) => {
+    if (!raiz.isConnected) { document.removeEventListener('keydown', teclas); return; }
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.querySelector('.dialogo-pergunta')) return;
+    const n = Number(ev.key);
+    if (n >= 1 && n <= 2) raiz.querySelectorAll('.dialogo-escolhas .escolhas button')[n - 1]?.click();
+  };
+  document.addEventListener('keydown', teclas);
 
   desenhar();
 }

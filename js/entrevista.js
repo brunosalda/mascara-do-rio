@@ -5,11 +5,9 @@ import { CENAS, FALAS_CLA, trocar, clasSugeridos, montarFicha } from './motor/ro
 import * as banco from './banco.js';
 import { esc, narracao, aviso, on } from './ui.js';
 import { estado as app, recarregarPersonagens, ir } from './app.js';
-import { resumoFicha, fortesEFracos, itemFortesFracos, linhaEmVida, pedraDeToque, semPontoFinal } from './ficha.js';
-import { imagemDoCla, retratoProvisorio } from './cidade.js';
+import { resumoFicha, dossieDoFim, linhaDepoisDoEnvio, confirmarEnvio, semPontoFinal } from './ficha.js';
+import { imagemDoCla } from './cidade.js';
 import { som } from './ambiente.js';
-import { termoDe, dicaDoGlossario } from './glossario.js';
-import { quandoONarradorVolta } from './jogo/registro.js';
 import { perguntar } from './jogo/camadas.js';
 
 const PERGUNTAS = CENAS.filter((c) => c.tipo !== 'fim').length;
@@ -100,39 +98,16 @@ function htmlCena(c, e) {
 // O fim da criação: o personagem grande, com o essencial em palavras. A ficha completa e a conversa
 // ficam dobradas embaixo; o envio fica à vista, com uma linha que diz o que acontece depois.
 function htmlFim(ficha, ok, e) {
-  const c = v5.cla(ficha.cla);
-  const pr = v5.predador(ficha.predador?.id);
-  const { fortes, fracos } = fortesEFracos(ficha);
-  const conv = (ficha.conviccoes || []).find((x) => x?.texto?.trim());
-  const pedra = conv ? pedraDeToque(conv) : '';
   return `
     <div class="lembranca surgir fim-abertura">
       <div class="texto-narracao">${narracao(`Você abre os olhos num quarto que não conhece. A sede de sangue, essa você já conhece bem.
 
 [O SANGUE] Pronto. Agora você é um de nós.`)}</div>
     </div>
-    <div class="fim-dossie surgir" style="animation-delay:450ms">
-      <img class="fim-retrato" src="${retratoProvisorio(ficha.cla)}" alt="Retrato provisório, até o Narrador pintar o seu">
-      <div class="fim-texto">
-        <span class="grupo-rotulo">${c ? termoDe('cla', c.id, c.nome) : ''}${pr ? ` · ${termoDe('predador', pr.id, pr.nome)}` : ''}</span>
-        <h2 class="fim-nome">${esc(semPontoFinal(ficha.nome) || 'Sem nome')}</h2>
-        ${linhaEmVida(ficha)}
-        ${ficha.origem?.conceito ? `<p class="fim-conceito">${esc(ficha.origem.conceito)}</p>` : ''}
-        ${dicaDoGlossario()}
-        <div class="fim-colunas">
-          <div><h3>Seus pontos fortes</h3><ul class="lista-palavras compacta">${fortes.map(itemFortesFracos).join('')}</ul></div>
-          <div><h3>Seus pontos fracos</h3><ul class="lista-palavras compacta">${fracos.map(itemFortesFracos).join('')}</ul></div>
-        </div>
-        <div class="fim-frases">
-          ${conv ? `<p><b>${termoDe('geral', 'conviccao', 'Convicção')}.</b> ${esc(semPontoFinal(conv.texto))}${pedra ? `. <span class="nota">Quem ainda te prende à humanidade: ${esc(pedra)}.</span>` : ''}</p>` : ''}
-          ${ficha.ambicao ? `<p><b>${termoDe('geral', 'ambicao', 'Ambição')}.</b> ${esc(semPontoFinal(ficha.ambicao))}.</p>` : ''}
-          ${ficha.desejo ? `<p><b>${termoDe('geral', 'desejo', 'Desejo')}.</b> ${esc(semPontoFinal(ficha.desejo))}.</p>` : ''}
-        </div>
-      </div>
-    </div>
+    ${dossieDoFim(ficha, 'surgir')}
     <div class="fim-envio surgir" style="animation-delay:800ms">
       ${ok ? '' : '<p class="nota">Faltou algum detalhe na ficha. Use "Ajustar detalhes" para completar.</p>'}
-      <p class="fim-depois">Depois de enviar, o Narrador lê sua ficha, encaixa você na cidade e escreve o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode ajustar.</p>
+      ${linhaDepoisDoEnvio()}
       <div class="botoes final-conversa">
         <button type="button" class="btn-secundario" data-ajustar>Ajustar detalhes</button>
         <button type="button" class="btn" data-enviar-conversa ${ok ? '' : 'disabled'}>Enviar para o Narrador</button>
@@ -297,12 +272,7 @@ export async function telaEntrevista(raiz, personagem) {
 
   on(raiz, 'click', '[data-enviar-conversa]', async (_ev, el) => {
     if (ocupado) return;
-    const r = await perguntar(raiz.querySelector('.tela-criacao') || raiz, {
-      rotulo: 'Enviar a ficha',
-      texto: `<p>O Narrador vai ler sua ficha e escrever o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode voltar e ajustar.</p>`,
-      opcoes: ['Enviar ao Narrador', 'Revisar mais um pouco'],
-    });
-    if (r !== 0 || ocupado) return;
+    if (!(await confirmarEnvio(raiz.querySelector('.tela-criacao') || raiz)) || ocupado) return;
     ocupado = true;
     el.disabled = true;
     try {

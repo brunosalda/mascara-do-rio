@@ -3,6 +3,8 @@ import * as v5 from './motor/v5.js';
 import { esc, pontos } from './ui.js';
 import { retratoDe, retratoProvisorio, localDe } from './cidade.js';
 import { termo, termoDe, ligarGlossario, dicaDoGlossario } from './glossario.js';
+import { quandoONarradorVolta } from './jogo/registro.js';
+import { perguntar } from './jogo/camadas.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
 // Até o Narrador pintar o retrato do personagem, mostra o retrato provisório (silhueta do clã).
@@ -62,6 +64,50 @@ export function fortesEFracos(f) {
   if (defeito) fracos.push({ tipo: 'defeito', id: defeito.id, nome: nomeItem(v5.DEFEITOS, defeito.id) });
   else fracos.push(porNivel.at(-2));
   return { fortes, fracos };
+}
+
+// O dossiê do fim da criação (por conversa ou detalhada): retrato, nome, clã e predador, conceito,
+// pontos fortes e fracos, convicção, ambição e desejo.
+export function dossieDoFim(ficha, classe = '') {
+  const c = v5.cla(ficha.cla);
+  const pr = v5.predador(ficha.predador?.id);
+  const { fortes, fracos } = fortesEFracos(ficha);
+  const conv = (ficha.conviccoes || []).find((x) => x?.texto?.trim());
+  const pedra = conv ? pedraDeToque(conv) : '';
+  return `
+    <div class="fim-dossie ${classe}">
+      <img class="fim-retrato" src="${retratoProvisorio(ficha.cla)}" alt="Retrato provisório, até o Narrador pintar o seu">
+      <div class="fim-texto">
+        <span class="grupo-rotulo">${c ? termoDe('cla', c.id, c.nome) : ''}${pr ? ` · ${termoDe('predador', pr.id, pr.nome)}` : ''}</span>
+        <h2 class="fim-nome">${esc(semPontoFinal(ficha.nome || ficha.origem?.nomeEmVida) || 'Sem nome')}</h2>
+        ${linhaEmVida(ficha)}
+        ${ficha.origem?.conceito ? `<p class="fim-conceito">${esc(ficha.origem.conceito)}</p>` : ''}
+        ${dicaDoGlossario()}
+        <div class="fim-colunas">
+          <div><h3>Seus pontos fortes</h3><ul class="lista-palavras compacta">${fortes.map(itemFortesFracos).join('')}</ul></div>
+          <div><h3>Seus pontos fracos</h3><ul class="lista-palavras compacta">${fracos.map(itemFortesFracos).join('')}</ul></div>
+        </div>
+        <div class="fim-frases">
+          ${conv ? `<p><b>${termoDe('geral', 'conviccao', 'Convicção')}.</b> ${esc(semPontoFinal(conv.texto))}${pedra ? `. <span class="nota">Quem ainda te prende à humanidade: ${esc(pedra)}.</span>` : ''}</p>` : ''}
+          ${ficha.ambicao ? `<p><b>${termoDe('geral', 'ambicao', 'Ambição')}.</b> ${esc(semPontoFinal(ficha.ambicao))}.</p>` : ''}
+          ${ficha.desejo ? `<p><b>${termoDe('geral', 'desejo', 'Desejo')}.</b> ${esc(semPontoFinal(ficha.desejo))}.</p>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+export function linhaDepoisDoEnvio() {
+  return `<p class="fim-depois">Depois de enviar, o Narrador lê sua ficha, encaixa você na cidade e escreve o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode ajustar.</p>`;
+}
+
+// A confirmação do envio, numa caixa do jogo. Resolve true só com "Enviar ao Narrador".
+export async function confirmarEnvio(raiz) {
+  const r = await perguntar(raiz, {
+    rotulo: 'Enviar a ficha',
+    texto: `<p>O Narrador vai ler sua ficha e escrever o seu prelúdio. Ele volta ${quandoONarradorVolta()}. Até ele começar, você ainda pode voltar e ajustar.</p>`,
+    opcoes: ['Enviar ao Narrador', 'Revisar mais um pouco'],
+  });
+  return r === 0;
 }
 
 export function itemFortesFracos(x) {

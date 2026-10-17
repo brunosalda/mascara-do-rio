@@ -61,7 +61,8 @@ function desenharCabecalho(rota) {
 
 // --- Login -----------------------------------------------------------------
 
-function telaLogin(raiz) {
+// demo: só nas rotas de demonstração (?depurar): nada vai ao banco; cada clique mostra uma das mensagens.
+export function telaLogin(raiz, { demo = false } = {}) {
   // Tela de título: a Lapa em tela cheia, o nome do jogo grande e a entrada numa caixa igual à da
   // conversa do jogo. Sem cabeçalho nem rodapé de site; o aviso legal fica dentro da caixa.
   document.body.dataset.tela = 'cena';
@@ -89,6 +90,15 @@ function telaLogin(raiz) {
     </div>`;
   const form = raiz.querySelector('#form-login');
   const msg = raiz.querySelector('#msg-login');
+  if (demo) {
+    const MENSAGENS = ['Este e-mail não está na lista de convidados.', 'E-mail ou senha incorretos.', 'Pronto. Abra o link que chegou no seu e-mail neste mesmo aparelho.'];
+    let i = 0;
+    const proxima = (e) => { e?.preventDefault(); msg.textContent = MENSAGENS[i++ % MENSAGENS.length]; };
+    form.email.value = 'convidado@exemplo.com';
+    form.onsubmit = proxima;
+    raiz.querySelector('#link-email').onclick = proxima;
+    return;
+  }
   form.onsubmit = async (e) => {
     e.preventDefault();
     const email = form.email.value;
@@ -149,6 +159,13 @@ async function desenhar() {
   // 'cena': telas de jogo em tela cheia (sem cabeçalho nem rodapé do site).
   definirCenario(!estado.sessao ? 'login' : emCriacao ? 'criacao' : p.status === 'revisao' ? 'cena' : 'jogo', p);
   if (estado.sessao && !emCriacao) document.body.dataset.tela = 'cena';
+
+  // Rotas de demonstração (?depurar): dados fictícios, sem banco e sem mexer na sessão.
+  const depurar = /[?&]depurar\b/.test(location.search) || /[?&]depurar\b/.test(location.hash);
+  if (rota.startsWith('demo/') && depurar) {
+    const { telaDemo } = await import('./demo.js');
+    return telaDemo(tela, rota.slice(5));
+  }
 
   if (!estado.sessao) return telaLogin(tela);
 
