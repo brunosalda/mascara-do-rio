@@ -53,17 +53,153 @@ export const TIPOS_GENTE = {
     falas: ['No meu tempo a Lapa era outra coisa.', 'Senta aí, moço. O banco é grande.', 'Essa chuva não para mais.'],
     repara: 'conta histórias para quem para do lado',
   },
-  // Elenco próprio de cada lugar (ordem do Bruno: gente presa ao cenário). Falas provisórias, até o
-  // roteirista mandar as definitivas.
-  'lapa-sambista': {
+  // Elenco próprio de cada lugar (ordem do Bruno: gente presa ao cenário), escrito pelo roteirista
+  // em gerencia/elenco-falas.md.
+  // ----- Lapa -----
+  sambista: {
     nome: 'Sambista', rotulo: 'um sambista com o pandeiro, encostado num pilar dos Arcos', presa: true,
-    falas: ['A roda começa tarde hoje. Chuva espanta o povo.', 'Conhece aquela do Cartola? Ninguém mais pede.', 'Aqui embaixo dos Arcos o som fica bonito.'],
-    repara: 'conhece todo mundo que passa pelos Arcos de madrugada',
+    falas: ['A roda começa quando o último chegar.', 'Pandeiro molhado não canta, parceiro.', 'Sabe algum samba? Então senta.'],
+    repara: 'conhece pelo nome todo mundo que passa embaixo dos Arcos',
   },
-  'lapa-dona-do-bar': {
+  'dona-do-bar': {
     nome: 'Dona do bar', rotulo: 'a dona do bar, de avental, na porta', presa: false,
-    falas: ['Entra ou sai, meu filho, que a porta não é sala.', 'A cozinha fechou. Cerveja ainda tem.', 'Aqui eu sei quem é quem. Você eu ainda não sei.'],
-    repara: 'não esquece um rosto e sabe quem deve no bar',
+    falas: ['Fiado, só pra quem eu conheço.', 'Entra que vai chover, meu filho.', 'Hoje tá calmo. Calmo demais.'],
+    repara: 'lembra de cada rosto que já pagou uma conta ali',
+  },
+
+  // ----- Centro (Cinelândia) -----
+  'seguranca-theatro': {
+    nome: 'Segurança do Theatro', rotulo: 'o segurança do Theatro, de terno, na escadaria', presa: false,
+    falas: ['O Theatro está fechado, senhor.', 'Espetáculo, só amanhã.', 'Pode tirar foto daí mesmo.'],
+    repara: 'olha mais para a lateral do prédio do que para a porta da frente',
+  },
+  'musico-de-rua': {
+    nome: 'Músico de rua', rotulo: 'um músico de rua com o violão, sentado na mureta da praça', presa: true,
+    falas: ['Pede uma que eu toco.', 'Moeda serve, Pix também.', 'Ninguém para mais pra ouvir.'],
+    repara: 'toca para a praça vazia e repara em quem fica até o fim',
+  },
+
+  // ----- Santa Teresa -----
+  motorneiro: {
+    nome: 'Motorneiro', rotulo: 'o motorneiro do bonde, de uniforme, ao lado do bonde', presa: true,
+    falas: ['Última viagem já foi, amigo.', 'Esse bonde tem mais idade que eu.', 'Segura firme na descida.'],
+    repara: 'sabe quem mora em cada casarão da linha',
+  },
+  'senhora-cachorro': {
+    nome: 'Senhora com cachorro', rotulo: 'uma senhora levando o cachorro na coleira pela ladeira', presa: true,
+    vulneravel: 'Ela mora sozinha e conversa com qualquer um que faça carinho no cachorro.',
+    falas: ['Ele não morde, só late.', 'Pode fazer carinho, ele gosta.', 'Na minha idade, a ladeira dobra.'],
+    repara: 'o cachorro rosna para você e ela pede desculpas',
+  },
+
+  // ----- Zona Sul (orla) -----
+  quiosqueiro: {
+    nome: 'Dono do quiosque', rotulo: 'o dono do quiosque, atrás do balcão', presa: true,
+    falas: ['Água de coco acabou, só cerveja.', 'Fecho quando o último cliente for.', 'Cartão, só acima de vinte.'],
+    repara: 'conta o caixa sem tirar os olhos do calçadão',
+  },
+  corredora: {
+    nome: 'Corredora', rotulo: 'uma corredora de fone de ouvido no calçadão', presa: true,
+    falas: ['Desculpa, tô no meio do treino.', 'Que horas são? Perdi a conta.', 'Corro de noite pra fugir do sol.'],
+    repara: 'corre de fone e não escuta ninguém chegando',
+  },
+
+  // ----- Barra -----
+  porteiro: {
+    nome: 'Porteiro', rotulo: 'o porteiro do prédio, na guarita', presa: false,
+    falas: ['Visita? Vou ter que interfonar.', 'Morador entra pela garagem.', 'Câmera grava tudo, viu?'],
+    repara: 'cochila na guarita entre uma ronda e outra',
+  },
+  ciclista: {
+    nome: 'Ciclista', rotulo: 'um ciclista parado na ciclovia, com a bicicleta', presa: true,
+    falas: ['Furou o pneu, acredita?', 'Daqui pro Recreio é uma hora.', 'Tem bomba de ar aí? Não, né.'],
+    repara: 'está sozinho, longe de casa, e o celular está quase sem bateria',
+  },
+
+  // ----- Zona Norte -----
+  feirante: {
+    nome: 'Feirante', rotulo: 'um feirante desmontando a barraca', presa: true,
+    falas: ['Acabou a feira, freguês.', 'Leva o resto do abacaxi, é de graça.', 'Já, já apagam a luz do viaduto.'],
+    repara: 'é sempre o último a ir embora do viaduto',
+  },
+  'rapaz-bola': {
+    nome: 'Rapaz da bola', rotulo: 'um rapaz de uns vinte anos com a bola debaixo do braço, perto da quadra', presa: true,
+    falas: ['Falta um pra fechar o time.', 'Joga na linha ou no gol?', 'A quadra é nossa até a uma.'],
+    repara: 'espera os amigos que ainda não chegaram',
+  },
+
+  // ----- Morro -----
+  mototaxista: {
+    nome: 'Mototaxista', rotulo: 'um mototaxista de colete, sentado na moto, na base da escadaria', presa: true,
+    falas: ['Subir é dez, descer é cinco.', 'Capacete tá no banco, pode pegar.', 'Pra onde, chefe?'],
+    repara: 'conhece todo mundo que sobe e todo mundo que não deveria subir',
+  },
+  'mulher-laje': {
+    nome: 'Mulher na laje', rotulo: 'uma mulher recolhendo a roupa do varal na laje', presa: false,
+    falas: ['Vai chover, tenho que tirar tudo.', 'Tá procurando alguém aqui em cima?', 'Daqui eu vejo a rua toda.'],
+    repara: 'vê de cima quem entra e quem sai da escadaria',
+  },
+
+  // ----- Cemitério -----
+  coveiro: {
+    nome: 'Coveiro', rotulo: 'o coveiro com a pá, perto de um túmulo', presa: true,
+    falas: ['Enterro às oito. Tenho que terminar.', 'Aqui ninguém reclama do serviço.', 'Já vi de tudo. Quase tudo.'],
+    repara: 'trabalha de madrugada sem medo nenhum do escuro',
+  },
+  'vigia-cemiterio': {
+    nome: 'Vigia', rotulo: 'o vigia noturno com a lanterna, perto da capela', presa: true,
+    falas: ['O portão fechou às seis. Como entrou?', 'Ronda, só eu e Deus.', 'Ouviu isso? Não? Melhor assim.'],
+    repara: 'à meia-noite, some da ronda por uma hora',
+  },
+
+  // ----- Porto -----
+  estivador: {
+    nome: 'Estivador', rotulo: 'um estivador de colete refletivo, perto do armazém', presa: true,
+    falas: ['O navio atrasou, tô aqui até cedo.', 'Contêiner não tem hora pra chegar.', 'Isso aqui é área restrita, parceiro.'],
+    repara: 'conhece cada porta do armazém e de quem é cada chave',
+  },
+  grafiteiro: {
+    nome: 'Grafiteiro', rotulo: 'um grafiteiro com a lata de spray, diante do mural', presa: true,
+    falas: ['Não conta pra ninguém que me viu.', 'Mural de noite tem outra cor.', 'Gostou? Ainda falta o fundo.'],
+    repara: 'pinta de costas para a rua e se assusta com qualquer passo',
+  },
+
+  // ----- Baixada -----
+  'dono-bar-esquina': {
+    nome: 'Dono do bar', rotulo: 'o dono do bar da esquina, atrás do balcão', presa: false,
+    falas: ['Primeira vez aqui? Então paga antes.', 'Pergunta demais, bebe de menos.', 'Depois da terceira, a gente conversa.'],
+    repara: 'sabe da vida de toda a rua e só fala depois de umas doses',
+  },
+  churrasqueiro: {
+    nome: 'Vendedor de churrasquinho', rotulo: 'o vendedor de churrasquinho na esquina, com a grelha acesa', presa: true,
+    falas: ['Carne, frango ou coração?', 'Com farofa é mais um real.', 'Não come não? Tá pálido, hein.'],
+    repara: 'a fumaça da grelha esconde quem para na esquina',
+  },
+
+  // ----- Niterói -----
+  pescador: {
+    nome: 'Pescador', rotulo: 'um pescador com a vara, na mureta', presa: true,
+    vulneravel: 'Ele está sozinho na mureta há horas, e ninguém espera por ele.',
+    falas: ['De noite o peixe vem mais perto.', 'Hoje não deu nem bagre.', 'Daqui a vista do Rio é mais bonita.'],
+    repara: 'não tira os olhos da linha e não vê quem chega por trás',
+  },
+  fotografo: {
+    nome: 'Fotógrafo', rotulo: 'um fotógrafo com o tripé, de frente para a vista', presa: true,
+    falas: ['Não passa na frente, tô em exposição longa.', 'A luz da ponte fica linda agora.', 'Quer que eu tire uma sua?'],
+    repara: 'fotografa tudo, inclusive quem está de passagem',
+  },
+
+  // ----- Aeroporto -----
+  taxista: {
+    nome: 'Taxista', rotulo: 'um taxista de pé no ponto de táxi', presa: true,
+    falas: ['Táxi? Até a Zona Sul é tabelado.', 'Aplicativo não entra aqui, não.', 'Voo atrasado de novo, né?'],
+    repara: 'espera passageiro há horas e aceita qualquer corrida',
+  },
+  viajante: {
+    nome: 'Viajante', rotulo: 'uma viajante com a mala de rodinha, na calçada do embarque', presa: true,
+    vulneravel: 'Ela acabou de chegar e não conhece ninguém na cidade.',
+    falas: ['Sabe onde pega o ônibus pro centro?', 'Meu voo foi cancelado, acredita?', 'É seguro andar por aqui de noite?'],
+    repara: 'olha o celular sem sinal e não sabe para onde ir',
   },
 };
 
@@ -95,8 +231,30 @@ export const FIGURAS_GENTE = {
   celular: ['mulher-celular'],
   garconete: ['garconete'],
   idoso: ['idoso-banco'],
-  'lapa-sambista': ['lapa-sambista'],
-  'lapa-dona-do-bar': ['lapa-dona-do-bar'],
+  'sambista': ['lapa-sambista'],
+  'dona-do-bar': ['lapa-dona-do-bar'],
+  'seguranca-theatro': ['centro-seguranca-theatro'],
+  'musico-de-rua': ['centro-musico'],
+  'motorneiro': ['santa-teresa-motorneiro'],
+  'senhora-cachorro': ['santa-teresa-senhora-cachorro'],
+  'quiosqueiro': ['zona-sul-quiosqueiro'],
+  'corredora': ['zona-sul-corredora'],
+  'porteiro': ['barra-porteiro'],
+  'ciclista': ['barra-ciclista'],
+  'feirante': ['zona-norte-feirante'],
+  'rapaz-bola': ['zona-norte-bola'],
+  'mototaxista': ['morro-mototaxista'],
+  'mulher-laje': ['morro-mulher-laje'],
+  'coveiro': ['cemiterio-coveiro'],
+  'vigia-cemiterio': ['cemiterio-vigia'],
+  'estivador': ['porto-estivador'],
+  'grafiteiro': ['porto-grafiteira'],
+  'dono-bar-esquina': ['baixada-dono-do-bar'],
+  'churrasqueiro': ['baixada-churrasquinho'],
+  'pescador': ['niteroi-pescador'],
+  'fotografo': ['niteroi-fotografa'],
+  'taxista': ['aeroporto-taxista'],
+  'viajante': ['aeroporto-viajante'],
 };
 
 // Pistas nas conversas (rodada 34): uma por lugar, com um tipo de pessoa. Conversar com ela dá uma

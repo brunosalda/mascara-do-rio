@@ -496,7 +496,7 @@ export function montarCena(raiz, {
     // figura tingida pela cor e pelo brilho da pintura em volta dos pés (amostrados quando a pintura carrega).
     const src = figura ? `img/gente/${figura}.png` : '';
     el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
-      ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
+      ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
       : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
     el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
@@ -532,14 +532,44 @@ export function montarCena(raiz, {
           if (!p.el.classList.contains('pessoa-pintada')) continue;
           const px = Math.round(p.x * W);
           const py = Math.round(p.y * H);
-          const d = cx.getImageData(Math.max(0, px - 6), Math.max(0, py - 10), 12, 12).data;
-          let r = 0; let gg = 0; let b = 0;
-          for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; }
+          // Em volta dos pés: média (tinta e brilho), o mais escuro (o preto da figura não passa dele) e a
+          // saturação da pintura ali (a figura fica com a mesma).
+          const d = cx.getImageData(Math.max(0, px - 7), Math.max(0, py - 12), 14, 14).data;
+          let r = 0; let gg = 0; let b = 0; let sat = 0;
+          let escuro = [255, 255, 255]; let lumMin = 9;
+          for (let k = 0; k < d.length; k += 4) {
+            const R = d[k]; const G = d[k + 1]; const B = d[k + 2];
+            r += R; gg += G; b += B;
+            const mx = Math.max(R, G, B); const mn = Math.min(R, G, B);
+            sat += mx ? (mx - mn) / mx : 0;
+            const l = (0.299 * R + 0.587 * G + 0.114 * B) / 255;
+            if (l < lumMin) { lumMin = l; escuro = [R, G, B]; }
+          }
           const n = d.length / 4;
-          r /= n; gg /= n; b /= n;
+          r /= n; gg /= n; b /= n; sat /= n;
           const lum = (0.299 * r + 0.587 * gg + 0.114 * b) / 255;
-          p.el.style.setProperty('--luz-gente', Math.max(0.62, Math.min(1.25, 0.55 + lum * 1.5)).toFixed(2));
-          p.el.style.setProperty('--tinta-gente', `rgb(${Math.round(r)}, ${Math.round(gg)}, ${Math.round(b)})`);
+          const topo = Math.max(r, gg, b, 1);
+          p.el.style.setProperty('--luz-gente', Math.max(0.55, Math.min(1.2, 0.5 + lum * 1.5)).toFixed(2));
+          // Tinta forte: a cor média normalizada (a luz do lugar), multiplicada sobre a figura de estúdio.
+          p.el.style.setProperty('--tinta-gente', `rgb(${Math.round((r / topo) * 255)}, ${Math.round((gg / topo) * 255)}, ${Math.round((b / topo) * 255)})`);
+          p.el.style.setProperty('--preto-gente', `rgb(${escuro.map((v) => Math.round(v * 0.9)).join(', ')})`);
+          p.el.style.setProperty('--sat-gente', Math.max(0.35, Math.min(1.1, 0.4 + sat * 1.1)).toFixed(2));
+          // Luz mais forte por perto: a sombra vai para o lado oposto; néon perto vira borda colorida.
+          let forte = null; let melhor = 0;
+          for (const l of geo.luzes) {
+            if (l.raio >= 0.5) continue;
+            const dd = dist(l.x, l.y, p.x, p.y);
+            const peso = (l.forca ?? 1) * Math.max(0, 1 - dd / (l.raio * 2.2));
+            if (peso > melhor) { melhor = peso; forte = l; }
+          }
+          if (forte) {
+            const dx = p.x - forte.x;
+            p.el.style.setProperty('--sombra-x', `${Math.max(-60, Math.min(60, dx * 900)).toFixed(0)}%`);
+            const [lr, lg, lb] = rgb(forte.cor);
+            const neon = Math.max(lr, lg, lb) - Math.min(lr, lg, lb) > 120 && melhor > 0.25;
+            if (neon) p.el.style.setProperty('--rim-gente', `rgba(${lr}, ${lg}, ${lb}, ${Math.min(0.95, 0.4 + melhor).toFixed(2)})`);
+            p.el.style.setProperty('--rim-x', `${forte.x < p.x ? -1 : 1}px`);
+          }
         }
       } catch { /* sem leitura da imagem: fica o brilho das luzes marcadas */ }
     };
