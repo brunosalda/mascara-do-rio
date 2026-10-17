@@ -263,6 +263,8 @@ async function desenhar() {
   desenharCabecalho(rota);
 
   fecharTudo();
+  // Rodada 42: nenhuma caixa fica por cima ao trocar de tela (a de criar a senha vive fora das camadas).
+  document.querySelectorAll('.janela-senha-direta, .faixa-feito, .cartao-passagem').forEach((el) => el.remove());
   const p = estado.atual;
   const novo = rota === 'novo' || rota === 'detalhado';
   const emCriacao = !estado.sessao || novo || !p || p.status === 'criacao';
