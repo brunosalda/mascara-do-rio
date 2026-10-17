@@ -997,10 +997,30 @@ export function montarCena(raiz, {
   // Campo de visão da presa: um leque de uns 70° olhando para o meio da rua. Dentro dele, na luz, a
   // presa repara mais rápido; com Sentidos Aguçados, o leque aparece no chão.
   const RAIO_CAMPO = 0.24;
+  // Rodada 39: na vista do alto, a caçada segue a escala das figuras do lugar (leque, anéis, alcance) e a
+  // sombra é onde a pintura é escura (as luzes marcadas e o brilho da própria pintura em volta dos pés).
+  function escalaCaca(y) { return geo.alto ? limitar((altura(y) / ALTURA_REF) * 2.2, 0.3, 1) : 1; }
+  // O brilho da pintura conta em relação à mediana do chão do lugar (cada foto tem a sua noite): cerca de
+  // um terço do chão fica escuro, onde a pintura é mais escura.
+  let medianaChao = null;
+  function luzCaca(x, y) {
+    if (!geo.alto || !amostra.dados) return luzEm(x, y);
+    if (medianaChao == null) {
+      const v = [];
+      for (let j = 0; j < amostra.A; j++) for (let i = 0; i < amostra.L; i++) {
+        const q = [(i + 0.5) / amostra.L, (j + 0.5) / amostra.A];
+        if (dentro(q, geo.chao)) v.push(brilhoDaPintura(q[0], q[1], 0.015));
+      }
+      v.sort((a, b2) => a - b2);
+      medianaChao = v.length ? Math.max(0.05, v[Math.floor(v.length / 2)]) : 0.3;
+    }
+    const b = brilhoDaPintura(x, y - 0.01, 0.015) ?? 0;
+    return Math.max(luzEm(x, y) * 0.45, limitar((b / medianaChao - 0.6) * 1.1, 0, 1.5));
+  }
   function dentroDoCampo(c, x, y) {
     const dx = (x - c.alvo.x) * ASPECTO;
     const dy = y - c.alvo.y;
-    if (Math.hypot(dx, dy) > RAIO_CAMPO) return false;
+    if (Math.hypot(dx, dy) > RAIO_CAMPO * escalaCaca(c.alvo.y)) return false;
     const ang = Math.atan2(dy, dx);
     let d = ang - c.olhar;
     d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -1018,7 +1038,8 @@ export function montarCena(raiz, {
     const pts = [];
     for (let i = 0; i <= 10; i++) {
       const a = c.olhar - 0.62 + (1.24 * i) / 10;
-      pts.push(`${(c.alvo.x + (Math.cos(a) * RAIO_CAMPO) / ASPECTO).toFixed(4)},${(c.alvo.y + Math.sin(a) * RAIO_CAMPO * 0.45).toFixed(4)}`);
+      const raio = RAIO_CAMPO * escalaCaca(c.alvo.y);
+      pts.push(`${(c.alvo.x + (Math.cos(a) * raio) / ASPECTO).toFixed(4)},${(c.alvo.y + Math.sin(a) * raio * 0.45).toFixed(4)}`);
     }
     campoEl.setAttribute('d', `M${c.alvo.x.toFixed(4)},${c.alvo.y.toFixed(4)} L${pts.join(' L')} Z`);
   }
@@ -1059,6 +1080,7 @@ export function montarCena(raiz, {
   function anelDeBarulho(x, y) {
     const el = document.createElement('span');
     el.className = 'anel-barulho';
+    el.style.scale = String(escalaCaca(y));
     el.style.left = pct(x);
     el.style.top = pct(y);
     mundo.appendChild(el);
@@ -1069,7 +1091,7 @@ export function montarCena(raiz, {
     // Com qualquer caixa ou pergunta aberta, o tempo e a atenção da caçada param.
     if (camadaAberta() || balaoEscolha) { c.t0 += dt * 1000; return; }
     const andando = Math.hypot(vel.x, vel.y) > 0.01;
-    const luz = luzEm(pos.x, pos.y);
+    const luz = luzCaca(pos.x, pos.y);
     const naSombra = luz < 0.25;
     boneco.classList.toggle('na-sombra', c.modo === 'sombra' && naSombra);
     let taxa = c.modo === 'sombra' ? (naSombra ? -0.03 : luz * 0.09) : 0.035;
@@ -1084,7 +1106,7 @@ export function montarCena(raiz, {
       if (c.anel <= 0) {
         c.anel = 0.4;
         anelDeBarulho(pos.x, pos.y);
-        if (dist(c.alvo.x, c.alvo.y, pos.x, pos.y) < 0.12) taxa += 1.2;
+        if (dist(c.alvo.x, c.alvo.y, pos.x, pos.y) < 0.12 * escalaCaca(pos.y)) taxa += 1.2;
       }
     }
     // A presa olha de relance quando ele entra na borda do campo dela.
@@ -1135,10 +1157,10 @@ export function montarCena(raiz, {
     // Ensino: a primeira luz, perto do leque, o anel na metade.
     if (c.modo === 'sombra') {
       if (!naSombra) ensinar('luz', 'A luz te mostra.', boneco);
-      if (noCampo || d < RAIO_CAMPO * 1.2) ensinar('leque', 'É para lá que ela olha.', campoEl.parentNode);
+      if (noCampo || d < RAIO_CAMPO * escalaCaca(c.alvo.y) * 1.2) ensinar('leque', 'É para lá que ela olha.', campoEl.parentNode);
       if (resta < c.limite / 2) ensinar('anel', 'Ela não vai esperar.', elPresa);
     }
-    if (d <= Math.max(alcanceEm(pos.y) * 1.5, 0.11) && agora - c.t0 > 2500) encerrarFurtividade(true);
+    if (d <= Math.max(alcanceEm(pos.y) * 1.5, 0.11 * escalaCaca(pos.y)) && agora - c.t0 > 2500) encerrarFurtividade(true);
     else if (agora - c.t0 > c.limite * 1000) encerrarFurtividade(false);
   }
 
@@ -1262,10 +1284,10 @@ export function montarCena(raiz, {
     if (!caca?.piscar) return;
     for (let i = 0; i < 24 && marcasSombra.length < 3; i++) {
       const a = (i / 24) * Math.PI * 2;
-      const r = 0.12 + (i % 3) * 0.05;
+      const r = (0.12 + (i % 3) * 0.05) * escalaCaca(pos.y);
       const q = [pos.x + (Math.cos(a) * r) / ASPECTO, pos.y + Math.sin(a) * r * 0.45];
-      if (!dentro(q, geo.chao) || luzEm(q[0], q[1]) > 0.12) continue;
-      if (marcasSombra.some((m) => dist(m[0], m[1], q[0], q[1]) < 0.08)) continue;
+      if (!dentro(q, geo.chao) || luzCaca(q[0], q[1]) > 0.12) continue;
+      if (marcasSombra.some((m) => dist(m[0], m[1], q[0], q[1]) < 0.08 * escalaCaca(pos.y))) continue;
       marcasSombra.push(q);
       const el = document.createElement('span');
       el.className = 'marca-sombra';
@@ -2241,7 +2263,7 @@ export function montarCena(raiz, {
     mostrarPoderAtivo,
     ensinar,
     // O momento da caçada, para escolher o poder que mais serve.
-    estadoCaca: () => (caca ? { naSombra: luzEm(pos.x, pos.y) < 0.25, parado: Math.hypot(vel.x, vel.y) < 0.01, dPresa: dist(caca.alvo.x, caca.alvo.y, pos.x, pos.y), noCampo: dentroDoCampo(caca, pos.x, pos.y) } : null),
+    estadoCaca: () => (caca ? { naSombra: luzCaca(pos.x, pos.y) < 0.25, parado: Math.hypot(vel.x, vel.y) < 0.01, dPresa: dist(caca.alvo.x, caca.alvo.y, pos.x, pos.y), noCampo: dentroDoCampo(caca, pos.x, pos.y) } : null),
     // Aviso curto dentro do bloco da caçada (2,5 s).
     avisoCaca: (texto) => {
       const el = document.createElement('span');
