@@ -119,7 +119,8 @@ async function demoCena(raiz) {
   // &lugar=lapa-alto-realista: a mesma vista com a pintura realista aumentada (teste de resolução).
   const pintura = pedido.endsWith('-realista') ? 'realista' : null;
   const semPintura = pedido.replace(/-realista$/, '');
-  const vista = semPintura.endsWith('-alto') ? 'alto' : null;
+  // A vista do alto é o padrão; &vista=olhos mostra a pintura na altura dos olhos.
+  const vista = semPintura.endsWith('-alto') ? 'alto' : params.get('vista') === 'olhos' ? 'olhos' : null;
   const lugar = LOCAIS.some((l) => l.id === semPintura.replace(/-alto$/, '')) ? semPintura.replace(/-alto$/, '') : 'lapa';
   // &ficha=atenta: a ficha fictícia com as habilidades dos escondidos em nível alto (e os poderes da cena).
   // &ficha=poderes: só os poderes (Auspícios 3, Ofuscação 2, Rapidez 3, Presença 1, Dominação 1).

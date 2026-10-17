@@ -49,7 +49,7 @@ function htmlBoneco(sprite) {
   const mascara = `-webkit-mask-image:url('${sprite.url}');mask-image:url('${sprite.url}')`;
   // Corpo, mais uma camada de tinta com a cor da luz do lugar, recortada pela própria figura.
   return `
-    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}" style="${vars}">
+    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}${sprite.frente?.url && sprite.costas?.url ? '' : ' sem-folhas'}" style="${vars}">
       <span class="sombra-pe"></span>
       <span class="circulo-escolhido" aria-hidden="true"></span>
       <span class="sprite reflexo" style="${folha}"></span>
@@ -74,7 +74,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  nome = '', nevoa = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', nevoa = false, nevoaLonge = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -93,6 +93,7 @@ export function montarCena(raiz, {
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
         <canvas class="veu-area" aria-hidden="true" hidden></canvas>
+        <canvas class="veu-longe" aria-hidden="true" hidden></canvas>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
         ${geo.vida?.passantes?.length ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
@@ -352,6 +353,26 @@ export function montarCena(raiz, {
     if (vx || vy) camLivre.suave = false;
   }
   function centrarCamera() { camLivre.centrar = true; }
+  // Zoom em três degraus (rodada 32): da área toda até perto, sem nunca mostrar a pintura maior que
+  // 1,35 vez o tamanho original (o aumento feito no computador não cria detalhe novo).
+  camLivre.nivel = 1;
+  function niveisZoom() {
+    const zMax = Math.max(1, Math.min(1.6, (1.35 * 1344) / Math.max(1, mw)));
+    return [1, (1 + zMax) / 2, zMax];
+  }
+  function nivelZoom() { return niveisZoom()[camLivre.nivel]; }
+  function mudarZoom(passo) {
+    const novo = limitar(camLivre.nivel + passo, 0, 2);
+    if (novo === camLivre.nivel) return;
+    // Mantém o ponto do meio da tela no lugar ao aproximar ou afastar.
+    const wx = (vw / 2 - cam.x) / cam.z;
+    const wy = (vh / 2 - cam.y) / cam.z;
+    camLivre.nivel = novo;
+    const z = nivelZoom();
+    camLivre.x = vw / 2 - wx * z;
+    camLivre.y = vh / 2 - wy * z;
+    camLivre.suave = true;
+  }
   if (geo.alto) {
     cena.classList.add('vista-alto');
     // Borda da tela (só mouse): perto da borda, a câmera rola para aquele lado.
@@ -387,6 +408,14 @@ export function montarCena(raiz, {
       cena.addEventListener('pointermove', mover);
       window.addEventListener('pointerup', soltar, { once: true });
     });
+    // Roda do mouse: aproxima e afasta em degraus.
+    let rodaAte = 0;
+    cena.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      if (performance.now() < rodaAte) return;
+      rodaAte = performance.now() + 220;
+      mudarZoom(ev.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
     // Botão direito arrasta (sem abrir o menu do navegador).
     cena.addEventListener('contextmenu', (ev) => ev.preventDefault());
     // Celular: dois dedos rolam a área.
@@ -397,7 +426,7 @@ export function montarCena(raiz, {
       dedos.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       if (dedos.size === 2) {
         const [a, b] = [...dedos.values()];
-        doisDedos = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cx: camLivre.x, cy: camLivre.y };
+        doisDedos = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cx: camLivre.x, cy: camLivre.y, d: Math.hypot(a.x - b.x, a.y - b.y) };
         camLivre.arrastando = true;
       }
     });
@@ -406,6 +435,13 @@ export function montarCena(raiz, {
       dedos.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       if (doisDedos && dedos.size === 2) {
         const [a, b] = [...dedos.values()];
+        // Pinça: abrir os dedos aproxima, fechar afasta (em degraus); senão, os dois dedos rolam.
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d > doisDedos.d * 1.25 || d < doisDedos.d * 0.8) {
+          mudarZoom(d > doisDedos.d ? 1 : -1);
+          doisDedos = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cx: camLivre.x, cy: camLivre.y, d };
+          return;
+        }
         camLivre.x = doisDedos.cx + ((a.x + b.x) / 2 - doisDedos.mx);
         camLivre.y = doisDedos.cy + ((a.y + b.y) / 2 - doisDedos.my);
       }
@@ -584,7 +620,31 @@ export function montarCena(raiz, {
     veuCtx.fill();
     veuCtx.globalCompositeOperation = 'source-over';
   }
+  // Névoa de BG2 na vista do alto: além do véu do que nunca foi visto, o que está longe do personagem
+  // fica levemente acinzentado, e o que está perto fica limpo. Redesenhado só quando ele anda.
+  const veuLonge = cena.querySelector('.veu-longe');
+  const longeCtx = geo.alto && nevoaLonge && !semPersonagem ? (() => { veuLonge.width = VEU_L; veuLonge.height = VEU_A; veuLonge.hidden = false; return veuLonge.getContext('2d'); })() : null;
+  function desenharLonge() {
+    if (!longeCtx) return;
+    longeCtx.clearRect(0, 0, VEU_L, VEU_A);
+    longeCtx.fillStyle = 'rgba(70, 76, 92, 0.2)';
+    longeCtx.fillRect(0, 0, VEU_L, VEU_A);
+    const cx = pos.x * VEU_L;
+    const cy = (pos.y - 0.05) * VEU_A;
+    const r = 0.22 * VEU_L;
+    const g = longeCtx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    longeCtx.globalCompositeOperation = 'destination-out';
+    longeCtx.fillStyle = g;
+    longeCtx.beginPath();
+    longeCtx.ellipse(cx, cy, r, r * 1.3, 0, 0, Math.PI * 2);
+    longeCtx.fill();
+    longeCtx.globalCompositeOperation = 'source-over';
+  }
+  let longeUltimo = null;
   function atualizarVeu() {
+    if (longeCtx && (!longeUltimo || dist(longeUltimo.x, longeUltimo.y, pos.x, pos.y) > 0.01)) { longeUltimo = { x: pos.x, y: pos.y }; desenharLonge(); }
     if (!veuCtx) return;
     if (veuUltimo && dist(veuUltimo.x, veuUltimo.y, pos.x, pos.y) < 0.012) return;
     veuUltimo = { x: pos.x, y: pos.y };
@@ -1305,7 +1365,7 @@ export function montarCena(raiz, {
     // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
     const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
     const foco = focoBeijo || (focoEscolha && performance.now() < focoEscolha.ate ? focoEscolha : null);
-    const zAlvo = geo.alto && !foco && !conversa ? (estreito ? ZOOM_ALTO_CELULAR : ZOOM_ALTO) : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
+    const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
@@ -1574,8 +1634,8 @@ export function montarCena(raiz, {
       if (rapidez > 0.05) {
         const sx = Math.abs(vel.x * mw);
         const sy = Math.abs(vel.y * mh);
-        if (sy > sx * 1.15) alvoFolha = (vel.y > 0 ? sprite.frente : sprite.costas) || sprite;
-      } else if (agora - paradoDesde > 450 && sprite.respira) {
+        if (sy > sx * (geo.alto ? 1.8 : 1.15)) alvoFolha = (vel.y > 0 ? sprite.frente : sprite.costas) || sprite;
+      } else if (agora - paradoDesde > 450 && sprite.respira && !(geo.alto && folha === sprite.costas)) {
         alvoFolha = sprite.respira;
       } else if (folha === sprite.frente || folha === sprite.costas) {
         alvoFolha = folha; // termina o passo de frente ou de costas antes de virar de perfil
@@ -1653,8 +1713,9 @@ export function montarCena(raiz, {
 
     if (proximaLuz === 0 || (agora > proximaLuz && (andando || virando))) { iluminar(); proximaLuz = agora + 100; }
     if (gente.length) andarGente(dt);
-    // Oito direções (vista do alto): a figura usa o perfil; de frente e de costas ela estreita um pouco,
-    // e de costas fica mais escura. Provisório, até haver folhas de caminhada nas oito direções.
+    // Oito direções (vista do alto): para cima, a folha de costas; para baixo, a de frente; dos lados e nas
+    // diagonais, o perfil, que nas diagonais se inclina para a direção (CSS por data-dir). Parado, fica
+    // virado para a última direção.
     if (geo.alto && andando) {
       const ang = Math.atan2(vel.y / VEL_Y, vel.x / VEL_X);
       const dir = ['l', 'se', 's', 'so', 'o', 'no', 'n', 'ne'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];

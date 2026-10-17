@@ -2987,8 +2987,8 @@ body.sem-efeitos .veu-area { filter: none; }
 .pessoa:hover { filter: drop-shadow(0 0 4px rgba(255, 220, 150, 0.9)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7)); }
 .cena.em-caca .pessoa:hover { filter: drop-shadow(0 0 5px rgba(220, 40, 50, 0.95)); }
 body.cena-pausada .pessoa { animation-play-state: paused; }
-.cena.vista-alto .personagem[data-dir='n'] .sprite, .cena.vista-alto .personagem[data-dir='s'] .sprite { scale: 0.82 1; }
-.cena.vista-alto .personagem[data-dir='n'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='no'] .corpo-sprite, .cena.vista-alto .personagem[data-dir='ne'] .corpo-sprite { filter: brightness(0.78); }
+.cena.vista-alto .personagem.sem-folhas[data-dir='n'] .sprite, .cena.vista-alto .personagem.sem-folhas[data-dir='s'] .sprite { scale: 0.82 1; }
+.cena.vista-alto .personagem.sem-folhas[data-dir='n'] .corpo-sprite { filter: brightness(0.78); }
 
 /* Pedido do Bruno: a caixa da narração fica dentro da moldura, com o texto numa coluna de leitura
    (até ~72 caracteres), a HQ na mesma largura e o fim do texto sempre à vista quando as opções aparecem. */
@@ -3056,3 +3056,19 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
    coroa já dizem isso); o texto aparece só ao passar o mouse ou chegar perto. */
 .tela-mapa .mapa-lugar.atual .mapa-descobertas { opacity: 0; }
 .tela-mapa .mapa-lugar.atual:hover .mapa-descobertas, .tela-mapa .mapa-lugar.atual.perto .mapa-descobertas { opacity: 1; }
+
+/* Rodada 32: o personagem na pintura realista vista do alto: tom e borda de luz mais marcados, sombra de
+   contato curta e escura; nas diagonais, o perfil inclina para a direção e a sombra acompanha. */
+.cena.vista-alto .corpo-sprite {
+  filter: brightness(var(--brilho, 0.94)) contrast(1.14) saturate(0.88)
+    drop-shadow(var(--rim-x, 0px) 0 1px var(--rim-cor, transparent)) drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.95));
+}
+.cena.vista-alto .personagem .tinta { opacity: 0.55; }
+.cena.vista-alto .sombra-pe { background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.45) 45%, transparent 72%); height: 6%; bottom: -2%; }
+.cena.vista-alto .reflexo { opacity: 0.2; }
+.cena.vista-alto .personagem[data-dir='ne'], .cena.vista-alto .personagem[data-dir='no'] { --inclinar: -2.5deg; }
+.cena.vista-alto .personagem[data-dir='se'], .cena.vista-alto .personagem[data-dir='so'] { --inclinar: 2.5deg; }
+.cena.vista-alto .personagem[data-dir='ne'] .sombra-pe, .cena.vista-alto .personagem[data-dir='no'] .sombra-pe { translate: 0 -12%; scale: 0.9 1; }
+.cena.vista-alto .personagem[data-dir='se'] .sombra-pe, .cena.vista-alto .personagem[data-dir='so'] .sombra-pe { translate: 0 10%; scale: 1.08 1; }
+.veu-longe { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1390; pointer-events: none; filter: blur(4px); mix-blend-mode: multiply; }
+.veu-longe[hidden] { display: none; }

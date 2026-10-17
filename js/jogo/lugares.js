@@ -383,7 +383,7 @@ for (const [id, a] of Object.entries(ALTOS)) {
   LUGARES[`${id}-alto`] = {
     alto: true, aspecto: 1344 / 576, imagem: `img/cidade/alto/${id}.jpg`,
     horizonte: 0.2, k: 0.17, chao: a.chao, entrada: a.entrada || [0.45, 0.88], saida: a.saida || [0.32, 0.97],
-    ancoras, frente: [], luzes: a.luzes, pontosLivres: a.pontos, gente: a.gente,
+    ancoras, frente: a.frente ? [{ base: 0.995, poligono: a.frente }] : [], luzes: a.luzes, pontosLivres: a.pontos, gente: a.gente,
     vida: { passantes: [] },
   };
 }
