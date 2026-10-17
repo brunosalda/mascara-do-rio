@@ -116,7 +116,6 @@ export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
   if (!abas.some(([id]) => id === escolhida)) escolhida = 'noite';
   raiz.innerHTML = `
     <section class="diario-livro">
-      <p class="sobretitulo">Diário de ${esc(p.nome)}</p>
       <div class="diario-abas" role="tablist">${abas.map(([id, nome]) => `<button type="button" role="tab" data-aba="${id}" aria-selected="${id === escolhida}">${esc(nome)}</button>`).join('')}</div>
       <div class="diario-pagina" role="tabpanel"></div>
     </section>`;

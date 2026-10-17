@@ -53,7 +53,7 @@ export function gravarPosicao(p, noite, id) {
 }
 
 // fonte: de onde vêm a noite, as narrações e a ação (o banco; nas demonstrações, dados fictícios).
-export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco, vista = null, pintura = null } = {}) {
+export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = banco, vista = null, pintura = null, irPara = ir } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
   const [noite, narracoes, resolvidas, ultima] = await Promise.all([
     fonte.noiteAberta(),
@@ -175,7 +175,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         <div class="painel-pergunta"></div>
       </section>
       <button type="button" class="botao-centrar" data-hud="centrar" hidden title="Centralizar no personagem (C)" aria-label="Centralizar no personagem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
-      <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+      <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icone-pausar" d="M8 5v14M16 5v14"/><path class="icone-soltar" d="M8 5l11 7-11 7z"/></svg></button>
       <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
       <aside class="hud-plano" aria-live="polite"></aside>
       <div class="barra-disciplinas" hidden role="toolbar" aria-label="Disciplinas"></div>
@@ -1053,7 +1053,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
 
   function abrirDiario() {
-    abrirJanela(camadas, { titulo: 'Diário', classe: 'janela-larga', montar: (corpo) => telaDiario(corpo, p, { noite, plano }) });
+    abrirJanela(camadas, { titulo: `Diário de ${p.nome}`, classe: 'janela-larga janela-registro janela-diario', montar: (corpo) => telaDiario(corpo, p, { noite, plano }) });
   }
 
   function abrirMenu() {
@@ -1082,8 +1082,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             <p class="nota">Espaço pausa e solta a cena a qualquer momento. Pausado, dá para marcar o destino e escolher um poder: tudo acontece ao soltar.</p>
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
-        corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
-        corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); await banco.sair(); };
+        corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); irPara('novo'); };
+        corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); if (irPara !== ir) { irPara('sair'); return; } await banco.sair(); };
         corpo.querySelectorAll('[data-leitura]').forEach((b) => {
           b.onclick = () => {
             const campo = b.dataset.leitura;
@@ -1119,7 +1119,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   function acao_(nome) {
     switch (nome) {
-      case 'mapa': fecharTudo(); ir('mapa'); break;
+      case 'mapa': fecharTudo(); irPara('mapa'); break;
       case 'ficha': abrirFicha(); break;
       case 'diario': abrirDiario(); break;
       case 'plano': abrirPlano(); break;

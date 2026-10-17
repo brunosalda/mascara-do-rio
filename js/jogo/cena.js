@@ -533,8 +533,10 @@ export function montarCena(raiz, {
     veu.height = VEU_A;
     veu.hidden = false;
     veuCtx = veu.getContext('2d', { willReadFrequently: true });
-    veuCtx.fillStyle = 'rgba(6, 6, 10, 0.5)';
+    veuCtx.fillStyle = 'rgba(6, 6, 10, 0.35)';
     veuCtx.fillRect(0, 0, VEU_L, VEU_A);
+    // As ações da noite e a saída ficam sempre limpas (sem véu nem desfoque em volta).
+    setTimeout(() => { for (const p of lista) if (p.tipo === 'acao' || p.tipo === 'saida' || p.tipo === 'cacar') abrirVeu(p.x, p.y + 0.04, 0.07); }, 0);
   }
   function abrirVeu(x, y, raio = 0.16) {
     if (!veuCtx) return;
@@ -555,7 +557,7 @@ export function montarCena(raiz, {
     if (!veuCtx) return;
     if (veuUltimo && dist(veuUltimo.x, veuUltimo.y, pos.x, pos.y) < 0.012) return;
     veuUltimo = { x: pos.x, y: pos.y };
-    abrirVeu(pos.x, pos.y, geo.alto ? 0.12 : 0.16);
+    abrirVeu(pos.x, pos.y, geo.alto ? 0.15 : 0.21);
   }
   const sobVeu = (x, y) => {
     if (!veuCtx) return false;

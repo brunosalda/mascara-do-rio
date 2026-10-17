@@ -132,11 +132,55 @@ async function demoCena(raiz) {
   }
   const p = { ...base, _poderes: poderesDemo || undefined, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
   try { localStorage.setItem('mascara.lido.demo-noite-2', '1'); } catch { /* sem armazenamento */ }
-  await telaNoite(raiz, p, { lugar, vista, pintura, fonte: fonteFicticia() });
+  // Nada da demonstração sai dela: o mapa vai para o mapa fictício; as outras rotas reais ficam fora.
+  const irPara = (rota) => {
+    if (rota === 'mapa') { location.hash = `#/demo/mapa?${paramsDemo({ lugar: pedido || lugar })}`; return; }
+    aviso('Na demonstração, isso fica fora: nada sai da noite fictícia.');
+  };
+  // O registro da noite fictícia começa limpo a cada carregamento.
+  try { localStorage.removeItem('mascara.registro.990003'); } catch { /* sem armazenamento */ }
+  await telaNoite(raiz, p, { lugar, vista, pintura, fonte: fonteFicticia(), irPara });
   raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('noite fictícia; nada vai ao banco'));
 }
 
-const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada, cena: demoCena };
+// Parâmetros da demonstração (depurar, raf, ficha) mantidos ao trocar de tela; troca só o que vier.
+function paramsDemo(muda = {}) {
+  const params = new URLSearchParams(location.hash.split('?')[1] || '');
+  params.set('depurar', '');
+  for (const [k, v] of Object.entries(muda)) params.set(k, v);
+  return params.toString().replace('depurar=', 'depurar');
+}
+
+// Mapa do Rio fictício (rodada 30): o pergaminho com dados de demonstração. Entrar num bairro volta à
+// cena da demonstração naquele lugar (na vista do alto, se a cena vinha dela); Esc ou M voltam.
+async function demoMapa(raiz) {
+  const params = new URLSearchParams(location.hash.split('?')[1] || '');
+  const veio = params.get('lugar') || 'lapa';
+  const alto = /-alto/.test(veio);
+  const atual = veio.replace(/-alto.*$/, '');
+  const { montarMapa } = await import('./jogo/mapa.js');
+  raiz.innerHTML = `
+    <div class="tela-jogo tela-mapa">
+      <div class="palco"></div>
+      <span class="mapa-titulo">Mapa do Rio</span>
+      <nav class="mapa-voltar"><button type="button" data-voltar>Voltar à cena</button></nav>
+      <p class="mapa-instrucao"><span class="so-mouse">Clique</span><span class="so-toque">Toque</span> num bairro para ir até lá</p>
+    </div>`;
+  const voltar = (id = veio) => { location.hash = `#/demo/cena?${paramsDemo({ lugar: id })}`; };
+  raiz.querySelector('[data-voltar]').onclick = () => voltar();
+  montarMapa(raiz.querySelector('.palco'), {
+    cla: personagemFicticio().ficha?.cla,
+    atualId: atual,
+    visitados: new Set([atual, 'centro', 'santa-teresa']),
+    descobertas: { [atual]: { vistos: 1, total: 3 }, centro: { vistos: 0, total: 3 }, 'santa-teresa': { vistos: 2, total: 3 } },
+    clima: 'noite de garoa',
+    aoEntrar: (id) => voltar(alto ? `${id}-alto` : id),
+    aoTecla: (ev) => { if (ev.key === 'Escape' || ev.key.toLowerCase() === 'm') { ev.preventDefault(); voltar(); } },
+  });
+  raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('mapa fictício; nada vai ao banco'));
+}
+
+const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada, cena: demoCena, mapa: demoMapa };
 
 export function telaDemo(raiz, nome) {
   document.body.dataset.tela = 'cena';

@@ -3026,3 +3026,33 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
 .pessoa.pessoa-pintada.vira img { transform: scaleX(-1); }
 .pessoa.pessoa-pintada:hover { filter: brightness(calc(var(--luz-gente, 0.8) + 0.25)) drop-shadow(0 0 4px rgba(255, 220, 150, 0.9)); }
 .cena.em-caca .pessoa.pessoa-pintada:hover { filter: brightness(var(--luz-gente, 0.8)) drop-shadow(0 0 5px rgba(220, 40, 50, 0.95)); }
+
+/* Rodada 30: ficha e diário na moldura com uma rolagem só (a da aba); névoa mais leve; pausa no toque. */
+.janela-registro .janela { height: min(88vh, 780px); display: flex; flex-direction: column; }
+.janela-registro .janela-corpo { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.janela-registro .registro-pj { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) auto; }
+.janela-registro .rp-lado { min-height: 0; overflow: auto; scrollbar-width: thin; }
+.janela-registro .rp-corpo { min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+.janela-registro .rp-pagina { min-height: 0; max-height: none; height: 100%; box-sizing: border-box; }
+.rp-trilha small { white-space: normal; overflow: visible; line-height: 1.25; }
+.janela-diario .diario-livro { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+.janela-diario .diario-pagina { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 760px) {
+  .janela-registro .janela { height: 92vh; width: 96vw; }
+  .janela-registro .registro-pj { grid-template-rows: auto minmax(0, 1fr) auto; overflow: auto; }
+}
+.veu-area { filter: blur(3px); }
+.botao-pausa .icone-soltar { display: none; fill: currentColor; stroke: none; }
+.botao-pausa[aria-pressed='true'] .icone-pausar { display: none; }
+.botao-pausa[aria-pressed='true'] .icone-soltar { display: inline; }
+@media (max-width: 760px), (pointer: coarse) {
+  .tela-jogo.bg2.pausado:not(.paineis-ocultos)::after, .tela-jogo.bg2.paineis-ocultos.pausado::after, .tela-jogo:not(.bg2).pausado::after {
+    content: 'PAUSA · toque em ▶ para soltar'; position: absolute; z-index: 260; top: 64px; left: 50%; translate: -50% 0; padding: 0.3rem 0.8rem; pointer-events: none; white-space: nowrap;
+    font: 700 0.8rem/1 var(--sans); letter-spacing: 0.1em; color: #ffcf7a; background: rgba(40, 6, 10, 0.88); border: 2px solid #b8202e;
+  }
+  .tela-jogo.bg2.pausado .moldura .pedra-chave::after { content: 'PAUSA · toque em ▶'; }
+}
+/* Pedido do Bruno: o bairro atual não repete "você está aqui" nem as descobertas (a gota, o anel e a
+   coroa já dizem isso); o texto aparece só ao passar o mouse ou chegar perto. */
+.tela-mapa .mapa-lugar.atual .mapa-descobertas { opacity: 0; }
+.tela-mapa .mapa-lugar.atual:hover .mapa-descobertas, .tela-mapa .mapa-lugar.atual.perto .mapa-descobertas { opacity: 1; }

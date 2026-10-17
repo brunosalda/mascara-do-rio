@@ -90,8 +90,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 ${l.id === atual ? '<circle class="mapa-pulso" r="34"/><path class="mapa-gota" d="M0 -84 C6 -74 10 -69 10 -63 A10 10 0 0 1 -10 -63 C-10 -69 -6 -74 0 -84 Z"/>' : ''}
                 ${novo ? '' : brasasSvg(d)}
                 <text class="mapa-nome" y="50">${esc(l.nome)}</text>
-                ${l.id === atual ? '<text class="mapa-aqui" y="70">você está aqui</text>' : ''}
-                <text class="mapa-descobertas" y="${l.id === atual ? 90 : 70}">${esc(frase)}${clima ? ` · ${esc(clima)}` : ''}</text>
+                <text class="mapa-descobertas" y="70">${esc(frase)}${clima ? ` · ${esc(clima)}` : ''}</text>
               </g>`;
           }).join('')}
         </g>
