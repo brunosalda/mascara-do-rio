@@ -326,6 +326,26 @@ export function todasDescobertas(id) {
   return [...(DESCOBERTAS[id]?.detalhes || []), ...(MAIS[id]?.detalhes || [])];
 }
 
+// Descobertas sem números (pedido do Bruno, 17/10/2026): uma frase em palavras e três brasas que
+// acendem em âmbar conforme os detalhes da noite são examinados.
+const EXTENSO = ['nenhum', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis'];
+export function fraseDescobertas(vistos, total) {
+  if (!total) return '';
+  if (vistos >= total) return 'tudo visto esta noite';
+  if (vistos <= 0) return 'nada visto ainda';
+  if (total - vistos === 1) return 'falta um detalhe';
+  if (vistos === 1) return 'um detalhe visto';
+  return `${EXTENSO[vistos] || vistos} detalhes vistos`;
+}
+
+// As brasas em HTML: o passar do mouse, o foco ou um toque mostram a frase (balão do glossário).
+export function brasas(vistos, total) {
+  if (!total) return '';
+  const frase = fraseDescobertas(vistos, total);
+  const pontos = Array.from({ length: total }, (_, i) => `<span class="brasa${i < vistos ? ' acesa' : ''}"></span>`).join('');
+  return `<span class="termo brasas" tabindex="0" role="img" data-def="Descobertas: ${frase}." aria-label="Descobertas: ${frase}">${pontos}</span>`;
+}
+
 export function descobertas(id, noite = 0) {
   const detalhes = todasDescobertas(id);
   const comentarios = [...(DESCOBERTAS[id]?.comentarios || []), ...(MAIS[id]?.comentarios || [])];

@@ -12,7 +12,8 @@ import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
-import { descobertas, todasDescobertas } from './jogo/detalhes.js';
+import { descobertas, todasDescobertas, brasas, fraseDescobertas } from './jogo/detalhes.js';
+import { ligarGlossario } from './glossario.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
 import { lerLeitura, gravarLeitura, cerimoniasCurtas, RITMOS } from './leitura.js';
@@ -192,7 +193,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const hd = raiz.querySelector('.hud-descobertas');
     if (hd) {
       const d = descobertasDoLugar();
-      hd.innerHTML = d.total ? `<span class="desc-longa"> · descobertas ${d.vistos} de ${d.total}</span><span class="desc-curta"> · <span class="desc-icone" aria-label="descobertas">?</span> ${d.vistos}/${d.total}</span>` : '';
+      hd.innerHTML = d.total ? ` ${brasas(d.vistos, d.total)}` : '';
     }
   }
 
@@ -550,7 +551,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     }
   }
 
+  ligarGlossario();
   raiz.querySelector('.tela-jogo').addEventListener('click', (ev) => {
+    // As brasas das descobertas mostram a frase (balão) sem abrir a ficha.
+    if (ev.target.closest('.brasas')) { ev.stopPropagation(); return; }
     const b = ev.target.closest('[data-hud]');
     if (b) { ev.stopPropagation(); acao_(b.dataset.hud); }
   });
@@ -617,7 +621,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const faixa = document.createElement('div');
     faixa.className = 'faixa-chegada';
     faixa.setAttribute('role', 'status');
-    faixa.innerHTML = `<b>${esc(lugarNome)}</b><small>${esc(nomeTempo)} · ${primeiraVisita ? 'primeira visita' : d.total ? `descobertas ${d.vistos}/${d.total}` : ''}</small>`;
+    faixa.innerHTML = `<b>${esc(lugarNome)}</b><small>${esc(nomeTempo)} · ${primeiraVisita ? 'primeira visita' : esc(fraseDescobertas(d.vistos, d.total))}</small>`;
     camadas.appendChild(faixa);
     setTimeout(() => faixa.remove(), 2600);
   }
@@ -694,11 +698,9 @@ export async function telaMapa(raiz, p) {
   raiz.innerHTML = `
     <div class="tela-jogo tela-mapa">
       <div class="palco"></div>
-      <header class="hud-topo">
-        <div class="hud-noite"><b>Mapa do Rio</b><small class="mapa-visitados">Visitados nesta noite: ${registroDaNoite(noite?.id).visitados.length} de ${LOCAIS.length}</small><small><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou </span>clique num bairro para viajar</small></div>
-        <nav class="hud-botoes"><button type="button" data-voltar>Voltar à cena <kbd>M</kbd></button></nav>
-      </header>
-      <footer class="hud-dicas"><kbd>E</kbd> entrar no bairro · <kbd>M</kbd> ou <kbd>Esc</kbd> volta · visitar outro bairro deixa você planejar o que fazer lá</footer>
+      <span class="mapa-titulo">Mapa do Rio</span>
+      <nav class="mapa-voltar"><button type="button" data-voltar>Voltar à cena</button></nav>
+      <p class="mapa-instrucao"><span class="so-mouse">Clique</span><span class="so-toque">Toque</span> num bairro para ir até lá</p>
     </div>`;
   raiz.querySelector('[data-voltar]').onclick = () => ir('noite');
   // Quanto já foi descoberto em cada bairro (detalhes examinados neste aparelho).
@@ -743,11 +745,12 @@ export async function telaEspera(raiz, p, { aoEditar } = {}) {
   const contagem = () => ({ vistos: achados.detalhes.filter((d) => visto(d.id)).length, total: achados.detalhes.length });
 
   const verFicha = () => abrirJanela(camadas, { titulo: 'Ficha', classe: 'janela-larga', montar: (corpo) => telaFicha(corpo, p) });
+  ligarGlossario();
   function desenharQuadro(subiu = false) {
     const d = contagem();
     quadro.innerHTML = `
       <div class="ciclo-linha"><b>Ficha com o Narrador</b> · ele volta ${quandoONarradorVolta()}</div>
-      <div class="ciclo-linha"><span class="quadro-nome">Enquanto isso</span> examine os detalhes da Lapa: <b class="espera-contador${subiu ? ' subiu' : ''}">${d.vistos} de ${d.total}</b></div>
+      <div class="ciclo-linha"><span class="quadro-nome">Enquanto isso</span> examine os detalhes da Lapa <span class="espera-contador${subiu ? ' subiu' : ''}">${brasas(d.vistos, d.total)}</span></div>
       <div class="ciclo-linha quadro-espera-botoes"><button type="button" class="btn-texto" data-espera="ficha">Ver minha ficha</button><button type="button" class="btn-texto" data-espera="editar">Voltar a editar</button></div>`;
   }
   quadro.addEventListener('click', (ev) => {

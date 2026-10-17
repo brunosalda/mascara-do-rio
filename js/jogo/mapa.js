@@ -6,6 +6,7 @@ import { camadaAberta, teclaNaCamada } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc } from '../ui.js';
 import { cerimoniasCurtas } from '../leitura.js';
+import { fraseDescobertas } from './detalhes.js';
 
 const LARGURA = 1920;
 const ALTURA = 1080;
@@ -29,8 +30,16 @@ function desenhoDoMapa() {
     <text class="mapa-agua" x="1610" y="470">Baía de Guanabara</text>
     <text class="mapa-agua" x="720" y="1030">Oceano Atlântico</text>`;
 }
+// Área com todos os bairros e rótulos (nome, brasas, frase), com folga: o mapa enquadra esta área
+// inteira no computador; numa tela estreita, mostra a altura toda e desliza na horizontal.
+const AREA = { x: 90, y: 50, w: 1790, h: 860 };
+
+// Brasas das descobertas dentro do rótulo do bairro (sem números; pedido do Bruno).
+const brasasSvg = (d) => (d?.total ? `<tspan class="mapa-brasas" dx="12" dy="-3">${Array.from({ length: d.total }, (_, i) => `<tspan class="brasa-svg${i < d.vistos ? ' acesa' : ''}" dx="${i ? 5 : 0}">●</tspan>`).join('')}</tspan>` : '');
+
 // visitados: bairros já vistos (os outros ficam sob névoa); descobertas: { id: { vistos, total } };
-// retrato: aparece no "você está aqui". Clique ou toque num bairro viaja direto, com a rota animada.
+// retrato: aparece no "você está aqui". Clique ou toque num bairro viaja direto, com a rota animada;
+// no teclado, setas ou Tab escolhem o bairro e Enter viaja.
 export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla, visitados = null, descobertas = {}, retrato = '' } = {}) {
   const atual = atualId || localDe(localAtual)?.id;
   const inicio = POSICOES[atual] || POSICOES.lapa;
@@ -43,17 +52,18 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
             const [x, y] = POSICOES[l.id] || [0, 0];
             const novo = visitados && !visitados.has(l.id) && l.id !== atual;
             const d = descobertas[l.id];
+            const frase = novo ? 'nunca visitado' : fraseDescobertas(d?.vistos || 0, d?.total || 0);
             return `
-              <g class="mapa-lugar ${l.id === atual ? 'atual' : ''} ${novo ? 'nao-visitado' : ''}" data-lugar="${l.id}" transform="translate(${x} ${y})">
+              <g class="mapa-lugar ${l.id === atual ? 'atual' : ''} ${novo ? 'nao-visitado' : ''}" data-lugar="${l.id}" transform="translate(${x} ${y})" role="button" aria-label="${esc(l.nome)}${frase ? `: ${frase}` : ''}">
+                <title>${esc(l.nome)}${frase ? ` · ${frase}` : ''}</title>
                 ${novo ? '<circle class="mapa-nevoa" r="70" fill="url(#nevoa-lugar)"/>' : ''}
                 <circle class="mapa-brilho" r="60" fill="url(#brilho-lugar)"/>
                 ${l.id === atual && retrato
-                  ? `<circle class="mapa-voce" r="46"/><image class="mapa-retrato" href="${esc(retrato)}" x="-38" y="-38" width="76" height="76" clip-path="url(#recorte-retrato)" preserveAspectRatio="xMidYMid slice"/>`
+                  ? `<circle class="mapa-pulso" r="46"/><circle class="mapa-voce" r="46"/><image class="mapa-retrato" href="${esc(retrato)}" x="-38" y="-38" width="76" height="76" clip-path="url(#recorte-retrato)" preserveAspectRatio="xMidYMid slice"/>`
                   : `<circle class="mapa-ponto" r="9"/>${l.id === atual ? '<circle class="mapa-voce" r="18"/>' : ''}`}
-                <text class="mapa-nome" y="${l.id === atual && retrato ? -54 : -20}">${esc(l.nome)}</text>
-                ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 66 : 34}">você está aqui</text>` : ''}
-                ${!novo && d?.total ? `<g class="mapa-selo" transform="translate(${l.id === atual && retrato ? 44 : 16} ${l.id === atual && retrato ? -40 : -44})"><rect x="0" y="-17" width="${String(d.vistos).length + String(d.total).length > 2 ? 58 : 48}" height="26" rx="4"/><text x="8" y="2">${d.vistos}/${d.total}</text></g>` : ''}
-                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 90 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `descobertas: ${d.vistos} de ${d.total} esta noite` : ''}</text>
+                <text class="mapa-nome" y="${l.id === atual && retrato ? -56 : -20}">${esc(l.nome)}${novo ? '' : brasasSvg(d)}</text>
+                ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 70 : 36}">você está aqui</text>` : ''}
+                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 94 : 58) : 34}">${esc(frase)}</text>
               </g>`;
           }).join('')}
         </g>
@@ -67,6 +77,47 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
       <div class="dica-interagir" hidden></div>
     </div>`;
   const svg = raiz.querySelector('.mapa-svg');
+  const caixaMapa = raiz.querySelector('.mapa');
+
+  // Enquadramento: no computador, todos os bairros inteiros; numa tela estreita (celular em pé), a
+  // altura toda, centrada no bairro atual, e o dedo arrasta para os lados.
+  let desloc = null;
+  function enquadrar() {
+    const largura = svg.clientWidth || window.innerWidth;
+    const altura = svg.clientHeight || window.innerHeight;
+    const aspecto = largura / Math.max(1, altura);
+    if (aspecto >= 1.3) {
+      desloc = null;
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svg.setAttribute('viewBox', `${AREA.x} ${AREA.y} ${AREA.w} ${AREA.h}`);
+      return;
+    }
+    // Folga no alto para os rótulos de cima não encostarem no título e no botão de voltar.
+    const h = AREA.h + 90;
+    const w = h * aspecto;
+    const centro = (POSICOES[atual] || POSICOES.lapa)[0];
+    if (desloc == null) desloc = centro - w / 2;
+    desloc = Math.max(AREA.x - 40, Math.min(AREA.x + AREA.w + 40 - w, desloc));
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('viewBox', `${desloc.toFixed(1)} ${AREA.y - 90} ${w.toFixed(1)} ${h}`);
+  }
+  enquadrar();
+  window.addEventListener('resize', enquadrar);
+  let arraste = null;
+  let arrastou = false;
+  svg.addEventListener('pointerdown', (ev) => { if (desloc != null) { arraste = { x: ev.clientX, d: desloc }; arrastou = false; } });
+  svg.addEventListener('pointermove', (ev) => {
+    if (!arraste) return;
+    const dx = ev.clientX - arraste.x;
+    if (Math.abs(dx) > 8) arrastou = true;
+    if (!arrastou) return;
+    const escala = ((AREA.h + 90) * (svg.clientWidth / svg.clientHeight)) / svg.clientWidth;
+    desloc = arraste.d - dx * escala;
+    enquadrar();
+  });
+  const soltar = () => { arraste = null; };
+  svg.addEventListener('pointerup', soltar);
+  svg.addEventListener('pointercancel', soltar);
   const vampiro = raiz.querySelector('.mapa-vampiro');
   const dica = raiz.querySelector('.dica-interagir');
   const pos = { x: inicio[0] - 40, y: inicio[1] + 30 };
@@ -98,6 +149,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
   const rota = raiz.querySelector('.mapa-rota');
   function viajar(id) {
     if (viajando || camadaAberta()) return;
+    caixaMapa.classList.add('viajando');
     const de = POSICOES[atual] || [pos.x, pos.y];
     const ate = POSICOES[id];
     if (!ate || id === atual) { entrar(id); return; }
@@ -136,38 +188,29 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     if (viajando) { ultimo = agora; requestAnimationFrame(quadro); return; }
     const dt = Math.min(0.12, (agora - ultimo) / 1000);
     ultimo = agora;
-    let dx = 0;
-    let dy = 0;
-    if (!camadaAberta()) for (const k of teclas) { const v = DIRS[k]; if (v) { dx += v[0]; dy += v[1]; } }
-    if (dx || dy) alvo = null;
-    if (alvo) {
-      const ax = alvo.x - pos.x;
-      const ay = alvo.y - pos.y;
-      const d = Math.hypot(ax, ay);
-      if (d < 6) { const l = alvo.lugar; alvo = null; if (l) entrar(l); } else { dx = ax / d; dy = ay / d; }
-    }
-    if (dx || dy) {
-      const n = Math.hypot(dx, dy);
-      pos.x = Math.max(20, Math.min(LARGURA - 20, pos.x + (dx / n) * VEL * dt));
-      pos.y = Math.max(20, Math.min(ALTURA - 20, pos.y + (dy / n) * VEL * dt));
-    }
-    vampiro.setAttribute('transform', `translate(${pos.x.toFixed(1)} ${pos.y.toFixed(1)})`);
-    vampiro.classList.toggle('andando', !!(dx || dy));
-    const novo = maisPerto();
-    if (novo !== perto) {
-      perto = novo;
-      svg.querySelectorAll('.mapa-lugar').forEach((g) => g.classList.toggle('perto', g.dataset.lugar === perto));
-      dica.hidden = !perto;
-      if (perto) dica.innerHTML = `<kbd>E</kbd> Ir para ${esc(LOCAIS.find((l) => l.id === perto)?.nome || '')}`;
-    }
+    void dt;
     requestAnimationFrame(quadro);
+  }
+
+  function escolher(id) {
+    perto = id;
+    svg.querySelectorAll('.mapa-lugar').forEach((g) => g.classList.toggle('perto', g.dataset.lugar === perto));
+    dica.hidden = !perto;
+    if (perto) dica.innerHTML = `Ir para ${esc(LOCAIS.find((l) => l.id === perto)?.nome || '')} <kbd>Enter</kbd>`;
   }
 
   const aoApertar = (ev) => {
     if (camadaAberta()) { if (teclaNaCamada(ev)) ev.preventDefault(); return; }
     const k = ev.key.toLowerCase();
-    if (DIRS[k]) { teclas.add(k); ev.preventDefault(); return; }
-    if ((k === 'e' || k === 'enter' || k === ' ') && perto) { ev.preventDefault(); entrar(perto); return; }
+    const ordem = LOCAIS.map((l) => l.id);
+    const passo = (k === 'arrowright' || k === 'arrowdown' || (k === 'tab' && !ev.shiftKey)) ? 1 : (k === 'arrowleft' || k === 'arrowup' || k === 'tab') ? -1 : 0;
+    if (passo) {
+      ev.preventDefault();
+      const i = ordem.indexOf(perto ?? atual);
+      escolher(ordem[(i + passo + ordem.length) % ordem.length]);
+      return;
+    }
+    if ((k === 'e' || k === 'enter' || k === ' ') && perto) { ev.preventDefault(); viajar(perto); return; }
     aoTecla?.(ev);
   };
   const aoSoltar = (ev) => teclas.delete(ev.key.toLowerCase());
@@ -179,11 +222,9 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     pt.x = ev.clientX;
     pt.y = ev.clientY;
     const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-    if (g) {
-      viajar(g.dataset.lugar);
-    } else {
-      alvo = { x: p.x, y: p.y };
-    }
+    void p;
+    if (arrastou) { arrastou = false; return; }
+    if (g) viajar(g.dataset.lugar);
   });
 
   document.addEventListener('keydown', aoApertar);
@@ -192,6 +233,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
 
   function desmontar() {
     vivo = false;
+    window.removeEventListener('resize', enquadrar);
     document.removeEventListener('keydown', aoApertar);
     document.removeEventListener('keyup', aoSoltar);
     window.removeEventListener('blur', aoPerderFoco);

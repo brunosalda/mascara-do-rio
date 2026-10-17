@@ -3,7 +3,7 @@ import * as banco from './banco.js';
 import { esc, narracao, narracaoComPaineis, dataCurta } from './ui.js';
 import { imagemDoLocal, LOCAIS } from './cidade.js';
 import { registroDaNoite } from './jogo/registro.js';
-import { descobertas } from './jogo/detalhes.js';
+import { descobertas, fraseDescobertas } from './jogo/detalhes.js';
 
 // "Esta noite": o que o jogador fez na noite aberta (bairros, detalhes, vozes ouvidas, plano até agora).
 function htmlEstaNoite(noite, plano) {
@@ -14,7 +14,7 @@ function htmlEstaNoite(noite, plano) {
     const todos = descobertas(id, noite.numero).detalhes;
     let n = 0;
     try { n = todos.filter((d) => localStorage.getItem(`mascara.visto.${id}.${d.id}`) === '1').length; } catch { /* sem armazenamento */ }
-    return `${n} de ${todos.length}`;
+    return fraseDescobertas(n, todos.length);
   };
   const curtas = [plano?.curta_1, plano?.curta_2].filter((x) => x?.trim());
   return `
@@ -27,7 +27,7 @@ function htmlEstaNoite(noite, plano) {
         <li><span>Ações curtas</span><b>${curtas.length ? curtas.map(esc).join(' · ') : 'nenhuma'}</b></li>
       </ul>
       <h3>Por onde você andou</h3>
-      ${r.visitados.length ? `<ul class="lista-palavras">${r.visitados.map((id) => `<li><span>${esc(nome(id))}</span><b>descobertas: ${vistosEm(id)} esta noite</b></li>`).join('')}</ul>` : '<p class="nota">Nenhum bairro ainda.</p>'}
+      ${r.visitados.length ? `<ul class="lista-palavras">${r.visitados.map((id) => `<li><span>${esc(nome(id))}</span><b>${vistosEm(id)}</b></li>`).join('')}</ul>` : '<p class="nota">Nenhum bairro ainda.</p>'}
       <h3>O que você examinou</h3>
       ${r.detalhes.length ? r.detalhes.map((d) => `<p class="nota">${esc(nome(d.lugar))} · ${esc(d.rotulo)}</p><div class="texto-narracao">${narracao(`[${d.voz}] ${d.texto}`)}</div>`).join('') : '<p class="nota">Nada ainda. Os pontos com ? na cena são detalhes para examinar.</p>'}
       <h3>O que as vozes disseram</h3>

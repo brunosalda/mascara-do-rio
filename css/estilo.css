@@ -1985,3 +1985,42 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
 .btn-link-destaque { font: inherit; padding: 0; border: 0; background: none; color: var(--texto-claro); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .btn-link-destaque:hover, .btn-link-destaque:focus-visible { color: #fff; outline: none; }
 .personagem.sem-personagem { display: none; }
+
+/* --- Rodada 14: descobertas como brasas, mapa mais claro ------------------------------------------ */
+.brasas { display: inline-flex; gap: 4px; align-items: center; vertical-align: 0.05em; margin-left: 0.35em; cursor: help; text-decoration: none; }
+.brasa { width: 7px; height: 7px; border-radius: 50%; border: 1.2px solid rgba(255, 176, 92, 0.7); background: transparent; }
+.brasa.acesa { background: #ffb05c; border-color: #ffc27e; box-shadow: 0 0 5px rgba(255, 160, 70, 0.75); }
+.hud-descobertas.subiu .brasa.acesa:last-of-type, .espera-contador.subiu .brasa.acesa:last-of-type { animation: brasa-nova 0.9s ease-out; }
+@keyframes brasa-nova { 0% { transform: scale(1); } 35% { transform: scale(1.8); box-shadow: 0 0 12px rgba(255, 170, 80, 1); } 100% { transform: scale(1); } }
+.glossario-balao b:empty { display: none; }
+.espera-contador.subiu { animation: none; }
+
+.mapa-brasas { font-size: 15px; letter-spacing: 0; }
+.brasa-svg { fill: transparent; stroke: rgba(255, 176, 92, 0.8); stroke-width: 1.4px; paint-order: normal; }
+.brasa-svg.acesa { fill: #ffb05c; stroke: #3a1d06; stroke-width: 1px; }
+.mapa-lugar .mapa-ponto { stroke: #e7dcc6; }
+.mapa-lugar:hover .mapa-ponto, .mapa-lugar.perto .mapa-ponto { fill: #e7dcc6; }
+.mapa-lugar.nao-visitado .mapa-ponto { stroke: rgba(231, 220, 198, 0.45); }
+.mapa-lugar .mapa-voce { stroke: #ffd2a8; stroke-dasharray: none; animation: none; }
+.mapa-pulso { fill: none; stroke: #ffb070; stroke-width: 3; animation: pulso-mapa 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+@keyframes pulso-mapa { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
+.mapa-lugar.atual .mapa-aqui { font-size: 18px; font-weight: 700; font-style: normal; letter-spacing: 0.04em; }
+.mapa-vampiro { opacity: 0; transition: opacity 0.15s; }
+.mapa.viajando .mapa-vampiro { opacity: 1; }
+.mapa-svg { cursor: default; }
+.mapa-titulo {
+  position: absolute; z-index: 210; top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+  font: 700 0.78rem var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--texto-suave);
+  padding: 0.25rem 0.55rem; background: rgba(8, 8, 9, 0.7); border: 1px solid var(--linha);
+}
+.mapa-voltar { position: absolute; z-index: 210; top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); }
+.mapa-voltar button { min-height: 40px; padding: 0.4rem 0.9rem; font: 600 0.85rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-claro); background: rgba(8, 8, 9, 0.78); border: 1px solid var(--linha-forte); cursor: pointer; }
+.mapa-instrucao {
+  position: absolute; z-index: 210; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); translate: -50% 0; margin: 0;
+  padding: 0.5rem 1.1rem; font: 600 1rem var(--sans); letter-spacing: 0.03em; color: var(--texto-claro); white-space: nowrap;
+  background: rgba(6, 6, 7, 0.82); border: 1px solid var(--linha);
+}
+.so-toque { display: none; }
+body.toque .so-toque, .tela-mapa.toque .so-toque { display: inline; }
+body.toque .so-mouse { display: none; }
+@media (hover: none) { .so-toque { display: inline; } .so-mouse { display: none; } }
