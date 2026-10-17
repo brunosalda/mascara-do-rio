@@ -1818,3 +1818,15 @@ body:has(.tela-entrada) #cenario { animation: camera 36s ease-in-out infinite al
   .hud-personagem b, .hud-personagem small { max-width: 32vw; }
   .hud-botoes button { padding: 0 0.42rem; font-size: 0.8rem; }
 }
+
+/* --- Rodada 6 --- */
+.desc-icone { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; border-radius: 50%; border: 1px solid currentColor; font-size: 0.75em; font-weight: 700; line-height: 1; vertical-align: 0.05em; }
+.ponto.fora .ponto-rotulo { opacity: 0 !important; }
+.medidor-fps { position: absolute; right: 10px; bottom: 44px; z-index: 6000; padding: 4px 8px; background: rgba(0, 0, 0, 0.8); border: 1px solid #7dff9a; color: #9dffb0; font: 12px/1.3 ui-monospace, Consolas, monospace; pointer-events: none; }
+.medidor-fps.ruim { border-color: #ff6b6b; color: #ffb3b3; }
+/* Respingo do passo: anel achatado que abre e some. */
+.respingo { position: absolute; left: 0; top: 0; width: 34px; height: 9px; border-radius: 50%; border: 1.5px solid rgba(220, 230, 240, 0.55); pointer-events: none; animation: respingo-passo 0.55s ease-out forwards; }
+@keyframes respingo-passo { from { opacity: 0.9; scale: 0.3; } to { opacity: 0; scale: 1.4; } }
+.reflexo.onda { animation: onda-reflexo 0.45s ease-out; }
+@keyframes onda-reflexo { 0%, 100% { transform: scaleX(var(--virar, 1)) scaleY(-1); } 30% { transform: scaleX(var(--virar, 1)) scaleY(-1) skewX(4deg); } 60% { transform: scaleX(var(--virar, 1)) scaleY(-1) skewX(-2deg); } }
+body.sem-efeitos .respingo { display: none; }

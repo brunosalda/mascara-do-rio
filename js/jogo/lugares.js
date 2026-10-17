@@ -111,6 +111,7 @@ export const LUGARES = {
 
   // Copacabana: calçadão, areia e mar. A mulher pintada em primeiro plano tapa quem passa atrás dela.
   'zona-sul': {
+    molhado: false, // calçadão e areia secos: sem respingo nos passos
     horizonte: 0.47,
     k: 1.0,
     chao: [[0.02, 0.62], [0.2, 0.56], [0.32, 0.525], [0.42, 0.505], [0.5, 0.51], [0.58, 0.58], [0.68, 0.66],

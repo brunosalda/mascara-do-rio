@@ -102,6 +102,11 @@ export function montarCena(raiz, {
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
   document.body.classList.toggle('toque', !!toque);
   const painelCoord = cena.querySelector('.depuracao-coord');
+  // Medidor de quadros por segundo (só no ?depurar / ?editar): média de 2 s e o pior quadro.
+  const medidor = painelCoord ? document.createElement('div') : null;
+  if (medidor) { medidor.className = 'medidor-fps'; cena.appendChild(medidor); }
+  const tempos = [];
+  let proximoMedidor = 0;
   const farol = cena.querySelector('.farol');
   const passante = cena.querySelector('.passante');
 
@@ -303,6 +308,18 @@ export function montarCena(raiz, {
     sombra.style.opacity = (0.8 - forca * 0.2).toFixed(2);
   }
 
+  // Passo em chão molhado: um respingo pequeno sob o pé e uma onda curta no reflexo.
+  function respingar() {
+    const r = document.createElement('span');
+    r.className = 'respingo';
+    const s = altura(pos.y) / ALTURA_REF;
+    r.style.transform = `translate3d(${(pos.x * mw + (olhandoEsquerda ? -6 : 6) * s).toFixed(1)}px, ${(pos.y * mh).toFixed(1)}px, 0) translate(-50%, -50%) scale(${s.toFixed(3)})`;
+    r.style.zIndex = String(Math.round(pos.y * 1000) - 1);
+    mundo.appendChild(r);
+    setTimeout(() => r.remove(), 600);
+    if (reflexo) { reflexo.classList.remove('onda'); void reflexo.offsetWidth; reflexo.classList.add('onda'); }
+  }
+
   // --- Vida dentro da pintura ------------------------------------------------------------------
   function animarVida(agora, dt) {
     const ligado = efeitosLigados();
@@ -437,6 +454,7 @@ export function montarCena(raiz, {
       const sx = cam.x + p.x * mw * cam.z;
       el.classList.toggle('rotulo-dir', sx < 110);
       el.classList.toggle('rotulo-esq', sx > vw - 110);
+      el.classList.toggle('fora', sx < -10 || sx > vw + 10); // fora da tela: sem rótulo cortado na borda
       if (p.discreto && !visivel(p, agora)) continue;
       if (sx < 8) foraDaTela.esq.push(p); else if (sx > vw - 8) foraDaTela.dir.push(p);
     }
@@ -515,7 +533,19 @@ export function montarCena(raiz, {
   function quadro(agora) {
     if (!vivo) return;
     if (!raiz.isConnected) { desmontar(); return; }
-    const dt = Math.min(0.12, (agora - ultimo) / 1000);
+    const dtReal = agora - ultimo;
+    const dt = Math.min(0.12, dtReal / 1000);
+    if (medidor) {
+      tempos.push([agora, dtReal]);
+      while (tempos.length && agora - tempos[0][0] > 2000) tempos.shift();
+      if (agora > proximoMedidor && tempos.length > 1) {
+        proximoMedidor = agora + 500;
+        const media = tempos.reduce((s, t) => s + t[1], 0) / tempos.length;
+        const pior = Math.max(...tempos.map((t) => t[1]));
+        medidor.textContent = `${Math.round(1000 / media)} qps · pior quadro ${Math.round(pior)} ms`;
+        medidor.classList.toggle('ruim', media > 25 || pior > 50);
+      }
+    }
     ultimo = agora;
 
     let dx = 0;
@@ -603,7 +633,11 @@ export function montarCena(raiz, {
       }
       mostrarFase(fase);
     }
-    if (andando && agora > proximoPasso) { som.passo?.(); proximoPasso = agora + (correndo ? 250 : 360); }
+    if (andando && agora > proximoPasso) {
+      som.passo?.();
+      proximoPasso = agora + (correndo ? 250 : 360);
+      if (geo.molhado !== false && !document.body.classList.contains('sem-efeitos')) respingar();
+    }
 
     // Personagem: posição no mundo, escala pela perspectiva da pintura, profundidade pelo pé.
     const h = altura(pos.y);

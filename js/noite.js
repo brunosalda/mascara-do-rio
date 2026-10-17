@@ -159,7 +159,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
     const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))} <i>✓</i>` : '<em>falta escolher</em>';
-    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome sobe)</small>';
+    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
     const pe = enviado
       ? `<span class="quadro-enviado">Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}</span>`
       : `<span>${acao ? 'Mudanças não enviadas' : 'Não enviado'} · ${esc(prazoRestante(noite.fecha_em))}</span>`;
@@ -180,7 +180,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const hd = raiz.querySelector('.hud-descobertas');
     if (hd) {
       const d = descobertasDoLugar();
-      hd.innerHTML = d.total ? `<span class="desc-longa"> · descobertas ${d.vistos} de ${d.total}</span><span class="desc-curta"> · ${d.vistos}/${d.total}</span>` : '';
+      hd.innerHTML = d.total ? `<span class="desc-longa"> · descobertas ${d.vistos} de ${d.total}</span><span class="desc-curta"> · <span class="desc-icone" aria-label="descobertas">?</span> ${d.vistos}/${d.total}</span>` : '';
     }
   }
 
@@ -301,7 +301,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       html: `
         <div class="legenda-noite">
           <div class="legenda-cartao"><span class="legenda-icone">1</span><b>Ação principal</b><p>Obrigatória. Os pontos numerados são as opções desta noite; o lápis (✎) deixa você escrever outra ideia.</p></div>
-          <div class="legenda-cartao"><span class="legenda-icone ic-caca">♦</span><b>Caçada</b><p>Obrigatória. Diga onde e como seu vampiro se alimenta. Sem caçar, a Fome sobe.</p></div>
+          <div class="legenda-cartao"><span class="legenda-icone ic-caca">♦</span><b>Caçada</b><p>Obrigatória. Diga onde e como seu vampiro se alimenta. Sem caçar, a Fome não baixa.</p></div>
           <div class="legenda-cartao"><span class="legenda-icone ic-curta">✎</span><b>Ações curtas</b><p>Opcionais, até 2: uma ligação, passar num lugar, observar alguém.</p></div>
         </div>
         <p class="nota">Os pontos com <b>?</b> são detalhes para examinar. O quadro no canto mostra o que já está pronto e o que falta. ${prazo}</p>
@@ -371,7 +371,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     // Três sugestões do tipo de predador, mais as saídas de sempre: do seu jeito, outra ideia, não caçar.
     const onde = emOutroLugar ? ` (${visitado.em})` : '';
     const sugestoes = sugestoesDeCacada(p.ficha?.predador?.id).map((t) => t.replace(/\.$/, '') + onde + '.');
-    const opcoesCaca = [...sugestoes, `Do meu jeito de sempre, ${lugarCaca}.`, 'Escrever outra ideia', 'Não vou caçar esta noite (a Fome sobe)'];
+    const opcoesCaca = [...sugestoes, `Do meu jeito de sempre, ${lugarCaca}.`, 'Escrever outra ideia', 'Não vou caçar esta noite (a Fome não baixa)'];
     const camada = abrirDialogo(camadas, {
       rotulo: 'A caçada',
       html: `
@@ -446,7 +446,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
             <ol class="plano-lista">
               ${item(pt.principal, 'Ação principal', 'obrigatória', pt.principal ? esc(plano.principal) : '<em>Falta escolher. Ande até um ponto numerado ou escreva a sua ideia.</em>',
                 `${opcoes.length && !emOutroLugar ? '<button type="button" class="btn-secundario" data-ir="opcoes">Escolher entre as opções</button>' : '<button type="button" class="btn-secundario" data-ir="cena">Escolher na cena</button>'}<button type="button" class="btn-texto" data-ir="escrever">Escrever do meu jeito</button>`)}
-              ${item(pt.cacada, 'Caçada', 'obrigatória', plano.nao_cacar ? 'Não vou caçar esta noite (a Fome sobe).' : pt.cacada ? esc(plano.cacada) : '<em>Falta decidir. Em branco, você caça do seu jeito de sempre; sem caçar, a Fome sobe.</em>',
+              ${item(pt.cacada, 'Caçada', 'obrigatória', plano.nao_cacar ? 'Não vou caçar esta noite (a Fome não baixa).' : pt.cacada ? esc(plano.cacada) : '<em>Falta decidir. Em branco, você caça do seu jeito de sempre; sem caçar, a Fome não baixa.</em>',
                 '<button type="button" class="btn-secundario" data-ir="cacada">Decidir a caçada</button>')}
               ${item(pt.curtas > 0, 'Ações curtas', 'opcional', pt.curtas ? [plano.curta_1, plano.curta_2].filter((x) => x?.trim()).map((x) => `• ${esc(x)}`).join('<br>') : 'Nenhuma. Até 2, se quiser: uma ligação, passar num lugar, observar alguém.',
                 '<button type="button" class="btn-texto" data-ir="escrever">Escrever ações curtas</button>')}
