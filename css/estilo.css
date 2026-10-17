@@ -531,7 +531,6 @@ div.opcao { cursor: default; padding: 0; }
 .gota.cheia { fill: var(--sangue-vivo); stroke: var(--sangue-vivo); }
 .estado-fome[data-fome='4'], .estado-fome[data-fome='5'] { border-color: var(--sangue); animation: pulso 2.4s ease-in-out infinite; }
 @keyframes pulso { 50% { box-shadow: 0 0 22px -4px rgba(216, 33, 61, 0.55); } }
-@media (prefers-reduced-motion: reduce) { .estado-fome { animation: none !important; } }
 
 /* --- Narração: texto, vozes interiores, falas e escolhas -------------------------------- */
 
@@ -671,28 +670,81 @@ div.opcao { cursor: default; padding: 0; }
 
 /* --- Cenário vivo: câmera lenta, chuva, relâmpago e vinheta da Fome ---------------------- */
 
-#cenario { transform-origin: 30% 50%; animation: camera 70s ease-in-out infinite alternate; }
+/* A câmera passeia pela pintura, num vaivém visível de 36 segundos. */
+#cenario { transform-origin: 35% 45%; animation: camera 36s ease-in-out infinite alternate; transition: filter 0.15s; }
 @keyframes camera {
-  from { transform: scale(1.02) translate(0, 0); }
-  to { transform: scale(1.1) translate(-2%, -1.2%); }
+  0% { transform: scale(1.04) translate(0, 0); }
+  50% { transform: scale(1.12) translate(-2.5%, -1.5%); }
+  100% { transform: scale(1.08) translate(1.5%, -2.5%); }
 }
+body.clarao #cenario { filter: brightness(1.9) contrast(1.15) saturate(0.7); }
+
+/* Letreiros de néon pulsando sobre a pintura */
+#luzes { position: fixed; inset: 0; z-index: -1; pointer-events: none; mix-blend-mode: screen; }
+#luzes span { position: absolute; border-radius: 50%; filter: blur(30px); opacity: 0.25; animation: letreiro 5s ease-in-out infinite; }
+#luzes span:nth-child(1) { left: 8%; top: 52%; width: 240px; height: 160px; background: #ff3d6e; }
+#luzes span:nth-child(2) { left: 30%; top: 62%; width: 180px; height: 120px; background: #ff8a3d; animation-delay: -2s; animation-duration: 7s; }
+#luzes span:nth-child(3) { left: 18%; top: 28%; width: 200px; height: 200px; background: #3dd6ff; opacity: 0.12; animation-delay: -4s; animation-duration: 9s; }
+@keyframes letreiro {
+  0%, 100% { opacity: 0.12; } 40% { opacity: 0.32; } 42% { opacity: 0.08; } 44% { opacity: 0.3; } 70% { opacity: 0.2; }
+}
+
+/* Névoa passando devagar */
+#nevoa {
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 40% 25% at 30% 70%, rgba(200, 215, 225, 0.12), transparent 70%),
+    radial-gradient(ellipse 35% 20% at 70% 40%, rgba(200, 215, 225, 0.08), transparent 70%);
+  animation: nevoa 45s linear infinite alternate;
+}
+@keyframes nevoa { from { transform: translateX(-8%); } to { transform: translateX(10%); } }
+
+/* A chuva cai por cima de tudo, fraca o bastante para não atrapalhar a leitura. */
 #chuva, #relampago, #vinheta { position: fixed; inset: 0; pointer-events: none; }
-#chuva { z-index: -1; width: 100%; height: 100%; }
-#relampago { z-index: 1; background: #dfe8ff; opacity: 0; mix-blend-mode: screen; }
+#chuva { z-index: 4; width: 100%; height: 100%; }
+#relampago { z-index: 5; background: #dfe8ff; opacity: 0; mix-blend-mode: screen; }
 #relampago.ativo { animation: relampago 1.1s ease-out; }
 @keyframes relampago {
-  0% { opacity: 0; } 4% { opacity: 0.22; } 9% { opacity: 0.03; } 14% { opacity: 0.16; } 100% { opacity: 0; }
+  0% { opacity: 0; } 4% { opacity: 0.35; } 9% { opacity: 0.04; } 14% { opacity: 0.25; } 100% { opacity: 0; }
 }
 #vinheta {
-  z-index: 2;
+  z-index: 3;
   opacity: 0;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 0, 18, 0.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 0, 18, 0.6) 100%);
   transition: opacity 1.5s;
 }
-body[data-fome='3'] #vinheta { opacity: 0.45; }
-body[data-fome='4'] #vinheta { opacity: 0.7; animation: pulsar-vinheta 1.6s ease-in-out infinite; }
-body[data-fome='5'] #vinheta { opacity: 0.9; animation: pulsar-vinheta 1s ease-in-out infinite; }
-@keyframes pulsar-vinheta { 50% { opacity: 0.4; } }
+body[data-fome='1'] #vinheta { opacity: 0.18; animation: pulsar-vinheta 3.2s ease-in-out infinite; }
+body[data-fome='2'] #vinheta { opacity: 0.3; animation: pulsar-vinheta 2.6s ease-in-out infinite; }
+body[data-fome='3'] #vinheta { opacity: 0.5; animation: pulsar-vinheta 2s ease-in-out infinite; }
+body[data-fome='4'] #vinheta { opacity: 0.75; animation: pulsar-vinheta 1.5s ease-in-out infinite; }
+body[data-fome='5'] #vinheta { opacity: 0.95; animation: pulsar-vinheta 1s ease-in-out infinite; }
+@keyframes pulsar-vinheta { 50% { opacity: 0.25; } }
+
+/* As gotas de Fome batem como um coração. */
+.gota.cheia { animation: batida 1.6s ease-in-out infinite; transform-origin: 50% 70%; }
+.estado-fome[data-fome='3'] .gota.cheia { animation-duration: 1.1s; }
+.estado-fome[data-fome='4'] .gota.cheia, .estado-fome[data-fome='5'] .gota.cheia { animation-duration: 0.75s; }
+@keyframes batida { 0%, 40%, 100% { transform: scale(1); } 10% { transform: scale(1.25); } 22% { transform: scale(1.08); } }
+
+/* No jogo, a coluna de texto fica translúcida: a cidade se mexe atrás dela. */
+body[data-tela='jogo'] main, body[data-tela='criacao'] main { background: rgba(10, 10, 11, 0.76); backdrop-filter: blur(3px); }
+
+/* Botão "efeitos" desligado: só a pintura parada. */
+body.sem-efeitos #cenario, body.sem-efeitos #nevoa, body.sem-efeitos #luzes span, body.sem-efeitos .gota.cheia, body.sem-efeitos #vinheta { animation: none !important; }
+body.sem-efeitos #chuva, body.sem-efeitos #nevoa, body.sem-efeitos #luzes, body.sem-efeitos #relampago { display: none; }
+
+/* Palavras surgindo uma a uma */
+.palavra { opacity: 0; animation: palavra 0.4s ease-out forwards; }
+@keyframes palavra { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
+.pronto .palavra { animation: none !important; opacity: 1 !important; filter: none !important; }
+
+/* Painel de HQ solto entre os parágrafos */
+.hq-solto { margin: 1.2rem 0 1.4rem; }
+.hq-solto .painel { aspect-ratio: 3 / 2; }
+.hq-solto .painel img { object-position: center 35%; }
 
 /* Neon do logo falhando de vez em quando */
 .marca svg { animation: neon 9s linear infinite; }
@@ -735,9 +787,9 @@ body[data-fome='5'] #vinheta { opacity: 0.9; animation: pulsar-vinheta 1s ease-i
 .btn-continuar:hover, .btn-continuar:focus-visible { background: rgba(226, 112, 62, 0.12); color: var(--acento-claro); outline: none; }
 @keyframes chamar { 50% { box-shadow: 0 0 0 4px rgba(226, 112, 62, 0.12); } }
 
+/* Quem pede menos movimento no sistema tem transições curtas; o clima continua no botão "efeitos". */
 @media (prefers-reduced-motion: reduce) {
-  #cenario, .marca svg, .btn-continuar, #vinheta { animation: none !important; }
-  .tela, .surgir, .etapa { animation-duration: 0.01s !important; animation-delay: 0s !important; }
+  .tela, .surgir, .etapa { animation-duration: 0.2s !important; }
 }
 
 /* --- Botão de som ------------------------------------------------------------------------ */

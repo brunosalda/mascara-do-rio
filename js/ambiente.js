@@ -2,7 +2,19 @@
 // e um som sintetizado no navegador (chuva, cidade ao longe, batimento, trovão). Sem arquivos de áudio.
 
 const CHAVE_SOM = 'mascara.som';
-const calmo = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const CHAVE_EFEITOS = 'mascara.efeitos';
+
+// Efeitos visuais ligados por padrão; o jogador desliga no botão do cabeçalho.
+export const efeitos = {
+  ligados() {
+    try { return localStorage.getItem(CHAVE_EFEITOS) !== '0'; } catch { return true; }
+  },
+  alternar() {
+    const ligar = !this.ligados();
+    try { localStorage.setItem(CHAVE_EFEITOS, ligar ? '1' : '0'); } catch { /* sem armazenamento */ }
+    document.body.classList.toggle('sem-efeitos', !ligar);
+  },
+};
 
 let clima = { tela: 'login', fome: null };
 
@@ -10,7 +22,7 @@ let clima = { tela: 'login', fome: null };
 
 function iniciarChuva() {
   const canvas = document.getElementById('chuva');
-  if (!canvas || calmo()) return;
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   let gotas = [];
   let largura = 0;
@@ -23,7 +35,7 @@ function iniciarChuva() {
     canvas.width = largura * dpr;
     canvas.height = altura * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const qtd = Math.round(Math.min(160, (largura * altura) / 9000));
+    const qtd = Math.round(Math.min(240, (largura * altura) / 6000));
     gotas = Array.from({ length: qtd }, () => novaGota(true));
   }
 
@@ -32,14 +44,14 @@ function iniciarChuva() {
     return {
       x: Math.random() * (largura + 200) - 100,
       y: qualquerAltura ? Math.random() * altura : -20,
-      v: 7 + perto * 9,
-      c: 10 + perto * 18,
-      a: 0.08 + perto * 0.22,
+      v: 9 + perto * 12,
+      c: 14 + perto * 26,
+      a: 0.07 + perto * 0.2,
     };
   }
 
   function quadro() {
-    if (document.hidden) { requestAnimationFrame(quadro); return; }
+    if (document.hidden || !efeitos.ligados()) { ctx.clearRect(0, 0, largura, altura); requestAnimationFrame(quadro); return; }
     ctx.clearRect(0, 0, largura, altura);
     ctx.lineCap = 'round';
     for (const g of gotas) {
@@ -65,13 +77,16 @@ function iniciarChuva() {
 
 function iniciarRelampagos() {
   const flash = document.getElementById('relampago');
-  if (!flash || calmo()) return;
-  const proximo = () => setTimeout(raio, 25000 + Math.random() * 45000);
+  if (!flash) return;
+  const proximo = () => setTimeout(raio, 9000 + Math.random() * 22000);
   function raio() {
-    if (!document.hidden && clima.tela !== 'criacao') {
+    if (!document.hidden && efeitos.ligados()) {
       flash.classList.remove('ativo');
+      document.body.classList.remove('clarao');
       void flash.offsetWidth; // reinicia a animação
       flash.classList.add('ativo');
+      document.body.classList.add('clarao');
+      setTimeout(() => document.body.classList.remove('clarao'), 1200);
       som.trovao(0.9 + Math.random() * 1.6);
     }
     proximo();
@@ -210,6 +225,7 @@ export function definirClima(novo) {
 }
 
 export function iniciarAmbiente() {
+  document.body.classList.toggle('sem-efeitos', !efeitos.ligados());
   iniciarChuva();
   iniciarRelampagos();
   // Navegadores só tocam som depois de um gesto: se o som estava ligado, retoma no primeiro toque.

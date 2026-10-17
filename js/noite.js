@@ -1,7 +1,7 @@
 // Painel da noite: o que aconteceu (texto, vozes, HQ), escolhas, estado e envio das ações.
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
-import { esc, narracao, escolhas, quadrinhos, revelarAosPoucos, dataLonga, dataCurta, aviso, on } from './ui.js';
+import { esc, escolhas, narracaoComPaineis, revelarAosPoucos, dataLonga, dataCurta, aviso, on } from './ui.js';
 import { painelEstado, lerTecnica, cabecalhoPersonagem } from './ficha.js';
 import { imagemDoLocal } from './cidade.js';
 import { som } from './ambiente.js';
@@ -14,11 +14,9 @@ function blocoAconteceu(p, ultimaNoite, narrNoite, preludio, opcoes) {
         <p class="sobretitulo">Noite ${ultimaNoite.numero}</p>
         ${ultimaNoite.narracao_publica || ultimaNoite.paineis?.length ? `
           <h3>Nas ruas do Rio</h3>
-          ${quadrinhos(ultimaNoite.paineis, { cenario })}
-          <div class="texto-narracao">${narracao(ultimaNoite.narracao_publica)}</div>` : ''}
+          ${narracaoComPaineis(ultimaNoite.narracao_publica, ultimaNoite.paineis, { cenario })}` : ''}
         <h3>Só você sabe</h3>
-        ${quadrinhos(narrNoite.paineis, { cenario })}
-        <div class="texto-narracao privada">${narracao(narrNoite.texto)}</div>
+        ${narracaoComPaineis(narrNoite.texto, narrNoite.paineis, { cenario, classe: 'privada' })}
         ${escolhas(opcoes)}
       </article>`;
   }
@@ -26,8 +24,7 @@ function blocoAconteceu(p, ultimaNoite, narrNoite, preludio, opcoes) {
     return `
       <article class="narracao">
         <p class="sobretitulo">Prelúdio</p>
-        ${quadrinhos(preludio.paineis, { cenario })}
-        <div class="texto-narracao privada">${narracao(preludio.texto)}</div>
+        ${narracaoComPaineis(preludio.texto, preludio.paineis, { cenario, classe: 'privada' })}
         ${escolhas(opcoes)}
       </article>`;
   }

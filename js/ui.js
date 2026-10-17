@@ -60,9 +60,47 @@ export function narracao(texto) {
     .join('');
 }
 
+// Narração com os painéis de HQ espalhados entre os parágrafos (como cortes de cena).
+export function narracaoComPaineis(texto, paineis, { cenario, classe = '' } = {}) {
+  const partes = String(texto ?? '').trim().split(/\n\s*\n/).filter((p) => p.trim());
+  const lista = (Array.isArray(paineis) ? paineis : []).filter((p) => p && (p.legenda || p.imagem || p.baloes?.length));
+  const n = partes.length;
+  const posicoes = lista.map((_, k) => Math.round((k * n) / Math.max(lista.length, 1))); // 0, n/3, 2n/3…
+  let html = '';
+  partes.forEach((p, i) => {
+    lista.forEach((painel, k) => { if (posicoes[k] === i) html += quadrinhos([painel], { cenario, solto: true, indice: k }); });
+    html += paragrafo(p.trim());
+  });
+  return `<div class="texto-narracao ${classe}">${html}</div>`;
+}
+
 // --- Revelação aos poucos ----------------------------------------------------------------
 // A narração aparece fala por fala, com "Continuar" (ou espaço/Enter). Depois de lida até o fim,
 // fica marcada no aparelho e aparece inteira nas próximas visitas.
+
+// As palavras de um parágrafo surgem uma a uma, como se estivessem sendo escritas.
+const RITMO_PALAVRA = 34;
+
+function escreverPalavras(p) {
+  const nos = [];
+  const andar = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+  while (andar.nextNode()) nos.push(andar.currentNode);
+  let i = 0;
+  for (const no of nos) {
+    const frag = document.createDocumentFragment();
+    for (const parte of no.textContent.split(/(\s+)/)) {
+      if (!parte) continue;
+      if (/^\s+$/.test(parte)) { frag.append(parte); continue; }
+      const s = document.createElement('span');
+      s.className = 'palavra';
+      s.style.animationDelay = `${i++ * RITMO_PALAVRA}ms`;
+      s.textContent = parte;
+      frag.append(s);
+    }
+    no.replaceWith(frag);
+  }
+  return i * RITMO_PALAVRA + 350;
+}
 
 export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) {
   const itens = [...artigo.querySelectorAll('h3, .hq, .texto-narracao > p, .escolhas')];
@@ -76,6 +114,7 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
   barra.innerHTML = '<button type="button" class="btn-continuar">Continuar <span aria-hidden="true">▸</span></button><button type="button" class="btn-texto" data-tudo>Mostrar tudo</button>';
   let i = 0;
   let fim = false;
+  let escrevendo = null; // { el, ate }
 
   function terminar() {
     fim = true;
@@ -85,11 +124,18 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
   }
 
   function mostrar() {
+    // Se o parágrafo ainda está sendo escrito, o primeiro clique só completa o texto.
+    if (escrevendo && Date.now() < escrevendo.ate) {
+      escrevendo.el.classList.add('pronto');
+      escrevendo = null;
+      return;
+    }
     // Um título aparece junto com o item seguinte.
     while (i < itens.length) {
       const el = itens[i++];
       el.classList.remove('oculto');
       el.classList.add('surgir');
+      if (el.tagName === 'P') escrevendo = { el, ate: Date.now() + escreverPalavras(el) };
       if (el.tagName !== 'H3') break;
     }
     aoAvancar?.();
@@ -101,7 +147,7 @@ export function revelarAosPoucos(artigo, chave, { aoTerminar, aoAvancar } = {}) 
 
   barra.querySelector('.btn-continuar').onclick = mostrar;
   barra.querySelector('[data-tudo]').onclick = () => {
-    itens.forEach((el) => el.classList.remove('oculto'));
+    itens.forEach((el) => { el.classList.remove('oculto'); el.classList.add('pronto'); });
     i = itens.length;
     terminar();
   };
@@ -128,12 +174,13 @@ function urlSegura(u) {
   return typeof u === 'string' && /^(https:\/\/|img\/)/.test(u) ? u : null;
 }
 
-export function quadrinhos(paineis, { cenario = CENARIO_PADRAO } = {}) {
+export function quadrinhos(paineis, { cenario = CENARIO_PADRAO, solto = false, indice = 0 } = {}) {
   const lista = (Array.isArray(paineis) ? paineis : []).filter((p) => p && (p.legenda || p.imagem || p.baloes?.length));
   if (!lista.length) return '';
   return `
-    <div class="hq hq-${Math.min(lista.length, 3)}">
-      ${lista.map((p, i) => {
+    <div class="hq ${solto ? 'hq-solto' : `hq-${Math.min(lista.length, 3)}`}">
+      ${lista.map((p, j) => {
+        const i = solto ? indice : j;
         const img = urlSegura(p.imagem);
         const fundo = img
           ? `<img src="${esc(img)}" alt="${esc(p.legenda || 'Painel')}" loading="lazy">`

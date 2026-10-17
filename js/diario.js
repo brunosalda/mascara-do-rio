@@ -1,6 +1,6 @@
 // Diário: todas as noites já narradas (parte pública e a sua parte), do fim para o começo.
 import * as banco from './banco.js';
-import { esc, narracao, quadrinhos, dataCurta } from './ui.js';
+import { esc, narracaoComPaineis, dataCurta } from './ui.js';
 import { imagemDoLocal } from './cidade.js';
 
 export async function telaDiario(raiz, p) {
@@ -15,8 +15,8 @@ export async function telaDiario(raiz, p) {
     return `
       <article class="narracao entrada-diario">
         <p class="sobretitulo">Noite ${n.numero}${n.resolvida_em ? ` · ${dataCurta(n.resolvida_em)}` : ''}</p>
-        ${n.narracao_publica || n.paineis?.length ? `<h3>Nas ruas do Rio</h3>${quadrinhos(n.paineis, { cenario })}<div class="texto-narracao">${narracao(n.narracao_publica)}</div>` : ''}
-        ${minha ? `<h3>Só você sabe</h3>${quadrinhos(minha.paineis, { cenario })}<div class="texto-narracao privada">${narracao(minha.texto)}</div>` : ''}
+        ${n.narracao_publica || n.paineis?.length ? `<h3>Nas ruas do Rio</h3>${narracaoComPaineis(n.narracao_publica, n.paineis, { cenario })}` : ''}
+        ${minha ? `<h3>Só você sabe</h3>${narracaoComPaineis(minha.texto, minha.paineis, { cenario, classe: 'privada' })}` : ''}
       </article>`;
   }).join('');
 
@@ -24,6 +24,6 @@ export async function telaDiario(raiz, p) {
     <section>
       <p class="sobretitulo">Diário de ${esc(p.nome)}</p>
       ${noites || '<div class="cartao discreto"><p>Nenhuma noite narrada ainda.</p></div>'}
-      ${preludio ? `<article class="narracao entrada-diario"><p class="sobretitulo">Prelúdio</p>${quadrinhos(preludio.paineis, { cenario })}<div class="texto-narracao privada">${narracao(preludio.texto)}</div></article>` : ''}
+      ${preludio ? `<article class="narracao entrada-diario"><p class="sobretitulo">Prelúdio</p>${narracaoComPaineis(preludio.texto, preludio.paineis, { cenario, classe: 'privada' })}</article>` : ''}
     </section>`;
 }

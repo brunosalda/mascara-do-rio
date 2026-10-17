@@ -7,7 +7,7 @@ import { telaNoite } from './noite.js';
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
-import { iniciarAmbiente, definirClima, som } from './ambiente.js';
+import { iniciarAmbiente, definirClima, som, efeitos } from './ambiente.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
 
@@ -167,6 +167,13 @@ async function iniciar() {
   };
   botaoSom.onclick = () => { som.alternar(); atualizarBotaoSom(); };
   atualizarBotaoSom();
+  const botaoEfeitos = document.getElementById('efeitos');
+  const atualizarBotaoEfeitos = () => {
+    botaoEfeitos.setAttribute('aria-pressed', String(efeitos.ligados()));
+    botaoEfeitos.title = efeitos.ligados() ? 'Desligar chuva e efeitos' : 'Ligar chuva e efeitos';
+  };
+  botaoEfeitos.onclick = () => { efeitos.alternar(); atualizarBotaoEfeitos(); };
+  atualizarBotaoEfeitos();
   window.addEventListener('hashchange', desenhar);
   banco.aoMudarSessao((s) => { if ((s?.user?.id || null) !== (estado.sessao?.user?.id || null)) aoMudarSessao(s); });
   await aoMudarSessao(await banco.sessaoAtual());
