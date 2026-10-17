@@ -388,7 +388,7 @@ export function telaRegistro(raiz, p) {
   const [vonR, vonM] = caixa(est.vontade, calc.forcaVontade);
   const hum = est.humanidade ?? calc.humanidade ?? 0;
   const fome = est.fome ?? 0;
-  const abas = [['ficha', 'Ficha', () => abaFichaRP(f, calc)], ['sangue', 'Sangue', () => abaSangueRP(f, calc, est)], ['disciplinas', 'Disciplinas', () => abaDisciplinasRP(calc)], ['itens', 'Itens', () => abaItensRP(est)], ['biografia', 'Biografia', () => abaBiografiaRP(f, p)]];
+  const abas = [['ficha', 'Ficha', () => abaFichaRP(f, calc) + `<div class="rp-duas rp-noite"><div><h4 class="rp-titulo">Status</h4>${blocoStatusRP(est)}</div><div><h4 class="rp-titulo">Refúgio</h4><button type="button" class="btn-secundario rp-refugio" data-refugio>Ver o refúgio</button>${est.descansado ? '<p class="nota descansado">Sangue descansado: a próxima noite rende um pouco mais.</p>' : ''}</div></div>`], ['sangue', 'Sangue', () => abaSangueRP(f, calc, est)], ['disciplinas', 'Disciplinas', () => abaDisciplinasRP(calc)], ['itens', 'Itens', () => abaItensRP(est)], ['biografia', 'Biografia', () => abaBiografiaRP(f, p)]];
   raiz.innerHTML = `
     <section class="registro-pj">
       <aside class="rp-lado">
@@ -403,10 +403,6 @@ export function telaRegistro(raiz, p) {
           <dt>Geração</dt><dd>${calc.geracao ? `${calc.geracao}ª` : '—'}</dd>
         </dl>
         ${f.origem?.conceito ? `<p class="rp-conceito">${esc(f.origem.conceito)}</p>` : ''}
-        ${est.descansado ? '<p class="nota descansado">Sangue descansado: a próxima noite rende um pouco mais.</p>' : ''}
-        <h4 class="rp-titulo">Status</h4>
-        ${blocoStatusRP(est)}
-        <button type="button" class="btn-secundario rp-refugio" data-refugio>Refúgio</button>
       </aside>
       <div class="rp-corpo">
         <div class="rp-abas" role="tablist">${abas.map(([id, nome], i) => `<button type="button" role="tab" data-rp="${id}" aria-selected="${i === 0}">${nome}</button>`).join('')}</div>
@@ -435,7 +431,8 @@ export function telaRegistro(raiz, p) {
     b.disabled = true;
   });
   // Refúgio como cena: a pintura do bairro onde ele dorme, com o que se sabe do lugar.
-  raiz.querySelector('[data-refugio]').onclick = () => {
+  pagina.addEventListener('click', (ev) => { if (ev.target.closest('[data-refugio]')) abrirRefugio(); });
+  const abrirRefugio = () => {
     const r = est.refugio || {};
     const fundo = localDe(r.bairro || est.local)?.imagem || retratoDe(p);
     pagina.innerHTML = `

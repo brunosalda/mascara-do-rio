@@ -98,7 +98,7 @@ const ESTADO_FASE3 = {
     { espaco: 'ferramenta', nome: 'Pé de cabra', raridade: 'comum', traco: 'abre portas, mas faz barulho', equipado: true },
     { espaco: 'consumivel', nome: 'Bolsa de sangue', raridade: 'comum', traco: 'acalma a Fome uma vez, mas só sacia quem tem o sangue ainda ralo (Potência baixa)' },
     { espaco: 'consumivel', nome: 'Perfume forte', raridade: 'comum', traco: '✦ em Lábia para disfarçar o cheiro de sangue na roupa, por uma noite' },
-    { espaco: 'arma', nome: 'Canivete de bolso', raridade: 'comum', traco: 'arma leve: o dano vem da tabela da V5', equipado: true },
+    { espaco: 'arma', nome: 'Canivete de bolso', raridade: 'comum', traco: 'corta, mas não assusta ninguém', equipado: true },
   ],
   feitos: [
     { titulo: 'Primeiro gole', quando: 'Noite 1' },

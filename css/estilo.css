@@ -3198,3 +3198,10 @@ body.sem-efeitos .pessoa-figura { animation: none !important; }
 .anel-bairro { fill: none; stroke: #8a1420; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7; }
 .anel-bairro.nivel-2 { stroke-dasharray: none; stroke-width: 2.5; }
 .anel-bairro.nivel-3 { stroke-dasharray: none; stroke-width: 3.5; stroke: #b31525; }
+/* Ficha: a coluna da esquerda cabe sem rolar (retrato menor, espaçamento justo). */
+.janela-registro .rp-lado { overflow: hidden; gap: 0.3rem; }
+.janela-registro .rp-retrato { width: 72%; aspect-ratio: 1 / 1.1; }
+.janela-registro .rp-nome { font-size: 1.45rem; margin: 0; }
+.janela-registro .rp-dados dt, .janela-registro .rp-status dt { line-height: 1.45; }
+.janela-registro .rp-conceito { font-size: 0.95rem; }
+.janela-registro .rp-lado .rp-titulo { margin-top: 0.4rem; font-size: 1.05rem; }
