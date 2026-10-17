@@ -560,7 +560,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       b.type = 'button';
       b.className = 'caca-desistir';
       b.textContent = 'Desistir da caçada';
-      b.onclick = () => { cena.cancelarFurtividade(); terminarSemCacar(); };
+      b.onclick = () => { cena.cancelarFurtividade(); terminarSemCacar(); aviso('Você deixou a presa ir. Dá para caçar de novo.'); };
       camadas.appendChild(b);
     } else if (!sim) desistir?.remove();
   }
@@ -584,7 +584,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (pr.vulneravel) cena.falar('HUMANIDADE', pr.vulneravel, 2600);
     const ordem = abordagensPara(p.ficha?.predador?.id);
     setTimeout(() => cena.perguntarNoBalao({
-      voz: 'A FOME', texto: 'Como?',
+      voz: 'A FOME', texto: 'Como?', ms: 15000,
       opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
       aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
     }), pr.vulneravel ? 1700 : 150);
@@ -610,6 +610,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       return;
     }
     cena.atualizarPontos([{ ...pr, discreto: false, alvo: true }]);
+    if (modo === 'frente') setTimeout(() => cena.irAte(pr), 300);
     cena.iniciarFurtividade({
       alvo: pr, modo, zonas, limite: 20,
       aoFim: ({ chegou, atencao }) => {

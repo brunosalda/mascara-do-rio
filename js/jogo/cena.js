@@ -266,11 +266,11 @@ export function montarCena(raiz, {
 
   // Pergunta pequena no balão junto da cabeça ("1 · Olhar mais de perto · 2 · Seguir em frente"),
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
-  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar }) {
+  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, ms = 6000 }) {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}<span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
     balao.hidden = false;
-    falaAte = performance.now() + 6000;
+    falaAte = performance.now() + ms;
     balaoEscolha = { aoEscolher, aoExpirar, ate: falaAte };
     som.voz?.();
   }
@@ -837,7 +837,7 @@ export function montarCena(raiz, {
       const ax = alvo.x - pos.x;
       const ay = alvo.y - pos.y;
       const d = dist(alvo.x, alvo.y, pos.x, pos.y);
-      const chegouPerto = alvo.ponto && !alvo.ponto.parada && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
+      const chegouPerto = alvo.ponto && !alvo.ponto.parada && !alvo.aproximar && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
       if (d < 0.008 || chegouPerto || semProgresso > 0.5) {
         const ponto = alvo.ponto;
         const travou = semProgresso > 0.5;
@@ -1063,8 +1063,20 @@ export function montarCena(raiz, {
     if (botao) {
       const p = lista.find((x) => x.id === botao.dataset.ponto);
       if (!p) return;
-      // A presa da caçada se escolhe de longe, sem andar até ela.
-      if (p === perto || semPersonagem || (p.tipo === 'presa' && !p.alvo)) { interagir(p); return; }
+      if (p === perto || semPersonagem) { interagir(p); return; }
+      // A presa da caçada: ele vai até perto dela (correndo, se longe), parando fora do campo dela,
+      // e a pergunta da abordagem abre ali.
+      if (p.tipo === 'presa' && !p.alvo) {
+        const d = dist(p.x, p.y, pos.x, pos.y);
+        if (d < 0.3) { interagir(p); return; }
+        const k = 0.22 / d;
+        const [x, y] = maisPertoDentro([p.x + (pos.x - p.x) * k, p.y + (pos.y - p.y) * k], geo.chao, ASPECTO);
+        alvo = { x, y, ponto: p, aproximar: true, correr: Math.abs(x - pos.x) * mw * cam.z > vw * 0.4 };
+        virarPara(x < pos.x);
+        esperaAte = performance.now() + (reduzido() ? 0 : 80);
+        semProgresso = 0;
+        return;
+      }
       const [x, y] = p.parada && dentro(p.parada, geo.chao) ? p.parada : maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
       // Longe (mais de 40% da largura da tela): vai correndo. Vira para o destino e sai 80 ms depois.
       const longe = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
@@ -1142,6 +1154,13 @@ export function montarCena(raiz, {
     iniciarFurtividade,
     usarPoder,
     emFurtividade: () => !!caca,
+    // Anda até um ponto (de frente, na caçada: ele vai direto até a presa).
+    irAte: (p) => {
+      const [x, y] = p.parada && dentro(p.parada, geo.chao) ? p.parada : maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
+      alvo = { x, y, correr: Math.abs(x - pos.x) * mw * cam.z > vw * 0.4 };
+      virarPara(x < pos.x);
+      semProgresso = 0;
+    },
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
   };
