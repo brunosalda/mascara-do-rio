@@ -1277,6 +1277,20 @@ export function montarCena(raiz, {
     return soma / n;
   }
 
+  // Cor média da pintura em volta de um ponto (para tingir o personagem como a gente).
+  function corDaPintura(x, y) {
+    let r = 0; let g = 0; let b = 0; let n = 0;
+    const cx = Math.round(x * (amostra.L - 1));
+    const cy = Math.round(y * (amostra.A - 1));
+    for (let dy = -3; dy <= 1; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const i = (limitar(cy + dy, 0, amostra.A - 1) * amostra.L + limitar(cx + dx, 0, amostra.L - 1)) * 4;
+        r += amostra.dados[i]; g += amostra.dados[i + 1]; b += amostra.dados[i + 2]; n++;
+      }
+    }
+    return [r / n, g / n, b / n];
+  }
+
   function iluminar() {
     if (!sprite?.url) return;
     const h = altura(pos.y);
@@ -1295,8 +1309,17 @@ export function montarCena(raiz, {
       r += cr * i; g += cg * i; b += cb * i; total += i;
       if (i > maior) { maior = i; principal = l; }
     }
-    boneco.style.setProperty('--brilho', limitar(0.7 + L * 0.9 + total * 0.08, 0.74, 1.12).toFixed(3));
-    if (total > 0.02) {
+    const doAlto = geo.alto && amostra.dados && pes != null;
+    if (!doAlto) boneco.style.setProperty('--brilho', limitar(0.7 + L * 0.9 + total * 0.08, 0.74, 1.12).toFixed(3));
+    if (doAlto) {
+      // Vista do alto (rodada 36): o mesmo tratamento da gente. Brilho pela curva da pintura em volta
+      // dos pés (0,3 no escuro, até 0,92 sob o poste) e a cor dali multiplicada sobre a figura.
+      boneco.style.setProperty('--brilho', limitar(0.15 + pes * 1.4, 0.3, 0.92).toFixed(3));
+      const [pr, pg, pb] = corDaPintura(pos.x, pos.y - 0.01);
+      const topo = Math.max(pr, pg, pb, 1);
+      tinta.style.backgroundColor = `rgb(${Math.round((pr / topo) * 255)}, ${Math.round((pg / topo) * 255)}, ${Math.round((pb / topo) * 255)})`;
+      tinta.style.opacity = '0.8';
+    } else if (total > 0.02) {
       tinta.style.backgroundColor = `rgb(${Math.round(r / total)}, ${Math.round(g / total)}, ${Math.round(b / total)})`;
       tinta.style.opacity = Math.min(0.75, 0.15 + total * 1.1).toFixed(3);
     } else {
@@ -1306,7 +1329,7 @@ export function montarCena(raiz, {
     const comLuz = principal && maior > 0.04;
     const lado = comLuz ? Math.sign(principal.x - pos.x) || 1 : -1;
     const [cr, cg, cb] = rgb(comLuz ? principal.cor : '#9ab6dc');
-    const alfa = comLuz ? Math.min(0.5, 0.2 + maior * 0.6) : 0.18; // suave: só do lado da luz; o luar quase some
+    const alfa = (comLuz ? Math.min(0.5, 0.2 + maior * 0.6) : 0.18) * (geo.alto ? 0.7 : 1); // suave: só do lado da luz; o luar quase some
     boneco.style.setProperty('--rim-x', `${((1.8 / Math.max(0.35, s)) * lado * Math.sign(virar || 1)).toFixed(2)}px`);
     boneco.style.setProperty('--rim-cor', `rgba(${cr}, ${cg}, ${cb}, ${alfa.toFixed(2)})`);
     // Sombra para o lado oposto à luz principal, mais longa quanto mais forte a luz.

@@ -3257,3 +3257,8 @@ body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: 
 .pessoa-lado { opacity: var(--lado-forca, 0); background: linear-gradient(var(--lado-luz, 90deg), var(--cor-luz, rgba(255, 170, 90, 0.45)) 0%, rgba(128, 128, 128, 0) 40%); }
 .pessoa.pessoa-pintada .pessoa-sombra { left: -10%; right: -10%; bottom: -6%; height: 13%; border-radius: 50%; filter: blur(2px);
   background: radial-gradient(closest-side, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.38) 55%, rgba(0, 0, 0, 0) 100%); }
+
+/* Rodada 36, item 5: na vista do alto, o personagem leva a tinta multiplicada da pintura em volta dos pés,
+   como a gente; a sombra vira elipse macia. O círculo de bronze continua. */
+.cena.vista-alto .personagem .tinta { mix-blend-mode: multiply; opacity: 0.8; }
+.cena.vista-alto .personagem .corpo-sprite { filter: brightness(var(--brilho, 0.6)) contrast(1.04) saturate(0.85) drop-shadow(var(--rim-x, 0px) 0 1px var(--rim-cor, transparent)); }
