@@ -1801,7 +1801,10 @@ export function montarCena(raiz, {
         if (sy < vh * 0.2 || sy > vh * 0.8) camLivre.y += (vh * 0.55 - sy) * Math.min(1, dt * 1.5);
       }
       camLivre.x = limitar(camLivre.x, vw - W, 0);
-      camLivre.y = limitar(camLivre.y, vh - H, 0);
+      // No celular em pé, a câmera desce além do pé da pintura a altura dos botões redondos e uma folga,
+      // para a faixa de baixo (a saída, o "Mapa do Rio") sair de trás deles.
+      const folgaPe = document.body.classList.contains('celular') && !document.body.classList.contains('deitado') ? 72 : 0;
+      camLivre.y = limitar(camLivre.y, vh - H - folgaPe, 0);
       // Setas discretas nas bordas quando há mais cena para aquele lado (celular, ordem de 17/10).
       // Onde já há o indicador de pontos fora da tela ("‹ 2", "Caçada +2"), a seta de "mais cena" sobra.
       bordaMais.esq.hidden = camLivre.x > -4 || !setaEsq.hidden;
@@ -1831,7 +1834,8 @@ export function montarCena(raiz, {
       alvoY = vh * 0.58 - fy;
     }
     alvoX = limitar(alvoX, vw - W, 0);
-    alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H, 0);
+    const folgaPeCam = geo.alto && document.body.classList.contains('celular') && !document.body.classList.contains('deitado') ? 72 : 0;
+    alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H - folgaPeCam, 0);
     // Movimento reduzido (rodada 42): a câmera vai direto, sem deslizar.
     const k = !cameraPronta || reduzido() || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));
     if (geo.alto && camLivre.suave && Math.abs(alvoX - cam.x) + Math.abs(alvoY - cam.y) < 2) camLivre.suave = false;
