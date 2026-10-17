@@ -1432,6 +1432,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const cena = montarCena(palco, {
     nome: p.nome,
     temPedido: (tipo) => temPedidoAberto(tipo),
+    ajudado: (tipo) => pedidosResolvidos.has(tipo),
+    fome: p.estado?.fome ?? 0,
     nevoa: nevoaNaEntrada,
     nevoaLonge: nevoaLigada(),
     painel: raiz.querySelector('.painel-pergunta'),

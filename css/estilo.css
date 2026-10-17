@@ -3262,3 +3262,7 @@ body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: 
    como a gente; a sombra vira elipse macia. O círculo de bronze continua. */
 .cena.vista-alto .personagem .tinta { mix-blend-mode: multiply; opacity: 0.8; }
 .cena.vista-alto .personagem .corpo-sprite { filter: brightness(var(--brilho, 0.6)) contrast(1.04) saturate(0.85) drop-shadow(var(--rim-x, 0px) 0 1px var(--rim-cor, transparent)); }
+
+/* Rodada 36, item 3: com a Fome alta, a pessoa recua meio passo quando o vampiro chega perto. */
+.pessoa.pessoa-pintada .pessoa-figura { transition: translate 0.5s ease-out; }
+.pessoa.recua .pessoa-figura { translate: var(--recuo, 18%) 0; }

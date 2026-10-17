@@ -74,7 +74,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  nome = '', nevoa = false, nevoaLonge = false, temPedido = null, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', nevoa = false, nevoaLonge = false, temPedido = null, ajudado = null, fome = 0, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -603,10 +603,48 @@ export function montarCena(raiz, {
   }
   // Quem tem um pedido, ao ver o personagem chegar perto, vira para ele e levanta a mão (sem "!").
   let proximoAceno = 0;
+  // A cidade nota o vampiro sem clique (rodada 36): ao passar perto, a pessoa vira para ele e às vezes
+  // solta uma frase curta (no máximo uma por pessoa por noite); com a Fome em 4 ou mais, recua meio passo
+  // e desvia o olhar; quem ele já ajudou acena de longe.
+  const chaveNoite = new Date().toDateString();
+  const jaFalou = (tipo) => { try { return sessionStorage.getItem(`mascara.passagem.${chaveNoite}.${tipo}`) === '1'; } catch { return false; } };
+  const marcarFala = (tipo) => { try { sessionStorage.setItem(`mascara.passagem.${chaveNoite}.${tipo}`, '1'); } catch { /* sem armazenamento */ } };
+  let ultimaFalaPassagem = 0;
+  function notarVampiro(agora) {
+    for (const p of gente) {
+      const d = dist(p.x, p.y, pos.x, pos.y);
+      if (ajudado?.(p.tipoGente) && d < 0.35 && !p.acenouAjuda) {
+        p.acenouAjuda = true; virarPessoaPara(p.id);
+        p.el.classList.remove('acena'); void p.el.offsetWidth; p.el.classList.add('acena');
+      }
+      if (d < 0.12 && !p.notou && !conversa) {
+        p.notou = true;
+        if (fome >= 4) {
+          // O corpo sente o predador: meio passo para longe e o olhar para o outro lado.
+          const longe = pos.x < p.x ? 1 : -1;
+          p.dir = longe; p.el.classList.toggle('vira', longe < 0); p.fixa = agora + 3000;
+          p.el.style.setProperty('--recuo', `${longe * 18}%`);
+          p.el.classList.add('recua');
+          setTimeout(() => p.el.classList.remove('recua'), 3000);
+        } else {
+          virarPessoaPara(p.id); p.fixa = agora + 1500;
+          const t = TIPOS_GENTE[p.tipoGente];
+          const curtas = (t?.falas || []).filter((f) => f.length <= 48);
+          if (curtas.length && !jaFalou(p.tipoGente) && agora - ultimaFalaPassagem > 9000 && Math.random() < 0.45) {
+            marcarFala(p.tipoGente); ultimaFalaPassagem = agora;
+            falar((t.nome || p.rotulo).toUpperCase(), curtas[Math.floor(Math.random() * curtas.length)], 2800);
+          }
+        }
+      }
+      if (d > 0.25) p.notou = false;
+    }
+  }
   function acenarSeTemPedido() {
     const agora = performance.now();
-    if (agora < proximoAceno || !temPedido) return;
+    if (agora < proximoAceno) return;
     proximoAceno = agora + 400;
+    notarVampiro(agora);
+    if (!temPedido) return;
     for (const p of gente) {
       if (!temPedido(p.tipoGente)) continue;
       const perto = dist(p.x, p.y, pos.x, pos.y) < 0.16;
