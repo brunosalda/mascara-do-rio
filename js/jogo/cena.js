@@ -82,6 +82,7 @@ export function montarCena(raiz, {
       <div class="mundo">
         <div class="pintura" style="background-image:url('${fundoUrl}')"></div>
         <div class="pintura-fundo" style="background-image:url('${fundoUrl}');--horizonte:${(geo.horizonte * 100).toFixed(1)}%" aria-hidden="true"></div>
+        <div class="pintura-cinza" style="background-image:url('${fundoUrl}')" aria-hidden="true"></div>
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
@@ -98,7 +99,7 @@ export function montarCena(raiz, {
       </div>
       <svg class="linha-conversa" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3.5" cx="0" cy="0"/></svg>
       <div class="dica-interagir" hidden></div>
-      <div class="atencao-rua" hidden role="status"></div>
+      <div class="atencao-rua" hidden role="status"><span class="olho" aria-hidden="true"></span><span class="palavras"></span><span class="poderes-ativos"></span><button type="button" class="caca-ajuda" data-caca-ajuda aria-label="Como funciona a caçada">?</button><button type="button" class="caca-sair" data-caca-desistir>Desistir</button></div>
       <button type="button" class="seta-borda seta-esq" hidden aria-label="Pontos à esquerda">‹ <b></b></button>
       <button type="button" class="seta-borda seta-dir" hidden aria-label="Pontos à direita"><b></b> ›</button>
       ${depurar ? '<pre class="depuracao-coord">Modo de edição: clique na pintura para ver a coordenada.</pre>' : ''}
@@ -124,8 +125,9 @@ export function montarCena(raiz, {
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
   document.body.classList.toggle('toque', !!toque);
   const painelCoord = cena.querySelector('.depuracao-coord');
-  // Medidor de quadros por segundo (só no ?depurar / ?editar): média de 2 s e o pior quadro.
-  const medidor = painelCoord ? document.createElement('div') : null;
+  // Medidor (só no ?depurar / ?editar, também nas demonstrações): quadros por segundo, o pior quadro,
+  // o custo do laço em ms e o número de elementos da página.
+  const medidor = painelCoord || /[?&]depurar\b/.test(location.hash) ? document.createElement('div') : null;
   if (medidor) { medidor.className = 'medidor-fps'; cena.appendChild(medidor); }
   const tempos = [];
   let proximoMedidor = 0;
@@ -302,6 +304,18 @@ export function montarCena(raiz, {
   // à presa, a rua repara. A presa olha de relance quando ele entra na borda do campo dela. As palavras
   // ("ninguém reparou / alguém olhou / você foi visto") ficam só como resumo, no alto.
   const atencaoEl = cena.querySelector('.atencao-rua');
+  const palavrasEl = atencaoEl.querySelector('.palavras');
+  const poderesAtivosEl = atencaoEl.querySelector('.poderes-ativos');
+  const poderesAtivos = new Map(); // nome → até quando
+  function mostrarPoderAtivo(nome, segundos) { poderesAtivos.set(nome, performance.now() + segundos * 1000); }
+  // Ensino da primeira caçada (uma vez por aparelho): uma frase d'A FOME em cada momento, e o elemento
+  // de que ela fala pulsa.
+  function ensinar(chave, frase, alvoEl) {
+    const k = `mascara.ensino.${chave}`;
+    try { if (localStorage.getItem(k) === '1') return; localStorage.setItem(k, '1'); } catch { /* sem armazenamento */ }
+    falar('A FOME', frase, 3200);
+    if (alvoEl) { alvoEl.classList.remove('pulsa-ensino'); void alvoEl.offsetWidth; alvoEl.classList.add('pulsa-ensino'); setTimeout(() => alvoEl.classList.remove('pulsa-ensino'), 2400); }
+  }
   const PALAVRAS_ATENCAO = (a) => (a < 0.34 ? 'ninguém reparou' : a < 0.67 ? 'alguém olhou' : 'você foi visto');
   function luzEm(x, y) {
     let s = 0;
@@ -324,9 +338,14 @@ export function montarCena(raiz, {
     return Math.abs(d) < 0.62;
   }
   const campoEl = cena.querySelector('.campo-presa path');
+  let campoUltimo = '';
   function desenharCampo(c) {
     if (!c) { campoEl.setAttribute('d', ''); return; }
-    campoEl.parentNode.classList.toggle('forte', performance.now() < sentidosAte);
+    const forte = performance.now() < sentidosAte;
+    const chave = `${c.alvo.x.toFixed(3)},${c.alvo.y.toFixed(3)},${c.olhar},${forte}`;
+    if (chave === campoUltimo) return;
+    campoUltimo = chave;
+    campoEl.parentNode.classList.toggle('forte', forte);
     const pts = [];
     for (let i = 0; i <= 10; i++) {
       const a = c.olhar - 0.62 + (1.24 * i) / 10;
@@ -342,7 +361,11 @@ export function montarCena(raiz, {
     elP?.classList.toggle('olha-esq', caca.olhar > 1);
     elP?.classList.toggle('olha-dir', caca.olhar <= 1);
     atencaoEl.hidden = false;
-    atencaoEl.textContent = PALAVRAS_ATENCAO(0);
+    palavrasEl.textContent = PALAVRAS_ATENCAO(0);
+    atencaoEl.dataset.nivel = '0';
+    document.body.classList.add('furtividade');
+    poderesAtivos.clear();
+    if (modo === 'sombra') setTimeout(() => { if (caca) ensinar('escuro', 'Fique no escuro.', boneco); }, 600);
   }
   function encerrarFurtividade(chegou) {
     const c = caca;
@@ -351,7 +374,9 @@ export function montarCena(raiz, {
     cena.classList.remove('em-caca');
     boneco.classList.remove('na-sombra', 'manto');
     atencaoEl.hidden = true;
+    document.body.classList.remove('furtividade');
     campoEl.setAttribute('d', '');
+    campoUltimo = '';
     c.aoFim?.({ chegou, atencao: c.atencao });
   }
   // Na caçada pela sombra, o clique só anda (correr faz barulho): Shift, clique duplo ou Ligeireza.
@@ -428,8 +453,20 @@ export function montarCena(raiz, {
       }
     }
     const palavras = indo ? 'ela está indo embora' : PALAVRAS_ATENCAO(c.atencao);
-    if (atencaoEl.textContent !== palavras) atencaoEl.textContent = palavras;
-    atencaoEl.dataset.nivel = c.atencao < 0.34 ? '0' : c.atencao < 0.67 ? '1' : '2';
+    if (palavrasEl.textContent !== palavras) palavrasEl.textContent = palavras;
+    const nivel = c.atencao < 0.34 ? '0' : c.atencao < 0.67 ? '1' : '2';
+    if (atencaoEl.dataset.nivel !== nivel) atencaoEl.dataset.nivel = nivel;
+    // Poderes ativos com o tempo (só o texto muda).
+    if (poderesAtivos.size) {
+      const txt = [...poderesAtivos].filter(([, ate]) => ate > agora).map(([n, ate]) => `${n} ${Math.ceil((ate - agora) / 1000)} s`).join(' · ');
+      if (poderesAtivosEl.textContent !== txt) poderesAtivosEl.textContent = txt;
+    }
+    // Ensino: a primeira luz, perto do leque, o anel na metade.
+    if (c.modo === 'sombra') {
+      if (!naSombra) ensinar('luz', 'A luz te mostra.', boneco);
+      if (noCampo || d < RAIO_CAMPO * 1.2) ensinar('leque', 'É para lá que ela olha.', campoEl.parentNode);
+      if (resta < c.limite / 2) ensinar('anel', 'Ela não vai esperar.', elPresa);
+    }
     if (d <= Math.max(alcanceEm(pos.y) * 1.5, 0.11) && agora - c.t0 > 2500) encerrarFurtividade(true);
     else if (agora - c.t0 > c.limite * 1000) encerrarFurtividade(false);
   }
@@ -990,6 +1027,7 @@ export function montarCena(raiz, {
   function quadro(agora) {
     if (!vivo) return;
     if (!raiz.isConnected) { desmontar(); return; }
+    const inicioLaco = medidor ? performance.now() : 0;
     const dtReal = agora - ultimo;
     // Ser visto na caçada: meio segundo mais lento.
     const dt = Math.min(0.12, dtReal / 1000) * (caca?.lentoAte > agora ? 0.35 : 1);
@@ -1000,7 +1038,11 @@ export function montarCena(raiz, {
         proximoMedidor = agora + 500;
         const media = tempos.reduce((s, t) => s + t[1], 0) / tempos.length;
         const pior = Math.max(...tempos.map((t) => t[1]));
-        medidor.textContent = `${Math.round(1000 / media)} qps · pior quadro ${Math.round(pior)} ms`;
+        const laco = custoLaco.length ? custoLaco.reduce((s, x) => s + x, 0) / custoLaco.length : 0;
+        const piorLaco = custoLaco.length ? Math.max(...custoLaco) : 0;
+        custoLaco.length = 0;
+        if (agora > proximaContagem) { proximaContagem = agora + 2000; elementos = document.getElementsByTagName('*').length; }
+        medidor.textContent = `${Math.round(1000 / media)} qps · pior quadro ${Math.round(pior)} ms · laço ${laco.toFixed(2)} ms (pior ${piorLaco.toFixed(1)}) · ${elementos} elementos`;
         medidor.classList.toggle('ruim', media > 25 || pior > 50);
       }
     }
@@ -1160,8 +1202,12 @@ export function montarCena(raiz, {
       ajustarRotulos(agora);
       checarComentarios();
     }
+    if (medidor) custoLaco.push(performance.now() - inicioLaco);
     requestAnimationFrame(quadro);
   }
+  const custoLaco = [];
+  let proximaContagem = 0;
+  let elementos = 0;
 
   // Linha fina do objeto até a borda da caixa de conversa (a caixa do jogo mais recente na tela).
   const linha = cena.querySelector('.linha-conversa');
@@ -1354,6 +1400,8 @@ export function montarCena(raiz, {
     usarPoder,
     beijo,
     pegadas,
+    mostrarPoderAtivo,
+    ensinar,
     ajustarCaca: (fn) => { if (caca) fn(caca); },
     textoDoBalao: (html) => { if (balaoEscolha) { const t = balao.querySelector('.balao-texto'); if (t) t.innerHTML = html; } },
     emFurtividade: () => !!caca,

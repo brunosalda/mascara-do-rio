@@ -2160,8 +2160,8 @@ body.cerimonias-curtas .personagem .corpo-sprite, body.cerimonias-curtas .person
 
 /* --- Rodada 18: caçada na hora e vantagens ---------------------------------------------------------- */
 /* A Fome abre os olhos: menos cor, vinheta mais forte, vultos e presas com pulso quente. */
-body.fome-desperta .pintura, body.fome-desperta .pintura-fundo, body.fome-desperta .frente { filter: saturate(0.45) contrast(1.1) brightness(0.85) !important; transition: filter 1.5s; }
-body.fome-desperta .passante.vulto svg { fill: rgba(140, 20, 30, 0.9); animation: pulso-quente 1.2s ease-in-out infinite; }
+
+
 @keyframes pulso-quente { 50% { filter: drop-shadow(0 0 6px rgba(255, 60, 60, 0.9)); } }
 .ponto-presa { --cor-ponto: 255, 70, 70; }
 .ponto-presa .ponto-luz { animation: pulso-presa 1.1s ease-in-out infinite; }
@@ -2205,7 +2205,7 @@ body.fome-desperta .passante.vulto svg { fill: rgba(140, 20, 30, 0.9); animation
 .personagem.olhos-sangue .corpo-sprite { animation: olhos-sangue 1.4s ease-out; }
 @keyframes olhos-sangue { 0% { filter: drop-shadow(0 0 0 rgba(255, 30, 50, 0)); } 25% { filter: brightness(1.05) drop-shadow(0 -6px 6px rgba(255, 30, 50, 0.95)); } 100% { filter: drop-shadow(0 0 0 rgba(255, 30, 50, 0)); } }
 /* Sentidos Aguçados: a pintura escurece e perde a cor; um rastro vermelho leva ao alvo. */
-.cena.sentidos .pintura, .cena.sentidos .pintura-fundo, .cena.sentidos .frente { filter: grayscale(1) brightness(0.45) contrast(1.2) !important; transition: filter 0.6s; }
+
 .rastro { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2800; pointer-events: none; overflow: visible; opacity: 0; transition: opacity 0.5s; }
 .cena.sentidos .rastro { opacity: 1; }
 .rastro polyline { fill: none; stroke: rgba(255, 40, 60, 0.85); stroke-width: 2.5px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 5; filter: drop-shadow(0 0 4px rgba(255, 40, 60, 0.9)); animation: rastro 1.2s linear infinite; }
@@ -2236,7 +2236,7 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
 /* --- Rodada 21 --------------------------------------------------------------------------------------- */
 /* O Beijo: a pintura perde a cor (os vermelhos ficam, pela luz do lugar), a figura se inclina, a presa
    baixa, um brilho vermelho no contorno da boca e um clarão dourado no fim. */
-.cena.beijo .pintura, .cena.beijo .pintura-fundo, .cena.beijo .frente { filter: saturate(0.18) contrast(1.15) brightness(0.8) !important; transition: filter 0.4s; }
+
 .cena.beijo .brilho-luz { filter: saturate(1.6); }
 .personagem.boca-vermelha .corpo-sprite { filter: drop-shadow(0 -4px 3px rgba(255, 30, 50, 0.85)) !important; }
 .ponto-presa.baixando { transform: translate(-50%, -100%) scale(var(--escala, 1)) scaleY(0.92); transition: transform 0.6s ease-in; }
@@ -2245,7 +2245,7 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
 /* Campo de visão da presa, visível com Sentidos Aguçados (Visão Sombria). */
 .campo-presa { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
 .campo-presa path { fill: rgba(255, 40, 60, 0.18); stroke: rgba(255, 60, 80, 0.5); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.cena.sentidos.em-caca .pintura, .cena.sentidos.em-caca .frente { filter: grayscale(1) brightness(0.35) contrast(1.6) !important; }
+
 /* Detalhe que só os Sentidos revelam. */
 .ponto[data-ponto^='detalhe-sent-'] { display: none; }
 .cena.sentidos .ponto[data-ponto^='detalhe-sent-'] { display: block; --cor-ponto: 255, 80, 90; }
@@ -2261,13 +2261,13 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
 .ponto-presa.olha-esq .ponto-rotulo::before { content: '◂ '; color: #ff9aa6; }
 .ponto-presa.olha-dir .ponto-rotulo::after { content: ' ▸'; color: #ff9aa6; }
 /* Ser visto: meio segundo mais lento. */
-.cena.camera-lenta .pintura { filter: saturate(0.6) brightness(0.9) !important; }
+
 /* Sentidos em pulso: a onda atravessa a pintura e acende o que encontra. */
 .onda-sentidos { position: absolute; z-index: 2850; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; pointer-events: none;
   border: 2px solid rgba(255, 60, 80, 0.35); animation: onda-sentidos 1.2s ease-out forwards; }
 .onda-sentidos.forte { border-width: 3px; border-color: rgba(255, 60, 80, 0.75); box-shadow: 0 0 30px rgba(255, 60, 80, 0.4); }
 @keyframes onda-sentidos { from { transform: scale(0.2); opacity: 1; } to { transform: scale(60); opacity: 0; } }
-.ponto.acende .ponto-luz { animation: acende 0.8s ease-out; }
+
 @keyframes acende { 30% { transform: scale(1.8); opacity: 1; filter: brightness(1.8); } }
 /* Piscar de sombra em sombra: marcas discretas nas zonas escuras ao alcance. */
 .marca-sombra { position: absolute; z-index: 3; width: 26px; height: 10px; margin: -5px 0 0 -13px; border-radius: 50%; pointer-events: none;
@@ -2281,3 +2281,48 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
 /* Durante o Beijo, os rótulos, os outros pontos e as dicas somem e voltam no fim. */
 .cena.beijo .cena-pontos, .cena.beijo .dica-interagir, .cena.beijo .contornos, .cena.beijo .campo-presa, .cena.beijo .seta-borda { visibility: hidden !important; pointer-events: none; }
 .dica-pular { position: absolute; z-index: 290; left: 50%; bottom: 1.4rem; translate: -50% 0; font: italic 0.85rem var(--texto-livro); color: rgba(240, 230, 210, 0.75); pointer-events: none; animation: caca-entra 0.4s ease-out both; }
+
+/* --- Rodada 23 --------------------------------------------------------------------------------------- */
+/* Desempenho: os modos não animam o filtro da pintura inteira; uma camada já cinza e escura, gerada uma
+   vez, só muda de opacidade. */
+.pintura-cinza { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none; opacity: 0; transition: opacity 0.5s; will-change: opacity;
+  filter: grayscale(1) brightness(0.42) contrast(1.3); }
+.cena.sentidos .pintura-cinza { opacity: 1; }
+.cena.beijo .pintura-cinza { opacity: 0.85; transition-duration: 0.3s; }
+.cena.camera-lenta .pintura-cinza { opacity: 0.45; transition-duration: 0.15s; }
+body.fome-desperta .pintura-cinza { opacity: 0.4; transition-duration: 1.2s; }
+.cena.sentidos.em-caca .pintura-cinza { opacity: 1; }
+.cena.sentidos.em-caca .nevoa-cena { opacity: 0.6; background: rgba(0, 0, 0, 0.35); }
+body.fome-desperta .passante.vulto svg { fill: rgba(140, 20, 30, 0.9); }
+body.fome-desperta .passante.vulto { animation: pulso-quente-op 1.2s ease-in-out infinite; }
+@keyframes pulso-quente-op { 50% { opacity: 0.9; } }
+.ponto.acende .ponto-luz { animation: acende-op 0.8s ease-out; }
+@keyframes acende-op { 30% { transform: translate(-50%, 0) scale(1.8); opacity: 1; } }
+/* Bloco da caçada, no alto, no centro: olho de 3 estados, palavras, poderes ativos, ? e Desistir. */
+.atencao-rua { display: flex; align-items: center; gap: 0.6rem; pointer-events: auto; padding: 0.3rem 0.5rem 0.3rem 0.7rem; }
+.atencao-rua[hidden] { display: none; }
+.atencao-rua .olho { width: 22px; height: 12px; border-radius: 50%; border: 1.6px solid currentColor; position: relative; flex: none; }
+.atencao-rua .olho::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: currentColor; }
+.atencao-rua[data-nivel='0'] .olho { transform: scaleY(0.25); }
+.atencao-rua[data-nivel='1'] .olho { transform: scaleY(0.6); }
+.atencao-rua .poderes-ativos { font: 600 0.78rem var(--sans); color: #ffb3bd; }
+.atencao-rua .poderes-ativos:empty { display: none; }
+.atencao-rua button { font: 600 0.75rem var(--sans); letter-spacing: 0.04em; color: var(--texto-suave); background: none; border: 1px solid var(--linha); padding: 0.15rem 0.45rem; cursor: pointer; min-height: 28px; }
+.atencao-rua button:hover { color: #fff; }
+.atencao-rua .caca-ajuda { border-radius: 50%; width: 28px; padding: 0; }
+body.furtividade .caca-desistir { display: none; }
+@media (max-width: 700px) { .atencao-rua { top: auto; bottom: 4.5rem; gap: 0.4rem; font-size: 0.9rem; white-space: nowrap; max-width: 94vw; overflow: hidden; } }
+.pulsa-ensino { animation: pulsa-ensino 0.8s ease-in-out 3 !important; }
+@keyframes pulsa-ensino { 50% { opacity: 0.45; } }
+.legenda-caca p { display: flex; gap: 0.6rem; align-items: baseline; }
+.leg { flex: none; display: inline-block; width: 22px; height: 10px; border-radius: 50%; }
+.leg-leque { background: rgba(255, 60, 80, 0.35); border-radius: 0 50% 50% 0; }
+.leg-anel { border: 2px solid rgba(255, 120, 120, 0.9); }
+.leg-barulho { border: 1.5px solid rgba(255, 220, 200, 0.8); }
+.leg-olho { border: 1.6px solid #e8ddc8; }
+/* Olhos de sangue: só opacidade e transform (um brilho na cabeça), sem animar o filtro da figura. */
+.personagem.olhos-sangue .corpo-sprite { animation: none; }
+.personagem::before { content: ''; position: absolute; left: 50%; top: 8%; width: 30%; aspect-ratio: 1; translate: -50% 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 30, 50, 0.85), transparent 70%); opacity: 0; z-index: 3; }
+.personagem.olhos-sangue::before { animation: olhos-op 1.4s ease-out; }
+@keyframes olhos-op { 25% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; } }

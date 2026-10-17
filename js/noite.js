@@ -609,6 +609,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (resta <= 0) clearInterval(t);
       }, 1000);
     }
+    alternarBarra(false);
+    if (emCaca && def.dur) cena.mostrarPoderAtivo(nome, def.dur);
+    else if (emCaca) cena.mostrarPoderAtivo(nome, 999);
     if (emCaca) {
       emCaca.poderes.add(nome);
       if (id === 'perscrutar-alma') emCaca.perscrutou = true;
@@ -620,6 +623,20 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }
     desenharBarra();
   }
+  camadas.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-caca-desistir]')) { ev.stopPropagation(); cena.cancelarFurtividade(); terminarSemCacar(); aviso('Você deixou a presa ir. Dá para caçar de novo.'); return; }
+    if (ev.target.closest('[data-caca-ajuda]')) {
+      ev.stopPropagation();
+      abrirDialogo(camadas, {
+        rotulo: 'A caçada',
+        html: `<div class="texto-narracao legenda-caca">
+          <p><span class="leg leg-leque"></span><b>O leque</b> no chão é para onde a presa olha. Dentro dele, na luz, ela repara.</p>
+          <p><span class="leg leg-anel"></span><b>O anel</b> sob a presa é o tempo: quando acaba, ela vai embora.</p>
+          <p><span class="leg leg-barulho"></span><b>Os círculos</b> no chão são barulho: correr chama a atenção.</p>
+          <p><span class="leg leg-olho"></span><b>As palavras</b> no alto dizem quanto a rua reparou: ninguém, alguém olhou, você foi visto.</p></div>`,
+      });
+    }
+  });
   barra?.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-poder]');
     if (b) { ev.stopPropagation(); usarDisciplina(b.dataset.poder); }
@@ -681,6 +698,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
   function iniciarAbordagem(pr, modo) {
     emCaca.alvo = pr;
+    if (modo === 'conversa') setTimeout(() => cena.ensinar('conversa', 'Escolha rápido. Quem hesita, assusta.'), 4400);
+    if (modo === 'frente') setTimeout(() => cena.ensinar('frente', 'Chegue perto e fale antes que ela grite.'), 4400);
     cena.falar('A FOME', ABORDAGENS[modo].explica, 4200);
     const zonas = lerVantagens().filter((v) => v.cacada && v.lugar === lugarId).map((v) => ({ x: v.x, y: v.y, raio: 0.12 }));
     if (modo === 'conversa') {
