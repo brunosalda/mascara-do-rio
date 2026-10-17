@@ -367,7 +367,8 @@ export function montarCena(raiz, {
     cena.addEventListener('pointerleave', () => { camLivre.borda = { x: 0, y: 0 }; atualizarVelCamera(); cena.classList.remove('rolando-borda'); });
     // Arrastar: mais de 8 px com o botão apertado rola a área (e o clique que soltou não anda).
     cena.addEventListener('pointerdown', (ev) => {
-      if (ev.button !== 0 || ev.target.closest('[data-ponto], button')) return;
+      if (ev.pointerType === 'touch') return; // no toque, rola com dois dedos (abaixo)
+      if ((ev.button !== 0 && ev.button !== 2) || ev.target.closest('[data-ponto], button')) return;
       const x0 = ev.clientX; const y0 = ev.clientY; const c0 = { x: camLivre.x, y: camLivre.y };
       const mover = (e) => {
         if (!camLivre.arrastando && Math.hypot(e.clientX - x0, e.clientY - y0) < 8) return;
@@ -386,6 +387,36 @@ export function montarCena(raiz, {
       cena.addEventListener('pointermove', mover);
       window.addEventListener('pointerup', soltar, { once: true });
     });
+    // Botão direito arrasta (sem abrir o menu do navegador).
+    cena.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    // Celular: dois dedos rolam a área.
+    const dedos = new Map();
+    let doisDedos = null;
+    cena.addEventListener('pointerdown', (ev) => {
+      if (ev.pointerType !== 'touch') return;
+      dedos.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (dedos.size === 2) {
+        const [a, b] = [...dedos.values()];
+        doisDedos = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cx: camLivre.x, cy: camLivre.y };
+        camLivre.arrastando = true;
+      }
+    });
+    cena.addEventListener('pointermove', (ev) => {
+      if (ev.pointerType !== 'touch' || !dedos.has(ev.pointerId)) return;
+      dedos.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (doisDedos && dedos.size === 2) {
+        const [a, b] = [...dedos.values()];
+        camLivre.x = doisDedos.cx + ((a.x + b.x) / 2 - doisDedos.mx);
+        camLivre.y = doisDedos.cy + ((a.y + b.y) / 2 - doisDedos.my);
+      }
+    });
+    const tirarDedo = (ev) => {
+      if (ev.pointerType !== 'touch') return;
+      dedos.delete(ev.pointerId);
+      if (doisDedos && dedos.size < 2) { doisDedos = null; camLivre.arrastando = false; ignorarClique = true; setTimeout(() => { ignorarClique = false; }, 300); }
+    };
+    cena.addEventListener('pointerup', tirarDedo);
+    cena.addEventListener('pointercancel', tirarDedo);
   }
   // Desvio simples: se a linha reta até o destino sai do chão, passa por um canto do chão (puxado um
   // pouco para dentro) de onde as duas retas ficam no chão.
@@ -1294,6 +1325,13 @@ export function montarCena(raiz, {
       }
       camLivre.x += camLivre.vx * dt;
       camLivre.y += camLivre.vy * dt;
+      // Andando para fora do enquadramento, a câmera o acompanha devagar até ele voltar ao meio.
+      if (!camLivre.arrastando && !camLivre.vx && !camLivre.vy && (alvo || Math.hypot(vel.x, vel.y) > 0.01)) {
+        const sx = camLivre.x + fx;
+        const sy = camLivre.y + fy;
+        if (sx < vw * 0.18 || sx > vw * 0.82) camLivre.x += (vw * 0.5 - sx) * Math.min(1, dt * 1.5);
+        if (sy < vh * 0.2 || sy > vh * 0.8) camLivre.y += (vh * 0.55 - sy) * Math.min(1, dt * 1.5);
+      }
       camLivre.x = limitar(camLivre.x, vw - W, 0);
       camLivre.y = limitar(camLivre.y, vh - H, 0);
       alvoX = camLivre.x;
