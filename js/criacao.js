@@ -1,6 +1,7 @@
 // Assistente de criação de personagem, em etapas (a "ficha detalhada"). Salva a ficha a cada avanço.
 // Fica no mesmo palco da criação por conversa: a pintura em tela cheia e cada etapa numa caixa larga
 // do jogo, com avançar e voltar como escolhas numeradas. O fim é o mesmo dossiê da conversa.
+import { molduraTela } from './moldura-tela.js';
 import * as v5 from './motor/v5.js';
 import * as banco from './banco.js';
 import { esc, aviso, on, pontos } from './ui.js';
@@ -421,6 +422,7 @@ export async function telaCriacao(raiz, personagem) {
     document.body.dataset.tela = 'cena';
     raiz.innerHTML = `
       <div class="tela-jogo tela-criacao">
+        ${molduraTela()}
         <section class="dialogo-cena dialogo-criacao dialogo-largo conversa assistente-jogo">
           <header class="dialogo-cabeca">
             <span class="grupo-rotulo rotulo-consciencia voz-alma"><span class="rosto" aria-hidden="true">F</span>Ficha detalhada · etapa ${etapa + 1} de ${v5.ETAPAS.length}</span>

@@ -4,6 +4,7 @@ import { esc, aviso, on } from './ui.js';
 import { telaCriacao } from './criacao.js';
 import { telaEntrevista } from './entrevista.js';
 import { telaNoite, telaMapa, telaEspera } from './noite.js';
+import { molduraTela } from './moldura-tela.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
 import { fecharTudo } from './jogo/camadas.js';
 import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos } from './ambiente.js';
@@ -68,6 +69,7 @@ export function telaLogin(raiz, { demo = false } = {}) {
   document.body.dataset.tela = 'cena';
   raiz.innerHTML = `
     <div class="tela-jogo tela-entrada">
+      ${molduraTela()}
       <div class="titulo-entrada">
         <p class="sobretitulo">Rio de Janeiro, depois da meia-noite</p>
         <h1 class="titulo-grande">A Máscara do Rio</h1>

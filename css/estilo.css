@@ -3396,3 +3396,18 @@ body.sem-efeitos .sombra-caca { transition: none; }
 /* Rodada 40, item 4: o rastro some devagar ao longo da noite (--frescor de 1, agora há pouco, a 0,25). */
 .rastro-amigo { opacity: calc(0.26 * var(--frescor, 1)); }
 .rastro-amigo.nitido { opacity: calc(0.48 * var(--frescor, 1)); }
+
+/* Rodada 40, item 3: entrada, criação e espera com a cara da noite (moldura de pedra e bronze, fundo de
+   foto vista do alto e escurecida, títulos em placa de bronze, botões redondos). Ordem e textos iguais. */
+.moldura.moldura-tela { display: block; position: fixed; z-index: 140; pointer-events: none; inset: 12px;
+  border: 2px solid var(--bronze-claro); box-shadow: 0 0 0 3px #1c150f, 0 0 0 5px var(--bronze), 0 0 0 6px #1c150f, inset 0 0 40px 10px rgba(0, 0, 0, 0.7); }
+body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
+  background-image: image-set(url("../img/cidade/alto/p/lapa.webp") type("image/webp"), url("../img/cidade/alto/lapa.jpg") type("image/jpeg")) !important;
+  background-size: cover; background-position: center; filter: brightness(0.5) saturate(0.85); }
+.tela-criacao .dialogo-cabeca .grupo-rotulo, .caixa-entrada .dialogo-cabeca .grupo-rotulo, .quadro-espera .ciclo-linha b {
+  display: inline-block; padding: 0.22rem 0.9rem; color: #fbeccb; text-shadow: 0 1px 0 #2a1a08;
+  background: linear-gradient(180deg, #a8823e, #6e5229 55%, #4a3518); border-top: 1px solid #f0d590;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%); }
+.tela-criacao .dialogo-cena, .caixa-entrada { border: 2px solid #8a6a36; box-shadow: 0 0 0 2px #1c150f, 0 10px 30px rgba(0, 0, 0, 0.7); }
+.tela-criacao .btn, .caixa-entrada .btn { border-radius: 999px; border: 1.5px solid #c9a25a; background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+@media (max-width: 760px) { .moldura.moldura-tela { inset: 6px; } .moldura.moldura-tela .canto { width: 40px; height: 40px; } }

@@ -16,6 +16,7 @@ import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { pinturaLeve } from './jogo/imagens.js';
+import { molduraTela } from './moldura-tela.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
@@ -1746,14 +1747,18 @@ export async function telaMapa(raiz, p) {
 // no aparelho pelo lugar e pelo detalhe, e continua valendo nas noites seguintes.
 export async function telaEspera(raiz, p, { aoEditar } = {}) {
   raiz.innerHTML = `
-    <div class="tela-jogo">
+    <div class="tela-jogo tela-espera">
       <div class="palco"></div>
+      ${molduraTela()}
       <aside class="hud-plano quadro-noite quadro-ciclo quadro-espera" aria-live="polite"></aside>
     </div>`;
   const camadas = raiz.querySelector('.tela-jogo');
   const quadro = raiz.querySelector('.quadro-espera');
   const lugarId = 'lapa';
   const achados = descobertas(lugarId, 0);
+  // Rodada 40: a espera também na Lapa vista do alto; os detalhes vão para os pontos livres do chão.
+  const geoEspera = geografia('lapa-alto');
+  if (geoEspera.alto && geoEspera.pontosLivres) achados.detalhes = achados.detalhes.map((d, i) => { const [x, y] = geoEspera.pontosLivres[(i * 2 + 1) % geoEspera.pontosLivres.length]; return { ...d, x, y }; });
   const chaveVisto = (id) => `mascara.visto.${lugarId}.${id}`;
   const visto = (id) => { try { return localStorage.getItem(chaveVisto(id)) === '1'; } catch { return false; } };
   const contagem = () => ({ vistos: achados.detalhes.filter((d) => visto(d.id)).length, total: achados.detalhes.length });
@@ -1780,7 +1785,7 @@ export async function telaEspera(raiz, p, { aoEditar } = {}) {
   }));
   const comentados = new Set();
   const cena = montarCena(raiz.querySelector('.palco'), {
-    cla: p.ficha?.cla, sprite: p.sprite, imagem: CENARIO_ABERTURA, lugar: lugarId, inicio: [0.45, 0.8],
+    cla: p.ficha?.cla, sprite: p.sprite, imagem: geoEspera.imagem || CENARIO_ABERTURA, lugar: geoEspera.alto ? 'lapa-alto' : lugarId, inicio: geoEspera.entrada || [0.45, 0.8],
     pontos: pontos(),
     comentarios: achados.comentarios,
     comentar: (c) => { if (comentados.has(c.id)) return false; comentados.add(c.id); return true; },

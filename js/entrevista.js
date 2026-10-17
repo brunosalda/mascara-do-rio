@@ -1,5 +1,6 @@
 // Criação por conversa: as lembranças aparecem como um diálogo; cada resposta molda a ficha,
 // que é montada sozinha no fim. O progresso fica no aparelho até a ficha ser salva.
+import { molduraTela } from './moldura-tela.js';
 import * as v5 from './motor/v5.js';
 import { CENAS, FALAS_CLA, trocar, clasSugeridos, montarFicha } from './motor/roteiro.js';
 import * as banco from './banco.js';
@@ -141,6 +142,7 @@ export async function telaEntrevista(raiz, personagem) {
     const larga = fim || c.tipo === 'cla';
     raiz.innerHTML = `
       <div class="tela-jogo tela-criacao">
+        ${molduraTela()}
         <section class="dialogo-cena dialogo-criacao ${larga ? 'dialogo-largo' : 'dialogo-direita'} conversa">
           <header class="dialogo-cabeca">
             <span class="grupo-rotulo rotulo-consciencia voz-alma"><span class="rosto" aria-hidden="true">C</span>${fim ? 'Sua ficha' : `A consciência · lembrança ${Math.min(e.passo + 1, PERGUNTAS)} de ${PERGUNTAS}`}</span>
