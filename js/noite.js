@@ -224,7 +224,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const enviado = acao && !alterado;
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
-    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''}${plano.disciplina_principal && plano.disciplina_de === plano.principal ? ` <span class="icone-sangue" title="Com ${esc(plano.disciplina_principal)}">✶</span>` : ''} <i>✓</i>` : '<em>falta escolher</em>';
+    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''}${plano.disciplina_principal && plano.disciplina_de === plano.principal ? ` <span class="gota-sangue" title="Com ${esc(plano.disciplina_principal)}"></span>` : ''} <i>✓</i>` : '<em>falta escolher</em>';
     const doMinijogo = plano.cacada_curta && plano.cacada === plano.cacada_de;
     const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>'
       : pt.cacada && doMinijogo && plano.cacada_falhou ? `<span class="linha-falhou">${esc(plano.cacada_curta)}</span>`
@@ -454,7 +454,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         ${pt.livre ? `<label>O que exatamente?<textarea data-livre rows="3" maxlength="1200">${esc(texto)} </textarea></label>` : ''}
         <ol class="escolhas">
           <li><button type="button" data-principal><span class="escolha-num">1.</span> — Fazer isto esta noite</button></li>
-          ${discOpcao ? `<li><button type="button" data-com-disciplina><span class="escolha-num">2.</span> — Fazer isto com ${esc(discOpcao)} <span class="icone-sangue" aria-hidden="true">✶</span></button></li>` : ''}
+          ${discOpcao ? `<li><button type="button" data-com-disciplina><span class="escolha-num">2.</span> — <span class="gota-sangue" aria-hidden="true"></span>${esc(discOpcao.frase)} · ${esc(discOpcao.nome)}</button></li>` : ''}
           <li><button type="button" data-fechar-dialogo><span class="escolha-num">${discOpcao ? 3 : 2}.</span> — Pensar melhor</button></li>
         </ol>`,
       rodape: plano.principal && plano.principal !== texto ? `<span class="nota">Isto substitui a ação principal atual: “${esc(curto(plano.principal, 10))}”.</span>` : '',
@@ -468,7 +468,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     camada.el.querySelector('[data-com-disciplina]')?.addEventListener('click', async (ev) => {
       const botao = ev.currentTarget;
       if (!(await avisoDoSangue())) return;
-      plano.disciplina_principal = discOpcao;
+      plano.disciplina_principal = discOpcao.nome;
       plano.disciplina_de = texto;
       confirmarEscolha(botao, () => escolherPrincipal(texto, camada));
     });
@@ -534,12 +534,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }
     try { return v5.calcular(p.ficha || {}).disciplinas || {}; } catch { return {}; }
   })();
+  const FRASE_DISC = {
+    ofuscacao: 'Seguir sem ser visto', presenca: 'Fazer o lugar inteiro querer falar com você', dominacao: 'Mandar dizer a verdade',
+    auspicios: 'Ler as auras e os rastros do lugar', potencia: 'Forçar a passagem', rapidez: 'Sair antes que alguém perceba',
+  };
   function disciplinaDaOpcao(texto) {
     const t = semAcentoV(texto);
     for (const v of VERBOS) {
       if (!v.termos.some((x) => t.includes(x))) continue;
       const d = v.discs.find((id) => (meusNiveisDisc[id] | 0) > 0);
-      if (d) return v5.DISCIPLINAS[d].nome;
+      if (d) return { id: d, nome: v5.DISCIPLINAS[d].nome, frase: FRASE_DISC[d] };
     }
     return null;
   }
@@ -562,7 +566,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const agora = Date.now();
     barra.innerHTML = poderesCena.filter((x) => x.quando === 'sempre' || emCaca).map((x) => {
       const resta = Math.ceil(((ativosAte.get(x.id) || 0) - agora) / 1000);
-      return `<button type="button" data-poder="${x.id}" title="${esc(nomePoder(x.id))}: ${esc(x.efeito)}"${resta > 0 ? ' class="ativo"' : ''}>${esc(nomePoder(x.id))}${resta > 0 ? ` <small>${resta} s</small>` : ''}</button>`;
+      return `<button type="button" data-poder="${x.id}" title="${esc(nomePoder(x.id))}: ${esc(x.efeito)}"${resta > 0 ? ' class="ativo"' : ''}><span class="gota-sangue" aria-hidden="true"></span>${esc(nomePoder(x.id))}${resta > 0 ? ` <small>${resta} s</small>` : ''}</button>`;
     }).join('') || '<span class="nota">Nenhum poder serve aqui agora.</span>';
   }
   function alternarBarra(abrir = barra.hidden) {
@@ -643,6 +647,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
       aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
     }), pr.vulneravel ? 1700 : 150);
+    // Conhecer a presa: parado perto dela por 2 s antes de responder, você repara em algo a mais.
+    const pos0 = cena.posicao();
+    setTimeout(() => {
+      if (!emCaca || emCaca.alvo || !pr.repara) return;
+      const p1 = cena.posicao();
+      if (Math.hypot(p1.x - pos0.x, p1.y - pos0.y) > 0.01) return;
+      const temp = emCaca.perscrutou && pr.temperamento ? ` (ressonância ${TEMPERAMENTOS[pr.temperamento].nome})` : '';
+      emCaca.observou = `${pr.repara}${temp}`;
+      cena.textoDoBalao(`Como? <small class="repara">Você repara: ${esc(pr.repara)}${esc(temp)}.</small>`);
+    }, (pr.vulneravel ? 1700 : 150) + 2000);
   }
   function iniciarAbordagem(pr, modo) {
     emCaca.alvo = pr;
@@ -654,7 +668,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       const perguntar = (n) => {
         if (n >= PERGUNTAS_CONVERSA.length) { terminarCaca(pr, modo, (2 - boas) * 0.3 + (hesitou ? 0.25 : 0), boas >= 1); return; }
         const q = PERGUNTAS_CONVERSA[n];
-        const extra = n === 0 && emCaca.presenca ? [`${nomePoder(emCaca.presenca)}: ${emCaca.presenca === 'assombro' ? 'um sorriso, e ela já confia' : 'um olhar, e ela não ousa recusar'}`] : [];
+        const extra = n === 0 && emCaca.presenca ? [`${nomePoder(emCaca.presenca)}: ${emCaca.presenca === 'assombro' ? 'um sorriso, e ela já confia' : 'um olhar, e ela não ousa recusar'}`]
+          : n === 0 && emCaca.observou ? ['Falar do que você reparou nela'] : [];
         cena.perguntarNoBalao({
           voz: 'A FOME', texto: q.texto, opcoes: [...q.opcoes, ...extra],
           aoEscolher: (i) => { if (i === 0 || i === 2) boas += i === 2 ? 2 : 1; setTimeout(() => perguntar(n + 1), 500); },
@@ -668,7 +683,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (modo === 'frente') setTimeout(() => cena.irAte(pr), 300);
     cena.iniciarFurtividade({
       alvo: pr, modo, zonas, limite: 20,
+      aoVisto: () => saidasDeQuemFoiVisto(),
       aoFim: ({ chegou, atencao }) => {
+        if (!chegou && modo === 'sombra' && !emCaca.segunda) { segundaChance(pr, modo, atencao, zonas); return; }
         if (!chegou) { terminarCaca(pr, modo, atencao, false); return; }
         if (modo !== 'frente') { terminarCaca(pr, modo, atencao, true); return; }
         const t0 = performance.now();
@@ -681,6 +698,55 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       },
     });
   }
+  // Ser visto abre um segundo momento: meio segundo lento (na cena) e um balão com saídas.
+  function saidasDeQuemFoiVisto() {
+    if (!emCaca || emCaca.visto) return;
+    emCaca.visto = true;
+    const poderes = ['manto-sombras', 'assombro', 'nublar-memoria'].filter((id) => meusPoderes.has(id));
+    const opcoes = ['Disfarçar: atender o celular', ...poderes.map((id) => `Usar ${nomePoder(id)}`), 'Seguir assim'];
+    cena.perguntarNoBalao({
+      voz: 'A FOME', texto: 'Viram você.', opcoes, ms: 6000,
+      aoEscolher: (i) => {
+        if (i === 0) {
+          cena.ajustarCaca((c) => { c.atencao = 0.5; c.limite = Math.max(4, c.limite - 4); });
+          emCaca.disfarcou = true;
+          aviso('Você disfarçou: a rua só olhou. Sobrou menos tempo.');
+        } else if (i <= poderes.length) {
+          const id = poderes[i - 1];
+          cena.ajustarCaca((c) => { c.atencao = id === 'nublar-memoria' ? 0.45 : 0.5; if (id === 'manto-sombras') c.manto = true; });
+          emCaca.poderes.add(nomePoder(id));
+          som.reacao?.('disciplina', 0);
+          aviso(`${nomePoder(id)}: a rua desvia o olhar. Fica anotado (Despertar).`);
+        } else {
+          emCaca.riscoMascara = true;
+          aviso('Você seguiu assim. Fica anotado: foi visto, risco à Máscara.');
+        }
+      },
+      aoExpirar: () => { emCaca && (emCaca.riscoMascara = true); },
+    });
+  }
+  // A presa que escapa deixa pegadas por 6 s: "Seguir até a esquina" dá uma segunda chance de 10 s.
+  function segundaChance(pr, modo, atencao, zonas) {
+    emCaca.segunda = true;
+    const lado = pr.x >= 0.5 ? 1 : -1;
+    const destino = { ...pr, x: Math.max(0.05, Math.min(0.95, pr.x + lado * 0.14)), parada: undefined };
+    cena.pegadas(pr.x, pr.y, destino.x, destino.y);
+    cena.perguntarNoBalao({
+      voz: 'A FOME', texto: 'Ela foi para a esquina.', opcoes: ['Seguir até a esquina', 'Deixar ir'], ms: 6000,
+      aoEscolher: (i) => {
+        if (i !== 0) { terminarCaca(pr, modo, atencao, false); return; }
+        emCaca.alvo = destino;
+        cena.atualizarPontos([{ ...destino, discreto: false, alvo: true }]);
+        cena.iniciarFurtividade({
+          alvo: destino, modo, zonas, limite: 10,
+          aoVisto: () => saidasDeQuemFoiVisto(),
+          aoFim: (r) => { emCaca.seguiu = true; terminarCaca(destino, modo, Math.max(atencao, r.atencao), r.chegou); },
+        });
+      },
+      aoExpirar: () => terminarCaca(pr, modo, atencao, false),
+    });
+  }
+
   function terminarCaca(pr, modo, atencao, deuCerto, jaPerguntou = false) {
     if (!emCaca) return;
     // Nublar a Memória: quem viu esquece ("foi visto" vira "alguém olhou").
@@ -695,6 +761,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const extras = [];
     if (emCaca.perscrutou && pr.temperamento) extras.push(`ressonância ${TEMPERAMENTOS[pr.temperamento].nome}`);
     if (emCaca.esqueceu) extras.push('fez a testemunha esquecer');
+    if (emCaca.observou) extras.push(`observou a presa antes: ${emCaca.observou}`);
+    if (emCaca.disfarcou) extras.push('disfarçou quando viram');
+    if (emCaca.riscoMascara) extras.push('foi visto, risco à Máscara');
+    if (emCaca.seguiu) extras.push('seguiu a presa até a esquina');
     if (emCaca.poderes.size) extras.push(`usou ${[...emCaca.poderes].join(', ')} (Despertar)`);
     if (deuCerto && !emCaca.beijou) {
       emCaca.beijou = true;
@@ -894,6 +964,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     },
   });
   desenharPlano();
+  // Só no modo de depuração: a cena fica acessível no console, para os testes.
+  if (location.hash.includes('depurar')) window.__cena = cena;
   if (noite && acao?.encerrada_em) fonte.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
 
   if (abrir === 'ficha') { abrirFicha(); return; }

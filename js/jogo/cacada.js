@@ -4,13 +4,13 @@
 
 // Presas genéricas: uma linha cada. "vulneravel" faz a voz de HUMANIDADE comentar (sem efeito na regra).
 export const PRESAS = [
-  { id: 'ponto', rotulo: 'um homem sozinho no ponto de ônibus' },
-  { id: 'casal', rotulo: 'um casal saindo de um bar' },
-  { id: 'marquise', rotulo: 'alguém dormindo sob a marquise', vulneravel: 'Ele não tem para onde ir.' },
-  { id: 'entregador', rotulo: 'um entregador encostado na moto' },
-  { id: 'celular', rotulo: 'uma mulher discutindo ao celular' },
-  { id: 'bebado', rotulo: 'um rapaz bêbado procurando o caminho de casa', vulneravel: 'Ele mal fica de pé.' },
-  { id: 'turista', rotulo: 'um turista perdido com o mapa no celular' },
+  { id: 'ponto', rotulo: 'um homem sozinho no ponto de ônibus', repara: 'olha o relógio toda hora; o ônibus está atrasado' },
+  { id: 'casal', rotulo: 'um casal saindo de um bar', repara: 'discutem baixo; um deles quer ir embora sozinho' },
+  { id: 'marquise', rotulo: 'alguém dormindo sob a marquise', vulneravel: 'Ele não tem para onde ir.', repara: 'acorda com qualquer barulho e volta a dormir' },
+  { id: 'entregador', rotulo: 'um entregador encostado na moto', repara: 'espera um pedido que não chega e está entediado' },
+  { id: 'celular', rotulo: 'uma mulher discutindo ao celular', repara: 'está com raiva de alguém e não presta atenção em volta' },
+  { id: 'bebado', rotulo: 'um rapaz bêbado procurando o caminho de casa', vulneravel: 'Ele mal fica de pé.', repara: 'aceita ajuda de qualquer um' },
+  { id: 'turista', rotulo: 'um turista perdido com o mapa no celular', repara: 'procura alguém que fale inglês' },
 ];
 
 // Três presas para este lugar e esta noite, presas a âncoras diferentes (sorteio fixo pela noite).

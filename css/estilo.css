@@ -2250,3 +2250,31 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
 .ponto[data-ponto^='detalhe-sent-'] { display: none; }
 .cena.sentidos .ponto[data-ponto^='detalhe-sent-'] { display: block; --cor-ponto: 255, 80, 90; }
 .icone-sangue { color: #e05a6a; font-style: normal; }
+
+/* --- Rodada 22 --------------------------------------------------------------------------------------- */
+/* Marca de disciplina: uma gota vermelha (não se confunde com o ✦ da vantagem). */
+.gota-sangue { display: inline-block; width: 0.55em; height: 0.75em; margin: 0 0.35em 0 0.1em; vertical-align: -0.05em;
+  background: #d8213d; border-radius: 50% 50% 50% 50% / 62% 62% 40% 40%; clip-path: polygon(50% 0, 100% 62%, 85% 92%, 50% 100%, 15% 92%, 0 62%); box-shadow: 0 0 4px rgba(216, 33, 61, 0.6); }
+/* Campo de visão: sempre fraco; forte com Sentidos. A presa aponta para onde olha. */
+.campo-presa path { fill: rgba(255, 60, 80, 0.07); stroke: rgba(255, 80, 100, 0.22); }
+.campo-presa.forte path { fill: rgba(255, 40, 60, 0.2); stroke: rgba(255, 60, 80, 0.6); }
+.ponto-presa.olha-esq .ponto-rotulo::before { content: '◂ '; color: #ff9aa6; }
+.ponto-presa.olha-dir .ponto-rotulo::after { content: ' ▸'; color: #ff9aa6; }
+/* Ser visto: meio segundo mais lento. */
+.cena.camera-lenta .pintura { filter: saturate(0.6) brightness(0.9) !important; }
+/* Sentidos em pulso: a onda atravessa a pintura e acende o que encontra. */
+.onda-sentidos { position: absolute; z-index: 2850; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; pointer-events: none;
+  border: 2px solid rgba(255, 60, 80, 0.35); animation: onda-sentidos 1.2s ease-out forwards; }
+.onda-sentidos.forte { border-width: 3px; border-color: rgba(255, 60, 80, 0.75); box-shadow: 0 0 30px rgba(255, 60, 80, 0.4); }
+@keyframes onda-sentidos { from { transform: scale(0.2); opacity: 1; } to { transform: scale(60); opacity: 0; } }
+.ponto.acende .ponto-luz { animation: acende 0.8s ease-out; }
+@keyframes acende { 30% { transform: scale(1.8); opacity: 1; filter: brightness(1.8); } }
+/* Piscar de sombra em sombra: marcas discretas nas zonas escuras ao alcance. */
+.marca-sombra { position: absolute; z-index: 3; width: 26px; height: 10px; margin: -5px 0 0 -13px; border-radius: 50%; pointer-events: none;
+  border: 1.5px dashed rgba(200, 160, 255, 0.7); animation: marca-sombra 1.4s ease-in-out infinite; }
+@keyframes marca-sombra { 50% { opacity: 0.4; transform: scale(1.15); } }
+/* Pegadas da presa que escapa. */
+.pegada { position: absolute; z-index: 2; width: 7px; height: 11px; margin: -5px 0 0 -3px; border-radius: 50%; pointer-events: none;
+  background: rgba(10, 10, 12, 0.55); opacity: 0; animation: pegada 6s ease-out forwards; }
+@keyframes pegada { 5% { opacity: 1; } 70% { opacity: 0.8; } 100% { opacity: 0; } }
+.balao-texto .repara { display: block; margin-top: 0.25rem; font-style: italic; color: #e8d8bf; }

@@ -270,7 +270,7 @@ export function montarCena(raiz, {
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
   function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, aoCancelar, perto: pertoDe = null, ms = 6000 }) {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
-    balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}<span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
+    balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
     balao.hidden = false;
     falaAte = performance.now() + ms;
     balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte };
@@ -325,7 +325,8 @@ export function montarCena(raiz, {
   }
   const campoEl = cena.querySelector('.campo-presa path');
   function desenharCampo(c) {
-    if (!c || performance.now() > sentidosAte) { campoEl.setAttribute('d', ''); return; }
+    if (!c) { campoEl.setAttribute('d', ''); return; }
+    campoEl.parentNode.classList.toggle('forte', performance.now() < sentidosAte);
     const pts = [];
     for (let i = 0; i <= 10; i++) {
       const a = c.olhar - 0.62 + (1.24 * i) / 10;
@@ -333,9 +334,13 @@ export function montarCena(raiz, {
     }
     campoEl.setAttribute('d', `M${c.alvo.x.toFixed(4)},${c.alvo.y.toFixed(4)} L${pts.join(' L')} Z`);
   }
-  function iniciarFurtividade({ alvo, modo = 'sombra', limite = 20, zonas = [], aoFim }) {
-    caca = { alvo, modo, limite, zonas, aoFim, t0: performance.now(), atencao: 0, anel: 0, olhou: false, olhar: alvo.x > 0.5 ? Math.PI : 0 };
+  function iniciarFurtividade({ alvo, modo = 'sombra', limite = 20, zonas = [], aoFim, aoVisto }) {
+    caca = { alvo, modo, limite, zonas, aoFim, aoVisto, t0: performance.now(), atencao: 0, anel: 0, olhou: false, olhar: alvo.x > 0.5 ? Math.PI : 0, piscar: caca?.piscar };
     cena.classList.add('em-caca');
+    // A presa olha para um lado: o rótulo dela aponta para onde ela olha.
+    const elP = camadaPontos.querySelector('.ponto-presa');
+    elP?.classList.toggle('olha-esq', caca.olhar > 1);
+    elP?.classList.toggle('olha-dir', caca.olhar <= 1);
     atencaoEl.hidden = false;
     atencaoEl.textContent = PALAVRAS_ATENCAO(0);
   }
@@ -399,6 +404,13 @@ export function montarCena(raiz, {
       taxa += 0.5;
     }
     c.atencao = limitar(c.atencao + taxa * dt, 0, 1);
+    if (!c.vistoAvisado && c.atencao >= 0.67) {
+      c.vistoAvisado = true;
+      c.lentoAte = agora + 500;
+      cena.classList.add('camera-lenta');
+      setTimeout(() => cena.classList.remove('camera-lenta'), 600);
+      c.aoVisto?.();
+    }
     // O tempo se vê: um anel fino sob a presa se esvazia; nos últimos 6 s, ela se afasta devagar.
     const resta = c.limite - (agora - c.t0) / 1000;
     const elPresa = camadaPontos.querySelector('.ponto-presa');
@@ -476,6 +488,9 @@ export function montarCena(raiz, {
     const agora = performance.now();
     if (id === 'sentidos-agucados') {
       sentidosAte = agora + 10000;
+      ondaDosSentidos(true);
+      clearInterval(usarPoder.pulsos);
+      usarPoder.pulsos = setInterval(() => { if (performance.now() < sentidosAte) ondaDosSentidos(false); else clearInterval(usarPoder.pulsos); }, 3000);
       alvoDoRastro = alvo || caca?.alvo || lista.filter((p) => p.tipo === 'detalhe' && !p.visto).sort((a, b) => dist(a.x, a.y, pos.x, pos.y) - dist(b.x, b.y, pos.x, pos.y))[0] || null;
       mostrarTudoAte = agora + 10000;
       proximaChecagem = 0;
@@ -493,6 +508,7 @@ export function montarCena(raiz, {
       else if (id === 'passagem-invisivel') caca.invisivelAte = agora + 8000;
       else if (id === 'ligeireza') caca.ligeireza = true;
       else if (id === 'piscar') {
+        caca.piscar = true; // daqui até o fim da caçada: clique duplo numa marca de sombra atravessa até ela
         const dx = caca.alvo.x - pos.x;
         const dy = caca.alvo.y - pos.y;
         const n = Math.hypot(dx * ASPECTO, dy) || 1;
@@ -505,6 +521,62 @@ export function montarCena(raiz, {
     som.reacao?.('disciplina', 0);
     return true;
   }
+  // Sentidos em pulso: uma onda atravessa a pintura em 1,2 s e acende o que encontra; depois, um pulso
+  // fraco a cada 3 s enquanto durar.
+  function ondaDosSentidos(forte) {
+    const el = document.createElement('span');
+    el.className = `onda-sentidos${forte ? ' forte' : ''}`;
+    el.style.left = pct(pos.x);
+    el.style.top = pct(pos.y - altura(pos.y) * 0.5);
+    mundo.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+    for (const p of lista) {
+      const elp = camadaPontos.querySelector(`[data-ponto="${CSS.escape(p.id)}"]`);
+      if (!elp) continue;
+      const atraso = Math.min(1200, dist(p.x, p.y, pos.x, pos.y) * 1400);
+      setTimeout(() => { elp.classList.remove('acende'); void elp.offsetWidth; elp.classList.add('acende'); }, atraso);
+    }
+  }
+
+  // Piscar de sombra em sombra: marcas discretas nas zonas escuras ao alcance.
+  let marcasSombra = [];
+  function atualizarMarcasSombra() {
+    mundo.querySelectorAll('.marca-sombra').forEach((m) => m.remove());
+    marcasSombra = [];
+    if (!caca?.piscar) return;
+    for (let i = 0; i < 24 && marcasSombra.length < 3; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const r = 0.12 + (i % 3) * 0.05;
+      const q = [pos.x + (Math.cos(a) * r) / ASPECTO, pos.y + Math.sin(a) * r * 0.45];
+      if (!dentro(q, geo.chao) || luzEm(q[0], q[1]) > 0.12) continue;
+      if (marcasSombra.some((m) => dist(m[0], m[1], q[0], q[1]) < 0.08)) continue;
+      marcasSombra.push(q);
+      const el = document.createElement('span');
+      el.className = 'marca-sombra';
+      el.style.left = pct(q[0]);
+      el.style.top = pct(q[1]);
+      mundo.appendChild(el);
+    }
+  }
+  const intervaloMarcas = setInterval(() => {
+    if (!raiz.isConnected) { clearInterval(intervaloMarcas); return; }
+    if (caca?.piscar || marcasSombra.length) atualizarMarcasSombra();
+  }, 600);
+
+  // Pegadas da presa que escapa, por 6 s.
+  function pegadas(x0, y0, x1, y1) {
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      const el = document.createElement('span');
+      el.className = `pegada${i % 2 ? ' dir' : ''}`;
+      el.style.left = pct(x0 + (x1 - x0) * t);
+      el.style.top = pct(y0 + (y1 - y0) * t + (i % 2 ? 0.006 : -0.006));
+      el.style.animationDelay = `${i * 120}ms`;
+      mundo.appendChild(el);
+      setTimeout(() => el.remove(), 6000);
+    }
+  }
+
   function desenharRastro(agora) {
     if (agora > sentidosAte || !alvoDoRastro) return;
     // Um rastro vermelho e tremido do personagem até o alvo.
@@ -911,7 +983,8 @@ export function montarCena(raiz, {
     if (!vivo) return;
     if (!raiz.isConnected) { desmontar(); return; }
     const dtReal = agora - ultimo;
-    const dt = Math.min(0.12, dtReal / 1000);
+    // Ser visto na caçada: meio segundo mais lento.
+    const dt = Math.min(0.12, dtReal / 1000) * (caca?.lentoAte > agora ? 0.35 : 1);
     if (medidor) {
       tempos.push([agora, dtReal]);
       while (tempos.length && agora - tempos[0][0] > 2000) tempos.shift();
@@ -1123,7 +1196,7 @@ export function montarCena(raiz, {
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); return; }
     if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
-    if (balaoEscolha && /^[1-3]$/.test(k) && balao.querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
+    if (balaoEscolha && /^[1-9]$/.test(k) && balao.querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
     if (k === 'e' || k === 'enter' || k === ' ') {
       if (perto) { ev.preventDefault(); interagir(perto); }
       return;
@@ -1196,7 +1269,23 @@ export function montarCena(raiz, {
     esperaAte = performance.now() + (reduzido() ? 0 : 80);
     semProgresso = 0;
   });
-  cena.addEventListener('dblclick', () => { if (alvo) alvo.correr = true; });
+  cena.addEventListener('dblclick', (ev) => {
+    // Piscar de sombra em sombra: clique duplo perto de uma marca atravessa até ela.
+    if (caca?.piscar && marcasSombra.length) {
+      const [px, py] = telaParaPintura(ev.clientX, ev.clientY);
+      const m = marcasSombra.find((q) => dist(q[0], q[1], px, py) < 0.06);
+      if (m) {
+        alvo = null;
+        pos.x = m[0];
+        pos.y = m[1];
+        boneco.classList.add('piscou');
+        setTimeout(() => boneco.classList.remove('piscou'), 300);
+        atualizarMarcasSombra();
+        return;
+      }
+    }
+    if (alvo) alvo.correr = true;
+  });
 
   document.addEventListener('keydown', aoApertar);
   document.addEventListener('keyup', aoSoltar);
@@ -1256,6 +1345,9 @@ export function montarCena(raiz, {
     iniciarFurtividade,
     usarPoder,
     beijo,
+    pegadas,
+    ajustarCaca: (fn) => { if (caca) fn(caca); },
+    textoDoBalao: (html) => { if (balaoEscolha) { const t = balao.querySelector('.balao-texto'); if (t) t.innerHTML = html; } },
     emFurtividade: () => !!caca,
     // Anda até um ponto (de frente, na caçada: ele vai direto até a presa).
     irAte: (p) => {
