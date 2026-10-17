@@ -272,7 +272,9 @@ export function montarCena(raiz, {
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
   function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, aoCancelar, perto: pertoDe = null, ms = 6000 }) {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
-    balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
+    // Balão com prazo mostra o prazo: uma linha fina que se esvazia embaixo das escolhas.
+    const prazo = ms < 1e8 ? `<span class="balao-prazo" style="animation-duration:${ms}ms"></span>` : '';
+    balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>${prazo}`;
     balao.hidden = false;
     falaAte = performance.now() + ms;
     balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte };
@@ -1402,6 +1404,16 @@ export function montarCena(raiz, {
     pegadas,
     mostrarPoderAtivo,
     ensinar,
+    // O momento da caçada, para escolher o poder que mais serve.
+    estadoCaca: () => (caca ? { naSombra: luzEm(pos.x, pos.y) < 0.25, parado: Math.hypot(vel.x, vel.y) < 0.01, dPresa: dist(caca.alvo.x, caca.alvo.y, pos.x, pos.y), noCampo: dentroDoCampo(caca, pos.x, pos.y) } : null),
+    // Aviso curto dentro do bloco da caçada (2,5 s).
+    avisoCaca: (texto) => {
+      const el = document.createElement('span');
+      el.className = 'aviso-caca';
+      el.textContent = texto;
+      atencaoEl.insertBefore(el, atencaoEl.querySelector('.caca-ajuda'));
+      setTimeout(() => el.remove(), 2500);
+    },
     ajustarCaca: (fn) => { if (caca) fn(caca); },
     textoDoBalao: (html) => { if (balaoEscolha) { const t = balao.querySelector('.balao-texto'); if (t) t.innerHTML = html; } },
     emFurtividade: () => !!caca,

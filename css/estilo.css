@@ -2326,3 +2326,7 @@ body.furtividade .caca-desistir { display: none; }
   background: radial-gradient(circle, rgba(255, 30, 50, 0.85), transparent 70%); opacity: 0; z-index: 3; }
 .personagem.olhos-sangue::before { animation: olhos-op 1.4s ease-out; }
 @keyframes olhos-op { 25% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; } }
+/* Prazo do balão: linha fina que se esvazia. Aviso curto no bloco da caçada. */
+.balao-prazo { display: block; height: 2px; margin-top: 0.4rem; background: rgba(255, 190, 140, 0.8); transform-origin: left center; animation: prazo-balao linear forwards; }
+@keyframes prazo-balao { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.aviso-caca { font: italic 600 0.82rem var(--titulo); color: #ffe2b8; animation: caca-entra 0.3s ease-out both; }

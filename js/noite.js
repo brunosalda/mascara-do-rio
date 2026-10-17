@@ -508,7 +508,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           confirmarEscolha(b, async () => {
             camada.fechar();
             // Com poderes de caçada na ficha, o aviso do sangue vem antes, para não parar a caçada no meio.
-            if (poderesCena.some((x) => x.quando === 'caca')) await avisoDoSangue();
+            if (poderesCena.some((x) => x.quando === 'caca')) await avisoDoSangueNaEntrada();
             cacarAgora(lugarCaca);
           });
           return;
@@ -554,6 +554,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       if (d) return { id: d, nome: v5.DISCIPLINAS[d].nome, frase: FRASE_DISC[d] };
     }
     return null;
+  }
+  // Ao entrar na caçada nada está sendo usado ainda: o aviso só tem "Entendi".
+  async function avisoDoSangueNaEntrada() {
+    try { if (localStorage.getItem(chaveSangue) === '1') return; } catch { /* sem armazenamento */ }
+    await perguntar(camadas, { rotulo: 'O sangue desperta', texto: `<p>${esc(AVISO_DESPERTAR)}</p>`, opcoes: ['Entendi'] });
+    try { localStorage.setItem(chaveSangue, '1'); } catch { /* sem armazenamento */ }
   }
   async function avisoDoSangue() {
     let avisado = false;
@@ -709,7 +715,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (n >= PERGUNTAS_CONVERSA.length) { terminarCaca(pr, modo, (2 - boas) * 0.3 + (hesitou ? 0.25 : 0), boas >= 1); return; }
         const q = PERGUNTAS_CONVERSA[n];
         const extra = n === 0 && emCaca.presenca ? [`${nomePoder(emCaca.presenca)}: ${emCaca.presenca === 'assombro' ? 'um sorriso, e ela já confia' : 'um olhar, e ela não ousa recusar'}`]
-          : n === 0 && emCaca.observou ? ['Falar do que você reparou nela'] : [];
+          : n === 0 && emCaca.observou ? ['Puxar assunto com o que você reparou'] : [];
         cena.perguntarNoBalao({
           voz: 'A FOME', texto: q.texto, opcoes: [...q.opcoes, ...extra],
           aoEscolher: (i) => { if (i === 0 || i === 2) boas += i === 2 ? 2 : 1; setTimeout(() => perguntar(n + 1), 500); },
@@ -742,7 +748,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function saidasDeQuemFoiVisto() {
     if (!emCaca || emCaca.visto) return;
     emCaca.visto = true;
-    const poderes = ['manto-sombras', 'assombro', 'nublar-memoria'].filter((id) => meusPoderes.has(id));
+    // No máximo 3 escolhas: disfarçar, o poder que mais serve agora e seguir assim.
+    const est = cena.estadoCaca() || {};
+    const tem = (id) => meusPoderes.has(id);
+    const melhor = tem('manto-sombras') && (est.naSombra || est.parado) ? 'manto-sombras'
+      : tem('nublar-memoria') && est.dPresa < 0.25 ? 'nublar-memoria'
+        : tem('assombro') && est.noCampo ? 'assombro'
+          : ['manto-sombras', 'nublar-memoria', 'assombro'].find(tem);
+    const poderes = melhor ? [melhor] : [];
     const opcoes = ['Disfarçar: atender o celular', ...poderes.map((id) => `Usar ${nomePoder(id)}`), 'Seguir assim'];
     cena.perguntarNoBalao({
       voz: 'A FOME', texto: 'Viram você.', opcoes, ms: 6000,
@@ -750,16 +763,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (i === 0) {
           cena.ajustarCaca((c) => { c.atencao = 0.5; c.limite = Math.max(4, c.limite - 4); });
           emCaca.disfarcou = true;
-          aviso('Você disfarçou: a rua só olhou. Sobrou menos tempo.');
+          cena.avisoCaca('disfarçou · a rua só olhou · menos 4 s');
         } else if (i <= poderes.length) {
           const id = poderes[i - 1];
           cena.ajustarCaca((c) => { c.atencao = id === 'nublar-memoria' ? 0.45 : 0.5; if (id === 'manto-sombras') c.manto = true; });
           emCaca.poderes.add(nomePoder(id));
           som.reacao?.('disciplina', 0);
-          aviso(`${nomePoder(id)}: a rua desvia o olhar. Fica anotado (Despertar).`);
+          cena.avisoCaca(`${nomePoder(id)} · a rua desvia o olhar`);
         } else {
           emCaca.riscoMascara = true;
-          aviso('Você seguiu assim. Fica anotado: foi visto, risco à Máscara.');
+          cena.avisoCaca('seguiu assim · risco à Máscara');
         }
       },
       aoExpirar: () => { emCaca && (emCaca.riscoMascara = true); },
