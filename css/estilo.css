@@ -1721,3 +1721,6 @@ body:has(.tela-entrada) #cenario { animation: camera 36s ease-in-out infinite al
   .dossie-lado { position: static; }
   .dossie-retrato { max-width: 220px; }
 }
+
+/* Com a respiração em quadros (tirada de vídeo), a respiração em CSS fica desligada. */
+.personagem.com-respiracao.parado .corpo-sprite, .personagem.com-respiracao.parado .tinta { animation: none; }

@@ -39,7 +39,7 @@ function htmlBoneco(cla, sprite) {
   const mascara = `-webkit-mask-image:url('${sprite.url}');mask-image:url('${sprite.url}')`;
   // Corpo, mais uma camada de tinta com a cor da luz do lugar, recortada pela própria figura.
   return `
-    <div class="personagem com-sprite" style="${vars}">
+    <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}" style="${vars}">
       <span class="sombra-pe"></span>
       <span class="sprite reflexo" style="${folha}"></span>
       <span class="sprite corpo-sprite" style="${folha}"></span>
@@ -322,7 +322,7 @@ export function montarCena(raiz, {
         p.x += p.dir * v * dt;
         p.fase += (v * mw * dt) / Math.max(1, (h * mh * PASSADA) / sprite.quadros);
         const q = Math.floor(p.fase) % sprite.quadros;
-        passante.style.backgroundPosition = posicaoDoQuadro(q);
+        passante.style.backgroundPosition = posicaoDoQuadro(q, sprite);
         passante.style.transform = `translate3d(${(p.x * mw).toFixed(1)}px, ${(p.f.y * mh).toFixed(1)}px, 0) translate(-50%, -100%) scale(${(h / ALTURA_REF).toFixed(3)}) scaleX(${p.dir})`;
         passante.style.zIndex = String(Math.round(p.f.y * 1000));
         if (p.x < p.f.x0 - 0.02 || p.x > p.f.x1 + 0.02 || !ligado) {
@@ -359,10 +359,24 @@ export function montarCena(raiz, {
   }
 
   // --- Folha de caminhada --------------------------------------------------------------------------
-  const posicaoDoQuadro = (n) => `${sprite.quadros > 1 ? (n / (sprite.quadros - 1)) * 100 : 0}% 0`;
+  // Folhas do personagem: perfil (a principal), frente e costas (andar para baixo e para cima) e
+  // respiração (parado). As três últimas são opcionais; sem elas, fica o perfil.
+  let folha = sprite;
+  function usarFolha(nova) {
+    if (!nova?.url || nova === folha) return;
+    folha = nova;
+    quadroVisivel = -1;
+    corpo.style.backgroundImage = `url('${nova.url}')`;
+    reflexo.style.backgroundImage = `url('${nova.url}')`;
+    tinta.style.webkitMaskImage = `url('${nova.url}')`;
+    tinta.style.maskImage = `url('${nova.url}')`;
+    boneco.style.setProperty('--quadros', nova.quadros);
+    boneco.style.setProperty('--proporcao', nova.largura / nova.altura);
+  }
+  const posicaoDoQuadro = (n, f = folha) => `${f.quadros > 1 ? (n / (f.quadros - 1)) * 100 : 0}% 0`;
   function mostrarFase(f) {
-    if (!sprite?.url) return;
-    const n = sprite.quadros;
+    if (!folha?.url) return;
+    const n = folha.quadros;
     const q = ((Math.floor(f) % n) + n) % n;
     if (q === quadroVisivel) return;
     quadroVisivel = q;
@@ -554,13 +568,32 @@ export function montarCena(raiz, {
     // Passada: avança pela distância andada, proporcional ao tamanho do boneco. Ao parar, termina o
     // passo depressa até a pose de pernas juntas mais próxima (há uma em cada metade da passada).
     if (sprite?.url) {
-      const n = sprite.quadros;
+      // Qual folha: andando mais na vertical que na horizontal, frente (para baixo) ou costas (para cima);
+      // parado há um tempo, a respiração; senão, o perfil.
+      let alvoFolha = sprite;
+      if (rapidez > 0.05) {
+        const sx = Math.abs(vel.x * mw);
+        const sy = Math.abs(vel.y * mh);
+        if (sy > sx * 1.15) alvoFolha = (vel.y > 0 ? sprite.frente : sprite.costas) || sprite;
+      } else if (agora - paradoDesde > 450 && sprite.respira) {
+        alvoFolha = sprite.respira;
+      } else if (folha === sprite.frente || folha === sprite.costas) {
+        alvoFolha = folha; // termina o passo de frente ou de costas antes de virar de perfil
+      }
+      usarFolha(alvoFolha);
+    }
+    if (sprite?.url && folha === sprite.respira) {
+      // Respiração: os quadros vão e voltam num ciclo de 3,2 s.
+      const t = (agora % 3200) / 3200;
+      mostrarFase(Math.round((t < 0.5 ? t * 2 : (1 - t) * 2) * (folha.quadros - 1)));
+    } else if (sprite?.url) {
+      const n = folha.quadros;
       if (rapidez > 0.05) {
         const andouPx = Math.hypot(vel.x * mw, vel.y * mh * 0.6) * dt;
         const passoPx = (altura(pos.y) * mh * PASSADA * (correndo ? 1.3 : 1)) / n;
         fase += andouPx / Math.max(1, passoPx);
       } else {
-        const parado = sprite.parado ?? 0;
+        const parado = folha.parado ?? 0;
         const juntas = n % 2 === 0 ? [parado, (parado + n / 2) % n] : [parado];
         const falta = Math.min(...juntas.map((j) => ((j - Math.floor(fase)) % n + n) % n));
         if (falta > 0) fase = Math.floor(fase) + Math.min(falta, (fase % 1) + dt * 16);
