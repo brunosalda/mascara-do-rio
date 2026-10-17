@@ -549,7 +549,8 @@ export function montarCena(raiz, {
           r /= n; gg /= n; b /= n; sat /= n;
           const lum = (0.299 * r + 0.587 * gg + 0.114 * b) / 255;
           const topo = Math.max(r, gg, b, 1);
-          p.el.style.setProperty('--luz-gente', Math.max(0.55, Math.min(1.2, 0.5 + lum * 1.5)).toFixed(2));
+          // Curva forte (rodada 36): 0,3 no escuro, perto de 0,9 só sob o poste. Nunca mais claro que a rua.
+          p.el.style.setProperty('--luz-gente', Math.max(0.3, Math.min(0.92, 0.15 + lum * 1.4)).toFixed(2));
           // Tinta forte: a cor média normalizada (a luz do lugar), multiplicada sobre a figura de estúdio.
           p.el.style.setProperty('--tinta-gente', `rgb(${Math.round((r / topo) * 255)}, ${Math.round((gg / topo) * 255)}, ${Math.round((b / topo) * 255)})`);
           p.el.style.setProperty('--preto-gente', `rgb(${escuro.map((v) => Math.round(v * 0.9)).join(', ')})`);
@@ -566,12 +567,16 @@ export function montarCena(raiz, {
             const dx = p.x - forte.x;
             p.el.style.setProperty('--sombra-x', `${Math.max(-60, Math.min(60, dx * 900)).toFixed(0)}%`);
             const [lr, lg, lb] = rgb(forte.cor);
-            const neon = Math.max(lr, lg, lb) - Math.min(lr, lg, lb) > 120 && melhor > 0.25;
-            if (neon) p.el.style.setProperty('--rim-gente', `rgba(${lr}, ${lg}, ${lb}, ${Math.min(0.95, 0.4 + melhor).toFixed(2)})`);
+            // Só néon de verdade (vermelho, verde, azul, rosa) vira borda; a luz amarela de poste, não.
+            const sodio = lr >= lg && lg >= lb && lr - lb > 60 && lg > lr * 0.45;
+            const neon = !sodio && Math.max(lr, lg, lb) - Math.min(lr, lg, lb) > 120 && melhor > 0.25;
+            if (neon) p.el.style.setProperty('--rim-gente', `rgba(${lr}, ${lg}, ${lb}, ${Math.min(0.6, 0.25 + melhor * 0.5).toFixed(2)})`);
             p.el.style.setProperty('--rim-x', `${forte.x < p.x ? -1 : 1}px`);
             // Luz quente de lado (do lado da luz forte) e o resto em sombra.
             p.el.style.setProperty('--lado-luz', forte.x < p.x ? '90deg' : '270deg');
             p.el.style.setProperty('--cor-luz', `rgba(${lr}, ${lg}, ${lb}, 0.55)`);
+            // A borda de luz só existe com luz por perto, e fraca (0,3 a 0,4).
+            p.el.style.setProperty('--lado-forca', melhor > 0.15 ? Math.min(0.4, 0.3 + melhor * 0.15).toFixed(2) : '0');
           }
         }
       } catch { /* sem leitura da imagem: fica o brilho das luzes marcadas */ }

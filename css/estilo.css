@@ -3248,3 +3248,12 @@ body.sem-efeitos .refugio-chuva, body.sem-efeitos .refugio-obj img { animation: 
   .diario-carimbo { justify-self: start; }
   .diario-feito b.voz { font-size: 1.05rem; font-family: var(--texto-livro); font-weight: 700; }
 }
+
+/* Rodada 36: a gente com a luz da noite, sem brilho de fantasma. Sem contorno (só néon de verdade, fraco);
+   brilho pela curva amostrada (sem o fator extra); tinta multiplicada mais forte; luz de lado só com luz perto;
+   sombra em elipse macia, escura no centro e sumindo nas bordas. */
+.pessoa.pessoa-pintada .pessoa-figura img { filter: brightness(var(--luz-gente, 0.6)) saturate(calc(var(--sat-gente, 0.8) * 0.8)) contrast(1.04) blur(0.4px) drop-shadow(var(--rim-x, 1px) 0 1px var(--rim-gente, transparent)); }
+.pessoa-tinta { opacity: 0.88; }
+.pessoa-lado { opacity: var(--lado-forca, 0); background: linear-gradient(var(--lado-luz, 90deg), var(--cor-luz, rgba(255, 170, 90, 0.45)) 0%, rgba(128, 128, 128, 0) 40%); }
+.pessoa.pessoa-pintada .pessoa-sombra { left: -10%; right: -10%; bottom: -6%; height: 13%; border-radius: 50%; filter: blur(2px);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.38) 55%, rgba(0, 0, 0, 0) 100%); }
