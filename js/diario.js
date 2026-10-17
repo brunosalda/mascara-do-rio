@@ -3,6 +3,7 @@ import * as banco from './banco.js';
 import { esc, narracao, narracaoComPaineis, dataCurta, grupoVoz } from './ui.js';
 import { imagemDoLocal, LOCAIS } from './cidade.js';
 import { registroDaNoite } from './jogo/registro.js';
+import { FEITOS } from './jogo/progressao-textos.js';
 import { descobertas, fraseDescobertas } from './jogo/detalhes.js';
 
 // "Esta noite": o que o jogador fez na noite aberta (bairros, detalhes, vozes ouvidas, plano até agora).
@@ -85,7 +86,12 @@ function abaFeitos(p) {
   const feitos = p.estado?.feitos || [];
   const escolha = ''; // escolha das três noites: fica para depois (seção 7)
   if (!feitos.length) return `${escolha}<p class="nota">Nenhum feito ainda. Os feitos aparecem aqui quando o Narrador reconhece algo que você fez ("Conhece cada beco da Lapa").</p>`;
-  return escolha + feitos.map((f) => `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(f.titulo)}</b><br>${esc(f.texto || '')}</span></div>`).join('');
+  const ganhos = feitos.map((f) => {
+    const cat = FEITOS.find((x) => x.nome === (f.titulo || f) || x.titulo === (f.titulo || f));
+    return `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(cat?.nome || f.titulo || f)}</b> · título: “${esc(cat?.titulo || f.titulo || f)}”<br>${esc(f.texto || cat?.como || '')}</span></div>`;
+  }).join('');
+  const falta = FEITOS.filter((x) => !feitos.some((f) => [x.nome, x.titulo].includes(f.titulo || f))).length;
+  return escolha + ganhos + `<p class="nota">Faltam ${falta} feitos. Muitos vêm de andar pela cidade, de caçar sem testemunha e de ajudar a gente dos bairros.</p>`;
 }
 
 export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {

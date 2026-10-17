@@ -5,7 +5,8 @@
 // Idade na noite (seção 7): degraus dentro da fase de neonato, um a cada 5 de experiência GANHA no total.
 // Não trava nada: dá um título e abre pedidos mais difíceis. Ancilla só pela história, pelo Narrador
 // (estado.idade_narrador). Nomes de exemplo, até o roteirista mandar os definitivos.
-export const DEGRAUS_IDADE = ['Recém-Abraçado', 'Neonato com nome', 'Respeitado entre os jovens', 'À porta dos antigos'];
+import { DEGRAUS, NIVEIS_NOME_BAIRRO, FEITOS } from './progressao-textos.js';
+export const DEGRAUS_IDADE = DEGRAUS;
 export function famaDe(xpTotal = 0, idadeNarrador = null) {
   const nivel = Math.floor(Math.max(0, xpTotal) / 5) + 1;
   const nome = idadeNarrador || DEGRAUS_IDADE[Math.min(nivel - 1, DEGRAUS_IDADE.length - 1)];
@@ -29,7 +30,15 @@ export const ESPACOS = [
   { id: 'veiculo', nome: 'Veículo' },
 ];
 export const RARIDADES = { comum: 'comum', bom: 'bom', raro: 'raro', reliquia: 'relíquia' };
-export const NIVEIS_BAIRRO = ['estranho', 'conhecido', 'de casa', 'de confiança'];
+export const NIVEIS_BAIRRO = NIVEIS_NOME_BAIRRO;
+// O título que aparece sob o nome: o escolhido (estado.titulo) ou o do feito mais recente.
+export function tituloDe(estado = {}) {
+  if (estado.titulo) return estado.titulo;
+  const f = (estado.feitos || []).at(-1);
+  if (!f) return '';
+  const nome = f.titulo || f;
+  return FEITOS.find((x) => x.nome === nome || x.titulo === nome)?.titulo || nome;
+}
 
 // Soma o estado com os ganhos de cada narração (do mais antigo ao mais novo).
 export function progressoDe(estado = {}, narracoes = []) {

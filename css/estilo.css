@@ -3192,3 +3192,9 @@ body.sem-efeitos .pessoa-figura { animation: none !important; }
 
 .rp-idade { margin: 0; font: italic 600 1rem var(--texto-livro); color: #e8c878; }
 .consumiveis { margin: 0.6rem 0 0; padding: 0.45rem 0.6rem; border: 1px dashed rgba(201, 162, 90, 0.4); }
+
+.rp-titulo-feito { margin: 0; font: italic 400 0.95rem var(--texto-livro); color: #cdb48a; }
+.cartao-bairro { margin: 0; font: 400 1rem var(--texto-livro); color: #e9dcc4; }
+.anel-bairro { fill: none; stroke: #8a1420; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.7; }
+.anel-bairro.nivel-2 { stroke-dasharray: none; stroke-width: 2.5; }
+.anel-bairro.nivel-3 { stroke-dasharray: none; stroke-width: 3.5; stroke: #b31525; }

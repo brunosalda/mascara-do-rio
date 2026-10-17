@@ -67,7 +67,7 @@ const brasasSvg = (d) => (d?.total ? `<text class="mapa-brasas mapa-coroa" y="-3
 // visitados: bairros já vistos (os outros ficam sob névoa); descobertas: { id: { vistos, total } };
 // retrato: aparece no "você está aqui". Clique ou toque num bairro viaja direto, com a rota animada;
 // no teclado, setas ou Tab escolhem o bairro e Enter viaja.
-export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla, visitados = null, descobertas = {}, retrato = '', clima = '' } = {}) {
+export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla, visitados = null, descobertas = {}, retrato = '', clima = '', bairros = {} } = {}) {
   const atual = atualId || localDe(localAtual)?.id;
   const inicio = POSICOES[atual] || POSICOES.lapa;
   raiz.innerHTML = `
@@ -86,6 +86,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 ${novo ? '<circle class="mapa-nevoa" r="70" fill="url(#nevoa-lugar)"/>' : ''}
                 <circle class="mapa-brilho" r="62" fill="url(#brilho-lugar)"/>
                 <circle class="medalhao-aro" r="28"/>
+                ${bairros[l.id] ? `<circle class="anel-bairro nivel-${bairros[l.id]}" r="33"/>` : ''}
                 ${l.imagem ? `<image class="medalhao-pintura" href="${esc(l.imagem)}" x="-23" y="-23" width="46" height="46" clip-path="url(#recorte-medalhao)" preserveAspectRatio="xMidYMid slice"/>` : '<circle class="medalhao-vazio" r="23"/>'}
                 <circle class="medalhao-filete" r="23"/>
                 ${l.id === atual ? '<circle class="mapa-pulso" r="34"/><path class="mapa-gota" d="M0 -84 C6 -74 10 -69 10 -63 A10 10 0 0 1 -10 -63 C-10 -69 -6 -74 0 -84 Z"/>' : ''}

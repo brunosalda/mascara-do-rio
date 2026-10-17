@@ -10,6 +10,7 @@ import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './a
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
 import { TIPOS_GENTE, PISTAS_CONVERSA } from './jogo/gente.js';
+import { PEDIDOS, FALAS_DE_CASA, NIVEIS_NOME_BAIRRO } from './jogo/progressao-textos.js';
 import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
@@ -816,12 +817,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       escolherPresa({ id: `presa-${pt.id}`, rotulo: t.rotulo, repara: t.repara, vulneravel: t.vulneravel, x: pt.x, y: pt.y, tipo: 'presa', icone: '♦', acao: `Escolher: ${t.rotulo}`, temperamento: temperamentoDe(`${pt.id}.${noite?.numero || 0}`) });
       return;
     }
-    const fala = t.falas[Math.floor(Math.random() * t.falas.length)];
+    // Nome no bairro "De casa" (nível 3) ou mais: a figura fala de outro jeito (falas do roteirista).
+    const nivelBairro = p.estado?.bairros?.[lugarId] ?? 0;
+    const fala = nivelBairro >= 2 && FALAS_DE_CASA[pt.tipoGente] ? FALAS_DE_CASA[pt.tipoGente] : t.falas[Math.floor(Math.random() * t.falas.length)];
     // A primeira fala da pessoa já vai para o registro (a pergunta no painel não registra sozinha).
     anotar(t.nome.toUpperCase(), fala);
+    const pedido = PEDIDOS[pt.tipoGente];
     cena.perguntarNoBalao({
-      voz: t.nome.toUpperCase(), texto: fala, opcoes: ['Puxar conversa', 'Deixar para lá'], perto: { x: pt.x, y: pt.y, raio: 0.3 },
+      voz: t.nome.toUpperCase(), texto: fala, opcoes: pedido ? ['Puxar conversa', 'Perguntar se precisa de alguma coisa', 'Deixar para lá'] : ['Puxar conversa', 'Deixar para lá'], perto: { x: pt.x, y: pt.y, raio: 0.3 },
       aoEscolher: (i) => {
+        if (pedido && i === 1) { oferecerPedido(pt, t, pedido); return; }
         if (i !== 0) return;
         anotar('VOCÊ', `conversa com ${t.rotulo}.`);
         // Pista ✦: a primeira pessoa do tipo certo, neste lugar, conta algo que ajuda (uma vez por noite).
@@ -836,6 +841,30 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         setTimeout(() => cena.falar('PRONTIDÃO', `${t.repara.charAt(0).toUpperCase()}${t.repara.slice(1)}.`, 3600), 1400);
       },
     });
+  }
+  // Pedidos do elenco (fase 3): no máximo 2 ativos; aceitar vira uma ação curta, que o Narrador resolve
+  // no fechamento (recompensa em favor, nome no bairro e às vezes item). Os de "fio solto" vão marcados.
+  const chavePedidos = `mascara.pedidos.${noite?.id || 'sem-noite'}.${p.id}`;
+  const lerPedidos = () => { try { return JSON.parse(localStorage.getItem(chavePedidos)) || []; } catch { return []; } };
+  function oferecerPedido(pt, t, pedido) {
+    const ativos = lerPedidos();
+    if (ativos.includes(pt.tipoGente)) { cena.falar(t.nome.toUpperCase(), 'Você já disse que ia ver isso pra mim.', 3000); return; }
+    anotar(t.nome.toUpperCase(), pedido.fala);
+    setTimeout(() => cena.perguntarNoBalao({
+      voz: t.nome.toUpperCase(), texto: pedido.fala, opcoes: ['Ajudar (vira ação curta da noite)', 'Agora não'], ms: 1e9, perto: { x: pt.x, y: pt.y, raio: 0.3 },
+      aoEscolher: (i) => {
+        if (i !== 0) return;
+        if (ativos.length >= 2) { aviso('Já há 2 pedidos nesta noite. Termine um antes de aceitar outro.'); return; }
+        const texto = `Ajudar ${t.rotulo.replace(/,.*$/, '')} (${lugarNome}): ${pedido.fala.replace(/[.!?]$/, '')}.${pedido.fioSolto ? ' [fio solto]' : ''}`;
+        if (!plano.curta_1?.trim()) plano.curta_1 = texto;
+        else if (!plano.curta_2?.trim()) plano.curta_2 = texto;
+        else { aviso('As duas ações curtas já estão ocupadas. Troque uma no plano para aceitar o pedido.'); return; }
+        try { localStorage.setItem(chavePedidos, JSON.stringify([...ativos, pt.tipoGente])); } catch { /* sem armazenamento */ }
+        guardarRascunho();
+        anotar('VOCÊ', `aceita o pedido: ${pedido.resolver.split('.')[0]}.`);
+        aviso('Pedido aceito: foi para as ações curtas. O Narrador resolve no fechamento.');
+      },
+    }), 700);
   }
   function escolherPresa(pr) {
     if (!emCaca) return;
@@ -1341,7 +1370,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     // O cartão usa a pintura na altura dos olhos (a de antes), que continua no jogo.
     const imagemCartao = emOutroLugar ? (visitado.imagem || imagem) : (localAtual?.imagem || imagem);
     cartao.style.setProperty('--fundo', `url('${new URL(imagemCartao, location.href).href}')`);
-    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2><p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
+    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é: <b>${esc(NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '')}</b></p>` : ''}<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
     camadas.appendChild(cartao);
     const t0 = performance.now();
     const tirar = () => {
@@ -1561,6 +1590,7 @@ export async function telaMapa(raiz, p) {
     visitados: visitados(),
     descobertas: contagem,
     retrato,
+    bairros: p.estado?.bairros || {},
     clima: { garoa: 'noite de garoa', lua: 'noite de lua', tempestade: 'tempestade', nevoa: 'noite de névoa' }[tempoDaNoite(noite?.numero || 0)] || '',
     aoEntrar: (id) => {
       gravarPosicao(p, noite, id);

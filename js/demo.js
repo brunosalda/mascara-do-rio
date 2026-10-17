@@ -89,7 +89,7 @@ const ESTADO_FASE3 = {
   experiencia_total: 12,
   noites_jogadas: 3,
   descansado: true,
-  bairros: { lapa: 1, centro: 0 },
+  bairros: { lapa: 2, centro: 1 },
   status: { camarilla: 'tolerado', anarquistas: 'desconhecido', independentes: 'respeitado', policia: 'desconhecido' },
   refugio: { bairro: 'Lapa', local: 'Um quarto alugado em cima de um bar, com a janela pintada de preto.', seguranca: 'fraca', rebanho: 'nenhum', nota: 'uma tranca nova e um colchão no chão' },
   itens: [
@@ -97,11 +97,12 @@ const ESTADO_FASE3 = {
     { espaco: 'eletronico', nome: 'Celular sem chip', raridade: 'bom', traco: 'só funciona no wi-fi; ninguém rastreia', termos: ['internet', 'pesquisar', 'rastrear'], equipado: true },
     { espaco: 'ferramenta', nome: 'Pé de cabra', raridade: 'comum', traco: 'abre portas, mas faz barulho', equipado: true },
     { espaco: 'consumivel', nome: 'Bolsa de sangue', raridade: 'comum', traco: 'acalma a Fome uma vez, mas só sacia quem tem o sangue ainda ralo (Potência baixa)' },
-    { espaco: 'consumivel', nome: 'Remédio para dormir', raridade: 'comum', traco: 'deixa uma presa sonolenta e fácil' },
+    { espaco: 'consumivel', nome: 'Perfume forte', raridade: 'comum', traco: '✦ em Lábia para disfarçar o cheiro de sangue na roupa, por uma noite' },
+    { espaco: 'arma', nome: 'Canivete de bolso', raridade: 'comum', traco: 'arma leve: o dano vem da tabela da V5', equipado: true },
   ],
   feitos: [
-    { titulo: 'Conhece cada beco da Lapa', texto: 'Examinou todos os detalhes da Lapa numa noite.', quando: 'Noite 2' },
-    { titulo: 'Fome sob controle', texto: 'Caçou três noites seguidas sem ninguém reparar.', quando: 'Noite 3' },
+    { titulo: 'Primeiro gole', quando: 'Noite 1' },
+    { titulo: 'Becos da Lapa', quando: 'Noite 2' },
   ],
 };
 
@@ -196,6 +197,7 @@ async function demoMapa(raiz) {
     atualId: atual,
     visitados: new Set([atual, 'centro', 'santa-teresa']),
     descobertas: { [atual]: { vistos: 1, total: 3 }, centro: { vistos: 0, total: 3 }, 'santa-teresa': { vistos: 2, total: 3 } },
+    bairros: { lapa: 2, centro: 1 },
     clima: 'noite de garoa',
     aoEntrar: (id) => voltar(alto ? `${id}-alto` : id),
     aoTecla: (ev) => { if (ev.key === 'Escape' || ev.key.toLowerCase() === 'm') { ev.preventDefault(); voltar(); } },

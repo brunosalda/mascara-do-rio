@@ -5,7 +5,7 @@ import { retratoDe, retratoProvisorio, localDe } from './cidade.js';
 import { termo, termoDe, ligarGlossario, dicaDoGlossario } from './glossario.js';
 import { quandoONarradorVolta } from './jogo/registro.js';
 import { perguntar } from './jogo/camadas.js';
-import { progressoDe, ESPACOS, RARIDADES } from './jogo/progresso.js';
+import { progressoDe, ESPACOS, RARIDADES, tituloDe } from './jogo/progresso.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
 // Até o Narrador pintar o retrato do personagem, mostra o retrato provisório (silhueta do clã).
@@ -394,7 +394,8 @@ export function telaRegistro(raiz, p) {
       <aside class="rp-lado">
         <div class="rp-retrato"><img src="${esc(retratoDe(p))}" alt="Retrato de ${esc(p.nome)}"></div>
         <h2 class="rp-nome">${esc(p.nome || 'Sem nome')}</h2>
-        <p class="rp-idade" title="Sobe com a experiência ganha. Não trava nada: dá um título e abre pedidos mais difíceis.">${esc(est.fama.nome)}</p>
+        <p class="rp-idade" title="Idade na noite: sobe com a experiência ganha. Não trava nada: abre pedidos mais difíceis.">${esc(est.fama.nome)}</p>
+        ${tituloDe(est) ? `<p class="rp-titulo-feito">“${esc(tituloDe(est))}”</p>` : ''}
         ${linhaEmVida({ ...f, nome: p.nome })}
         <dl class="rp-dados">
           <dt>Clã</dt><dd>${c ? termoDe('cla', c.id, c.nome) : '—'}</dd>
