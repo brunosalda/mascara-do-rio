@@ -10,7 +10,7 @@ import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './a
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
 import { TIPOS_GENTE, PISTAS_CONVERSA } from './jogo/gente.js';
-import { PEDIDOS, FALAS_DE_CASA, NIVEIS_NOME_BAIRRO } from './jogo/progressao-textos.js';
+import { PEDIDOS, FALAS_DE_CASA, NIVEIS_NOME_BAIRRO, FEITOS } from './jogo/progressao-textos.js';
 import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
@@ -1429,9 +1429,36 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     setTimeout(() => { if (Date.now() >= numerosAte) camadas.classList.remove('mostrar-numeros'); }, 2700);
   }
 
+  // Rodada 38: feito novo (do Narrador, em estado.feitos ou ganhos.feitos) mostra uma faixa no alto, com
+  // o título e um som, e a linha no registro. Cada feito aparece uma vez só.
+  setTimeout(() => {
+    if (!palco.isConnected) return; // a tela foi montada de novo: a montagem nova cuida disso
+    const ganhos = [...(p.estado?.feitos || []).map((f) => f.titulo || f), ...narracoes.flatMap((n) => n.ganhos?.feitos || [])];
+    const chave = `mascara.feitos-vistos.${p.id}`;
+    let vistos = [];
+    try { vistos = JSON.parse(localStorage.getItem(chave)) || []; } catch { /* sem armazenamento */ }
+    const novos = [...new Set(ganhos)].filter((f) => !vistos.includes(f));
+    if (!novos.length) return;
+    try { localStorage.setItem(chave, JSON.stringify([...vistos, ...novos])); } catch { /* sem armazenamento */ }
+    for (const f of novos) {
+      const cat = FEITOS.find((x) => x.nome === f || x.titulo === f);
+      anotar('FEITO', `${cat?.nome || f}. Título: “${cat?.titulo || f}”.`);
+    }
+    const ultimo = FEITOS.find((x) => x.nome === novos.at(-1) || x.titulo === novos.at(-1));
+    const faixa = document.createElement('div');
+    faixa.className = 'faixa-feito';
+    faixa.setAttribute('role', 'status');
+    faixa.innerHTML = `<small>Feito</small><b>${esc(ultimo?.nome || novos.at(-1))}</b><span>título: “${esc(ultimo?.titulo || novos.at(-1))}”</span>`;
+    raiz.querySelector('.tela-jogo')?.appendChild(faixa);
+    som.selo?.();
+    setTimeout(() => faixa.classList.add('sai'), 4200);
+    setTimeout(() => faixa.remove(), 5000);
+  }, 5200);
+
   // Rodada 38: quando o nome no bairro sobe (o Narrador grava em estado.bairros), uma linha no registro e
   // um som curto, uma vez só.
   setTimeout(() => {
+    if (!palco.isConnected) return;
     const nivel = p.estado?.bairros?.[lugarId] ?? 0;
     const chave = `mascara.nivel-bairro.${p.id}.${lugarId}`;
     let antes = null;

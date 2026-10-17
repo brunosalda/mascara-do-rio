@@ -3328,3 +3328,17 @@ body.sem-efeitos .vivo { animation: none !important; opacity: 0 !important; }
    gente nossa cheio), sobre um trilho fino. */
 .anel-bairro-trilho { fill: none; stroke: rgba(138, 20, 32, 0.28); stroke-width: 2.5; }
 .anel-bairro, .anel-bairro.nivel-2, .anel-bairro.nivel-3 { fill: none; stroke: #c01a2c; stroke-width: 3; stroke-linecap: round; opacity: 0.95; }
+
+/* Rodada 38, item 3: faixa do feito novo e as silhuetas dos que faltam. */
+.faixa-feito { position: absolute; z-index: 400; top: 70px; left: 50%; translate: -50% 0; display: grid; justify-items: center; gap: 0.1rem; padding: 0.5rem 1.6rem 0.6rem;
+  background: linear-gradient(#3a2a1a, #1c140c); border: 2px solid #c9a25a; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), 0 0 18px rgba(255, 200, 110, 0.25); text-align: center; animation: faixa-feito 0.6s ease-out; pointer-events: none; }
+.faixa-feito small { font: 700 0.72rem var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: #c9a25a; }
+.faixa-feito b { font: italic 600 1.35rem var(--titulo); color: #f6ead6; }
+.faixa-feito span { font: italic 400 0.95rem var(--texto-livro); color: #e8c878; }
+.faixa-feito.sai { opacity: 0; translate: -50% -14px; transition: opacity 0.7s, translate 0.7s; }
+@keyframes faixa-feito { from { opacity: 0; translate: -50% -18px; } to { opacity: 1; translate: -50% 0; } }
+.feitos-faltam { margin: 1rem 0 0.4rem; }
+.lista-silhuetas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 0.4rem 1rem; }
+.feito-silhueta { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: start; opacity: 0.62; }
+.feito-sombra { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(60, 40, 20, 0.25); color: rgba(60, 40, 20, 0.5); }
+.feito-silhueta small { font-style: italic; }

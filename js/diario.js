@@ -90,8 +90,10 @@ function abaFeitos(p) {
     const cat = FEITOS.find((x) => x.nome === (f.titulo || f) || x.titulo === (f.titulo || f));
     return `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(cat?.nome || f.titulo || f)}</b> · título: “${esc(cat?.titulo || f.titulo || f)}”<br>${esc(f.texto || cat?.como || '')}</span></div>`;
   }).join('');
-  const falta = FEITOS.filter((x) => !feitos.some((f) => [x.nome, x.titulo].includes(f.titulo || f))).length;
-  return escolha + ganhos + `<p class="nota">Faltam ${falta} feitos. Muitos vêm de andar pela cidade, de caçar sem testemunha e de ajudar a gente dos bairros.</p>`;
+  // Rodada 38: os que faltam aparecem como silhuetas, com a pista de como ganhar.
+  const faltam = FEITOS.filter((x) => !feitos.some((f) => [x.nome, x.titulo].includes(f.titulo || f)));
+  const silhuetas = faltam.map((x) => `<li class="feito-silhueta"><span class="feito-sombra" aria-hidden="true">✦</span><span><b>· · ·</b><br><small>${esc(x.como)}</small></span></li>`).join('');
+  return escolha + ganhos + `<h3 class="feitos-faltam">Faltam ${faltam.length}</h3><ul class="lista-silhuetas">${silhuetas}</ul>`;
 }
 
 export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
