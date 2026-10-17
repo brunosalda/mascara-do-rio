@@ -3351,3 +3351,16 @@ body.sem-efeitos .vivo { animation: none !important; opacity: 0 !important; }
 .relogio-noite.ultima-hora { animation: relogio-pulsa 1.6s ease-in-out infinite; }
 @keyframes relogio-pulsa { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 140, 40, 0)); scale: 1; } 50% { filter: drop-shadow(0 0 10px rgba(255, 140, 40, 0.95)); scale: 1.06; } }
 body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }
+
+/* Rodada 39, item 1: rastros dos amigos (vulto translúcido, baixo contraste) e recados como marca no muro. */
+.rastro-amigo { position: absolute; aspect-ratio: 0.4; translate: -50% -100%; opacity: 0.22; fill: #c8d0e0; filter: blur(0.6px); pointer-events: auto; cursor: help; }
+.rastro-amigo svg { width: 100%; height: 100%; display: block; }
+.rastro-amigo.nitido { opacity: 0.42; filter: none; fill: #dce4f4; }
+.rastro-nome { position: absolute; left: 50%; bottom: 104%; translate: -50% 0; white-space: nowrap; padding: 0.1rem 0.4rem; font: italic 600 0.8rem var(--texto-livro); color: #e4ecf8; background: rgba(10, 12, 20, 0.75); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.rastro-nome small { margin-left: 0.3rem; font: 700 0.65rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #a8b4c8; }
+.rastro-amigo:hover { opacity: 0.6; }
+.rastro-amigo:hover .rastro-nome, .cena.mostrar-tudo .rastro-amigo .rastro-nome { opacity: 1; }
+.recado-marca { position: absolute; translate: -50% -50%; z-index: 2900; width: 26px; height: 26px; padding: 0; border: 1px dashed rgba(240, 230, 210, 0.55); border-radius: 50%; background: rgba(20, 14, 10, 0.55); color: #f0e6d2; font-size: 0.85rem; cursor: pointer; }
+.recado-marca:hover { background: rgba(60, 40, 20, 0.85); }
+.form-recado { display: grid; gap: 0.6rem; }
+.form-recado input { width: 100%; padding: 0.5rem; font: inherit; }

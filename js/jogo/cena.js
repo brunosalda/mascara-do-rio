@@ -93,7 +93,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  nome = '', nevoa = false, nevoaLonge = false, temPedido = null, ajudado = null, fome = 0, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', nevoa = false, nevoaLonge = false, temPedido = null, ajudado = null, fome = 0, rastros = [], recados = [], nitido = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -530,6 +530,33 @@ export function montarCena(raiz, {
     const p = { id: `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: t?.nome || g.tipo, acao: `Falar com: ${t?.nome || g.tipo}`, anda: figura ? null : g.anda, dir: (i % 2) ? -1 : 1, el, parado: 0 };
     return p;
   });
+  // Rodada 39: rastros de quem passou por aqui nesta noite (só o nome das ruas e o clã aparente) e
+  // recados deixados nos pontos. Com Auspícios, os rastros ficam nítidos e dizem há quanto tempo.
+  function desenharRastroAmigo(r) {
+    const el = document.createElement('span');
+    el.className = `rastro-amigo${nitido ? ' nitido' : ''}`;
+    el.style.left = pct(r.x);
+    el.style.top = pct(r.y);
+    el.style.height = `${(altura(r.y) * 100).toFixed(2)}%`;
+    el.style.zIndex = String(Math.round(r.y * 1000) - 2);
+    el.title = `${r.nome}${r.cla ? `, ${/^[AEIOU]/.test(r.cla) ? 'uma' : 'um'} ${r.cla},` : ''} passou por aqui${nitido && r.ha ? ` há ${r.ha}` : ''}.`;
+    el.innerHTML = `${VULTO}<span class="rastro-nome">${esc(r.nome)}${r.cla ? `<small>${esc(r.cla)}</small>` : ''}</span>`;
+    mundo.appendChild(el);
+  }
+  function desenharRecado(r) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'recado-marca';
+    el.style.left = pct(r.x);
+    el.style.top = pct(r.y);
+    el.title = `Recado${r.de ? ` de ${r.de}` : ''}: ${r.texto}`;
+    el.setAttribute('aria-label', el.title);
+    el.textContent = '✎';
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); falar(`RECADO${r.de ? ` DE ${r.de.toUpperCase()}` : ''}`, r.texto, 4200); });
+    mundo.appendChild(el);
+  }
+  if (geo.alto) { rastros.forEach(desenharRastroAmigo); recados.forEach(desenharRecado); }
+
   function posicionarPessoa(p) {
     p.el.style.left = pct(p.x);
     p.el.style.top = pct(p.y);
@@ -2203,6 +2230,7 @@ export function montarCena(raiz, {
       desenharPontos(recem);
     },
     posicao: () => ({ ...pos }),
+    deixarRecado: (r) => desenharRecado(r),
     falar,
     perguntarNoBalao,
     apresentar,

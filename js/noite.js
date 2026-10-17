@@ -1172,6 +1172,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       montar: (corpo, camada) => {
         corpo.innerHTML = `
           <div class="menu-opcoes">
+            ${geo.alto ? '<button type="button" class="btn-secundario" data-m="recado">Deixar um recado aqui</button>' : ''}
             <button type="button" class="btn-secundario" data-m="novo">Criar outro personagem</button>
             <button type="button" class="btn-secundario so-celular" data-m="legenda">Como funciona a noite</button>
             <button type="button" class="btn-secundario so-celular" data-m="efeitos">${efeitos.ligados() ? 'Desligar' : 'Ligar'} chuva e efeitos</button>
@@ -1194,6 +1195,24 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); irPara('novo'); };
+        const botaoRecado = corpo.querySelector('[data-m="recado"]');
+        if (botaoRecado) botaoRecado.onclick = () => {
+          corpo.innerHTML = `<form class="form-recado"><label>Recado para quem passar depois (uma frase curta, como marca no muro)<input name="texto" maxlength="80" required autocomplete="off" placeholder="O dono do bar sabe mais do que diz."></label><p class="nota">Fica no ponto onde você está. Quem passar lê o recado e o nome que você usa nas ruas, nada mais.</p><div class="cartao-botoes"><button type="submit" class="btn">Deixar o recado</button><button type="button" class="btn-texto" data-cancelar>Cancelar</button></div></form>`;
+          const form = corpo.querySelector('form');
+          form.querySelector('input').focus();
+          form.querySelector('[data-cancelar]').onclick = () => camada.fechar();
+          form.onsubmit = (ev) => {
+            ev.preventDefault();
+            const texto = form.texto.value.trim().slice(0, 80);
+            if (!texto) return;
+            const { x, y } = cena.posicao();
+            const recado = { texto, x, y: y - 0.01, de: p.nome };
+            try { localStorage.setItem(chaveRecados, JSON.stringify([...lerRecados(), recado].slice(-6))); } catch { /* sem armazenamento */ }
+            cena.deixarRecado(recado);
+            anotar('VOCÊ', `deixa um recado: “${texto}”`);
+            camada.fechar();
+          };
+        };
         corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); if (irPara !== ir) { irPara('sair'); return; } await banco.sair(); };
         corpo.querySelectorAll('[data-leitura]').forEach((b) => {
           b.onclick = () => {
@@ -1450,6 +1469,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     setTimeout(() => { if (Date.now() >= numerosAte) camadas.classList.remove('mostrar-numeros'); }, 2700);
   }
 
+  // Rodada 39: recados (uma frase curta, como marca no muro), guardados neste aparelho até os amigos
+  // entrarem no banco. Só o recado e o nome das ruas vão junto, nada da ficha.
+  const chaveRecados = `mascara.recados.${lugarId}`;
+  function lerRecados() { try { return JSON.parse(localStorage.getItem(chaveRecados)) || []; } catch { return []; } }
+
   // Rodada 38: feito novo (do Narrador, em estado.feitos ou ganhos.feitos) mostra uma faixa no alto, com
   // o título e um som, e a linha no registro. Cada feito aparece uma vez só.
   setTimeout(() => {
@@ -1496,6 +1520,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     temPedido: (tipo) => temPedidoAberto(tipo),
     ajudado: (tipo) => pedidosResolvidos.has(tipo),
     fome: p.estado?.fome ?? 0,
+    // Rastros dos amigos (demonstração por enquanto) e recados guardados neste aparelho.
+    rastros: p.estado?._rastros_demo?.[lugarId] || [],
+    recados: [...(p.estado?._recados_demo?.[lugarId] || []), ...lerRecados()],
+    nitido: (() => { try { return (v5.calcular(p.ficha || {}).disciplinas?.auspicios || 0) > 0; } catch { return false; } })(),
     nevoa: nevoaNaEntrada,
     nevoaLonge: nevoaLigada(),
     painel: raiz.querySelector('.painel-pergunta'),

@@ -85,6 +85,9 @@ function demoEntrada(raiz) {
 // caminhada em vídeo do Bruno. A ação "enviada" fica só na memória da página. &lugar=<id> escolhe o bairro.
 // Fase 3.3 (parte da tela), só na demonstração: experiência, status, refúgio, itens e feitos fictícios.
 const ESTADO_FASE3 = {
+  // Rodada 39: rastros fictícios de amigos e um recado, só na Lapa da demonstração.
+  _rastros_demo: { lapa: [{ nome: 'Corvo', cla: 'Toreador', x: 0.6, y: 0.7, ha: '2 horas' }, { nome: 'Dandara', cla: 'Brujah', x: 0.7, y: 0.82, ha: '40 minutos' }] },
+  _recados_demo: { lapa: [{ texto: 'O segurança do bar vê tudo. Cuidado com ele.', x: 0.74, y: 0.73, de: 'Corvo' }] },
   experiencia: 8,
   experiencia_total: 12,
   noites_jogadas: 3,
