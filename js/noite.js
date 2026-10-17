@@ -16,7 +16,7 @@ import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } fr
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS, DETALHES_SENTIDOS, VANTAGENS_SENTIDOS } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
-import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
+import { registroDaNoite, registrar, anotarLinha, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
 import { lerLeitura, gravarLeitura, cerimoniasCurtas, RITMOS } from './leitura.js';
 
@@ -109,8 +109,19 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // --- Interface sobre a cena ---------------------------------------------------------------
   const retrato = retratoDe(p);
   const fome = p.estado?.fome ?? 0;
+  // Painéis à maneira dos RPGs clássicos (rodada 25): moldura de pedra, botões redondos à esquerda,
+  // retrato com barras à direita, registro e diálogo embaixo. H esconde tudo (fica salvo no aparelho).
+  let paineisOcultos = false;
+  try { paineisOcultos = localStorage.getItem('mascara.paineis') === 'ocultos'; } catch { /* sem armazenamento */ }
+  const calc = (() => { try { return v5.calcular(p.ficha || {}); } catch { return {}; } })();
+  const caixas = (e, max) => { const m = e?.max || max || 0; return { max: m, resta: Math.max(0, m - (e?.superficial || 0) - (e?.agravado || 0)) }; };
+  const vit = caixas(p.estado?.vitalidade, calc.vitalidade);
+  const von = caixas(p.estado?.vontade, calc.forcaVontade);
+  const ferido = vit.max && vit.resta / vit.max <= 0.5;
+  const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
+  const barraPainel = (classe, nome, resta, max) => `<span class="barra ${classe}" title="${nome}: ${resta} de ${max}" style="--v:${max ? (resta / max).toFixed(3) : 0}"><i></i><em>${resta}/${max}</em><small>${nome}</small></span>`;
   raiz.innerHTML = `
-    <div class="tela-jogo">
+    <div class="tela-jogo bg2${paineisOcultos ? ' paineis-ocultos' : ''}" style="--retrato:url('${esc(new URL(retrato, location.href).href)}')">
       <div class="palco"></div>
       <header class="hud-topo">
         <button type="button" class="hud-personagem" data-hud="ficha" title="Ficha (F)">
@@ -129,12 +140,33 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M9 2.5v6a1.6 1.6 0 0 0 3.2 0V4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
           <button type="button" class="hud-com-icone" data-hud="diario" title="Diário (J)" aria-label="Diário"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 3v18"/><path d="M12 8h4M12 11.5h4"/></svg><span class="hud-nome">Diário <kbd>J</kbd></span></button>
           ${poderesCena.length ? '<button type="button" class="hud-com-icone hud-sangue" data-hud="disciplinas" title="Disciplinas (Q)" aria-label="Disciplinas"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C15 8 18 11 18 15a6 6 0 0 1-12 0c0-4 3-7 6-12z"/></svg><span class="hud-nome">Sangue <kbd>Q</kbd></span></button>' : ''}
-          <button type="button" data-hud="efeitos" class="hud-icone" aria-pressed="${efeitos.ligados()}" title="Chuva e efeitos">☂</button>
-          <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente">♪</button>
-          <button type="button" data-hud="legenda" class="hud-icone" title="Como funciona a noite">?</button>
-          <button type="button" data-hud="menu" class="hud-icone" title="Mais opções">⋯</button>
+          <button type="button" data-hud="efeitos" class="hud-icone" aria-pressed="${efeitos.ligados()}" title="Chuva e efeitos" aria-label="Chuva e efeitos"><span class="icone-texto">☂</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v6.5a2 2 0 0 1-4 0"/><path d="M12 3v-1"/></svg><span class="hud-nome">Chuva</span></button>
+          <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente" aria-label="Som ambiente"><span class="icone-texto">♪</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="hud-nome">Som</span></button>
+          <button type="button" data-hud="legenda" class="hud-icone" title="Como funciona a noite" aria-label="Como funciona a noite"><span class="icone-texto">?</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17v.5"/></svg><span class="hud-nome">Ajuda</span></button>
+          <button type="button" data-hud="menu" class="hud-icone" title="Mais opções" aria-label="Mais opções"><span class="icone-texto">⋯</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span class="hud-nome">Mais</span></button>
         </nav>
       </header>
+      <div class="moldura" aria-hidden="true">
+        <span class="canto canto-se">${CANTO}</span><span class="canto canto-sd">${CANTO}</span><span class="canto canto-ie">${CANTO}</span><span class="canto canto-id">${CANTO}</span>
+        <span class="pedra-chave"><i></i></span>
+      </div>
+      <div class="relogio-noite" role="img"></div>
+      <aside class="painel-retrato" style="--anel:${(() => { const fv = vit.max ? vit.resta / vit.max : 0; const fw = von.max ? von.resta / von.max : 0; const ff = fome / 5; const g = (cor, ini, f) => `${cor} ${ini}deg ${(ini + 118 * f).toFixed(1)}deg, #1c150f ${(ini + 118 * f).toFixed(1)}deg ${ini + 120}deg`; return `${g('#5fa86a', 0, fv)}, ${g('#6c8fd0', 120, fw)}, ${g('#c8202f', 240, ff)}`; })()}">
+        <button type="button" class="retrato-grande${fome >= 4 ? ' faminto' : ''}${ferido ? ' ferido' : ''}" data-hud="ficha" title="Ficha (F)">
+          <img src="${esc(retrato)}" alt=""><span class="estado-cor" aria-hidden="true"></span>
+        </button>
+        <b class="retrato-nome">${esc(p.nome)}</b>
+        <div class="barras">
+          ${barraPainel('barra-vit', 'Vitalidade', vit.resta, vit.max)}
+          ${barraPainel('barra-von', 'Força de Vontade', von.resta, von.max)}
+          ${barraPainel('barra-fome', 'Fome', fome, 5)}
+        </div>
+      </aside>
+      <section class="painel-baixo" aria-label="Registro da noite">
+        <ol class="registro-noite" aria-live="polite"></ol>
+        <div class="painel-pergunta"></div>
+      </section>
+      <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
       <aside class="hud-plano" aria-live="polite"></aside>
       <div class="barra-disciplinas" hidden role="toolbar" aria-label="Disciplinas"></div>
       <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>E</kbd> interagir · <kbd>Tab</kbd> mostrar tudo · <kbd>M</kbd> mapa · <kbd>P</kbd> plano · <kbd>F</kbd> ficha · <kbd>J</kbd> diário</footer>
@@ -359,6 +391,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         voz: d.voz, texto: d.rotulo, opcoes: ['Olhar mais de perto', 'Seguir em frente'],
         aoEscolher: (i) => {
           if (i !== 0) return;
+          anotar('VOCÊ', `examina: ${d.rotulo}.`);
           try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
           registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
           desenharPlano();
@@ -441,6 +474,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const alvo = pts.find((pt) => pt.brasa === 'grande');
     const frase = curto(texto, 12).replace(/^./, (c) => c.toLowerCase()).replace(/[.…]*$/, '.');
     setTimeout(() => cena.marcarEscolha(alvo?.id, frase), 260);
+    anotar('ESTA NOITE', frase);
     setTimeout(() => aviso('Ação principal escolhida. Envie quando o plano estiver pronto.'), 2100);
   }
 
@@ -864,6 +898,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     plano.cacada = texto;
     plano.cacada_curta = linha;
     plano.cacada_falhou = falhou;
+    anotar('CAÇADA', `${linha}${falhou ? '' : ' ✓'}`);
     plano.cacada_de = texto;
     plano.nao_cacar = false;
     // O fim: a tela pulsa vermelho, o batimento desacelera e a voz d'A FOME fala.
@@ -1014,6 +1049,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       case 'encerrar': encerrar(); break;
       case 'disciplinas': alternarBarra(); break;
       case 'menu': abrirMenu(); break;
+      case 'paineis': alternarPaineis(); break;
       case 'legenda': abrirLegenda(); break;
       case 'recolher':
         quadroRecolhido = !quadroRecolhido;
@@ -1038,8 +1074,75 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (b) { ev.stopPropagation(); acao_(b.dataset.hud); }
   });
 
+  // --- Painéis de pedra (rodada 25) ------------------------------------------------------------
+  const listaRegistro = raiz.querySelector('.registro-noite');
+  const semAcentoR = (t) => String(t || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const classeVoz = (voz) => {
+    const v = semAcentoR(voz);
+    if (v.includes('fome')) return 'fome';
+    if (v.includes('humanidade')) return 'humanidade';
+    if (v === 'voce' || v === 'esta noite') return 'voce';
+    if (v.includes('cacada')) return 'cacada';
+    if (/^[A-ZÀ-Ý[\] ]+$/.test(String(voz))) return 'habilidade';
+    return 'outra';
+  };
+  function linhaHtml({ voz, texto }) {
+    return `<li class="reg-${classeVoz(voz)}"><b>${esc(voz)}</b> ${esc(texto)}</li>`;
+  }
+  listaRegistro.innerHTML = registroDaNoite(noite?.id).linhas.slice(-80).map(linhaHtml).join('');
+  listaRegistro.scrollTop = listaRegistro.scrollHeight;
+  function anotar(voz, texto) {
+    const l = anotarLinha(noite?.id, voz, texto);
+    if (!l) return;
+    listaRegistro.insertAdjacentHTML('beforeend', linhaHtml(l));
+    while (listaRegistro.children.length > 120) listaRegistro.firstElementChild.remove();
+    listaRegistro.scrollTop = listaRegistro.scrollHeight;
+  }
+  // Relógio da noite: um disco da lua ao sol; o sol é o fim do prazo (quando a noite fecha).
+  const relogio = raiz.querySelector('.relogio-noite');
+  function desenharRelogio() {
+    if (!noite?.fecha_em) { relogio.hidden = true; return; }
+    const fim = new Date(noite.fecha_em).getTime();
+    const ini = noite.abre_em ? new Date(noite.abre_em).getTime() : fim - 3 * 86400000;
+    const resta = Math.max(0, fim - Date.now());
+    const f = Math.min(1, Math.max(0, 1 - resta / Math.max(1, fim - ini)));
+    const h = Math.floor(resta / 3.6e6);
+    const m = Math.floor((resta % 3.6e6) / 60000);
+    const texto = resta <= 0 ? 'o sol chegou' : h >= 48 ? `faltam ${Math.floor(h / 24)} dias até o sol` : `faltam ${h} h ${String(m).padStart(2, '0')} até o sol`;
+    relogio.title = texto;
+    relogio.setAttribute('aria-label', `Relógio da noite: ${texto}`);
+    relogio.classList.toggle('amanhecendo', f > 0.85);
+    relogio.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="aro" cx="32" cy="32" r="30"/>
+        <g class="disco" style="transform:rotate(${(-180 * f).toFixed(1)}deg)">
+          <path class="metade-noite" d="M4 32a28 28 0 0 1 56 0z"/><path class="metade-dia" d="M4 32a28 28 0 0 0 56 0z"/>
+          <circle class="lua" cx="32" cy="16" r="7"/><circle class="lua-sombra" cx="35" cy="14" r="6"/>
+          <g class="sol"><circle cx="32" cy="48" r="6"/><path d="M32 38v-2M32 60v-2M22 48h-2M44 48h-2M25 41l-1.5-1.5M40.5 56.5 39 55M25 55l-1.5 1.5M40.5 39.5 39 41"/></g>
+        </g>
+        <path class="horizonte" d="M2 32h60"/><circle class="ponteiro" cx="32" cy="5" r="2.4"/>
+      </svg><small>${resta <= 0 ? 'amanheceu' : h >= 48 ? `${Math.floor(h / 24)} dias` : `${h} h ${String(m).padStart(2, '0')}`}</small>`;
+  }
+  desenharRelogio();
+  const relogioTimer = setInterval(() => { if (!relogio.isConnected) { clearInterval(relogioTimer); return; } desenharRelogio(); }, 60000);
+  function alternarPaineis() {
+    paineisOcultos = !paineisOcultos;
+    camadas.classList.toggle('paineis-ocultos', paineisOcultos);
+    try { localStorage.setItem('mascara.paineis', paineisOcultos ? 'ocultos' : 'visiveis'); } catch { /* sem armazenamento */ }
+    // A cena mede a área livre de novo (a moldura muda o tamanho do palco).
+    window.dispatchEvent(new Event('resize'));
+  }
+  let numerosAte = 0;
+  function mostrarNumeros() {
+    camadas.classList.add('mostrar-numeros');
+    numerosAte = Date.now() + 2600;
+    setTimeout(() => { if (Date.now() >= numerosAte) camadas.classList.remove('mostrar-numeros'); }, 2700);
+  }
+
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {
+    painel: raiz.querySelector('.painel-pergunta'),
+    aoFalar: (voz, texto) => anotar(voz, texto),
+    aoMostrarTudo: () => mostrarNumeros(),
     cla: p.ficha?.cla,
     sprite: p.sprite,
     imagem,
@@ -1062,6 +1165,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     aoTecla: (ev) => {
       const k = ev.key.toLowerCase();
       if (k === 'q' && poderesCena.length) { ev.preventDefault(); alternarBarra(); return; }
+      if (k === 'h') { ev.preventDefault(); alternarPaineis(); return; }
       const mapa = { m: 'mapa', f: 'ficha', j: 'diario', p: 'plano' };
       if (mapa[k]) { ev.preventDefault(); acao_(mapa[k]); }
     },

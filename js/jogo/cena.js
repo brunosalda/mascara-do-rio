@@ -69,6 +69,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
+  painel = null, aoFalar = null, aoMostrarTudo = null,
 } = {}) {
   const geo = geografia(lugar);
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
@@ -260,8 +261,9 @@ export function montarCena(raiz, {
 
   // --- Voz interior que comenta ao passar perto -------------------------------------------------
   function falar(voz, texto, ms = 3200) {
+    aoFalar?.(voz, texto);
     // Uma pergunta no balão esperando resposta não é coberta por outra fala.
-    if (balaoEscolha && performance.now() < balaoEscolha.ate) return;
+    if (balaoEscolha && performance.now() < balaoEscolha.ate && !balaoEscolha.noPainel) return;
     balao.className = `balao-voz voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}`;
     balao.hidden = false;
@@ -271,7 +273,22 @@ export function montarCena(raiz, {
 
   // Pergunta pequena no balão junto da cabeça ("1 · Olhar mais de perto · 2 · Seguir em frente"),
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
+  // Com os painéis à mostra (rodada 25), a pergunta abre no painel de baixo, como as respostas de um
+  // diálogo; o balão junto da cabeça fica para as falas.
+  const painelVisivel = () => !!painel?.parentElement && painel.parentElement.offsetParent !== null;
+  function caixaDaPergunta() { return balaoEscolha?.noPainel ? painel : balao; }
+  function limparPainel() { if (painel) { painel.innerHTML = ''; painel.classList.remove('com-pergunta'); } }
   function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, aoCancelar, perto: pertoDe = null, ms = 6000 }) {
+    if (painelVisivel()) {
+      const prazoP = ms < 1e8 ? `<span class="balao-prazo" style="animation-duration:${ms}ms"></span>` : '';
+      painel.className = `painel-pergunta com-pergunta voz-${grupoVoz(voz)}`;
+      painel.innerHTML = `<p class="painel-quem"><b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span></p><ol class="painel-respostas">${opcoes.map((o, i) => `<li><button type="button" data-balao="${i}"><span class="escolha-num">${i + 1}.</span> ${esc(o)}</button></li>`).join('')}</ol>${prazoP}`;
+      falaAte = performance.now() + Math.min(ms, 1e9);
+      balao.hidden = true;
+      balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte, desde: performance.now(), noPainel: true };
+      som.voz?.();
+      return;
+    }
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
     // Balão com prazo mostra o prazo: uma linha fina que se esvazia embaixo das escolhas.
     const prazo = ms < 1e8 ? `<span class="balao-prazo" style="animation-duration:${ms}ms"></span>` : '';
@@ -286,22 +303,26 @@ export function montarCena(raiz, {
   function cancelarBalao(porque) {
     if (!balaoEscolha) return;
     const { aoCancelar } = balaoEscolha;
+    if (balaoEscolha.noPainel) limparPainel();
     balaoEscolha = null;
     falaAte = performance.now();
     aoCancelar?.(porque);
   }
   function responderBalao(i) {
     if (!balaoEscolha || performance.now() - balaoEscolha.desde < 400) return;
-    const { aoEscolher } = balaoEscolha;
+    const { aoEscolher, noPainel } = balaoEscolha;
+    if (noPainel) limparPainel();
     balaoEscolha = null;
     falaAte = performance.now();
     som.toque?.();
     aoEscolher?.(i);
   }
-  balao.addEventListener('click', (ev) => {
+  const cliqueResposta = (ev) => {
     const b = ev.target.closest('[data-balao]');
     if (b) { ev.stopPropagation(); responderBalao(Number(b.dataset.balao)); }
-  });
+  };
+  balao.addEventListener('click', cliqueResposta);
+  painel?.addEventListener('click', cliqueResposta);
 
   // --- A escolha da noite ganha corpo (rodada 24) -----------------------------------------------------
   // Ao confirmar a ação principal: o personagem vira para o objeto, a câmera enquadra os dois, um fio de
@@ -993,7 +1014,11 @@ export function montarCena(raiz, {
     const fy = (pos.y - h * 0.5) * H;
     let alvoX;
     let alvoY;
-    if (conversa && !estreito) {
+    if (conversa && !estreito && ladoDialogo === 'baixo') {
+      // O diálogo sobe do painel de baixo: o personagem vai para o alto, no meio.
+      alvoX = vw * 0.5 - fx;
+      alvoY = vh * 0.34 - fy;
+    } else if (conversa && !estreito) {
       // A caixa de conversa fica de um lado; o personagem vai para o outro.
       alvoX = vw * (ladoDialogo === 'direita' ? 0.3 : 0.7) - fx;
       alvoY = vh * 0.55 - fy;
@@ -1266,15 +1291,24 @@ export function montarCena(raiz, {
     atualizarCamera(dt);
     if (conversa && pontoDaConversa) desenharLinha();
 
+    // Pergunta no painel de baixo: o prazo vence como no balão.
+    if (balaoEscolha?.noPainel && agora > balaoEscolha.ate + 400) {
+      const expirou = balaoEscolha;
+      balaoEscolha = null;
+      limparPainel();
+      expirou.aoExpirar?.();
+    }
     // Balão da voz interior acima da cabeça.
     if (!balao.hidden) {
       balao.style.transform = `translate3d(${(pos.x * mw).toFixed(1)}px, ${((pos.y - h) * mh - 10).toFixed(1)}px, 0) translate(-50%, -100%)`;
       balao.classList.toggle('sumindo', agora > falaAte);
       if (agora > falaAte + 400) {
         balao.hidden = true;
-        const expirou = balaoEscolha;
-        balaoEscolha = null;
-        expirou?.aoExpirar?.();
+        if (!balaoEscolha?.noPainel) {
+          const expirou = balaoEscolha;
+          balaoEscolha = null;
+          expirou?.aoExpirar?.();
+        }
       }
     }
 
@@ -1348,9 +1382,9 @@ export function montarCena(raiz, {
     const k = ev.key.toLowerCase();
     if (k === 'shift') { teclas.add('shift'); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
-    if (k === 'tab') { ev.preventDefault(); mostrarTudo(); return; }
+    if (k === 'tab') { ev.preventDefault(); mostrarTudo(); aoMostrarTudo?.(); return; }
     if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
-    if (balaoEscolha && /^[1-9]$/.test(k) && balao.querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
+    if (balaoEscolha && /^[1-9]$/.test(k) && caixaDaPergunta().querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
     if (k === 'e' || k === 'enter' || k === ' ') {
       if (perto) { ev.preventDefault(); interagir(perto); }
       return;
@@ -1447,10 +1481,12 @@ export function montarCena(raiz, {
 
   // A caixa de conversa abre do lado oposto ao personagem, e a câmera aproxima enquanto ela está aberta.
   const ladoLivre = () => (cam.x + pos.x * mw * cam.z > vw / 2 ? 'esquerda' : 'direita');
+  // Com os painéis de pedra à mostra (rodada 25), a conversa abre no painel de baixo.
+  const comPaineis = () => !estreito && !!cena.closest('.bg2:not(.paineis-ocultos)');
   const desregistrar = registrarCena({
-    lado: ladoLivre,
+    lado: () => (comPaineis() ? 'baixo' : ladoLivre()),
     conversa: (aberta) => {
-      if (aberta && !conversa) ladoDialogo = ladoLivre();
+      if (aberta && !conversa) ladoDialogo = comPaineis() ? 'baixo' : ladoLivre();
       if (!aberta && conversa && pontoDaConversa) {
         // Ao fechar: endireita e dá meio passo para trás, sem virar de costas.
         const dx = (pontoDaConversa.x < pos.x ? 1 : -1) * 0.012;
@@ -1513,7 +1549,7 @@ export function montarCena(raiz, {
       setTimeout(() => el.remove(), 2500);
     },
     ajustarCaca: (fn) => { if (caca) fn(caca); },
-    textoDoBalao: (html) => { if (balaoEscolha) { const t = balao.querySelector('.balao-texto'); if (t) t.innerHTML = html; } },
+    textoDoBalao: (html) => { if (balaoEscolha) { const t = caixaDaPergunta().querySelector('.balao-texto'); if (t) t.innerHTML = html; } },
     emFurtividade: () => !!caca,
     // Anda até um ponto (de frente, na caçada: ele vai direto até a presa).
     irAte: (p) => {

@@ -7,9 +7,9 @@ const chave = (noiteId) => `mascara.registro.${noiteId || 'sem-noite'}`;
 export function registroDaNoite(noiteId) {
   try {
     const r = JSON.parse(localStorage.getItem(chave(noiteId))) || {};
-    return { visitados: r.visitados || [], detalhes: r.detalhes || [], comentarios: r.comentarios || [] };
+    return { visitados: r.visitados || [], detalhes: r.detalhes || [], comentarios: r.comentarios || [], linhas: r.linhas || [] };
   } catch {
-    return { visitados: [], detalhes: [], comentarios: [] };
+    return { visitados: [], detalhes: [], comentarios: [], linhas: [] };
   }
 }
 
@@ -20,6 +20,18 @@ export function registrar(noiteId, tipo, item) {
   if (r[tipo].some(igual)) return;
   r[tipo].push(item);
   try { localStorage.setItem(chave(noiteId), JSON.stringify(r)); } catch { /* sem armazenamento */ }
+}
+
+// Registro da noite (rodada 25): uma linha por acontecimento, na ordem, para o painel de baixo e o
+// diário. Não repete a mesma linha seguida; guarda no máximo 300.
+export function anotarLinha(noiteId, voz, texto) {
+  const r = registroDaNoite(noiteId);
+  const ultima = r.linhas.at(-1);
+  if (ultima && ultima.voz === voz && ultima.texto === texto) return null;
+  const linha = { voz, texto, t: Date.now() };
+  r.linhas = [...r.linhas, linha].slice(-300);
+  try { localStorage.setItem(chave(noiteId), JSON.stringify(r)); } catch { /* sem armazenamento */ }
+  return linha;
 }
 
 const fmtDia = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'America/Sao_Paulo' });

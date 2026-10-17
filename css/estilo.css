@@ -2375,3 +2375,253 @@ body.furtividade .caca-desistir { display: none; }
 .vigia.vulto { position: absolute; height: calc(var(--altura, 200px) * var(--s, 1)); width: calc(var(--altura, 200px) * 0.4 * var(--s, 1)); translate: -50% -100%; scale: var(--lado, 1) 1; pointer-events: none; filter: blur(0.8px) drop-shadow(0 0 6px rgba(150, 160, 190, 0.35)); opacity: 0.75; }
 .vigia.vulto svg { width: 100%; height: 100%; fill: rgba(12, 12, 16, 0.9); display: block; }
 body.sem-efeitos .vestigio *, body.sem-efeitos .ponto.brasa-grande::before, body.sem-efeitos .ponto.brasa-pequena::before { animation: none !important; }
+
+/* =====================================================================================================
+   Rodada 25: painéis à maneira dos RPGs clássicos (inspiração em Baldur's Gate 2; tudo próprio, CSS e SVG).
+   Moldura de pedra e bronze, botões redondos à esquerda com o relógio da noite, retrato com barras à
+   direita, registro e diálogo embaixo. .paineis-ocultos (tecla H) volta à cena de tela cheia.
+   ===================================================================================================== */
+.tela-jogo.bg2 {
+  --col-e: 84px; --col-d: 116px; --baixo: 176px; --topo: 14px;
+  --pedra: #2e241c; --pedra-clara: #4a3a2c; --bronze: #8a6a36; --bronze-claro: #c9a25a;
+}
+.icone-texto { display: none; }
+.moldura, .relogio-noite, .painel-retrato, .painel-baixo { display: none; }
+.mostrar-paineis {
+  position: absolute; z-index: 270; top: 6px; right: 6px; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6b5232, #2a1f14 70%); border: 1.5px solid #c9a25a; color: #f0dcb0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.mostrar-paineis svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.mostrar-paineis:hover, .mostrar-paineis:focus-visible { color: #fff; border-color: #f0c870; outline: none; }
+.tela-jogo.bg2.paineis-ocultos .mostrar-paineis { top: auto; bottom: 2.6rem; opacity: 0.75; }
+
+/* Pedra: gradientes e ruído pintados uma vez (sem animação). */
+.tela-jogo.bg2:not(.paineis-ocultos) {
+  background-color: var(--pedra);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.12 0 0 0 0 0.08 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 30% 20%, rgba(255, 220, 170, 0.07), transparent 60%),
+    linear-gradient(160deg, var(--pedra-clara), var(--pedra) 45%, #221a13);
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .palco { inset: var(--topo) var(--col-d) var(--baixo) var(--col-e); }
+.tela-jogo.bg2:not(.paineis-ocultos) .moldura {
+  display: block; position: absolute; z-index: 150; pointer-events: none;
+  inset: var(--topo) var(--col-d) var(--baixo) var(--col-e);
+  border: 2px solid var(--bronze-claro);
+  box-shadow: 0 0 0 3px #1c150f, 0 0 0 5px var(--bronze), 0 0 0 6px #1c150f, inset 0 0 26px 6px rgba(0, 0, 0, 0.75);
+}
+.moldura .canto { position: absolute; width: 58px; height: 58px; }
+.moldura .canto svg { width: 100%; height: 100%; overflow: visible; }
+.moldura .galho { fill: none; stroke: var(--bronze-claro); stroke-width: 3.2; stroke-linecap: round; filter: drop-shadow(0 1px 1px #000); }
+.moldura .galho.fino { stroke-width: 1.8; stroke: var(--bronze); }
+.moldura .espinho { fill: #7a1520; stroke: var(--bronze-claro); stroke-width: 0.8; }
+.moldura .no { fill: #1c150f; stroke: var(--bronze-claro); stroke-width: 1.6; }
+.moldura .canto-ie { left: -14px; bottom: -14px; }
+.moldura .canto-id { right: -14px; bottom: -14px; transform: scaleX(-1); }
+.moldura .canto-se { left: -14px; top: -14px; transform: scaleY(-1); }
+.moldura .canto-sd { right: -14px; top: -14px; transform: scale(-1, -1); }
+.moldura .pedra-chave {
+  position: absolute; top: -16px; left: 50%; translate: -50% 0; width: 46px; height: 30px;
+  clip-path: polygon(0 0, 100% 0, 82% 100%, 18% 100%);
+  background: linear-gradient(180deg, var(--pedra-clara), var(--pedra)); border-top: 2px solid var(--bronze-claro);
+  display: grid; place-items: center;
+}
+.moldura .pedra-chave i { width: 11px; height: 11px; margin-top: -2px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff8a8a, #a0101e 55%, #3a0508); box-shadow: 0 0 6px rgba(220, 30, 40, 0.7); }
+
+/* Coluna da esquerda: botões redondos de bronze, a tecla embaixo. */
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-topo { display: contents; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-personagem { display: none; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-noite {
+  position: absolute; z-index: 200; top: 10px; right: 0; width: var(--col-d); padding: 0 6px; text-align: center;
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-noite b { font-size: 1.15rem; color: #f0dcb0; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-noite small { display: none; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes {
+  position: absolute; z-index: 200; top: calc(var(--topo) + 6px); left: 0; width: var(--col-e);
+  display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 1.15rem;
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button {
+  position: relative; width: 48px; height: 48px; min-width: 0; min-height: 0; padding: 0 !important; display: grid; place-items: center;
+  border-radius: 50%; color: #f0dcb0;
+  background: radial-gradient(circle at 35% 28%, #5e4830, #2a1f14 72%);
+  border: 2px solid var(--bronze);
+  box-shadow: inset 0 0 0 1px #1c150f, inset 0 2px 3px rgba(255, 220, 160, 0.25), 0 2px 5px rgba(0, 0, 0, 0.75);
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button:hover,
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button:focus-visible { border-color: var(--bronze-claro); color: #fff; outline: none; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button[aria-pressed='true'],
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-sangue { box-shadow: inset 0 0 0 1px #1c150f, 0 0 0 2px rgba(180, 20, 32, 0.55), 0 2px 5px rgba(0, 0, 0, 0.75); }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button[aria-pressed='false'] { opacity: 0.6; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-svg { width: 24px; height: 24px; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome {
+  position: absolute; top: calc(100% + 1px); left: 50%; translate: -50% 0; opacity: 1; padding: 0; background: none; border: 0;
+  font: 600 0 / 1 var(--sans); color: transparent; pointer-events: none;
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome kbd {
+  display: inline-block; font: 700 0.72rem/1 var(--sans); color: #e8cf98; background: none; border: 0; padding: 0; text-shadow: 0 1px 2px #000;
+}
+/* Relógio da noite: da lua ao sol (o sol é o fim do prazo). */
+.tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite {
+  display: grid; justify-items: center; gap: 2px; position: absolute; z-index: 200; left: 0; width: var(--col-e); bottom: calc(var(--baixo) + 8px);
+}
+.relogio-noite svg { width: 64px; height: 64px; overflow: visible; }
+.relogio-noite .aro { fill: #1c150f; stroke: var(--bronze-claro); stroke-width: 3; }
+.relogio-noite .disco { transform-origin: 32px 32px; transition: transform 2s ease; }
+.relogio-noite .metade-noite { fill: #141a2e; }
+.relogio-noite .metade-dia { fill: #5a3418; }
+.relogio-noite .lua { fill: #e8e2cc; }
+.relogio-noite .lua-sombra { fill: #141a2e; }
+.relogio-noite .sol circle { fill: #f2a640; }
+.relogio-noite .sol path { stroke: #f2a640; stroke-width: 1.6; stroke-linecap: round; }
+.relogio-noite .horizonte { stroke: var(--bronze); stroke-width: 1.5; }
+.relogio-noite .ponteiro { fill: #b31525; stroke: #1c150f; }
+.relogio-noite small { font: 600 0.78rem/1 var(--sans); color: #e8cf98; text-shadow: 0 1px 2px #000; }
+.relogio-noite.amanhecendo .aro { stroke: #f08a30; filter: drop-shadow(0 0 5px rgba(255, 140, 40, 0.8)); }
+
+/* Coluna da direita: retrato com Vitalidade, Força de Vontade e Fome. */
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato {
+  display: grid; justify-items: center; gap: 6px; position: absolute; z-index: 200; right: 0; top: 44px; width: var(--col-d); padding: 0 8px;
+}
+.retrato-grande { position: relative; width: 88px; height: 110px; padding: 0; cursor: pointer; border: 2px solid var(--bronze-claro); outline: 2px solid #1c150f; background: #000; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.8); }
+.retrato-grande img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.retrato-grande .estado-cor { position: absolute; inset: 0; pointer-events: none; }
+.retrato-grande.faminto .estado-cor { background: radial-gradient(ellipse at center, transparent 35%, rgba(170, 10, 25, 0.55)); animation: pulso-faminto 2.6s ease-in-out infinite; }
+.retrato-grande.ferido .estado-cor { box-shadow: inset 0 -30px 30px -8px rgba(0, 0, 0, 0.85), inset 0 0 18px rgba(0, 0, 0, 0.7); }
+@keyframes pulso-faminto { 50% { opacity: 0.35; } }
+.retrato-grande:hover, .retrato-grande:focus-visible { border-color: #f0c870; outline-color: #000; }
+.retrato-nome { max-width: 100%; font: 700 0.86rem/1.15 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: #f0dcb0; text-align: center; overflow-wrap: anywhere; text-shadow: 0 1px 2px #000; }
+.painel-retrato .barras { display: flex; gap: 10px; align-items: flex-end; }
+.painel-retrato .barra { position: relative; display: grid; justify-items: center; gap: 3px; }
+.painel-retrato .barra i { position: relative; display: block; width: 12px; height: 92px; background: #120d09; border: 1px solid var(--bronze); box-shadow: inset 0 0 4px #000; }
+.painel-retrato .barra i::after { content: ''; position: absolute; left: 1px; right: 1px; bottom: 1px; height: calc((100% - 2px) * var(--v, 0)); background: var(--cor-barra); box-shadow: 0 0 6px var(--cor-barra); transition: height 0.6s; }
+.painel-retrato .barra-vit { --cor-barra: #5fa86a; }
+.painel-retrato .barra-von { --cor-barra: #6c8fd0; }
+.painel-retrato .barra-fome { --cor-barra: #c8202f; }
+.painel-retrato .barra small { font: 700 0.62rem/1 var(--sans); color: #cdb48a; writing-mode: vertical-rl; rotate: 180deg; letter-spacing: 0.05em; }
+.painel-retrato .barra em { position: absolute; top: 34px; left: 50%; translate: -50% 0; font: 700 0.82rem/1 var(--sans); font-style: normal; color: #fff; background: rgba(0, 0, 0, 0.85); padding: 2px 4px; border: 1px solid var(--bronze); opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; z-index: 1; }
+.tela-jogo.mostrar-numeros .painel-retrato .barra em, .painel-retrato .barra:hover em { opacity: 1; }
+
+/* Painel de baixo: registro da noite à esquerda, quadro da noite à direita. */
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo {
+  display: block; position: absolute; z-index: 190; left: var(--col-e); right: var(--col-d); bottom: 0; height: var(--baixo); padding: 14px 400px 12px 6px;
+}
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-dicas { display: none; }
+.registro-noite {
+  height: 100%; margin: 0; padding: 0.5rem 0.8rem; list-style: none; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain;
+  background: rgba(14, 10, 7, 0.72); border: 1px solid var(--bronze); box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.8);
+  font: 400 1.07rem/1.35 var(--texto-livro); color: #e6dccb;
+}
+.registro-noite:empty::before { content: 'O registro da noite começa aqui: o que você examina, ouve e faz.'; color: #9c8f7a; font-style: italic; }
+.registro-noite li { padding: 1px 0; }
+.registro-noite li b { font: 700 0.8rem/1 var(--sans); letter-spacing: 0.06em; margin-right: 0.35rem; color: #c9a25a; }
+.registro-noite .reg-fome b { color: #ff5a68; }
+.registro-noite .reg-humanidade b { color: #8fc3e8; }
+.registro-noite .reg-voce b { color: #f0dcb0; }
+.registro-noite .reg-cacada b { color: #e6705a; }
+.registro-noite .reg-habilidade b { color: #b6d68a; }
+.tela-jogo.bg2:not(.paineis-ocultos) .hud-plano {
+  top: auto; bottom: 12px; right: calc(var(--col-d) + 4px); transform: none; width: 384px; max-width: 384px; max-height: calc(var(--baixo) - 24px); overflow-y: auto;
+  background: rgba(14, 10, 7, 0.82); border: 1px solid var(--bronze); backdrop-filter: none;
+}
+/* Perguntas rápidas (caçada, detalhes) no painel de baixo, como respostas de diálogo. */
+.painel-pergunta:not(.com-pergunta) { display: none; }
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta {
+  position: absolute; inset: 14px 400px 12px 6px; z-index: 2; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.5rem 0.9rem; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(30, 22, 15, 0.97), rgba(16, 12, 8, 0.97)); border: 1px solid var(--bronze-claro); box-shadow: 0 0 0 1px #000, inset 0 0 16px rgba(0, 0, 0, 0.7);
+  animation: surgir-dialogo 0.25s ease-out;
+}
+.painel-quem { margin: 0; font: 400 1.2rem/1.3 var(--texto-livro); color: #f2e8d6; }
+.painel-quem b { font: 700 0.85rem/1 var(--sans); letter-spacing: 0.06em; color: #c9a25a; margin-right: 0.3rem; }
+.painel-pergunta.voz-fome .painel-quem b { color: #ff5a68; }
+.painel-quem .repara { display: block; font-size: 0.95rem; color: #cdb48a; font-style: italic; }
+.painel-respostas { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.1rem; }
+.painel-respostas button {
+  width: 100%; text-align: left; cursor: pointer; padding: 0.22rem 0.4rem; background: none; border: 0; border-left: 2px solid transparent;
+  font: 400 1.2rem/1.3 var(--texto-livro); color: #e9d8b4;
+}
+.painel-respostas button:hover, .painel-respostas button:focus-visible { color: #ffcf7a; border-left-color: #b31525; background: rgba(179, 21, 37, 0.12); outline: none; }
+.painel-respostas .escolha-num { color: #c9a25a; font-weight: 700; margin-right: 0.25rem; }
+.painel-pergunta .balao-prazo { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #b31525; transform-origin: left; animation: prazo-esvazia linear forwards; }
+@keyframes prazo-esvazia { to { transform: scaleX(0); } }
+
+/* Diálogo: o painel de baixo cresce até uns 40% da altura, com o medalhão de quem fala. */
+.dialogo-cena.dialogo-baixo {
+  left: 0; right: 0; bottom: 0; width: auto; margin: 0; max-height: 44vh; min-height: 176px;
+  padding-left: 112px;
+  background-color: #241b13;
+  background-image: linear-gradient(180deg, rgba(40, 30, 21, 0.97), rgba(20, 15, 10, 0.98));
+  border: 0; border-top: 3px solid #c9a25a; box-shadow: 0 -2px 0 #1c150f, 0 -10px 30px rgba(0, 0, 0, 0.7); backdrop-filter: none;
+}
+.dialogo-cena.dialogo-baixo::before {
+  content: ''; position: absolute; left: 22px; top: 18px; width: 72px; height: 90px; background: var(--retrato) center / cover, #000;
+  border: 2px solid #c9a25a; outline: 2px solid #1c150f; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.8);
+}
+.dialogo-cena.dialogo-baixo.surgir { animation-name: surgir-dialogo; }
+.dialogo-cena.dialogo-baixo .dialogo-cabeca .grupo-rotulo { color: #c9a25a; }
+.dialogo-cena.dialogo-baixo .dialogo-corpo .texto-narracao { font-size: 1.2rem; }
+.dialogo-cena.dialogo-baixo .escolhas button { font-size: 1.2rem; }
+.dialogo-cena.dialogo-baixo .escolhas button:hover, .dialogo-cena.dialogo-baixo .escolhas button:focus-visible { color: #ffcf7a; }
+.dialogo-cena.dialogo-baixo .dialogo-escolhas { border-top-color: rgba(201, 162, 90, 0.35); background: rgba(0, 0, 0, 0.15); }
+
+/* O resto da cena respeita a área livre. */
+.tela-jogo.bg2:not(.paineis-ocultos) .atencao-rua { top: calc(var(--topo) + 14px); left: calc(var(--col-e) + (100% - var(--col-e) - var(--col-d)) / 2); }
+.tela-jogo.bg2:not(.paineis-ocultos) .barra-disciplinas { top: calc(var(--topo) + 14px); left: calc(var(--col-e) + 14px); }
+.tela-jogo.bg2:not(.paineis-ocultos) .medidor-fps { right: calc(var(--col-d) + 10px); bottom: calc(var(--baixo) + 10px); }
+.tela-jogo.bg2:not(.paineis-ocultos) .letreiro-escolha { top: 22%; }
+
+/* Celular: fileira de botões no alto, retrato como selo com as barras em anel, registro de uma linha. */
+@media (max-width: 760px) {
+  .tela-jogo.bg2 { --col-e: 0px; --col-d: 0px; --topo: 60px; --baixo: 46px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .moldura { box-shadow: 0 0 0 2px #1c150f, inset 0 0 16px 4px rgba(0, 0, 0, 0.7); }
+  .moldura .canto { width: 34px; height: 34px; }
+  .moldura .pedra-chave { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-noite { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes { top: 8px; left: 8px; right: 112px; width: auto; flex-direction: row; justify-content: flex-start; gap: 6px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button { width: 42px; height: 42px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes .hud-nome { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-svg { width: 21px; height: 21px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite { left: auto; right: 62px; top: 9px; bottom: auto; width: auto; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite svg { width: 40px; height: 40px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite small { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato { top: 6px; right: 6px; width: auto; padding: 0; gap: 0; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .retrato-grande { width: 48px; height: 48px; border-radius: 50%; outline: 0; overflow: hidden; border: 0; box-shadow: 0 0 0 2px #1c150f; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato .barras { position: absolute; inset: 0; width: 48px; height: 48px; pointer-events: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato .barras::before {
+    content: ''; position: absolute; inset: -5px; border-radius: 50%;
+    background: conic-gradient(var(--anel));
+    -webkit-mask: radial-gradient(circle, transparent 26px, #000 27px); mask: radial-gradient(circle, transparent 26px, #000 27px);
+  }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-retrato .barra, .tela-jogo.bg2:not(.paineis-ocultos) .retrato-nome { display: none; }
+  .mostrar-paineis { top: auto; bottom: calc(var(--baixo, 46px) + 8px); right: 8px; }
+  .tela-jogo.bg2.paineis-ocultos .mostrar-paineis { bottom: 4.2rem; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo { left: 0; right: 0; padding: 6px 8px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .registro-noite { padding: 0.35rem 0.6rem; overflow: hidden; font-size: 1rem; white-space: nowrap; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .registro-noite li:not(:last-child) { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .registro-noite li { overflow: hidden; text-overflow: ellipsis; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano { bottom: calc(var(--baixo) + 8px); right: 50%; transform: translateX(50%); width: auto; max-width: 92vw; max-height: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta { position: fixed; inset: auto 0 0 0; max-height: 60vh; z-index: 320; padding: 0.8rem 1rem 1rem; border-width: 2px 0 0; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .atencao-rua { left: 50%; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .barra-disciplinas { left: 10px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .medidor-fps { right: 8px; }
+}
+body.sem-efeitos .retrato-grande .estado-cor { animation: none !important; }
+/* Ajustes da rodada 25: o quadro da noite compacto cabe no painel; relógio e botão dos painéis nos cantos de pedra. */
+@media (min-width: 761px) {
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes { gap: 0.9rem; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-botoes button { width: 44px; height: 44px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .relogio-noite { bottom: 18px; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .mostrar-paineis { top: auto; bottom: 18px; right: calc(var(--col-d) / 2 - 16px); }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-cabeca { padding: 0.3rem 0.6rem; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-linhas button { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.12rem 0.6rem; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-nome { flex: none; width: 7.2rem; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-nome small { display: none; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-valor { flex: 1; min-width: 0; }
+  .tela-jogo.bg2:not(.paineis-ocultos) .hud-plano .quadro-pe { padding: 0.25rem 0.6rem; gap: 0.5rem; }
+}
+@media (min-width: 761px) { .tela-jogo.bg2 { --baixo: 188px; } }
+/* H: painéis escondidos = só a cena, o quadro da noite e o botão de bronze para trazer de volta. */
+.tela-jogo.bg2.paineis-ocultos .hud-topo, .tela-jogo.bg2.paineis-ocultos .hud-dicas { display: none; }
+.tela-jogo.bg2.paineis-ocultos .mostrar-paineis { top: 10px; bottom: auto; left: 10px; right: auto; }
+.tela-jogo.bg2.paineis-ocultos .hud-plano { top: 10px; }
+.hud-icone .hud-nome { display: none; }
