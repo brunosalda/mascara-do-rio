@@ -815,6 +815,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       return;
     }
     const fala = t.falas[Math.floor(Math.random() * t.falas.length)];
+    // A primeira fala da pessoa já vai para o registro (a pergunta no painel não registra sozinha).
+    anotar(t.nome.toUpperCase(), fala);
     cena.perguntarNoBalao({
       voz: t.nome.toUpperCase(), texto: fala, opcoes: ['Puxar conversa', 'Deixar para lá'], perto: { x: pt.x, y: pt.y, raio: 0.3 },
       aoEscolher: (i) => {
@@ -824,7 +826,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         const pista = PISTAS_CONVERSA[lugarId]?.[pt.tipoGente];
         const idPista = `${lugarId}.conversa.${pt.tipoGente}`;
         if (pista && !lerVantagens().some((v) => v.id === idPista)) {
-          cena.falar(t.nome.toUpperCase(), pista.fala, 5200);
+          cena.falar(t.nome.toUpperCase(), `${pista.fala} ✦`, 5200);
           setTimeout(() => ganharVantagem({ id: idPista, lugar: lugarId, x: pt.x, y: pt.y, nota: pista.nota, termos: pista.termos, cacada: pista.cacada }), 1800);
           return;
         }
