@@ -7,7 +7,7 @@
 import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
-import { TIPOS_GENTE, figuraGente } from './gente.js';
+import { TIPOS_GENTE, figuraGente, FIGURAS_GENTE } from './gente.js';
 import { geografia, dentro, maisPertoDentro } from './lugares.js';
 import { cerimoniasCurtas } from '../leitura.js';
 
@@ -414,9 +414,17 @@ export function montarCena(raiz, {
     el.className = `pessoa pessoa-${g.tipo}`;
     el.setAttribute('aria-label', t?.rotulo || g.tipo);
     el.title = t?.nome || g.tipo;
-    el.innerHTML = `${figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}</span>`;
+    const figuras = FIGURAS_GENTE[g.tipo];
+    const figura = figuras ? figuras[i % figuras.length] : null;
+    el.innerHTML = `${figura ? `<img src="img/gente/${figura}.png" alt="" draggable="false">` : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}</span>`;
+    if (figura) {
+      el.classList.add('pessoa-pintada');
+      // Tinge com a luz do lugar: mais clara perto de um poste ou néon, mais escura no breu.
+      const luz = luzEm(g.x, g.y);
+      el.style.setProperty('--luz-gente', (0.72 + Math.min(1, luz) * 0.5).toFixed(2));
+    }
     mundo.appendChild(el);
-    const p = { id: `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: t?.nome || g.tipo, acao: `Falar com: ${t?.nome || g.tipo}`, anda: g.anda, dir: 1, el, parado: 0 };
+    const p = { id: `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: t?.nome || g.tipo, acao: `Falar com: ${t?.nome || g.tipo}`, anda: figura ? null : g.anda, dir: (i % 2) ? -1 : 1, el, parado: 0 };
     return p;
   });
   function posicionarPessoa(p) {

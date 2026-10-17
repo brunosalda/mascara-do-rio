@@ -33,6 +33,26 @@ export const TIPOS_GENTE = {
     falas: ['Excuse me... Selarón?', 'Is this the right way?', 'Obrigada! Obrigada!'],
     repara: 'procura alguém que fale inglês',
   },
+  entregador: {
+    nome: 'Entregador', rotulo: 'um entregador encostado na moto', presa: true,
+    falas: ['O pedido sumiu do aplicativo, acredita?', 'Chuva assim ninguém dá gorjeta.', 'Tá esperando alguém?'],
+    repara: 'espera um pedido que não chega e está entediado',
+  },
+  celular: {
+    nome: 'Mulher ao celular', rotulo: 'uma mulher discutindo ao celular', presa: true,
+    falas: ['Não, escuta você agora!', 'Tô na Lapa, pô. Vem me buscar.', 'Desculpa, tô no telefone.'],
+    repara: 'está com raiva de alguém e não presta atenção em volta',
+  },
+  garconete: {
+    nome: 'Garçonete', rotulo: 'a garçonete do bar', presa: false,
+    falas: ['Mesa pra um? Só lá dentro.', 'A cozinha já fechou, só bebida.', 'Vai querer alguma coisa?'],
+    repara: 'conhece todo mundo que entra no bar',
+  },
+  idoso: {
+    nome: 'Senhor no banco', rotulo: 'um senhor sozinho no banco da praça', presa: true, vulneravel: 'Ele só queria ver a noite passar.',
+    falas: ['No meu tempo a Lapa era outra coisa.', 'Senta aí, moço. O banco é grande.', 'Essa chuva não para mais.'],
+    repara: 'conta histórias para quem para do lado',
+  },
 };
 
 // Figura provisória em SVG: corpo genérico mais um detalhe que diz o tipo (guarda-chuva, isopor,
@@ -49,3 +69,18 @@ const DETALHE = {
 export function figuraGente(tipo) {
   return `<svg viewBox="-4 -8 48 108" aria-hidden="true"><g class="corpo-gente">${CORPO}</g>${DETALHE[tipo] || ''}</svg>`;
 }
+
+// Figuras pintadas (etapa C), recortadas do fundo verde: img/gente/<nome>.png. Quando há figura, a
+// pessoa fica parada (como na pintura), tingida pela luz do lugar e às vezes espelhada para variar.
+export const FIGURAS_GENTE = {
+  passante: ['passante-teste', 'passante-celular'],
+  turista: ['mulher-guarda-chuva'],
+  ambulante: ['ambulante'],
+  bebado: ['bebado'],
+  seguranca: ['seguranca'],
+  policial: ['policial'],
+  entregador: ['entregador'],
+  celular: ['mulher-celular'],
+  garconete: ['garconete'],
+  idoso: ['idoso-banco'],
+};

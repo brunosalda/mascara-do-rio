@@ -3020,3 +3020,9 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
 }
 .dialogo-cena.dialogo-baixo .dialogo-corpo .texto-narracao, .dialogo-cena.dialogo-baixo .escolhas button { font-size: 1.2rem; }
 .mapa-coroa { text-anchor: middle; font-size: 15px; paint-order: stroke; stroke: rgba(240, 226, 192, 0.85); stroke-width: 4px; }
+/* Gente pintada (etapa C): recortada do fundo verde, tingida pela luz do lugar, espelhada para variar. */
+.pessoa.pessoa-pintada { aspect-ratio: auto; filter: brightness(var(--luz-gente, 0.8)) saturate(0.85) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.75)); }
+.pessoa.pessoa-pintada img { height: 100%; width: auto; display: block; pointer-events: auto; }
+.pessoa.pessoa-pintada.vira img { transform: scaleX(-1); }
+.pessoa.pessoa-pintada:hover { filter: brightness(calc(var(--luz-gente, 0.8) + 0.25)) drop-shadow(0 0 4px rgba(255, 220, 150, 0.9)); }
+.cena.em-caca .pessoa.pessoa-pintada:hover { filter: brightness(var(--luz-gente, 0.8)) drop-shadow(0 0 5px rgba(220, 40, 50, 0.95)); }
