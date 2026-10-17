@@ -3417,3 +3417,32 @@ body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
 .janela-senha-direta { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 16px; background: rgba(6, 4, 3, 0.72); }
 .janela-senha-caixa { width: min(30rem, 100%); padding: 1.1rem 1.3rem 1.2rem; background: linear-gradient(#2a1f14, #16100b); border: 2px solid #c9a25a; box-shadow: 0 0 0 3px #1c150f, 0 16px 40px rgba(0, 0, 0, 0.8); color: #f0e2c4; }
 .janela-senha-caixa h2 { margin: 0 0 0.6rem; font: italic 600 1.5rem var(--titulo); color: #f6ead6; }
+
+/* Rodada 41: entrada e senha sem tropeço no celular. Alvos de 44 px (o desenho não muda), a tela de criar
+   a senha na mesma placa de bronze e letra grande, a navegação da demonstração e a faixa abaixo do título. */
+.caixa-entrada .btn-texto { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 0.6rem; }
+.caixa-entrada .btn-link-destaque { display: inline-block; padding: 0.55rem 0.1rem; margin: -0.55rem 0; }
+.caixa-entrada .btn[disabled], .form-senha .btn[disabled] { opacity: 0.75; cursor: progress; }
+#form-pedir-link { display: grid; gap: 0.3rem; margin-top: 0.4rem; }
+#form-pedir-link[hidden] { display: none; }
+.placa-bronze { display: inline-block; padding: 0.25rem 1rem; color: #fbeccb; text-shadow: 0 1px 0 #2a1a08; font: italic 600 1.35rem var(--titulo);
+  background: linear-gradient(180deg, #a8823e, #6e5229 55%, #4a3518); border-top: 1px solid #f0d590;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+.janela-senha-caixa { font: 400 1.08rem/1.45 var(--texto-livro); }
+.janela-senha-caixa label { display: grid; gap: 0.25rem; font: 600 0.85rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #d8c8a8; }
+.janela-senha-caixa input { font: 400 1.1rem var(--texto-livro); min-height: 44px; padding: 0.4rem 0.6rem; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(201, 162, 90, 0.5); color: #f6ead6; text-transform: none; letter-spacing: 0; }
+.janela-senha-caixa .btn, .janela-senha-caixa .btn-texto { min-height: 44px; }
+.demo-telas { position: absolute; z-index: 410; left: 50%; bottom: 0.6rem; translate: -50% 0; display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; align-items: center; justify-content: center; max-width: 94vw;
+  padding: 0.2rem 0.6rem; font: 600 0.8rem var(--sans); color: #1a1206; background: var(--voz-fisico); }
+.demo-telas a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 0.4rem; color: #1a1206; }
+.demo-telas a[aria-current] { text-decoration: none; background: rgba(0, 0, 0, 0.15); }
+@media (max-width: 760px) {
+  .tela-entrada .faixa-demo { top: 6px !important; bottom: auto !important; }
+  .tela-entrada:has(.demo-telas) .faixa-demo { display: none; }
+  .demo-telas { top: 6px; bottom: auto; font-size: 0.72rem; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; max-width: calc(100vw - 24px); justify-content: flex-start; scrollbar-width: none; }
+  .demo-telas a { min-height: 32px; padding: 0 0.3rem; }
+  .demo-telas::before { content: 'Demonstração ·'; }
+  .tela-entrada .titulo-entrada { top: 64px; }
+  .tela-entrada .titulo-entrada .lead { display: none; }
+  .caixa-entrada { max-height: calc(100dvh - 210px); overflow-y: auto; bottom: 12px; }
+}

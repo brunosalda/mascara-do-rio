@@ -8,6 +8,7 @@ import { montarCena } from './jogo/cena.js';
 import { abrirDialogo, confirmarEscolha } from './jogo/camadas.js';
 import { telaEspera, cartaoDeAbertura, telaNoite } from './noite.js';
 import { telaLogin } from './app.js';
+import { abrirSenhaDireto } from './senha.js';
 import { som } from './ambiente.js';
 
 // Um personagem fictício, montado pelo mesmo roteiro da criação por conversa.
@@ -60,6 +61,18 @@ async function demoPreludio(raiz) {
   };
   await telaNoite(raiz, p, { lugar: 'lapa', vista: 'alto', fonte: fonteFicticia({ preludio: true }), irPara });
   raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('prelúdio fictício; as escolhas não são gravadas'));
+}
+
+// Rodada 41: as telas de entrada e de senha, sem banco (&tela=entrada | primeira | esqueci | criar).
+function demoSenha(raiz) {
+  const tela = new URLSearchParams(location.hash.split('?')[1] || '').get('tela') || 'criar';
+  const api = telaLogin(raiz, { demo: true });
+  const entrada = raiz.querySelector('.tela-entrada');
+  entrada?.insertAdjacentHTML('beforeend', faixaDemo('telas de entrada e de senha; nada é enviado'));
+  const link = (t, nome) => `<a href="#/demo/senha?depurar&tela=${t}"${t === tela ? ' aria-current="page"' : ''}>${nome}</a>`;
+  entrada?.insertAdjacentHTML('beforeend', `<nav class="demo-telas" aria-label="Telas da demonstração">Ver: ${link('entrada', 'Entrada')} ${link('primeira', 'Primeira vez')} ${link('esqueci', 'Esqueci a senha')} ${link('criar', 'Criar a senha')}</nav>`);
+  if (tela === 'primeira' || tela === 'esqueci') api?.abrirPedido(tela);
+  else if (tela === 'criar') abrirSenhaDireto({ demo: true });
 }
 
 function demoEntrada(raiz) {
@@ -200,7 +213,7 @@ async function demoMapa(raiz) {
   raiz.querySelector('.tela-jogo')?.insertAdjacentHTML('beforeend', faixaDemo('mapa fictício; nada vai ao banco'));
 }
 
-const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada, cena: demoCena, mapa: demoMapa };
+const DEMOS = { espera: demoEspera, preludio: demoPreludio, entrada: demoEntrada, senha: demoSenha, cena: demoCena, mapa: demoMapa };
 
 export function telaDemo(raiz, nome) {
   document.body.dataset.tela = 'cena';

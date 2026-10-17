@@ -80,13 +80,21 @@ export function telaLogin(raiz, { demo = false } = {}) {
         <header class="dialogo-cabeca"><span class="grupo-rotulo">Entrar na crônica</span></header>
         <div class="dialogo-corpo">
           <p class="nota">Entre com o e-mail que recebeu o convite.</p>
-          <form id="form-login">
+          <form id="form-login" novalidate>
             <label data-campo-login="email">E-mail<input type="email" name="email" autocomplete="email" required></label>
             <label data-campo-login="senha">Senha<input type="password" name="senha" autocomplete="current-password"></label>
             <button class="btn" type="submit">Entrar</button>
             <button class="btn-texto" type="button" id="link-email">Prefiro receber um link de acesso por e-mail</button>
             <button class="btn-secundario primeira-senha" type="button" id="primeira-senha">Primeira vez? Crie a sua senha</button>
+            <button class="btn-texto" type="button" id="esqueci">Esqueci a senha</button>
             <p class="msg-login" id="msg-login" role="status" hidden></p>
+          </form>
+          <form id="form-pedir-link" novalidate hidden>
+            <p class="nota" data-explica></p>
+            <label data-campo-link="email">E-mail<input type="email" name="email" autocomplete="email" required></label>
+            <button class="btn" type="submit">Mandar o link</button>
+            <button class="btn-texto" type="button" data-voltar-login>Voltar para entrar com senha</button>
+            <p class="msg-login" role="status" hidden></p>
           </form>
           <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
         </div>
@@ -95,23 +103,35 @@ export function telaLogin(raiz, { demo = false } = {}) {
   const form = raiz.querySelector('#form-login');
   const msg = raiz.querySelector('#msg-login');
   const botaoLink = raiz.querySelector('#link-email');
+  const botaoEntrar = form.querySelector('[type=submit]');
   const campo = (nome) => raiz.querySelector(`[data-campo-login="${nome}"]`);
+  const rotulo = raiz.querySelector('.caixa-entrada .grupo-rotulo');
+  const notaTopo = raiz.querySelector('.caixa-entrada .dialogo-corpo > .nota');
   // Mensagem junto do campo a que se refere: erro em tom de sangue, com ícone e anunciado (alert);
   // sucesso em tom de ok; o resto (entrando, enviando) discreto. Cada uma diz o próximo passo.
   const ICONES = {
     erro: '<svg class="msg-icone" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="M8 4.4v4.4M8 11v.6"/></svg>',
     ok: '<svg class="msg-icone" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="M5 8.2l2 2 4-4.4"/></svg>',
   };
-  function mensagem(tipo, perto, html) {
-    msg.hidden = false;
-    msg.className = `msg-login msg-${tipo}`;
-    msg.setAttribute('role', tipo === 'erro' ? 'alert' : 'status');
-    msg.innerHTML = `${ICONES[tipo] || ''}<span>${html}</span>`;
-    perto.after(msg);
+  function mensagem(tipo, perto, html, caixa = msg) {
+    caixa.hidden = false;
+    caixa.className = `msg-login msg-${tipo}`;
+    caixa.setAttribute('role', tipo === 'erro' ? 'alert' : 'status');
+    caixa.innerHTML = `${ICONES[tipo] || ''}<span>${html}</span>`;
+    perto.after(caixa);
   }
+  // Rodada 41: o botão mostra que está trabalhando e não aceita dois toques.
+  function ocupado(botao, texto) {
+    const antes = botao.textContent;
+    botao.disabled = true;
+    botao.setAttribute('aria-busy', 'true');
+    botao.textContent = texto;
+    return () => { botao.disabled = false; botao.removeAttribute('aria-busy'); botao.textContent = antes; };
+  }
+  const CONVIDADO = 'Esse e-mail não está na lista de convidados. Fale com o Bruno.';
   const MENSAGENS = {
-    convidado: () => mensagem('erro', campo('email'), 'Este e-mail não está na lista de convidados. Peça ao Bruno para adicionar o seu e-mail.'),
-    senha: () => mensagem('erro', campo('senha'), 'E-mail ou senha incorretos. Ainda sem senha? <button type="button" class="btn-link-destaque" data-pedir-link>Entre pelo link e crie a sua senha</button>.'),
+    convidado: (perto = campo('email'), caixa = msg) => mensagem('erro', perto, CONVIDADO, caixa),
+    senha: () => mensagem('erro', campo('senha'), 'E-mail ou senha não conferem. Ainda sem senha? <button type="button" class="btn-link-destaque" data-primeira>Entre pelo link e crie a sua senha</button>.'),
     link: () => mensagem('ok', botaoLink, 'Link enviado. Abra o e-mail neste mesmo aparelho; o link vale por pouco tempo. Depois de entrar, crie a sua senha em Opções.'),
   };
   // Erros que vêm do banco: o texto decide o campo e o próximo passo.
@@ -121,7 +141,43 @@ export function telaLogin(raiz, { demo = false } = {}) {
     else if (/incorretos/i.test(t)) MENSAGENS.senha();
     else mensagem('erro', botaoLink, esc(t || 'Não deu para entrar agora. Tente de novo em instantes.'));
   };
-  form.addEventListener('click', (ev) => { if (ev.target.closest('[data-pedir-link]')) botaoLink.click(); });
+
+  // "Primeira vez?" e "Esqueci a senha": a mesma caixa pede o e-mail e manda o link; quem entra por ele
+  // cai direto na tela de criar a senha.
+  const formLink = raiz.querySelector('#form-pedir-link');
+  const msgLink = formLink.querySelector('.msg-login');
+  const campoLink = formLink.querySelector('[data-campo-link="email"]');
+  function abrirPedido(modo) {
+    form.hidden = true;
+    formLink.hidden = false;
+    msgLink.hidden = true;
+    rotulo.textContent = modo === 'esqueci' ? 'Esqueci a senha' : 'Primeira vez';
+    notaTopo.hidden = true;
+    formLink.querySelector('[data-explica]').textContent = modo === 'esqueci'
+      ? 'Digite o seu e-mail. Mandamos um link: ao entrar por ele, você cria uma senha nova.'
+      : 'Digite o e-mail que recebeu o convite. Mandamos um link: ao entrar por ele, você cria a sua senha.';
+    formLink.email.value = form.email.value;
+    formLink.email.focus();
+  }
+  function voltarLogin() {
+    formLink.hidden = true;
+    form.hidden = false;
+    rotulo.textContent = 'Entrar na crônica';
+    notaTopo.hidden = false;
+  }
+  raiz.querySelector('#primeira-senha').onclick = () => abrirPedido('primeira');
+  raiz.querySelector('#esqueci').onclick = () => abrirPedido('esqueci');
+  formLink.querySelector('[data-voltar-login]').onclick = voltarLogin;
+  form.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-pedir-link]')) botaoLink.click();
+    if (ev.target.closest('[data-primeira]')) abrirPedido('primeira');
+  });
+  const emailVazio = (f, perto, caixa) => {
+    if (f.email.checkValidity() && f.email.value) return false;
+    mensagem('erro', perto, f.email.value ? 'Esse e-mail parece incompleto. Confira se tem @ e o final (.com, .br).' : 'Digite o seu e-mail primeiro.', caixa);
+    return true;
+  };
+
   if (demo) {
     const ordem = ['convidado', 'senha', 'link'];
     let i = 0;
@@ -129,38 +185,47 @@ export function telaLogin(raiz, { demo = false } = {}) {
     form.email.value = 'convidado@exemplo.com';
     form.onsubmit = proxima;
     botaoLink.onclick = proxima;
-    raiz.querySelector('#primeira-senha').onclick = () => mensagem('ok', raiz.querySelector('#primeira-senha'), 'Demonstração: no jogo, chega um link; ao entrar por ele, a tela de criar a senha abre sozinha.');
-    return;
+    formLink.onsubmit = (e) => {
+      e.preventDefault();
+      if (emailVazio(formLink, campoLink, msgLink)) return;
+      mensagem('ok', formLink.querySelector('[type=submit]'), 'Demonstração: no jogo, chega um link; ao entrar por ele, a tela de criar a senha abre sozinha.', msgLink);
+    };
+    return { abrirPedido };
   }
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const email = form.email.value;
-    const senha = form.senha.value;
-    if (!senha) { mensagem('erro', campo('senha'), 'Digite a senha, ou <button type="button" class="btn-link-destaque" data-pedir-link>receba um link de acesso por e-mail</button>.'); return; }
-    mensagem('info', botaoLink, 'Entrando…');
-    try { await banco.entrarComSenha(email, senha); msg.hidden = true; } catch (err) { mostrarErro(err); }
+    if (botaoEntrar.disabled) return;
+    if (emailVazio(form, campo('email'), msg)) return;
+    if (!form.senha.value) { mensagem('erro', campo('senha'), 'Digite a senha. Ainda sem senha? <button type="button" class="btn-link-destaque" data-primeira>Crie a sua senha pelo link</button>.'); return; }
+    const soltar = ocupado(botaoEntrar, 'Entrando…');
+    msg.hidden = true;
+    try { await banco.entrarComSenha(form.email.value, form.senha.value); } catch (err) { mostrarErro(err); } finally { soltar(); }
   };
-  // Primeira vez: o link de acesso volta direto para a tela de criar a senha.
-  const botaoPrimeira = raiz.querySelector('#primeira-senha');
-  botaoPrimeira.onclick = async () => {
-    const email = form.email.value;
-    if (!form.email.checkValidity() || !email) { mensagem('erro', campo('email'), 'Digite o seu e-mail primeiro; mandamos um link para você entrar e criar a senha.'); return; }
-    mensagem('info', botaoPrimeira, 'Enviando…');
+  formLink.onsubmit = async (e) => {
+    e.preventDefault();
+    const botao = formLink.querySelector('[type=submit]');
+    if (botao.disabled) return;
+    if (emailVazio(formLink, campoLink, msgLink)) return;
+    const soltar = ocupado(botao, 'Enviando…');
     try {
       try { localStorage.setItem('mascara.criarSenha', '1'); } catch { /* sem armazenamento */ }
-      await banco.entrarComLink(email, { criarSenha: true });
-      mensagem('ok', botaoPrimeira, 'Link enviado. Abra o e-mail neste mesmo aparelho: ao entrar, a tela de criar a senha abre sozinha.');
-    } catch (err) { mostrarErro(err); }
+      await banco.entrarComLink(formLink.email.value, { criarSenha: true });
+      mensagem('ok', botao, 'Link enviado. Abra o e-mail neste mesmo aparelho: ao entrar, a tela de criar a senha abre sozinha.', msgLink);
+    } catch (err) {
+      if (/convidados/i.test(err.message)) MENSAGENS.convidado(campoLink, msgLink);
+      else mensagem('erro', botao, esc(err.message || 'Não deu para mandar o link agora. Tente de novo em instantes.'), msgLink);
+    } finally { soltar(); }
   };
   botaoLink.onclick = async () => {
-    const email = form.email.value;
-    if (!form.email.checkValidity() || !email) { mensagem('erro', campo('email'), 'Digite o e-mail que recebeu o convite primeiro.'); return; }
-    mensagem('info', botaoLink, 'Enviando…');
+    if (botaoLink.disabled) return;
+    if (emailVazio(form, campo('email'), msg)) return;
+    const soltar = ocupado(botaoLink, 'Enviando o link…');
     try {
-      await banco.entrarComLink(email);
+      await banco.entrarComLink(form.email.value);
       MENSAGENS.link();
-    } catch (err) { mostrarErro(err); }
+    } catch (err) { mostrarErro(err); } finally { soltar(); }
   };
+  return { abrirPedido };
 }
 
 // --- Cenário de fundo (a pintura da cidade atrás do texto) -------------------------
