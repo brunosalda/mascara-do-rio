@@ -2224,3 +2224,11 @@ body.fome-desperta .passante.vulto svg { fill: rgba(140, 20, 30, 0.9); animation
 body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 0; z-index: 240; pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 45%, rgba(70, 10, 40, 0.5)); animation: caca-entra 1.5s ease-out both; }
 @keyframes caca-entra { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- Rodada 20 --------------------------------------------------------------------------------------- */
+.linha-falhou { color: #ffcf8a; font-style: italic; }
+/* Anel fino sob a presa que se esvazia com o tempo da caçada pela sombra. */
+.cena.em-caca .ponto-presa::after { content: ''; display: block; position: absolute; left: 50%; bottom: -12px; width: 58px; height: 20px; translate: -50% 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(rgba(255, 120, 120, 0.9) calc(var(--resta, 1) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px)); }

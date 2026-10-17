@@ -266,13 +266,20 @@ export function montarCena(raiz, {
 
   // Pergunta pequena no balão junto da cabeça ("1 · Olhar mais de perto · 2 · Seguir em frente"),
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
-  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, ms = 6000 }) {
+  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, aoCancelar, perto: pertoDe = null, ms = 6000 }) {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}<span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
     balao.hidden = false;
     falaAte = performance.now() + ms;
-    balaoEscolha = { aoEscolher, aoExpirar, ate: falaAte };
+    balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte };
     som.voz?.();
+  }
+  function cancelarBalao(porque) {
+    if (!balaoEscolha) return;
+    const { aoCancelar } = balaoEscolha;
+    balaoEscolha = null;
+    falaAte = performance.now();
+    aoCancelar?.(porque);
   }
   function responderBalao(i) {
     if (!balaoEscolha) return;
@@ -317,6 +324,14 @@ export function montarCena(raiz, {
     atencaoEl.hidden = true;
     c.aoFim?.({ chegou, atencao: c.atencao });
   }
+  // Na caçada pela sombra, o clique só anda (correr faz barulho): Shift, clique duplo ou Ligeireza.
+  let lembrouCorrer = false;
+  function andarSemCorrer(longe) {
+    if (!caca || caca.modo !== 'sombra') return false;
+    if (longe && !lembrouCorrer) { lembrouCorrer = true; falar('A FOME', 'Devagar. Correr faz barulho: só com Shift ou clique duplo.', 3500); }
+    return true;
+  }
+
   function anelDeBarulho(x, y) {
     const el = document.createElement('span');
     el.className = 'anel-barulho';
@@ -356,7 +371,21 @@ export function montarCena(raiz, {
       taxa += 0.5;
     }
     c.atencao = limitar(c.atencao + taxa * dt, 0, 1);
-    const palavras = PALAVRAS_ATENCAO(c.atencao);
+    // O tempo se vê: um anel fino sob a presa se esvazia; nos últimos 6 s, ela se afasta devagar.
+    const resta = c.limite - (agora - c.t0) / 1000;
+    const elPresa = camadaPontos.querySelector('.ponto-presa');
+    if (elPresa) elPresa.style.setProperty('--resta', String(limitar(resta / c.limite, 0, 1)));
+    let indo = false;
+    if (c.modo === 'sombra' && resta < 6) {
+      indo = true;
+      const sentido = c.alvo.x >= pos.x ? 1 : -1;
+      const nx = c.alvo.x + sentido * 0.012 * dt;
+      if (dentro([nx, c.alvo.y], geo.chao)) {
+        c.alvo = { ...c.alvo, x: nx };
+        if (elPresa) elPresa.style.left = pct(nx);
+      }
+    }
+    const palavras = indo ? 'ela está indo embora' : PALAVRAS_ATENCAO(c.atencao);
     if (atencaoEl.textContent !== palavras) atencaoEl.textContent = palavras;
     atencaoEl.dataset.nivel = c.atencao < 0.34 ? '0' : c.atencao < 0.67 ? '1' : '2';
     if (d <= Math.max(alcanceEm(pos.y) * 1.5, 0.11) && agora - c.t0 > 2500) encerrarFurtividade(true);
@@ -861,6 +890,8 @@ export function montarCena(raiz, {
     vel.x += (desejadoX - vel.x) * k;
     vel.y += (desejadoY - vel.y) * k;
     if (caca) atualizarCaca(agora, dt, correndo);
+    // A pergunta presa a um lugar some se o personagem se afastar dele.
+    if (balaoEscolha?.pertoDe && dist(balaoEscolha.pertoDe.x, balaoEscolha.pertoDe.y, pos.x, pos.y) > balaoEscolha.pertoDe.raio) cancelarBalao('longe');
     desenharRastro(agora);
     if (Math.abs(vel.x) < 0.002 && !dx) vel.x = 0;
     if (Math.abs(vel.y) < 0.002 && !dy) vel.y = 0;
@@ -1022,6 +1053,7 @@ export function montarCena(raiz, {
     if (k === 'shift') { teclas.add('shift'); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); return; }
+    if (k === 'escape' && balaoEscolha) { ev.preventDefault(); cancelarBalao('esc'); return; }
     if (balaoEscolha && /^[1-3]$/.test(k) && balao.querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
     if (k === 'e' || k === 'enter' || k === ' ') {
       if (perto) { ev.preventDefault(); interagir(perto); }
@@ -1080,7 +1112,7 @@ export function montarCena(raiz, {
       const [x, y] = p.parada && dentro(p.parada, geo.chao) ? p.parada : maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
       // Longe (mais de 40% da largura da tela): vai correndo. Vira para o destino e sai 80 ms depois.
       const longe = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
-      alvo = { x, y, ponto: p, correr: longe };
+      alvo = { x, y, ponto: p, correr: longe && !andarSemCorrer(longe) };
       virarPara(x < pos.x);
       esperaAte = performance.now() + (reduzido() ? 0 : 80);
       semProgresso = 0;
@@ -1089,7 +1121,8 @@ export function montarCena(raiz, {
     // Clique no chão: anda até lá (fora do chão, até o ponto de chão mais perto).
     if (semPersonagem) return;
     const [x, y] = maisPertoDentro([px, py], geo.chao, ASPECTO);
-    alvo = { x, y, correr: Math.abs(x - pos.x) * mw * cam.z > vw * 0.4 };
+    const longeChao = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
+    alvo = { x, y, correr: longeChao && !andarSemCorrer(longeChao) };
     virarPara(x < pos.x);
     esperaAte = performance.now() + (reduzido() ? 0 : 80);
     semProgresso = 0;

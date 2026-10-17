@@ -81,6 +81,6 @@ export function textoDaCacada({ presa, abordagem, atencao, deuCerto, onde, vanta
   const texto = deuCerto
     ? `Caçou ${presa.rotulo} ${onde}, ${a.texto}; ${rua}.${nota}`
     : `Tentou caçar ${presa.rotulo} ${onde}, ${a.texto}, mas a presa escapou antes; ${rua}.${nota}`;
-  const curto = `${a.curto} · ${rua}`;
-  return { texto, curto };
+  const curto = deuCerto ? `${a.curto} · ${rua}` : `${a.curto} · a presa escapou`;
+  return { texto, curto, falhou: !deuCerto };
 }

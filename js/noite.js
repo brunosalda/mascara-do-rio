@@ -225,7 +225,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
     const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''} <i>✓</i>` : '<em>falta escolher</em>';
-    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(plano.cacada_curta && plano.cacada === plano.cacada_de ? plano.cacada_curta : curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
+    const doMinijogo = plano.cacada_curta && plano.cacada === plano.cacada_de;
+    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>'
+      : pt.cacada && doMinijogo && plano.cacada_falhou ? `<span class="linha-falhou">${esc(plano.cacada_curta)}</span>`
+        : pt.cacada ? `${esc(doMinijogo ? plano.cacada_curta : curto(plano.cacada, 5))} <i>✓</i>`
+          : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
     const pe = encerrada()
       ? `<span class="quadro-encerrada">${todosEncerrados ? '<b>Todos encerraram</b> · o Narrador já começou' : '<b>Noite encerrada</b> · esperando os outros encerrarem'}</span>`
       : enviado
@@ -312,7 +316,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           { id: 'procurar', rotulo: 'Procurar alguém aqui', texto: `Ir ${l.a} e procurar alguém.`, livre: true },
         ].forEach((o) => pedidos.push({ ...o, tipo: 'acao', icone: '!', acao: o.rotulo, feito: plano.principal === o.texto }));
       }
-      pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), falta: !(plano.cacada || plano.nao_cacar), papel: 'escuro' });
+      const cacaFalhou = plano.cacada_falhou && plano.cacada === plano.cacada_de;
+      pedidos.push({ id: 'cacar', tipo: 'cacar', icone: '♦', rotulo: cacaFalhou ? 'Caçar de novo' : emOutroLugar ? `Caçar ${visitado.em}` : 'Caçar', acao: 'Decidir a caçada', feito: !!(plano.cacada || plano.nao_cacar), falta: !(plano.cacada || plano.nao_cacar), papel: 'escuro' });
       pedidos.push({ id: 'escrever', tipo: 'escrever', icone: '✎', rotulo: 'Outra ideia', acao: 'Escrever o que fazer', papel: 'livre' });
     }
     const ancoras = distribuirAncoras(geo, pedidos);
@@ -584,7 +589,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (pr.vulneravel) cena.falar('HUMANIDADE', pr.vulneravel, 2600);
     const ordem = abordagensPara(p.ficha?.predador?.id);
     setTimeout(() => cena.perguntarNoBalao({
-      voz: 'A FOME', texto: 'Como?', ms: 15000,
+      voz: 'A FOME', texto: 'Como?', ms: 1e9, perto: { x: pr.x, y: pr.y, raio: 0.4 },
+      aoCancelar: (porque) => { if (porque === 'esc') cena.falar('A FOME', 'Escolha outra, ou volte a ela.', 3000); },
       opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
       aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
     }), pr.vulneravel ? 1700 : 150);
@@ -642,9 +648,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (emCaca.esqueceu) extras.push('fez a testemunha esquecer');
     if (emCaca.poderes.size) extras.push(`usou ${[...emCaca.poderes].join(', ')} (Despertar)`);
     const v = vantagemDaCacada(lugarId);
-    const { texto, curto: linha } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota, extras });
+    const { texto, curto: linha, falhou } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota, extras });
     plano.cacada = texto;
     plano.cacada_curta = linha;
+    plano.cacada_falhou = falhou;
     plano.cacada_de = texto;
     plano.nao_cacar = false;
     // O fim: a tela pulsa vermelho, o batimento desacelera e a voz d'A FOME fala.
@@ -657,7 +664,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     cena.atualizarPontos(montarPontos());
     cena.falar('A FOME', deuCerto ? 'Agora sim. Por enquanto.' : 'Escapou. Eu continuo aqui.', 3600);
     guardarRascunho();
-    aviso('Caçada guardada no plano. A Fome baixa quando a noite fechar. Dá para caçar de novo até enviar.');
+    if (!deuCerto && modo === 'sombra') aviso('Ela foi embora. A tentativa fica no plano; dá para caçar de novo até enviar.');
+    else aviso('Caçada guardada no plano. A Fome baixa quando a noite fechar. Dá para caçar de novo até enviar.');
   }
 
   function abrirEscrita() {
