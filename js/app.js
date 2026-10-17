@@ -5,6 +5,7 @@ import { telaCriacao } from './criacao.js';
 import { telaEntrevista } from './entrevista.js';
 import { telaNoite, telaMapa, telaEspera } from './noite.js';
 import { molduraTela } from './moldura-tela.js';
+import { abrirSenhaDireto } from './senha.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
 import { fecharTudo } from './jogo/camadas.js';
 import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos } from './ambiente.js';
@@ -84,6 +85,7 @@ export function telaLogin(raiz, { demo = false } = {}) {
             <label data-campo-login="senha">Senha<input type="password" name="senha" autocomplete="current-password"></label>
             <button class="btn" type="submit">Entrar</button>
             <button class="btn-texto" type="button" id="link-email">Prefiro receber um link de acesso por e-mail</button>
+            <button class="btn-secundario primeira-senha" type="button" id="primeira-senha">Primeira vez? Crie a sua senha</button>
             <p class="msg-login" id="msg-login" role="status" hidden></p>
           </form>
           <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
@@ -127,6 +129,7 @@ export function telaLogin(raiz, { demo = false } = {}) {
     form.email.value = 'convidado@exemplo.com';
     form.onsubmit = proxima;
     botaoLink.onclick = proxima;
+    raiz.querySelector('#primeira-senha').onclick = () => mensagem('ok', raiz.querySelector('#primeira-senha'), 'Demonstração: no jogo, chega um link; ao entrar por ele, a tela de criar a senha abre sozinha.');
     return;
   }
   form.onsubmit = async (e) => {
@@ -136,6 +139,18 @@ export function telaLogin(raiz, { demo = false } = {}) {
     if (!senha) { mensagem('erro', campo('senha'), 'Digite a senha, ou <button type="button" class="btn-link-destaque" data-pedir-link>receba um link de acesso por e-mail</button>.'); return; }
     mensagem('info', botaoLink, 'Entrando…');
     try { await banco.entrarComSenha(email, senha); msg.hidden = true; } catch (err) { mostrarErro(err); }
+  };
+  // Primeira vez: o link de acesso volta direto para a tela de criar a senha.
+  const botaoPrimeira = raiz.querySelector('#primeira-senha');
+  botaoPrimeira.onclick = async () => {
+    const email = form.email.value;
+    if (!form.email.checkValidity() || !email) { mensagem('erro', campo('email'), 'Digite o seu e-mail primeiro; mandamos um link para você entrar e criar a senha.'); return; }
+    mensagem('info', botaoPrimeira, 'Enviando…');
+    try {
+      try { localStorage.setItem('mascara.criarSenha', '1'); } catch { /* sem armazenamento */ }
+      await banco.entrarComLink(email, { criarSenha: true });
+      mensagem('ok', botaoPrimeira, 'Link enviado. Abra o e-mail neste mesmo aparelho: ao entrar, a tela de criar a senha abre sozinha.');
+    } catch (err) { mostrarErro(err); }
   };
   botaoLink.onclick = async () => {
     const email = form.email.value;
@@ -238,7 +253,11 @@ async function aoMudarSessao(sessao) {
     try { await recarregarPersonagens(); } catch (err) { aviso(err.message, 'erro'); }
   }
   if (!sessao) { estado.personagens = []; estado.atual = null; }
-  desenhar();
+  await desenhar();
+  // Entrou pelo link de "Primeira vez? Crie a sua senha": a tela de criar a senha abre direto.
+  let pediuSenha = /[?&]criar-senha=1/.test(location.search);
+  try { pediuSenha ||= localStorage.getItem('mascara.criarSenha') === '1'; } catch { /* sem armazenamento */ }
+  if (sessao && pediuSenha) abrirSenhaDireto();
 }
 
 async function iniciar() {

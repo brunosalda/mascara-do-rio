@@ -29,10 +29,11 @@ export async function entrarComSenha(email, senha) {
   if (error) throw new Error(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message);
 }
 
-export async function entrarComLink(email) {
+// criarSenha: o link volta com ?criar-senha=1 e a tela de criar a senha abre sozinha depois de entrar.
+export async function entrarComLink(email, { criarSenha = false } = {}) {
   const { error } = await sb.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname },
+    options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname + (criarSenha ? '?criar-senha=1' : '') },
   });
   if (error) {
     if (/not.*allowed|convidado|Database error/i.test(error.message)) throw new Error('Este e-mail não está na lista de convidados.');

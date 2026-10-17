@@ -3411,3 +3411,9 @@ body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
 .tela-criacao .dialogo-cena, .caixa-entrada { border: 2px solid #8a6a36; box-shadow: 0 0 0 2px #1c150f, 0 10px 30px rgba(0, 0, 0, 0.7); }
 .tela-criacao .btn, .caixa-entrada .btn { border-radius: 999px; border: 1.5px solid #c9a25a; background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
 @media (max-width: 760px) { .moldura.moldura-tela { inset: 6px; } .moldura.moldura-tela .canto { width: 40px; height: 40px; } }
+
+/* Primeira vez: botão à vista na entrada e a tela de criar a senha que abre sozinha depois do link. */
+.caixa-entrada .primeira-senha { margin-top: 0.4rem; justify-self: start; }
+.janela-senha-direta { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 16px; background: rgba(6, 4, 3, 0.72); }
+.janela-senha-caixa { width: min(30rem, 100%); padding: 1.1rem 1.3rem 1.2rem; background: linear-gradient(#2a1f14, #16100b); border: 2px solid #c9a25a; box-shadow: 0 0 0 3px #1c150f, 0 16px 40px rgba(0, 0, 0, 0.8); color: #f0e2c4; }
+.janela-senha-caixa h2 { margin: 0 0 0.6rem; font: italic 600 1.5rem var(--titulo); color: #f6ead6; }

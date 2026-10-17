@@ -4,6 +4,21 @@ import { trocarSenha } from './banco.js';
 
 export const MIN_SENHA = 8;
 
+// Quem pediu "Primeira vez? Crie a sua senha" e entrou pelo link cai direto nesta tela.
+export function abrirSenhaDireto() {
+  if (document.querySelector('.janela-senha-direta')) return;
+  const fundo = document.createElement('div');
+  fundo.className = 'janela-senha-direta';
+  fundo.innerHTML = '<div class="janela-senha-caixa" role="dialog" aria-modal="true" aria-label="Criar a sua senha"><h2>Crie a sua senha</h2><div class="janela-senha-corpo"></div></div>';
+  document.body.appendChild(fundo);
+  const fechar = () => {
+    fundo.remove();
+    try { localStorage.removeItem('mascara.criarSenha'); } catch { /* sem armazenamento */ }
+    if (/[?&]criar-senha=1/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
+  };
+  formSenha(fundo.querySelector('.janela-senha-corpo'), { aoFim: fechar });
+}
+
 export function formSenha(corpo, { demo = false, aoFim } = {}) {
   corpo.innerHTML = `
     <form class="form-senha" autocomplete="on">
@@ -29,7 +44,7 @@ export function formSenha(corpo, { demo = false, aoFim } = {}) {
     try {
       if (!demo) await trocarSenha(senha);
       form.senha.value = ''; form.repete.value = '';
-      dizer('ok', demo ? 'Na demonstração nada é salvo. No jogo, a senha passa a valer na hora.' : 'Senha salva. Da próxima vez, entre com o e-mail e esta senha.');
+      dizer('ok', demo ? 'Na demonstração nada é salvo. No jogo, a senha passa a valer na hora.' : 'Pronto. Da próxima vez, entre com e-mail e senha.');
       setTimeout(() => aoFim?.(true), 2200);
     } catch (err) {
       dizer('erro', err.message);
