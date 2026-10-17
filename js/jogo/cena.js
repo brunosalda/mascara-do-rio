@@ -372,6 +372,8 @@ export function montarCena(raiz, {
   }
   function atualizarCaca(agora, dt, correndo) {
     const c = caca;
+    // Com qualquer caixa ou pergunta aberta, o tempo e a atenção da caçada param.
+    if (camadaAberta() || balaoEscolha) { c.t0 += dt * 1000; return; }
     const andando = Math.hypot(vel.x, vel.y) > 0.01;
     const luz = luzEm(pos.x, pos.y);
     const naSombra = luz < 0.25;
@@ -451,6 +453,11 @@ export function montarCena(raiz, {
       const ms = curto ? 1000 : 2500;
       focoBeijo = { x: presa.x, y: presa.y };
       cena.classList.add('beijo');
+      // Depois de meio segundo, um lembrete pequeno embaixo: dá para pular.
+      const dicaPular = document.createElement('div');
+      dicaPular.className = 'dica-pular';
+      dicaPular.textContent = 'clique ou Esc para pular';
+      setTimeout(() => { if (!feito) cena.appendChild(dicaPular); }, 500);
       boneco.style.setProperty('--inclinacao', `${presa.x < pos.x ? -7 : 7}deg`);
       boneco.classList.add('inclinado', 'boca-vermelha');
       camadaPontos.querySelector('.ponto-presa')?.classList.add('baixando');
@@ -468,6 +475,7 @@ export function montarCena(raiz, {
         feito = true;
         cena.removeEventListener('click', pular, true);
         document.removeEventListener('keydown', pular, true);
+        dicaPular.remove();
         cena.classList.add('clarao-dourado');
         setTimeout(() => {
           cena.classList.remove('beijo', 'clarao-dourado');

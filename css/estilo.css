@@ -2278,3 +2278,6 @@ body.fome-desperta .tela-jogo::before { content: ''; position: absolute; inset: 
   background: rgba(10, 10, 12, 0.55); opacity: 0; animation: pegada 6s ease-out forwards; }
 @keyframes pegada { 5% { opacity: 1; } 70% { opacity: 0.8; } 100% { opacity: 0; } }
 .balao-texto .repara { display: block; margin-top: 0.25rem; font-style: italic; color: #e8d8bf; }
+/* Durante o Beijo, os rótulos, os outros pontos e as dicas somem e voltam no fim. */
+.cena.beijo .cena-pontos, .cena.beijo .dica-interagir, .cena.beijo .contornos, .cena.beijo .campo-presa, .cena.beijo .seta-borda { visibility: hidden !important; pointer-events: none; }
+.dica-pular { position: absolute; z-index: 290; left: 50%; bottom: 1.4rem; translate: -50% 0; font: italic 0.85rem var(--texto-livro); color: rgba(240, 230, 210, 0.75); pointer-events: none; animation: caca-entra 0.4s ease-out both; }

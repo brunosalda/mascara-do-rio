@@ -504,7 +504,15 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       const b = ev.target.closest('[data-caca]');
       if (b) {
         let i = Number(b.dataset.caca);
-        if (podeAgora && i === 0) { confirmarEscolha(b, () => { camada.fechar(); cacarAgora(lugarCaca); }); return; }
+        if (podeAgora && i === 0) {
+          confirmarEscolha(b, async () => {
+            camada.fechar();
+            // Com poderes de caçada na ficha, o aviso do sangue vem antes, para não parar a caçada no meio.
+            if (poderesCena.some((x) => x.quando === 'caca')) await avisoDoSangue();
+            cacarAgora(lugarCaca);
+          });
+          return;
+        }
         i -= desloc;
         if (i < sugestoes.length) guardar(b, sugestoes[i], false);
         else if (i === sugestoes.length) guardar(b, emOutroLugar ? `Caçar do meu jeito de sempre ${visitado.em}` : 'Do meu jeito de sempre', false);
@@ -587,7 +595,20 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const presaAlvo = emCaca?.alvo || null;
     if (!cena.usarPoder(id, { alvo: presaAlvo })) { aviso('Esse poder só serve durante a caçada.'); return; }
     const nome = nomePoder(id);
-    if (def.dur) { ativosAte.set(id, Date.now() + def.dur * 1000); const t = setInterval(() => { desenharBarra(); if (Date.now() > ativosAte.get(id)) clearInterval(t); }, 1000); }
+    // Tempo restante: só o texto do botão muda (recriar a barra a cada segundo engolia cliques).
+    if (def.dur) {
+      ativosAte.set(id, Date.now() + def.dur * 1000);
+      const t = setInterval(() => {
+        const b = barra?.querySelector(`[data-poder="${id}"]`);
+        const resta = Math.ceil((ativosAte.get(id) - Date.now()) / 1000);
+        if (b) {
+          b.classList.toggle('ativo', resta > 0);
+          let s = b.querySelector('small');
+          if (resta > 0) { if (!s) { s = document.createElement('small'); b.appendChild(s); } s.textContent = `${resta} s`; } else s?.remove();
+        }
+        if (resta <= 0) clearInterval(t);
+      }, 1000);
+    }
     if (emCaca) {
       emCaca.poderes.add(nome);
       if (id === 'perscrutar-alma') emCaca.perscrutou = true;
