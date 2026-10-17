@@ -80,11 +80,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const lugarId = emOutroLugar ? visitado.id : (localAtual?.id || null);
   // Fase 2: com vista 'alto' e uma pintura vista do alto para o lugar, usa a geografia dela; os detalhes
   // do lugar vão para os pontos livres dessa pintura.
-  // Rodada 32: a vista do alto é o padrão quando o lugar tem pintura vista do alto; nas Opções dá para
-  // voltar à vista na altura dos olhos (salvo no aparelho).
+  // Vista do alto: por enquanto só na demonstração (pedido do Bruno, 17/10: as pinturas do alto vão ser
+  // refeitas com base em fotos reais; as do jogo continuam as de antes até a troca ser aprovada).
+  const naDemonstracao = location.hash.includes('/demo/');
   let vistaSalva = null;
   try { vistaSalva = localStorage.getItem('mascara.vista'); } catch { /* sem armazenamento */ }
-  const querAlto = vista ? vista === 'alto' : vistaSalva !== 'olhos';
+  const querAlto = vista ? vista === 'alto' : (naDemonstracao && vistaSalva === 'alto');
   const geoAlto = querAlto ? geografia(`${lugarId}-alto`) : null;
   const geo = geoAlto?.alto ? geoAlto : geografia(lugarId);
   const achados = descobertas(lugarId, noite?.numero || 0);
@@ -1083,7 +1084,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
             <span class="grupo-rotulo">Pausa automática</span>
             ${[['visto', 'Quando viram você'], ['presa', 'Quando a presa começa a ir embora'], ['poder', 'Quando um poder acaba']].map(([k, nome]) => `<div class="leitura-grupo" role="group" aria-label="${nome}"><span>${nome}</span><div><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="1" aria-pressed="${!!pausaAuto()[k]}">Pausar</button><button type="button" class="chip-leitura" data-pausa="${k}" data-valor="0" aria-pressed="${!pausaAuto()[k]}">Não</button></div></div>`).join('')}
             <div class="leitura-grupo" role="group" aria-label="Névoa nas áreas"><span>Névoa nas áreas (primeira visita da noite)</span><div><button type="button" class="chip-leitura" data-nevoa="1" aria-pressed="${nevoaLigada()}">Ligada</button><button type="button" class="chip-leitura" data-nevoa="0" aria-pressed="${!nevoaLigada()}">Desligada</button></div></div>
-            <div class="leitura-grupo" role="group" aria-label="Vista da cena"><span>Vista da cena (vale ao entrar de novo)</span><div><button type="button" class="chip-leitura" data-vista="alto" aria-pressed="${vistaSalva !== 'olhos'}">Do alto</button><button type="button" class="chip-leitura" data-vista="olhos" aria-pressed="${vistaSalva === 'olhos'}">Na altura dos olhos</button></div></div>
+            <div class="leitura-grupo" role="group" aria-label="Vista da cena"${naDemonstracao ? '' : ' hidden'}><span>Vista da cena (vale ao entrar de novo)</span><div><button type="button" class="chip-leitura" data-vista="alto" aria-pressed="${vistaSalva === 'alto'}">Do alto</button><button type="button" class="chip-leitura" data-vista="olhos" aria-pressed="${vistaSalva !== 'alto'}">Na altura dos olhos</button></div></div>
             <div class="leitura-grupo" role="group" aria-label="Dicas"><span>Dicas ao chegar num bairro</span><div><button type="button" class="chip-leitura" data-m="dicas">Mostrar de novo todas as dicas</button></div></div>
             <p class="nota">Espaço pausa e solta a cena a qualquer momento. Pausado, dá para marcar o destino e escolher um poder: tudo acontece ao soltar.</p>
           </div>
