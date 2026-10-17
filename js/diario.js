@@ -80,6 +80,13 @@ function abaPessoas(minhasOrdenadas) {
   return [...pessoas].map(([quem, onde]) => `<div class="diario-pessoa"><span class="diario-carimbo">${esc(onde)}</span> <b>${esc(quem.charAt(0) + quem.slice(1).toLowerCase())}</b></div>`).join('');
 }
 
+// Feitos (fase 3.3, parte da tela): títulos ganhos ao longo das noites, dados pelo Narrador.
+function abaFeitos(p) {
+  const feitos = p.estado?.feitos || [];
+  if (!feitos.length) return '<p class="nota">Nenhum feito ainda. Os feitos aparecem aqui quando o Narrador reconhece algo que você fez ("Conhece cada beco da Lapa").</p>';
+  return feitos.map((f) => `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(f.titulo)}</b><br>${esc(f.texto || '')}</span></div>`).join('');
+}
+
 export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
   raiz.innerHTML = '<p class="carregando">Abrindo o diário…</p>';
   let narracoes = [];
@@ -109,6 +116,7 @@ export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
     ['noite', noite ? `Noite ${noite.numero}` : 'Noite', () => abaNoite(noite, plano)],
     ['pistas', 'Pistas', () => abaPistas(noite)],
     ['pessoas', 'Pessoas', () => abaPessoas(ordenadas)],
+    ['feitos', 'Feitos', () => abaFeitos(p)],
     ['passadas', 'Noites passadas', () => passadas],
   ];
   let escolhida = 'noite';

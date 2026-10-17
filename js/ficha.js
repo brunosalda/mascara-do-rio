@@ -284,6 +284,59 @@ function abaFichaRP(f, calc) {
     </div>`;
 }
 
+// --- Fase 3.3, parte da tela (dados de demonstração até o banco ser liberado) --------------------
+// Árvore do sangue: as disciplinas do clã e a do predador como galhos; cada nível é um nó com os poderes
+// dele. O custo é o da V5 (no clã, nível novo x 5; fora, x 7; Caitiff, x 6), dito em palavras diante da
+// experiência guardada. Poderes que cobram em Humanidade, Fome ou Besta levam moldura vermelha.
+function abaSangueRP(f, calc, est) {
+  const c = v5.cla(f.cla);
+  const doCla = c?.disciplinas || [];
+  const doPredador = f.predador?.disciplina && !doCla.includes(f.predador.disciplina) ? [f.predador.disciplina] : [];
+  const galhos = [...new Set([...doCla, ...doPredador, ...Object.keys(calc.disciplinas)])].slice(0, 4);
+  const xp = est.experiencia ?? 0;
+  const fator = (id) => (c?.livre ? 6 : doCla.includes(id) ? 5 : 7);
+  const palavraCusto = (custo) => (custo <= xp ? 'ao seu alcance' : custo <= xp + 6 ? 'falta pouco' : 'ainda longe');
+  const caro = (pw) => /humanidade|fome|besta/i.test(pw.desc || '');
+  if (!galhos.length) return '<p class="nota">O sangue ainda não despertou nenhuma disciplina.</p>';
+  return `
+    <p class="rp-intro">Experiência guardada: <b>${xp >= 15 ? 'bastante' : xp >= 6 ? 'alguma' : xp > 0 ? 'pouca' : 'nenhuma'}</b>. O Narrador dá experiência no fechamento da noite.</p>
+    <div class="arvore-sangue">${galhos.map((id) => {
+      const d = v5.DISCIPLINAS[id];
+      const n = calc.disciplinas[id] || 0;
+      return `<section class="galho-sangue">
+        <h4>${termoDe('disciplina', id, d.nome)}<small>${doCla.includes(id) ? 'do clã' : 'do predador'}</small></h4>
+        <ol>${[1, 2, 3, 4, 5].map((nivel) => {
+          const estado = nivel <= n ? 'tem' : nivel === n + 1 ? 'proximo' : 'longe';
+          const poderes = d.poderes.filter((pw) => pw.nivel === nivel);
+          return `<li class="no-sangue no-${estado}${poderes.some(caro) ? ' no-caro' : ''}">
+            <span class="no-bolinha" aria-hidden="true"></span>
+            <span class="no-texto"><b>${nivel}º</b> ${poderes.map((pw) => `<span title="${esc(pw.desc || '')}">${esc(pw.nome)}</span>`).join(' · ') || '<i>sem poder neste nível</i>'}
+            ${estado === 'proximo' ? `<em class="no-custo">${palavraCusto(nivel * fator(id))}</em>` : ''}</span>
+          </li>`;
+        }).join('')}</ol>
+      </section>`;
+    }).join('')}</div>
+    <p class="nota">Comprar um nível acontece pelo Narrador, no fechamento; os poderes com moldura vermelha cobram um preço na Humanidade, na Fome ou na Besta.</p>`;
+}
+
+// Itens: uma lista de cinco espaços, sem grade e sem cor de raridade; cada item tem um traço.
+const ESPACOS_ITEM = [['roupa', 'Roupa'], ['arma', 'Arma escondida'], ['ferramenta', 'Ferramenta'], ['eletronico', 'Celular ou eletrônico'], ['veiculo', 'Veículo']];
+function abaItensRP(est) {
+  const itens = est.itens || [];
+  return `<ul class="lista-itens">${ESPACOS_ITEM.map(([id, nome]) => {
+    const it = itens.find((x) => x.espaco === id);
+    return `<li class="${it ? '' : 'vazio'}"><span class="item-espaco">${nome}</span>${it ? `<b>${esc(it.nome)}</b><small>${esc(it.traco || '')}</small>` : '<i>nada</i>'}</li>`;
+  }).join('')}</ul>
+  <p class="nota">Os itens chegam pelas tarefas, pela caçada, comprando com os Recursos ou pelo Narrador.</p>`;
+}
+
+// Status em palavras, com cada facção e a atenção da polícia.
+const FACCOES = [['camarilla', 'Camarilla'], ['anarquistas', 'Anarquistas'], ['independentes', 'Independentes'], ['policia', 'Atenção da polícia']];
+function blocoStatusRP(est) {
+  const st = est.status || {};
+  return `<dl class="rp-status">${FACCOES.map(([id, nome]) => `<dt>${nome}</dt><dd>${esc(st[id] || 'desconhecido')}</dd>`).join('')}</dl>`;
+}
+
 function abaDisciplinasRP(calc) {
   const itens = Object.entries(calc.disciplinas).map(([id, n]) => {
     const d = v5.DISCIPLINAS[id];
@@ -328,7 +381,7 @@ export function telaRegistro(raiz, p) {
   const [vonR, vonM] = caixa(est.vontade, calc.forcaVontade);
   const hum = est.humanidade ?? calc.humanidade ?? 0;
   const fome = est.fome ?? 0;
-  const abas = [['ficha', 'Ficha', () => abaFichaRP(f, calc)], ['disciplinas', 'Disciplinas', () => abaDisciplinasRP(calc)], ['biografia', 'Biografia', () => abaBiografiaRP(f, p)]];
+  const abas = [['ficha', 'Ficha', () => abaFichaRP(f, calc)], ['sangue', 'Sangue', () => abaSangueRP(f, calc, est)], ['disciplinas', 'Disciplinas', () => abaDisciplinasRP(calc)], ['itens', 'Itens', () => abaItensRP(est)], ['biografia', 'Biografia', () => abaBiografiaRP(f, p)]];
   raiz.innerHTML = `
     <section class="registro-pj">
       <aside class="rp-lado">
@@ -341,6 +394,9 @@ export function telaRegistro(raiz, p) {
           <dt>Geração</dt><dd>${calc.geracao ? `${calc.geracao}ª` : '—'}</dd>
         </dl>
         ${f.origem?.conceito ? `<p class="rp-conceito">${esc(f.origem.conceito)}</p>` : ''}
+        <h4 class="rp-titulo">Status</h4>
+        ${blocoStatusRP(est)}
+        <button type="button" class="btn-secundario rp-refugio" data-refugio>Refúgio</button>
       </aside>
       <div class="rp-corpo">
         <div class="rp-abas" role="tablist">${abas.map(([id, nome], i) => `<button type="button" role="tab" data-rp="${id}" aria-selected="${i === 0}">${nome}</button>`).join('')}</div>
@@ -360,5 +416,20 @@ export function telaRegistro(raiz, p) {
   };
   raiz.querySelectorAll('[data-rp]').forEach((b) => { b.onclick = () => mostrar(b.dataset.rp); });
   mostrar('ficha');
+  // Refúgio como cena: a pintura do bairro onde ele dorme, com o que se sabe do lugar.
+  raiz.querySelector('[data-refugio]').onclick = () => {
+    const r = est.refugio || {};
+    const fundo = localDe(r.bairro || est.local)?.imagem || retratoDe(p);
+    pagina.innerHTML = `
+      <div class="refugio-cena" style="--fundo:url('${esc(new URL(fundo, location.href).href)}')">
+        <div class="refugio-texto">
+          <h4>Refúgio</h4>
+          <p>${esc(r.local || 'Ainda sem refúgio fixo: dorme onde dá.')}</p>
+          <dl class="rp-status"><dt>Segurança</dt><dd>${esc(r.seguranca || 'nenhuma')}</dd><dt>Rebanho</dt><dd>${esc(r.rebanho || 'nenhum')}</dd>${r.nota ? `<dt>O que tem</dt><dd>${esc(r.nota)}</dd>` : ''}</dl>
+          <p class="nota">O refúgio melhora com o tempo, pelo Narrador.</p>
+        </div>
+      </div>`;
+    raiz.querySelectorAll('[data-rp]').forEach((b) => b.setAttribute('aria-selected', 'false'));
+  };
   ligarGlossario();
 }

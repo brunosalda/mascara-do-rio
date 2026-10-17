@@ -34,6 +34,7 @@ function desenhoDoMapa() {
       <radialGradient id="nevoa-lugar"><stop offset="0" stop-color="#3a2a18" stop-opacity="0.35"/><stop offset="1" stop-color="#3a2a18" stop-opacity="0"/></radialGradient>
       <clipPath id="recorte-retrato"><circle r="38"/></clipPath>
       <clipPath id="recorte-medalhao"><circle r="23"/></clipPath>
+      <clipPath id="recorte-fechado"><circle r="19"/></clipPath>
       <radialGradient id="brilho-lugar"><stop offset="0" stop-color="#b8202e" stop-opacity="0.35"/><stop offset="1" stop-color="#b8202e" stop-opacity="0"/></radialGradient>
       <radialGradient id="papel" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#e8d7b0"/><stop offset="0.6" stop-color="#d9c194"/><stop offset="1" stop-color="#a88a5a"/></radialGradient>
       <radialGradient id="borda-papel" cx="50%" cy="50%" r="72%"><stop offset="0.62" stop-color="#3a2410" stop-opacity="0"/><stop offset="0.9" stop-color="#3a2410" stop-opacity="0.45"/><stop offset="1" stop-color="#1e1208" stop-opacity="0.85"/></radialGradient>
@@ -93,6 +94,14 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 <text class="mapa-descobertas" y="70">${esc(frase)}${clima ? ` · ${esc(clima)}` : ''}</text>
               </g>`;
           }).join('')}
+          <g class="mapa-lugar mapa-fechado" data-fechado="aeroporto" transform="translate(1290 368)" role="button" aria-label="Aeroporto Santos Dumont: fechado por enquanto">
+            <title>Aeroporto Santos Dumont · fechado por enquanto</title>
+            <circle class="medalhao-aro" r="24"/>
+            <image class="medalhao-pintura" href="img/cidade/alto/aeroporto-rio.jpg" x="-19" y="-19" width="38" height="38" clip-path="url(#recorte-fechado)" preserveAspectRatio="xMidYMid slice"/>
+            <path class="cadeado" d="M-7 -2 h14 v11 h-14 z M-4 -2 v-4 a4 4 0 0 1 8 0 v4"/>
+            <text class="mapa-nome" y="44">Aeroporto</text>
+            <text class="mapa-descobertas" y="62">fechado por enquanto</text>
+          </g>
         </g>
         <path class="mapa-rota" d="" hidden/>
         <g class="mapa-vampiro" style="--cor-cla:${COR_CLA[cla] || '#e2703e'}">
@@ -243,6 +252,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
   const aoSoltar = (ev) => teclas.delete(ev.key.toLowerCase());
   const aoPerderFoco = () => teclas.clear();
 
+  let avisoFechado = null;
   svg.addEventListener('click', (ev) => {
     const g = ev.target.closest('[data-lugar]');
     const pt = svg.createSVGPoint();
@@ -251,6 +261,15 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     const p = pt.matrixTransform(svg.getScreenCTM().inverse());
     void p;
     if (arrastou) { arrastou = false; return; }
+    // O aeroporto é uma porta fechada até a viagem para São Paulo existir (fase 3.2).
+    if (ev.target.closest('[data-fechado]')) {
+      const aviso = caixaMapa.querySelector('.dica-interagir');
+      aviso.hidden = false;
+      aviso.textContent = 'O aeroporto ainda está fechado. A viagem para São Paulo vem depois.';
+      clearTimeout(avisoFechado);
+      avisoFechado = setTimeout(() => { aviso.hidden = true; }, 3500);
+      return;
+    }
     if (g) viajar(g.dataset.lugar);
   });
 

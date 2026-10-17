@@ -83,6 +83,22 @@ function demoEntrada(raiz) {
 
 // Cena completa de uma noite fictícia: quadro, opções, caçada, curtas, detalhes e o personagem com a
 // caminhada em vídeo do Bruno. A ação "enviada" fica só na memória da página. &lugar=<id> escolhe o bairro.
+// Fase 3.3 (parte da tela), só na demonstração: experiência, status, refúgio, itens e feitos fictícios.
+const ESTADO_FASE3 = {
+  experiencia: 8,
+  status: { camarilla: 'tolerado', anarquistas: 'desconhecido', independentes: 'respeitado', policia: 'desconhecido' },
+  refugio: { bairro: 'Lapa', local: 'Um quarto alugado em cima de um bar, com a janela pintada de preto.', seguranca: 'fraca', rebanho: 'nenhum', nota: 'uma tranca nova e um colchão no chão' },
+  itens: [
+    { espaco: 'roupa', nome: 'Jaqueta de couro gasta', traco: 'impõe respeito numa briga de rua' },
+    { espaco: 'eletronico', nome: 'Celular sem chip', traco: 'só funciona no wi-fi; ninguém rastreia' },
+    { espaco: 'ferramenta', nome: 'Pé de cabra', traco: 'abre portas, mas faz barulho' },
+  ],
+  feitos: [
+    { titulo: 'Conhece cada beco da Lapa', texto: 'Examinou todos os detalhes da Lapa numa noite.', quando: 'Noite 2' },
+    { titulo: 'Fome sob controle', texto: 'Caçou três noites seguidas sem ninguém reparar.', quando: 'Noite 3' },
+  ],
+};
+
 const CAMINHADA_DO_BRUNO = {
   url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-perfil.png', quadros: 10, largura: 154, altura: 300, parado: 5,
   frente: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-frente.png', quadros: 10, largura: 112, altura: 300, parado: 4 },
@@ -131,7 +147,7 @@ async function demoCena(raiz) {
     const niveis = ((base.ficha.habilidades ||= {}).niveis ||= {});
     for (const h of ['prontidao', 'investigacao', 'intuicao', 'ocultismo', 'manha']) niveis[h] = 4;
   }
-  const p = { ...base, _poderes: poderesDemo || undefined, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
+  const p = { ...base, _poderes: poderesDemo || undefined, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 }, ...ESTADO_FASE3 } };
   try { localStorage.setItem('mascara.lido.demo-noite-2', '1'); } catch { /* sem armazenamento */ }
   // Nada da demonstração sai dela: o mapa vai para o mapa fictício; as outras rotas reais ficam fora.
   const irPara = (rota) => {
