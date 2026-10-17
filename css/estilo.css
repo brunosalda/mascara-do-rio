@@ -3165,3 +3165,30 @@ body.sem-efeitos .pessoa-figura { animation: none !important; }
 .pessoa-grao { position: absolute; inset: 0; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; mix-blend-mode: overlay; opacity: 0.22; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' seed='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); background-size: 32px 32px; }
 .pessoa.pessoa-pintada .pessoa-sombra { translate: var(--sombra-x, 0%) 0; width: auto; left: -6%; right: -6%; }
+
+/* Fase 3, P1: fama na noite, equipamento por espaços, mochila, treinar e escolha das três noites. */
+.fama { display: grid; gap: 0.2rem; width: 100%; text-align: left; }
+.fama b { font: italic 600 1.15rem var(--titulo); color: #f6ead6; }
+.fama small { font: 700 0.75rem var(--sans); color: #c9a25a; margin-left: 0.3rem; }
+.fama-barra { display: block; height: 6px; background: #120c08; border: 1px solid #8a6a36; }
+.fama-barra i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a36, #e0bf78); }
+.fama-proximo { font-size: 0.86rem; color: #cdb48a; font-style: italic; }
+.descansado { color: #9fd0a8 !important; font-size: 0.9rem; }
+.item-raridade { font: 600 0.72rem/1.6 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #9c8f7a; margin-left: 0.5rem; }
+.lista-itens li.fechado { opacity: 0.4; }
+.lista-itens li b { display: inline; }
+.no-treinar { display: block; margin-top: 0.2rem; padding: 0; font-size: 0.85rem; color: #e8cf98; text-decoration: underline; background: none; border: 0; cursor: pointer; }
+.no-treinar:disabled { color: #9fd0a8; text-decoration: none; cursor: default; }
+.escolha-tres { padding: 0.8rem 1rem; margin-bottom: 1rem; border: 2px solid #c9a25a; background: rgba(255, 245, 220, 0.35); }
+.escolha-tres h3 { margin-top: 0 !important; }
+.escolha-tres-opcoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* As figuras vêm com luz clara de frente: escurece bastante, com luz quente de lado e o resto em sombra. */
+.pessoa.pessoa-pintada .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 0.82)) saturate(var(--sat-gente, 0.8)) contrast(1.04) blur(0.4px) drop-shadow(var(--rim-x, 1px) 0 1px var(--rim-gente, transparent)); }
+.pessoa-tinta { opacity: 0.72; }
+.pessoa-lado { position: absolute; inset: 0; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; pointer-events: none; mix-blend-mode: hard-light; opacity: 0.85;
+  background: linear-gradient(var(--lado-luz, 90deg), var(--cor-luz, rgba(255, 170, 90, 0.45)) 0%, rgba(128, 128, 128, 0) 45%, rgba(0, 0, 0, 0.55) 100%); }
+.tronco-sangue { margin: 0.8rem 0 0.3rem; padding: 0.5rem 0.8rem; border-left: 3px solid #c9a25a; background: rgba(0, 0, 0, 0.25); }
+
+.rp-idade { margin: 0; font: italic 600 1rem var(--texto-livro); color: #e8c878; }
+.consumiveis { margin: 0.6rem 0 0; padding: 0.45rem 0.6rem; border: 1px dashed rgba(201, 162, 90, 0.4); }

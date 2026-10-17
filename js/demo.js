@@ -86,12 +86,18 @@ function demoEntrada(raiz) {
 // Fase 3.3 (parte da tela), só na demonstração: experiência, status, refúgio, itens e feitos fictícios.
 const ESTADO_FASE3 = {
   experiencia: 8,
+  experiencia_total: 12,
+  noites_jogadas: 3,
+  descansado: true,
+  bairros: { lapa: 1, centro: 0 },
   status: { camarilla: 'tolerado', anarquistas: 'desconhecido', independentes: 'respeitado', policia: 'desconhecido' },
   refugio: { bairro: 'Lapa', local: 'Um quarto alugado em cima de um bar, com a janela pintada de preto.', seguranca: 'fraca', rebanho: 'nenhum', nota: 'uma tranca nova e um colchão no chão' },
   itens: [
-    { espaco: 'roupa', nome: 'Jaqueta de couro gasta', traco: 'impõe respeito numa briga de rua' },
-    { espaco: 'eletronico', nome: 'Celular sem chip', traco: 'só funciona no wi-fi; ninguém rastreia' },
-    { espaco: 'ferramenta', nome: 'Pé de cabra', traco: 'abre portas, mas faz barulho' },
+    { espaco: 'roupa', nome: 'Jaqueta de couro gasta', raridade: 'bom', traco: 'impõe respeito numa briga de rua', termos: ['briga', 'intimidar', 'ameacar'], equipado: true },
+    { espaco: 'eletronico', nome: 'Celular sem chip', raridade: 'bom', traco: 'só funciona no wi-fi; ninguém rastreia', termos: ['internet', 'pesquisar', 'rastrear'], equipado: true },
+    { espaco: 'ferramenta', nome: 'Pé de cabra', raridade: 'comum', traco: 'abre portas, mas faz barulho', equipado: true },
+    { espaco: 'consumivel', nome: 'Bolsa de sangue', raridade: 'comum', traco: 'acalma a Fome uma vez, mas só sacia quem tem o sangue ainda ralo (Potência baixa)' },
+    { espaco: 'consumivel', nome: 'Remédio para dormir', raridade: 'comum', traco: 'deixa uma presa sonolenta e fácil' },
   ],
   feitos: [
     { titulo: 'Conhece cada beco da Lapa', texto: 'Examinou todos os detalhes da Lapa numa noite.', quando: 'Noite 2' },

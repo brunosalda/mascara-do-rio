@@ -120,11 +120,19 @@ export async function noitesResolvidas() {
 }
 
 export async function narracoesDoPersonagem(personagemId) {
-  const { data, error } = await sb
+  // Os ganhos da noite (fase 3) vêm junto quando a coluna existir; antes da migração, a leitura sem ela.
+  let { data, error } = await sb
     .from('narracoes')
-    .select('id, tipo, noite_id, texto, opcoes, paineis, criado_em')
+    .select('id, tipo, noite_id, texto, opcoes, paineis, criado_em, ganhos')
     .eq('personagem_id', personagemId)
     .order('criado_em', { ascending: false });
+  if (error && /ganhos/.test(error.message || '')) {
+    ({ data, error } = await sb
+      .from('narracoes')
+      .select('id, tipo, noite_id, texto, opcoes, paineis, criado_em')
+      .eq('personagem_id', personagemId)
+      .order('criado_em', { ascending: false }));
+  }
   falha(error, 'Não foi possível carregar suas narrações.');
   return data;
 }

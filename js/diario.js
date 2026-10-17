@@ -83,8 +83,9 @@ function abaPessoas(minhasOrdenadas) {
 // Feitos (fase 3.3, parte da tela): títulos ganhos ao longo das noites, dados pelo Narrador.
 function abaFeitos(p) {
   const feitos = p.estado?.feitos || [];
-  if (!feitos.length) return '<p class="nota">Nenhum feito ainda. Os feitos aparecem aqui quando o Narrador reconhece algo que você fez ("Conhece cada beco da Lapa").</p>';
-  return feitos.map((f) => `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(f.titulo)}</b><br>${esc(f.texto || '')}</span></div>`).join('');
+  const escolha = ''; // escolha das três noites: fica para depois (seção 7)
+  if (!feitos.length) return `${escolha}<p class="nota">Nenhum feito ainda. Os feitos aparecem aqui quando o Narrador reconhece algo que você fez ("Conhece cada beco da Lapa").</p>`;
+  return escolha + feitos.map((f) => `<div class="diario-entrada diario-feito"><span class="diario-carimbo">${esc(f.quando || '')}</span><span><b class="voz">${esc(f.titulo)}</b><br>${esc(f.texto || '')}</span></div>`).join('');
 }
 
 export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
@@ -135,5 +136,11 @@ export async function telaDiario(raiz, p, { noite = null, plano = null } = {}) {
     pagina.innerHTML = abas.find(([a]) => a === id)[2]();
   };
   raiz.querySelectorAll('[data-aba]').forEach((b) => { b.onclick = () => mostrar(b.dataset.aba); });
+  pagina.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-escolha3]');
+    if (!b) return;
+    try { localStorage.setItem(`mascara.escolha3.${p.id}.${Math.floor((p.estado?.noites_jogadas ?? 0) / 3)}`, b.dataset.escolha3); } catch { /* sem armazenamento */ }
+    mostrar('feitos');
+  });
   mostrar(escolhida);
 }

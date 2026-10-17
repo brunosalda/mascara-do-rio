@@ -5,6 +5,7 @@ import { retratoDe, retratoProvisorio, localDe } from './cidade.js';
 import { termo, termoDe, ligarGlossario, dicaDoGlossario } from './glossario.js';
 import { quandoONarradorVolta } from './jogo/registro.js';
 import { perguntar } from './jogo/camadas.js';
+import { progressoDe, ESPACOS, RARIDADES } from './jogo/progresso.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
 // Até o Narrador pintar o retrato do personagem, mostra o retrato provisório (silhueta do clã).
@@ -293,7 +294,7 @@ function abaSangueRP(f, calc, est) {
   const doCla = c?.disciplinas || [];
   const doPredador = f.predador?.disciplina && !doCla.includes(f.predador.disciplina) ? [f.predador.disciplina] : [];
   const galhos = [...new Set([...doCla, ...doPredador, ...Object.keys(calc.disciplinas)])].slice(0, 4);
-  const xp = est.experiencia ?? 0;
+  const xp = est.xpGuardada ?? est.experiencia ?? 0;
   const fator = (id) => (c?.livre ? 6 : doCla.includes(id) ? 5 : 7);
   const palavraCusto = (custo) => (custo <= xp ? 'ao seu alcance' : custo <= xp + 6 ? 'falta pouco' : 'ainda longe');
   const caro = (pw) => /humanidade|fome|besta/i.test(pw.desc || '');
@@ -311,23 +312,28 @@ function abaSangueRP(f, calc, est) {
           return `<li class="no-sangue no-${estado}${poderes.some(caro) ? ' no-caro' : ''}">
             <span class="no-bolinha" aria-hidden="true"></span>
             <span class="no-texto"><b>${nivel}º</b> ${poderes.map((pw) => `<span title="${esc(pw.desc || '')}">${esc(pw.nome)}</span>`).join(' · ') || '<i>sem poder neste nível</i>'}
-            ${estado === 'proximo' ? `<em class="no-custo">${palavraCusto(nivel * fator(id))}</em>` : ''}</span>
+            ${estado === 'proximo' ? `<em class="no-custo">${palavraCusto(nivel * fator(id))}</em><button type="button" class="btn-texto no-treinar" data-treinar="${esc(d.nome)}">Treinar (ação curta)</button>` : ''}</span>
           </li>`;
         }).join('')}</ol>
       </section>`;
     }).join('')}</div>
-    <p class="nota">Comprar um nível acontece pelo Narrador, no fechamento; os poderes com moldura vermelha cobram um preço na Humanidade, na Fome ou na Besta.</p>`;
+    <p class="tronco-sangue"><b>Potência do Sangue</b> (o tronco): sobe com experiência, com o tempo de história e até o teto da geração. O Narrador confere.</p>
+    <p class="nota">Comprar um nível acontece pelo Narrador, no fechamento; os poderes com moldura vermelha cobram um preço na Humanidade, na Fome ou na Besta. A Humanidade não se compra. Vantagens ✦ somam no máximo +2 dados por rolagem.</p>`;
 }
 
 // Itens: uma lista de cinco espaços, sem grade e sem cor de raridade; cada item tem um traço.
 const ESPACOS_ITEM = [['roupa', 'Roupa'], ['arma', 'Arma escondida'], ['ferramenta', 'Ferramenta'], ['eletronico', 'Celular ou eletrônico'], ['veiculo', 'Veículo']];
 function abaItensRP(est) {
   const itens = est.itens || [];
-  return `<ul class="lista-itens">${ESPACOS_ITEM.map(([id, nome]) => {
-    const it = itens.find((x) => x.espaco === id);
-    return `<li class="${it ? '' : 'vazio'}"><span class="item-espaco">${nome}</span>${it ? `<b>${esc(it.nome)}</b><small>${esc(it.traco || '')}</small>` : '<i>nada</i>'}</li>`;
-  }).join('')}</ul>
-  <p class="nota">Os itens chegam pelas tarefas, pela caçada, comprando com os Recursos ou pelo Narrador.</p>`;
+  const linhaItem = (it) => `<b>${esc(it.nome)}</b><span class="item-raridade">${esc(RARIDADES[it.raridade] || 'comum')}</span>${it.traco ? `<small>${it.termos?.length ? '✦ ' : ''}${esc(it.traco)}</small>` : ''}`;
+  const equipados = ESPACOS.map((e) => {
+    const it = itens.find((x) => (x.espaco === e.id || x.tipo === e.id) && x.equipado !== false);
+    return `<li class="${it ? '' : 'vazio'}"><span class="item-espaco">${e.nome}</span>${it ? linhaItem(it) : '<i>nada</i>'}</li>`;
+  }).join('');
+  const consumiveis = itens.filter((x) => (x.espaco || x.tipo) === 'consumivel');
+  return `<ul class="lista-itens">${equipados}</ul>
+    <p class="consumiveis"><span class="item-espaco">Consumíveis</span> ${consumiveis.length ? consumiveis.map((it) => `<span title="${esc(it.traco || '')}">${esc(it.nome)}</span>`).join(' · ') : '<i>nenhum</i>'}</p>
+    <p class="nota">✦ O traço do item vale uma vantagem (+1 dado) quando ajuda de verdade numa ação, como as descobertas; somadas, as vantagens dão no máximo +2 dados. Os itens chegam pelas tarefas, pela caçada, pelos favores, comprando com os Recursos ou pelo Narrador.</p>`;
 }
 
 // Status em palavras, com cada facção e a atenção da polícia.
@@ -375,7 +381,8 @@ export function telaRegistro(raiz, p) {
   const calc = v5.calcular(f);
   const c = v5.cla(f.cla);
   const pr = v5.predador(f.predador?.id);
-  const est = p.estado || {};
+  const prog = progressoDe(p.estado || {}, p._narracoes || []);
+  const est = { ...(p.estado || {}), ...prog };
   const caixa = (e, max) => { const m = e?.max || max || 0; return [Math.max(0, m - (e?.superficial || 0) - (e?.agravado || 0)), m]; };
   const [vitR, vitM] = caixa(est.vitalidade, calc.vitalidade);
   const [vonR, vonM] = caixa(est.vontade, calc.forcaVontade);
@@ -387,6 +394,7 @@ export function telaRegistro(raiz, p) {
       <aside class="rp-lado">
         <div class="rp-retrato"><img src="${esc(retratoDe(p))}" alt="Retrato de ${esc(p.nome)}"></div>
         <h2 class="rp-nome">${esc(p.nome || 'Sem nome')}</h2>
+        <p class="rp-idade" title="Sobe com a experiência ganha. Não trava nada: dá um título e abre pedidos mais difíceis.">${esc(est.fama.nome)}</p>
         ${linhaEmVida({ ...f, nome: p.nome })}
         <dl class="rp-dados">
           <dt>Clã</dt><dd>${c ? termoDe('cla', c.id, c.nome) : '—'}</dd>
@@ -394,6 +402,7 @@ export function telaRegistro(raiz, p) {
           <dt>Geração</dt><dd>${calc.geracao ? `${calc.geracao}ª` : '—'}</dd>
         </dl>
         ${f.origem?.conceito ? `<p class="rp-conceito">${esc(f.origem.conceito)}</p>` : ''}
+        ${est.descansado ? '<p class="nota descansado">Sangue descansado: a próxima noite rende um pouco mais.</p>' : ''}
         <h4 class="rp-titulo">Status</h4>
         ${blocoStatusRP(est)}
         <button type="button" class="btn-secundario rp-refugio" data-refugio>Refúgio</button>
@@ -416,6 +425,14 @@ export function telaRegistro(raiz, p) {
   };
   raiz.querySelectorAll('[data-rp]').forEach((b) => { b.onclick = () => mostrar(b.dataset.rp); });
   mostrar('ficha');
+  // Treinar vira uma ação curta da noite (o Narrador confirma e desconta a experiência no fechamento).
+  pagina.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-treinar]');
+    if (!b) return;
+    document.dispatchEvent(new CustomEvent('mascara:treinar', { detail: { texto: `Treinar ${b.dataset.treinar} com quem sabe.` } }));
+    b.textContent = 'Vai para as ações curtas';
+    b.disabled = true;
+  });
   // Refúgio como cena: a pintura do bairro onde ele dorme, com o que se sabe do lugar.
   raiz.querySelector('[data-refugio]').onclick = () => {
     const r = est.refugio || {};

@@ -496,7 +496,7 @@ export function montarCena(raiz, {
     // figura tingida pela cor e pelo brilho da pintura em volta dos pés (amostrados quando a pintura carrega).
     const src = figura ? `img/gente/${figura}.png` : '';
     el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
-      ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
+      ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-lado" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
       : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
     el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
@@ -569,6 +569,9 @@ export function montarCena(raiz, {
             const neon = Math.max(lr, lg, lb) - Math.min(lr, lg, lb) > 120 && melhor > 0.25;
             if (neon) p.el.style.setProperty('--rim-gente', `rgba(${lr}, ${lg}, ${lb}, ${Math.min(0.95, 0.4 + melhor).toFixed(2)})`);
             p.el.style.setProperty('--rim-x', `${forte.x < p.x ? -1 : 1}px`);
+            // Luz quente de lado (do lado da luz forte) e o resto em sombra.
+            p.el.style.setProperty('--lado-luz', forte.x < p.x ? '90deg' : '270deg');
+            p.el.style.setProperty('--cor-luz', `rgba(${lr}, ${lg}, ${lb}, 0.55)`);
           }
         }
       } catch { /* sem leitura da imagem: fica o brilho das luzes marcadas */ }
@@ -1470,7 +1473,10 @@ export function montarCena(raiz, {
       // Vista do alto (Fase 2): a câmera é livre. Rola com arrastar, borda da tela e setas; C (ou o botão)
       // volta para o personagem. Ao entrar, começa centrada nele.
       if (camLivre.centrar || !cameraPronta) {
-        camLivre.x = vw * 0.5 - fx;
+        // Na chegada, enquadra o personagem e a gente da área juntos (ninguém do elenco escondido); o C
+        // depois centraliza só no personagem.
+        const fxInicial = !cameraPronta && gente.length ? ((pos.x + gente.reduce((sm, q) => sm + q.x, 0)) / (gente.length + 1)) * W : fx;
+        camLivre.x = vw * 0.5 - (camLivre.centrar ? fx : fxInicial);
         camLivre.y = vh * 0.55 - fy;
         if (camLivre.centrar && cameraPronta) camLivre.suave = true;
         camLivre.centrar = false;

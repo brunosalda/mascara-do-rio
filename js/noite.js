@@ -10,6 +10,7 @@ import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './a
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
 import { TIPOS_GENTE, PISTAS_CONVERSA } from './jogo/gente.js';
+import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
@@ -218,7 +219,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (!emCaca) cena?.atualizarPontos(montarPontos());
     desenharPlano();
   }
-  const vantagemDe = (texto) => (texto ? lerVantagens().find((v) => v.termos?.some((t) => semAcentoV(texto).includes(t))) : null);
+  // Vantagem ✦ numa opção: uma descoberta da noite ou o traço de um item equipado (fase 3).
+  const vantagemDe = (texto) => (texto ? (lerVantagens().find((v) => v.termos?.some((t) => semAcentoV(texto).includes(t))) || vantagemDosItens(p.estado, texto)) : null);
   const vantagemDaCacada = (lugar) => lerVantagens().find((v) => v.cacada && v.lugar === lugar) || null;
   const comVantagem = (texto, v) => (v && texto && !texto.includes(`[vantagem: ${v.nota}]`) ? `${texto} [vantagem: ${v.nota}]` : texto);
 
@@ -985,6 +987,17 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     plano.cacada = texto;
     plano.cacada_curta = linha;
     plano.cacada_falhou = falhou;
+    // Proteção contra azar (fase 3): duas caçadas falhas seguidas dão ✦ na próxima; uma linha no registro.
+    try {
+      const chaveAzar = `mascara.azar.${p.id}`;
+      const seguidas = falhou ? (Number(localStorage.getItem(chaveAzar)) || 0) + 1 : 0;
+      localStorage.setItem(chaveAzar, String(seguidas));
+      if (seguidas >= 2) {
+        ganharVantagem({ id: `azar.${noite?.id}.${lugarId}`, lugar: lugarId, cacada: true, nota: 'duas caçadas ruins seguidas: a próxima vem com o faro mais afiado' });
+        anotar('A FOME', 'Duas vezes sem sangue. Da próxima, eu acho o caminho. ✦');
+        localStorage.setItem(chaveAzar, '0');
+      }
+    } catch { /* sem armazenamento */ }
     anotar('CAÇADA', `${linha}${falhou ? '' : ' ✓'}`);
     plano.cacada_de = texto;
     plano.nao_cacar = false;
@@ -1084,7 +1097,19 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     });
   }
 
+  // Treinar (ficha > Sangue) vira uma ação curta da noite.
+  document.addEventListener('mascara:treinar', (ev) => {
+    if (!camadas.isConnected) return;
+    const texto = ev.detail?.texto;
+    if (!texto) return;
+    if (!plano.curta_1?.trim()) plano.curta_1 = texto;
+    else if (!plano.curta_2?.trim()) plano.curta_2 = texto;
+    else { aviso('As duas ações curtas já estão ocupadas. Troque uma no plano para treinar.'); return; }
+    guardarRascunho();
+    aviso('Treino posto nas ações curtas. O Narrador confirma no fechamento.');
+  });
   function abrirFicha() {
+    p._narracoes = narracoes;
     abrirJanela(camadas, { titulo: 'Registro do personagem', classe: 'janela-larga janela-registro', montar: (corpo) => telaRegistro(corpo, p) });
   }
 
