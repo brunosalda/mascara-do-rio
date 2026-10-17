@@ -129,10 +129,11 @@ export async function narracoesDoPersonagem(personagemId) {
   return data;
 }
 
+// '*' traz também encerrada_em quando a coluna existe (e não quebra enquanto ela não existe).
 export async function minhaAcao(noiteId, personagemId) {
   const { data, error } = await sb
     .from('acoes')
-    .select('id, principal, cacada, nao_cacar, curta_1, curta_2, esforco, atualizado_em')
+    .select('*')
     .eq('noite_id', noiteId)
     .eq('personagem_id', personagemId)
     .maybeSingle();
@@ -145,7 +146,7 @@ export async function salvarAcao(noiteId, personagemId, campos, existenteId) {
     ? sb.from('acoes').update(campos).eq('id', existenteId)
     : sb.from('acoes').insert({ noite_id: noiteId, personagem_id: personagemId, ...campos });
   const { data, error } = await consulta
-    .select('id, principal, cacada, nao_cacar, curta_1, curta_2, esforco, atualizado_em')
+    .select('*')
     .single();
   // 42501: inserção barrada pelo RLS; PGRST116: atualização que não achou linha liberada (noite fechada).
   if (error?.code === '42501' || error?.code === 'PGRST116' || /row-level security/i.test(error?.message || '')) {
@@ -153,4 +154,26 @@ export async function salvarAcao(noiteId, personagemId, campos, existenteId) {
   }
   falha(error, 'Não foi possível enviar suas ações.');
   return data;
+}
+
+// Encerrar a noite: depois disso, a ação não muda mais (o banco trava). Quando todos os personagens
+// ativos encerram, o vigia do PC do Bruno chama o Narrador.
+export async function encerrarNoite(acaoId) {
+  const { data, error } = await sb
+    .from('acoes')
+    .update({ encerrada_em: new Date().toISOString() })
+    .eq('id', acaoId)
+    .select('*')
+    .single();
+  if (error?.code === 'PGRST116' || /row-level security/i.test(error?.message || '')) {
+    throw new Error('A noite já fechou.');
+  }
+  falha(error, 'Não foi possível encerrar a noite.');
+  return data;
+}
+
+export async function todosEncerraram(noiteId) {
+  const { data, error } = await sb.rpc('noite_todos_encerraram', { p_noite: noiteId });
+  if (error) return false;
+  return !!data;
 }

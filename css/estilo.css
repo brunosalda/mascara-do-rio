@@ -2024,3 +2024,8 @@ body.cerimonias-curtas .brilho-luz { animation: none; }
 body.toque .so-toque, .tela-mapa.toque .so-toque { display: inline; }
 body.toque .so-mouse { display: none; }
 @media (hover: none) { .so-toque { display: inline; } .so-mouse { display: none; } }
+
+/* Encerrar a noite */
+.plano-encerrar { margin-top: 0.35rem; width: 100%; min-height: 40px; }
+.quadro-encerrada { color: var(--texto); }
+.quadro-encerrada b { color: var(--ok); font-family: var(--sans); letter-spacing: 0.03em; }

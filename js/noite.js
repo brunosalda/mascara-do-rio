@@ -10,7 +10,7 @@ import { som, efeitos, definirTempo, definirSomDoLugar } from './ambiente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
-import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
+import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas, brasas, fraseDescobertas } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
@@ -166,6 +166,30 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     caixaPlano.innerHTML = html;
   }
 
+  // Encerrar a noite: só aparece depois do envio e quando o banco já tem a coluna (encerrada_em).
+  let todosEncerrados = false;
+  const encerrada = () => !!acao?.encerrada_em;
+  const podeEncerrar = () => !!acao && !alterado && !encerrada() && Object.prototype.hasOwnProperty.call(acao, 'encerrada_em');
+  const avisarEncerrada = () => { if (encerrada()) { aviso('Você já encerrou esta noite. Não dá mais para mudar.'); return true; } return false; };
+
+  async function encerrar() {
+    if (!podeEncerrar()) return;
+    const r = await perguntar(camadas, {
+      rotulo: 'Encerrar a noite',
+      texto: '<p>Você termina a noite com o plano que enviou. Quando todos encerrarem, o Narrador começa a resolver. Depois disso, não dá mais para mudar.</p>',
+      opcoes: ['Encerrar minha noite', 'Ainda não'],
+    });
+    if (r !== 0) return;
+    try {
+      acao = await banco.encerrarNoite(acao.id);
+      todosEncerrados = await banco.todosEncerraram(noite.id);
+      desenharPlano();
+      som.selo?.();
+    } catch (err) {
+      aviso(err.message, 'erro');
+    }
+  }
+
   function desenharPlano() {
     if (!noite) { desenharCiclo(); return; }
     const enviado = acao && !alterado;
@@ -173,9 +197,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
     const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))} <i>✓</i>` : '<em>falta escolher</em>';
     const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
-    const pe = enviado
-      ? `<span class="quadro-enviado">Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}</span>`
-      : `<span>${acao ? 'Mudanças não enviadas' : 'Não enviado'} · ${esc(prazoRestante(noite.fecha_em))}</span>`;
+    const pe = encerrada()
+      ? `<span class="quadro-encerrada">${todosEncerrados ? '<b>Todos encerraram</b> · o Narrador já começou' : '<b>Noite encerrada</b> · esperando os outros encerrarem'}</span>`
+      : enviado
+        ? `<span class="quadro-enviado">Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}</span>${podeEncerrar() ? '<button type="button" class="btn-secundario plano-encerrar" data-hud="encerrar">Encerrar minha noite</button>' : ''}`
+        : `<span>${acao ? 'Mudanças não enviadas' : 'Não enviado'} · ${esc(prazoRestante(noite.fecha_em))}</span>`;
     const recolhidoAgora = quadroRecolhido && Date.now() > abertoAte;
     caixaPlano.className = `hud-plano quadro-noite plano-${estado}${recolhidoAgora ? ' recolhido' : ''}`;
     caixaPlano.innerHTML = `
@@ -198,6 +224,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   }
 
   async function enviar() {
+    if (avisarEncerrada()) return;
     if (!plano.principal?.trim()) { aviso('Escolha ou escreva a ação principal primeiro.'); return; }
     const campos = {
       principal: plano.principal.trim(), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
@@ -534,6 +561,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       case 'diario': abrirDiario(); break;
       case 'plano': abrirPlano(); break;
       case 'enviar': enviar(); break;
+      case 'encerrar': encerrar(); break;
       case 'menu': abrirMenu(); break;
       case 'legenda': abrirLegenda(); break;
       case 'recolher':
@@ -541,9 +569,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         try { localStorage.setItem('mascara.quadroRecolhido', quadroRecolhido ? '1' : '0'); } catch { /* sem armazenamento */ }
         desenharPlano();
         break;
-      case 'linha-principal': if (opcoes.length && !emOutroLugar) abrirHistoria(false); else abrirEscrita(); break;
-      case 'linha-cacada': abrirCacada(); break;
-      case 'linha-curtas': abrirEscrita(); break;
+      case 'linha-principal': if (avisarEncerrada()) break; if (opcoes.length && !emOutroLugar) abrirHistoria(false); else abrirEscrita(); break;
+      case 'linha-cacada': if (!avisarEncerrada()) abrirCacada(); break;
+      case 'linha-curtas': if (!avisarEncerrada()) abrirEscrita(); break;
       case 'ler-noite': abrirHistoria(false, () => desenharPlano()); break;
       case 'efeitos': efeitos.alternar(); raiz.querySelector('[data-hud="efeitos"]').setAttribute('aria-pressed', String(efeitos.ligados())); break;
       case 'som': som.alternar(); raiz.querySelector('[data-hud="som"]').setAttribute('aria-pressed', String(som.ligado())); break;
@@ -571,6 +599,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     tempo,
     aoInteragir: (pt) => {
       if (pt.tipo === 'historia') abrirHistoria(false);
+      else if ((pt.tipo === 'acao' || pt.tipo === 'cacar' || pt.tipo === 'escrever') && avisarEncerrada()) return;
       else if (pt.tipo === 'acao') abrirOpcao(pt);
       else if (pt.tipo === 'cacar') abrirCacada();
       else if (pt.tipo === 'escrever') abrirEscrita();
@@ -584,6 +613,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     },
   });
   desenharPlano();
+  if (noite && acao?.encerrada_em) banco.todosEncerraram(noite.id).then((t) => { todosEncerrados = t; desenharPlano(); });
 
   if (abrir === 'ficha') { abrirFicha(); return; }
   if (abrir === 'diario') { abrirDiario(); return; }
