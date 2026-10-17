@@ -7,3 +7,8 @@
 -- A leitura já é coberta pela política "ver as próprias narrações"; o jogador não grava narrações.
 alter table public.narracoes add column if not exists ganhos jsonb default null;
 comment on column public.narracoes.ganhos is 'Ganhos da noite (experiência, itens, status, refúgio, feitos, perdas), gravados pelo Narrador no fechamento.';
+
+-- Cidade do personagem ("rio" ou "sp"), ao lado de estado.local. Quem já existe fica no Rio.
+-- É um campo dentro de personagens.estado (jsonb), sem coluna nova.
+update public.personagens set estado = coalesce(estado, '{}'::jsonb) || '{"cidade": "rio"}'::jsonb
+  where not (coalesce(estado, '{}'::jsonb) ? 'cidade');
