@@ -6,13 +6,14 @@ import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, avis
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
 import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
-import { som, efeitos, definirTempo, definirSomDoLugar } from './ambiente.js';
+import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
+import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
-import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara } from './jogo/detalhes.js';
+import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
@@ -134,6 +135,24 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const caixaPlano = raiz.querySelector('.hud-plano');
   const camadas = raiz.querySelector('.tela-jogo');
 
+  // --- Vantagens das descobertas -----------------------------------------------------------------
+  const semAcentoV = (s) => ` ${String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()} `;
+  const chaveVantagens = `mascara.vantagens.${noite?.id || 'sem-noite'}`;
+  const lerVantagens = () => { try { return JSON.parse(localStorage.getItem(chaveVantagens)) || []; } catch { return []; } };
+  function ganharVantagem(v) {
+    const lista = lerVantagens();
+    if (lista.some((x) => x.id === v.id)) return;
+    lista.push(v);
+    try { localStorage.setItem(chaveVantagens, JSON.stringify(lista)); } catch { /* sem armazenamento */ }
+    som.reacao?.('vantagem', 0);
+    aviso('Você sabe algo que ajuda: a opção ligada ganhou a marca ✦.');
+    cena?.atualizarPontos(montarPontos());
+    desenharPlano();
+  }
+  const vantagemDe = (texto) => (texto ? lerVantagens().find((v) => v.termos?.some((t) => semAcentoV(texto).includes(t))) : null);
+  const vantagemDaCacada = (lugar) => lerVantagens().find((v) => v.cacada && v.lugar === lugar) || null;
+  const comVantagem = (texto, v) => (v && texto && !texto.includes(`[vantagem: ${v.nota}]`) ? `${texto} [vantagem: ${v.nota}]` : texto);
+
   function guardarRascunho() {
     alterado = true;
     // Quadro recolhido (celular): abre sozinho por 2 s para mostrar o que mudou.
@@ -196,8 +215,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const enviado = acao && !alterado;
     const pt = partes();
     const estado = enviado ? 'enviado' : pt.principal && pt.cacada ? 'pronto' : pt.principal ? 'quase' : 'vazio';
-    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))} <i>✓</i>` : '<em>falta escolher</em>';
-    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
+    const linhaPrincipal = pt.principal ? `${esc(curto(plano.principal, 7))}${vantagemDe(plano.principal) ? ' <span class="marca-ouro" title="Você sabe algo que ajuda">✦</span>' : ''} <i>✓</i>` : '<em>falta escolher</em>';
+    const linhaCacada = plano.nao_cacar ? 'não vou caçar <i>✓</i>' : pt.cacada ? `${esc(plano.cacada_curta && plano.cacada === plano.cacada_de ? plano.cacada_curta : curto(plano.cacada, 5))} <i>✓</i>` : '<em>falta</em> <small>(sem caçar, a Fome não baixa)</small>';
     const pe = encerrada()
       ? `<span class="quadro-encerrada">${todosEncerrados ? '<b>Todos encerraram</b> · o Narrador já começou' : '<b>Noite encerrada</b> · esperando os outros encerrarem'}</span>`
       : enviado
@@ -228,7 +247,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (avisarEncerrada()) return;
     if (!plano.principal?.trim()) { aviso('Escolha ou escreva a ação principal primeiro.'); return; }
     const campos = {
-      principal: plano.principal.trim(), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
+      principal: comVantagem(plano.principal.trim(), vantagemDe(plano.principal)), cacada: (plano.cacada || '').trim(), nao_cacar: !!plano.nao_cacar,
       curta_1: (plano.curta_1 || '').trim(), curta_2: (plano.curta_2 || '').trim(), esforco: !!plano.esforco,
     };
     try {
@@ -276,7 +295,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (!emOutroLugar && atual) pedidos.push({ id: 'historia', tipo: 'historia', icone: '❦', rotulo: 'O que aconteceu', acao: 'Relembrar o que aconteceu', papel: 'memoria' });
     if (noite && atual) {
       if (!emOutroLugar) {
-        opcoes.forEach((o, i) => pedidos.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o, alternativa: !!plano.principal?.trim() && plano.principal !== o }));
+        opcoes.forEach((o, i) => pedidos.push({ id: `opcao-${i}`, tipo: 'acao', icone: String(i + 1), rotulo: curto(o), acao: o, texto: o, feito: plano.principal === o, alternativa: !!plano.principal?.trim() && plano.principal !== o, vantagem: vantagemDe(o)?.nota }));
       } else {
         const l = visitado;
         [
@@ -316,6 +335,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
           const hd = raiz.querySelector('.hud-descobertas');
           if (hd) { hd.classList.remove('subiu'); void hd.offsetWidth; hd.classList.add('subiu'); }
           cena.falar(d.voz, d.texto, 7000);
+          const v = VANTAGENS[lugarId]?.[d.id];
+          if (v) setTimeout(() => ganharVantagem({ ...v, id: `${lugarId}.${d.id}`, lugar: lugarId, x: d.x, y: d.y }), 900);
           cena.atualizarPontos(montarPontos());
         },
       });
@@ -347,6 +368,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       localStorage.setItem(k, '1');
     } catch { /* sem armazenamento: vale a memória da sessão */ }
     registrar(noite?.id, 'comentarios', { lugar: lugarId, id: c.id, voz: c.voz, texto: c.texto });
+    const v = VANTAGENS_ESCONDIDOS[c.id];
+    if (v) setTimeout(() => ganharVantagem({ ...v, id: c.id, lugar: lugarId, x: c.x, y: c.y }), 1500);
     return true;
   }
 
@@ -429,7 +452,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     // Três sugestões do tipo de predador, mais as saídas de sempre: do seu jeito, outra ideia, não caçar.
     const onde = emOutroLugar ? ` (${visitado.em})` : '';
     const sugestoes = sugestoesDeCacada(p.ficha?.predador?.id).map((t) => t.replace(/\.$/, '') + onde + '.');
-    const opcoesCaca = [...sugestoes, `Do meu jeito de sempre, ${lugarCaca}.`, 'Escrever outra ideia', 'Não vou caçar esta noite (a Fome não baixa)'];
+    const podeAgora = !!cena && !!p.sprite?.url && !!noite && !encerrada();
+    const opcoesCaca = [...(podeAgora ? ['Caçar aqui, agora'] : []), ...sugestoes, `Do meu jeito de sempre, ${lugarCaca}.`, 'Escrever outra ideia', 'Não vou caçar esta noite (a Fome não baixa)'];
+    const desloc = podeAgora ? 1 : 0;
     const camada = abrirDialogo(camadas, {
       rotulo: 'A caçada',
       html: `
@@ -449,7 +474,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     camada.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-caca]');
       if (b) {
-        const i = Number(b.dataset.caca);
+        let i = Number(b.dataset.caca);
+        if (podeAgora && i === 0) { confirmarEscolha(b, () => { camada.fechar(); cacarAgora(lugarCaca); }); return; }
+        i -= desloc;
         if (i < sugestoes.length) guardar(b, sugestoes[i], false);
         else if (i === sugestoes.length) guardar(b, emOutroLugar ? `Caçar do meu jeito de sempre ${visitado.em}` : 'Do meu jeito de sempre', false);
         else if (i === sugestoes.length + 1) { const l = camada.el.querySelector('.caca-livre'); l.hidden = false; l.querySelector('textarea').focus(); }
@@ -461,6 +488,103 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
         if (t) guardar(ev.target, t, false);
       }
     });
+  }
+
+  // --- Caçada na hora (minijogo, sem dados) ---------------------------------------------------------
+  // A Fome abre os olhos: três presas na cena; a abordagem pelo tipo de predador; o fim escreve o texto
+  // da caçada no plano. O Narrador rola no fechamento, a partir desse texto.
+  let emCaca = null;
+  function fomeDesperta(sim) {
+    document.body.classList.toggle('fome-desperta', sim);
+    document.body.dataset.fome = String(sim ? 5 : (p.estado?.fome ?? ''));
+    definirClima({ fome: sim ? 5 : (p.estado?.fome ?? null) });
+    const desistir = camadas.querySelector('.caca-desistir');
+    if (sim && !desistir) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'caca-desistir';
+      b.textContent = 'Desistir da caçada';
+      b.onclick = () => { cena.cancelarFurtividade(); terminarSemCacar(); };
+      camadas.appendChild(b);
+    } else if (!sim) desistir?.remove();
+  }
+  function terminarSemCacar() {
+    emCaca = null;
+    fomeDesperta(false);
+    cena.atualizarPontos(montarPontos());
+  }
+  function cacarAgora(onde) {
+    if (avisarEncerrada() || !cena) return;
+    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}` }));
+    emCaca = { presas, onde };
+    fomeDesperta(true);
+    som.acorde?.();
+    cena.atualizarPontos(presas);
+    cena.apresentar(3500);
+    cena.falar('A FOME', 'Três. Escolha uma.', 3000);
+  }
+  function escolherPresa(pr) {
+    if (!emCaca) return;
+    if (pr.vulneravel) cena.falar('HUMANIDADE', pr.vulneravel, 2600);
+    const ordem = abordagensPara(p.ficha?.predador?.id);
+    setTimeout(() => cena.perguntarNoBalao({
+      voz: 'A FOME', texto: 'Como?',
+      opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
+      aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
+    }), pr.vulneravel ? 1700 : 150);
+  }
+  function iniciarAbordagem(pr, modo) {
+    cena.falar('A FOME', ABORDAGENS[modo].explica, 4200);
+    const zonas = lerVantagens().filter((v) => v.cacada && v.lugar === lugarId).map((v) => ({ x: v.x, y: v.y, raio: 0.12 }));
+    if (modo === 'conversa') {
+      let boas = 0;
+      let hesitou = false;
+      const perguntar = (n) => {
+        if (n >= PERGUNTAS_CONVERSA.length) { terminarCaca(pr, modo, (2 - boas) * 0.3 + (hesitou ? 0.25 : 0), boas >= 1); return; }
+        const q = PERGUNTAS_CONVERSA[n];
+        cena.perguntarNoBalao({
+          voz: 'A FOME', texto: q.texto, opcoes: q.opcoes,
+          aoEscolher: (i) => { if (i === 0) boas += 1; setTimeout(() => perguntar(n + 1), 500); },
+          aoExpirar: () => { hesitou = true; setTimeout(() => perguntar(n + 1), 300); },
+        });
+      };
+      setTimeout(() => perguntar(0), 1800);
+      return;
+    }
+    cena.atualizarPontos([{ ...pr, discreto: false, alvo: true }]);
+    cena.iniciarFurtividade({
+      alvo: pr, modo, zonas, limite: 20,
+      aoFim: ({ chegou, atencao }) => {
+        if (!chegou) { terminarCaca(pr, modo, atencao, false); return; }
+        if (modo !== 'frente') { terminarCaca(pr, modo, atencao, true); return; }
+        const t0 = performance.now();
+        cena.perguntarNoBalao({
+          voz: 'A FOME', texto: FRASES_FRENTE.texto, opcoes: FRASES_FRENTE.opcoes,
+          aoEscolher: (i) => terminarCaca(pr, modo, Math.min(1, atencao + (i === 1 ? 0.4 : 0) + (performance.now() - t0) / 20000), i === 0),
+          aoExpirar: () => terminarCaca(pr, modo, Math.min(1, atencao + 0.45), false),
+        });
+      },
+    });
+  }
+  function terminarCaca(pr, modo, atencao, deuCerto) {
+    if (!emCaca) return;
+    const v = vantagemDaCacada(lugarId);
+    const { texto, curto: linha } = textoDaCacada({ presa: pr, abordagem: modo, atencao, deuCerto, onde: emCaca.onde, vantagem: v?.nota });
+    plano.cacada = texto;
+    plano.cacada_curta = linha;
+    plano.cacada_de = texto;
+    plano.nao_cacar = false;
+    // O fim: a tela pulsa vermelho, o batimento desacelera e a voz d'A FOME fala.
+    camadas.classList.remove('pulso-fome');
+    void camadas.offsetWidth;
+    camadas.classList.add('pulso-fome');
+    setTimeout(() => camadas.classList.remove('pulso-fome'), 1100);
+    emCaca = null;
+    fomeDesperta(false);
+    cena.atualizarPontos(montarPontos());
+    cena.falar('A FOME', deuCerto ? 'Agora sim. Por enquanto.' : 'Escapou. Eu continuo aqui.', 3600);
+    guardarRascunho();
+    aviso('Caçada guardada no plano. A Fome baixa quando a noite fechar. Dá para caçar de novo até enviar.');
   }
 
   function abrirEscrita() {
@@ -623,6 +747,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       else if (pt.tipo === 'cacar') abrirCacada();
       else if (pt.tipo === 'escrever') abrirEscrita();
       else if (pt.tipo === 'detalhe') abrirDetalhe(pt);
+      else if (pt.tipo === 'presa' && !pt.alvo) escolherPresa(pt);
       else if (pt.tipo === 'saida') acao_('mapa');
     },
     aoTecla: (ev) => {

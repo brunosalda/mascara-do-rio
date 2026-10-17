@@ -334,6 +334,7 @@ export const som = {
       grilo: () => { for (let i = 0; i < 3; i++) tom(audio, t + i * 0.07, 3600, { dur: 0.03, volume: 0.005, ataque: 0.004, pan }); },
       sino: () => { for (const [f, v, d] of [[440, 0.025, 3], [880, 0.01, 2.2]]) tom(audio, t, f, { dur: d, volume: v, pan }); },
       motor: () => { tom(audio, t, 55, { tipo: 'triangle', dur: 1, volume: 0.03, ate: 70, ataque: 0.2, pan }); tom(audio, t, 110, { dur: 0.9, volume: 0.01, ate: 140, ataque: 0.2, pan }); },
+      vantagem: () => { tom(audio, t, 987.8, { dur: 0.35, volume: 0.016, pan }); tom(audio, t + 0.09, 1318.5, { dur: 0.6, volume: 0.014, pan }); },
       trem: () => { tom(audio, t, 349, { tipo: 'triangle', dur: 1, volume: 0.012, ataque: 0.1, pan }); tom(audio, t, 440, { tipo: 'triangle', dur: 1, volume: 0.01, ataque: 0.1, pan }); },
     };
     SONS[nome]?.();

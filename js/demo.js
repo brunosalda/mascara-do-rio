@@ -115,6 +115,12 @@ async function demoCena(raiz) {
   const base = personagemFicticio();
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const lugar = LOCAIS.some((l) => l.id === params.get('lugar')) ? params.get('lugar') : 'lapa';
+  // &ficha=atenta: a ficha fictícia com as habilidades dos escondidos em nível alto.
+  if (params.get('ficha') === 'atenta') {
+    base.ficha = structuredClone(base.ficha);
+    const niveis = ((base.ficha.habilidades ||= {}).niveis ||= {});
+    for (const h of ['prontidao', 'investigacao', 'intuicao', 'ocultismo', 'manha']) niveis[h] = 4;
+  }
   const p = { ...base, id: 'demo-cena', status: 'ativo', sprite: CAMINHADA_DO_BRUNO, estado: { fome: 2, humanidade: 7, local: 'Lapa', vitalidade: { max: 7 }, vontade: { max: 5 } } };
   try { localStorage.setItem('mascara.lido.demo-noite-2', '1'); } catch { /* sem armazenamento */ }
   await telaNoite(raiz, p, { lugar, fonte: fonteFicticia() });

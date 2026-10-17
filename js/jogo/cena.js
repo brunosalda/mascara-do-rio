@@ -96,6 +96,7 @@ export function montarCena(raiz, {
       </div>
       <svg class="linha-conversa" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3.5" cx="0" cy="0"/></svg>
       <div class="dica-interagir" hidden></div>
+      <div class="atencao-rua" hidden role="status"></div>
       <button type="button" class="seta-borda seta-esq" hidden aria-label="Pontos à esquerda">‹ <b></b></button>
       <button type="button" class="seta-borda seta-dir" hidden aria-label="Pontos à direita"><b></b> ›</button>
       ${depurar ? '<pre class="depuracao-coord">Modo de edição: clique na pintura para ver a coordenada.</pre>' : ''}
@@ -177,6 +178,7 @@ export function montarCena(raiz, {
   let mostrarTudoAte = 0;
   let falaAte = 0;
   let balaoEscolha = null;   // { opcoes, aoEscolher, ate }: pergunta pequena no balão, sem parar de andar
+  let caca = null;           // caçada pela sombra ou de frente: { alvo, modo, limite, t0, atencao, zonas, aoFim }
   let esperaAte = 0;         // antecipação: vira para o destino e só então sai (80 ms)
   let vivo = true;
   // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
@@ -190,7 +192,7 @@ export function montarCena(raiz, {
   // --- Pontos ----------------------------------------------------------------------------------
   function desenharPontos(recemFeitos = new Set()) {
     camadaPontos.innerHTML = lista.map((p) => `
-      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}" data-ponto="${esc(p.id)}"
+      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}" data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-luz" aria-hidden="true"></span>
         <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -261,12 +263,12 @@ export function montarCena(raiz, {
 
   // Pergunta pequena no balão junto da cabeça ("1 · Olhar mais de perto · 2 · Seguir em frente"),
   // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
-  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher }) {
+  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar }) {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}<span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
     balao.hidden = false;
     falaAte = performance.now() + 6000;
-    balaoEscolha = { aoEscolher, ate: falaAte };
+    balaoEscolha = { aoEscolher, aoExpirar, ate: falaAte };
     som.voz?.();
   }
   function responderBalao(i) {
@@ -281,6 +283,78 @@ export function montarCena(raiz, {
     const b = ev.target.closest('[data-balao]');
     if (b) { ev.stopPropagation(); responderBalao(Number(b.dataset.balao)); }
   });
+
+  // --- Caçada pela sombra / de frente (rodada 18) ---------------------------------------------------
+  // A visibilidade se lê no próprio personagem: na sombra, ele vira silhueta escura com um contorno
+  // vermelho fino; na luz, volta às cores. Correr desenha um anel de barulho no chão; se o anel chega
+  // à presa, a rua repara. A presa olha de relance quando ele entra na borda do campo dela. As palavras
+  // ("ninguém reparou / alguém olhou / você foi visto") ficam só como resumo, no alto.
+  const atencaoEl = cena.querySelector('.atencao-rua');
+  const PALAVRAS_ATENCAO = (a) => (a < 0.34 ? 'ninguém reparou' : a < 0.67 ? 'alguém olhou' : 'você foi visto');
+  function luzEm(x, y) {
+    let s = 0;
+    for (const l of geo.luzes) {
+      if (l.raio >= 0.5) continue; // lua e céu não contam
+      s += (l.forca ?? 1) * Math.max(0, 1 - dist(l.x, l.y, x, y) / (l.raio * 1.3));
+    }
+    return Math.min(1.5, s);
+  }
+  function iniciarFurtividade({ alvo, modo = 'sombra', limite = 20, zonas = [], aoFim }) {
+    caca = { alvo, modo, limite, zonas, aoFim, t0: performance.now(), atencao: 0, anel: 0, olhou: false };
+    cena.classList.add('em-caca');
+    atencaoEl.hidden = false;
+    atencaoEl.textContent = PALAVRAS_ATENCAO(0);
+  }
+  function encerrarFurtividade(chegou) {
+    const c = caca;
+    if (!c) return;
+    caca = null;
+    cena.classList.remove('em-caca');
+    boneco.classList.remove('na-sombra');
+    atencaoEl.hidden = true;
+    c.aoFim?.({ chegou, atencao: c.atencao });
+  }
+  function anelDeBarulho(x, y) {
+    const el = document.createElement('span');
+    el.className = 'anel-barulho';
+    el.style.left = pct(x);
+    el.style.top = pct(y);
+    mundo.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+  function atualizarCaca(agora, dt, correndo) {
+    const c = caca;
+    const andando = Math.hypot(vel.x, vel.y) > 0.01;
+    const luz = luzEm(pos.x, pos.y);
+    const naSombra = luz < 0.25;
+    boneco.classList.toggle('na-sombra', c.modo === 'sombra' && naSombra);
+    let taxa = c.modo === 'sombra' ? (naSombra ? -0.03 : luz * 0.09) : 0.035;
+    if (c.zonas.some((z) => dist(z.x, z.y, pos.x, pos.y) < z.raio)) taxa *= 0.4; // vantagem: canto sem câmera
+    // Barulho: correndo, um anel a cada 0,4 s; se o anel alcança a presa, a atenção sobe.
+    if (correndo && andando) {
+      c.anel -= dt;
+      if (c.anel <= 0) {
+        c.anel = 0.4;
+        anelDeBarulho(pos.x, pos.y);
+        if (dist(c.alvo.x, c.alvo.y, pos.x, pos.y) < 0.12) taxa += 1.2;
+      }
+    }
+    // A presa olha de relance quando ele entra na borda do campo dela.
+    const d = dist(c.alvo.x, c.alvo.y, pos.x, pos.y);
+    if (!c.olhou && d < 0.22 && !naSombra) {
+      c.olhou = true;
+      const el = camadaPontos.querySelector('.ponto-presa');
+      if (el) { el.classList.add('olhou'); setTimeout(() => el.classList.remove('olhou'), 500); }
+      efeitoNoMundo('relance', c.alvo.x, c.alvo.y - altura(c.alvo.y) * 0.9, 700);
+      taxa += 0.5;
+    }
+    c.atencao = limitar(c.atencao + taxa * dt, 0, 1);
+    const palavras = PALAVRAS_ATENCAO(c.atencao);
+    if (atencaoEl.textContent !== palavras) atencaoEl.textContent = palavras;
+    atencaoEl.dataset.nivel = c.atencao < 0.34 ? '0' : c.atencao < 0.67 ? '1' : '2';
+    if (d <= Math.max(alcanceEm(pos.y) * 1.5, 0.11) && agora - c.t0 > 2500) encerrarFurtividade(true);
+    else if (agora - c.t0 > c.limite * 1000) encerrarFurtividade(false);
+  }
 
   // Ao entrar (e ao fechar a narração): os nomes de todos os pontos aparecem por um instante, com
   // faíscas mais fortes, e depois somem devagar.
@@ -721,6 +795,7 @@ export function montarCena(raiz, {
     const k = Math.min(1, dt * ACELERACAO);
     vel.x += (desejadoX - vel.x) * k;
     vel.y += (desejadoY - vel.y) * k;
+    if (caca) atualizarCaca(agora, dt, correndo);
     if (Math.abs(vel.x) < 0.002 && !dx) vel.x = 0;
     if (Math.abs(vel.y) < 0.002 && !dy) vel.y = 0;
     const antes = { x: pos.x, y: pos.y };
@@ -808,7 +883,12 @@ export function montarCena(raiz, {
     if (!balao.hidden) {
       balao.style.transform = `translate3d(${(pos.x * mw).toFixed(1)}px, ${((pos.y - h) * mh - 10).toFixed(1)}px, 0) translate(-50%, -100%)`;
       balao.classList.toggle('sumindo', agora > falaAte);
-      if (agora > falaAte + 400) { balao.hidden = true; balaoEscolha = null; }
+      if (agora > falaAte + 400) {
+        balao.hidden = true;
+        const expirou = balaoEscolha;
+        balaoEscolha = null;
+        expirou?.aoExpirar?.();
+      }
     }
 
     if (proximaLuz === 0 || (agora > proximaLuz && (andando || virando))) { iluminar(); proximaLuz = agora + 100; }
@@ -876,7 +956,7 @@ export function montarCena(raiz, {
     if (k === 'shift') { teclas.add('shift'); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); return; }
-    if (balaoEscolha && (k === '1' || k === '2')) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
+    if (balaoEscolha && /^[1-3]$/.test(k) && balao.querySelector(`[data-balao="${Number(k) - 1}"]`)) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
     if (k === 'e' || k === 'enter' || k === ' ') {
       if (perto) { ev.preventDefault(); interagir(perto); }
       return;
@@ -917,7 +997,8 @@ export function montarCena(raiz, {
     if (botao) {
       const p = lista.find((x) => x.id === botao.dataset.ponto);
       if (!p) return;
-      if (p === perto || semPersonagem) { interagir(p); return; }
+      // A presa da caçada se escolhe de longe, sem andar até ela.
+      if (p === perto || semPersonagem || (p.tipo === 'presa' && !p.alvo)) { interagir(p); return; }
       const [x, y] = p.parada && dentro(p.parada, geo.chao) ? p.parada : maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
       // Longe (mais de 40% da largura da tela): vai correndo. Vira para o destino e sai 80 ms depois.
       const longe = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
@@ -992,6 +1073,8 @@ export function montarCena(raiz, {
     falar,
     perguntarNoBalao,
     apresentar,
+    iniciarFurtividade,
+    cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
     desmontar,
   };
 }

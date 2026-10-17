@@ -400,3 +400,31 @@ export const ESCONDIDOS = {
 export function escondidosPara(lugarId, habilidades = {}) {
   return (ESCONDIDOS[lugarId] || []).filter((e) => (habilidades[e.hab] | 0) >= e.nivel);
 }
+
+// Descobertas que dão vantagem (rodada 18): o detalhe examinado (ou o escondido percebido) liga-se a
+// uma opção da noite pelas palavras dela, ou à caçada. A opção ganha a marca dourada e, se escolhida,
+// leva a nota "[vantagem: …]" no plano, para o Narrador decidir no fechamento (pode dar um dado a mais).
+// Na caçada pela sombra, a atenção da rua sobe mais devagar perto do detalhe.
+export const VANTAGENS = {
+  lapa: {
+    chapa: { termos: ['bar', 'dono', 'balcao', 'antonio', 'perguntar'], nota: 'sabe quem trabalha no balcão do bar e a que horas' },
+    garrafa: { cacada: true, nota: 'achou um canto sem luz atrás das mesas do bar' },
+  },
+  centro: { cartaz: { termos: ['investigar', 'pesquisar', 'procurar', 'teatro', 'cartaz'], nota: 'leu no cartaz quem frequenta o teatro à noite' } },
+  'santa-teresa': { grade: { cacada: true, nota: 'viu que o portão de ferro dá para um quintal escuro' } },
+  'zona-sul': { quiosque: { termos: ['quiosque', 'bar', 'perguntar', 'procurar'], nota: 'sabe que o dono do quiosque vê tudo o que acontece na orla' } },
+  barra: { carro: { cacada: true, nota: 'reparou que o acostamento fica sem luz entre dois postes' } },
+  'zona-norte': { frutas: { termos: ['feira', 'barraca', 'perguntar', 'procurar'], nota: 'sabe que a dona da barraca conhece todo mundo na rua' } },
+  morro: { fios: { cacada: true, nota: 'viu que a luz da escada cai quando chove' } },
+  cemiterio: { corrente: { termos: ['portao', 'entrar', 'capela', 'tumulo'], nota: 'viu que o cadeado do portão lateral está aberto' } },
+  porto: { navio: { termos: ['cais', 'navio', 'porto', 'agua', 'barco'], nota: 'sabe a hora em que o navio grande sai' } },
+  baixada: { gato: { cacada: true, nota: 'viu que a rua de trás fica no escuro por causa do gato de luz' } },
+  niteroi: { pescador: { termos: ['mureta', 'pescador', 'barca', 'mar'], nota: 'sabe que o pescador da mureta vê quem chega de barca' } },
+};
+// Os escondidos também podem trazer vantagem (pelo id do escondido).
+export const VANTAGENS_ESCONDIDOS = {
+  'esc-cartaz': { termos: ['investigar', 'pesquisar', 'procurar', 'show', 'cartaz'], nota: 'viu que o cartaz do show esconde outro, com outra data' },
+  'esc-ponto': { termos: ['procurar', 'alguem', 'perguntar', 'seguir', 'homem'], nota: 'sabe que o vendedor de bala vigia quem entra no bar' },
+  'esc-marquise': { cacada: true, nota: 'viu que a câmera da marquise está virada para a parede' },
+  'esc-olheiro': { termos: ['subir', 'escada', 'topo', 'procurar'], nota: 'sabe que tem alguém vigiando a escada da laje de cima' },
+};

@@ -2157,3 +2157,38 @@ body.cerimonias-curtas .personagem .corpo-sprite, body.cerimonias-curtas .person
 .ave-voa::after { right: 0; transform-origin: 0 100%; }
 @keyframes ave-voa { from { transform: translate(0, 0) scale(1); opacity: 0.9; } to { transform: translate(120px, -90px) scale(0.6); opacity: 0; } }
 @keyframes asa { to { transform: rotate(-25deg); } }
+
+/* --- Rodada 18: caçada na hora e vantagens ---------------------------------------------------------- */
+/* A Fome abre os olhos: menos cor, vinheta mais forte, vultos e presas com pulso quente. */
+body.fome-desperta .pintura, body.fome-desperta .pintura-fundo, body.fome-desperta .frente { filter: saturate(0.45) contrast(1.1) brightness(0.85) !important; transition: filter 1.5s; }
+body.fome-desperta .passante.vulto svg { fill: rgba(140, 20, 30, 0.9); animation: pulso-quente 1.2s ease-in-out infinite; }
+@keyframes pulso-quente { 50% { filter: drop-shadow(0 0 6px rgba(255, 60, 60, 0.9)); } }
+.ponto-presa { --cor-ponto: 255, 70, 70; }
+.ponto-presa .ponto-luz { animation: pulso-presa 1.1s ease-in-out infinite; }
+@keyframes pulso-presa { 50% { transform: scale(1.25); opacity: 1; } }
+.ponto-presa.olhou .ponto-contorno { opacity: 1; transform: scale(1.2); }
+.relance { position: absolute; z-index: 2960; pointer-events: none; font: 700 1.3rem var(--titulo); color: #ffe7c2; text-shadow: 0 0 6px #000;
+  translate: -50% -100%; animation: relance 0.7s ease-out forwards; }
+.relance::after { content: '?'; }
+@keyframes relance { 0% { opacity: 0; scale: 0.6; } 25% { opacity: 1; scale: 1.15; } 100% { opacity: 0; scale: 1; } }
+/* Na sombra, o personagem vira silhueta escura com um contorno vermelho fino. */
+.personagem.na-sombra .corpo-sprite { filter: brightness(0.12) saturate(0) drop-shadow(1px 0 0 rgba(216, 33, 61, 0.9)) drop-shadow(-1px 0 0 rgba(216, 33, 61, 0.9)) drop-shadow(0 -1px 0 rgba(216, 33, 61, 0.7)) !important; transition: filter 0.3s; }
+.personagem.na-sombra .tinta { opacity: 0 !important; }
+/* Anel de barulho no chão. */
+.anel-barulho { position: absolute; z-index: 3; width: 40px; height: 12px; margin: -6px 0 0 -20px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid rgba(255, 220, 200, 0.7); animation: anel-barulho 0.9s ease-out forwards; }
+@keyframes anel-barulho { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(4); opacity: 0; } }
+/* Resumo da atenção da rua, no alto. */
+.atencao-rua { position: absolute; z-index: 260; top: 4.2rem; left: 50%; translate: -50% 0; padding: 0.25rem 0.8rem; pointer-events: none;
+  font: italic 600 1rem var(--titulo); color: #e8ddc8; background: rgba(8, 8, 9, 0.6); border: 1px solid var(--linha); }
+.atencao-rua[data-nivel='1'] { color: #ffcf8a; border-color: rgba(255, 190, 110, 0.5); }
+.atencao-rua[data-nivel='2'] { color: #ff9aa6; border-color: rgba(216, 33, 61, 0.7); }
+.caca-desistir { position: absolute; z-index: 260; bottom: 3.2rem; left: 50%; translate: -50% 0; padding: 0.4rem 0.9rem; min-height: 40px;
+  font: 600 0.85rem var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--texto-claro); background: rgba(8, 8, 9, 0.8); border: 1px solid var(--linha-forte); cursor: pointer; }
+/* O fim: a tela pulsa vermelho. */
+.tela-jogo.pulso-fome::after { content: ''; position: absolute; inset: 0; z-index: 270; pointer-events: none; background: radial-gradient(ellipse at center, transparent 30%, rgba(160, 10, 30, 0.55)); animation: pulso-fim 1.1s ease-out forwards; }
+@keyframes pulso-fim { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+/* Vantagem: marca dourada na opção (cena e quadro). */
+.ponto.vantagem .ponto-rotulo::before { content: '✦ '; color: #ffd27a; font-style: normal; }
+.ponto.vantagem { --cor-ponto: 255, 214, 122; }
+.marca-ouro { color: #ffd27a; }
