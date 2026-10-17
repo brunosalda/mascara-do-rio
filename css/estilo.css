@@ -3689,3 +3689,7 @@ body.celular .relogio-noite small { font-size: 14px !important; }
 body.celular .quadro-cabeca { min-height: 44px; }
 /* As setas de "mais cena" ficam acima dos indicadores de quem está fora da tela ("‹ 2", "Caçada +1 ›"). */
 .borda-mais { top: 30%; }
+
+/* Nomes de pontos e pessoas numa linha só ("A garrafa" não quebra em pé). */
+.ponto-rotulo, .pessoa-nome { white-space: nowrap; }
+body.celular .ponto-rotulo { max-width: none; }

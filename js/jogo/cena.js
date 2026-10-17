@@ -816,6 +816,8 @@ export function montarCena(raiz, {
     const el = ev.target.closest('.pessoa');
     if (!el) return;
     ev.stopPropagation();
+    // Um arrasto que começou numa pessoa não abre a conversa nem faz o personagem andar.
+    if (ignorarClique || camLivre.arrastando) return;
     const p = gente.find((g) => g.el === el);
     if (!p || camadaAberta() || semPersonagem) return;
     if (dist(p.x, p.y, pos.x, pos.y) < alcanceEm(pos.y) * 1.4) { interagir(p); return; }
@@ -1801,8 +1803,9 @@ export function montarCena(raiz, {
       camLivre.x = limitar(camLivre.x, vw - W, 0);
       camLivre.y = limitar(camLivre.y, vh - H, 0);
       // Setas discretas nas bordas quando há mais cena para aquele lado (celular, ordem de 17/10).
-      bordaMais.esq.hidden = camLivre.x > -4;
-      bordaMais.dir.hidden = camLivre.x < vw - W + 4;
+      // Onde já há o indicador de pontos fora da tela ("‹ 2", "Caçada +2"), a seta de "mais cena" sobra.
+      bordaMais.esq.hidden = camLivre.x > -4 || !setaEsq.hidden;
+      bordaMais.dir.hidden = camLivre.x < vw - W + 4 || !setaDir.hidden;
       alvoX = camLivre.x;
       alvoY = camLivre.y;
     } else if (conversa && !estreito && ladoDialogo === 'baixo') {
