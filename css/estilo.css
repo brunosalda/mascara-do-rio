@@ -3446,3 +3446,10 @@ body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
   .tela-entrada .titulo-entrada .lead { display: none; }
   .caixa-entrada { max-height: calc(100dvh - 210px); overflow-y: auto; bottom: 12px; }
 }
+
+/* Rodada 41, item 3: o olhar da presa visível sem poder (cerca de 18%, borda macia mais clara) e forte com
+   Sentidos (cerca de 35%). */
+.cena.vista-alto .campo-presa { filter: blur(1.2px); }
+.cena.vista-alto .campo-presa path { fill: rgba(205, 35, 50, 0.18); stroke: rgba(255, 120, 130, 0.45); stroke-width: 1.5px; }
+.cena.vista-alto .campo-presa.forte { filter: blur(0.4px); }
+.cena.vista-alto .campo-presa.forte path { fill: rgba(220, 35, 50, 0.35); stroke: rgba(255, 130, 140, 0.7); }
