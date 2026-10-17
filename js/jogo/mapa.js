@@ -116,7 +116,15 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
       vampiro.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
       pos.x = p.x; pos.y = p.y;
       if (k < 1) requestAnimationFrame(passo);
-      else { viajando = false; entrar(id); }
+      else {
+        // Passagem de cena: escurece em 250 ms antes de abrir o bairro (com menos movimento, só o corte).
+        const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        if (reduzido) { viajando = false; entrar(id); return; }
+        const veu = document.createElement('div');
+        veu.className = 'veu-passagem';
+        raiz.appendChild(veu);
+        setTimeout(() => { viajando = false; entrar(id); }, 250);
+      }
     };
     requestAnimationFrame(passo);
   }

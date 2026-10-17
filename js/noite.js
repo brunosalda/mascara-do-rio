@@ -79,6 +79,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   const tempo = tempoDaNoite(noite?.numero || 0);
   definirTempo(tempo);
   definirSomDoLugar(lugarId);
+  const primeiraVisita = !!lugarId && !visitados().has(lugarId);
   if (lugarId) { marcarVisitado(lugarId); registrar(noite?.id, 'visitados', lugarId); }
   // Descobertas deste lugar nesta noite (os detalhes sorteados), para o HUD.
   const descobertasDoLugar = () => ({ vistos: achados.detalhes.filter((d) => visto(d.id)).length, total: achados.detalhes.length });
@@ -114,9 +115,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
           ${noite ? `<b>Noite ${noite.numero}</b><small>fecha ${esc(dataLonga(noite.fecha_em))}</small>` : '<b>A cidade dorme</b><small>a próxima noite ainda não abriu</small>'}
         </div>
         <nav class="hud-botoes">
-          <button type="button" data-hud="mapa" title="Mapa do Rio (M)">Mapa <kbd>M</kbd></button>
-          <button type="button" data-hud="ficha" title="Ficha (F)">Ficha <kbd>F</kbd></button>
-          <button type="button" data-hud="diario" title="Diário (J)">Diário <kbd>J</kbd></button>
+          <button type="button" class="hud-com-icone" data-hud="mapa" title="Mapa do Rio (M)" aria-label="Mapa do Rio"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">Mapa <kbd>M</kbd></span></button>
+          <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M9 2.5v6a1.6 1.6 0 0 0 3.2 0V4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
+          <button type="button" class="hud-com-icone" data-hud="diario" title="Diário (J)" aria-label="Diário"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 3v18"/><path d="M12 8h4M12 11.5h4"/></svg><span class="hud-nome">Diário <kbd>J</kbd></span></button>
           <button type="button" data-hud="efeitos" class="hud-icone" aria-pressed="${efeitos.ligados()}" title="Chuva e efeitos">☂</button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente">♪</button>
           <button type="button" data-hud="legenda" class="hud-icone" title="Como funciona a noite">?</button>
@@ -500,7 +501,6 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
             <button type="button" class="btn-secundario so-celular" data-m="efeitos">${efeitos.ligados() ? 'Desligar' : 'Ligar'} chuva e efeitos</button>
             <button type="button" class="btn-secundario so-celular" data-m="som">${som.ligado() ? 'Desligar' : 'Ligar'} o som</button>
             <button type="button" class="btn-secundario" data-m="sair">Sair da conta</button>
-            ${recadoDeChegada() ? '' : '<button type="button" class="btn-secundario" data-m="recado">Voltar a mostrar o recado de chegada</button>'}
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
@@ -508,8 +508,6 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         corpo.querySelector('[data-m="legenda"]').onclick = () => { camada.fechar(); abrirLegenda(); };
         corpo.querySelector('[data-m="efeitos"]').onclick = () => { camada.fechar(); acao_('efeitos'); };
         corpo.querySelector('[data-m="som"]').onclick = () => { camada.fechar(); acao_('som'); };
-        const religar = corpo.querySelector('[data-m="recado"]');
-        if (religar) religar.onclick = () => { recadoDeChegada(true); religar.remove(); };
       },
     });
   }
@@ -597,13 +595,17 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   // pediu para não ver mais.
   let chegou = false;
   try { chegou = sessionStorage.getItem('mascara.chegou') === lugar; sessionStorage.removeItem('mascara.chegou'); } catch { /* sem armazenamento */ }
-  if (emOutroLugar && chegou && recadoDeChegada()) {
-    const recado = abrirDialogo(camadas, {
-      rotulo: visitado.nome,
-      html: `<div class="texto-narracao"><p>Você chega ${esc(visitado.a)}. Ande pela cena para decidir o que fazer aqui esta noite.</p><p class="nota">O que você escolher aqui entra no seu plano da noite.</p></div>`,
-      rodape: '<div class="rodape-recado"><span class="nota so-teclado"><kbd>Esc</kbd> fecha</span><button type="button" class="btn-texto" data-nao-mostrar>Não mostrar de novo</button></div>',
-    });
-    recado.el.querySelector('[data-nao-mostrar]').onclick = () => { recadoDeChegada(false); recado.fechar(); };
+  // Chegada pelo mapa: a cena clareia e uma faixa de título passa no alto (sem botão, some sozinha).
+  if (chegou) {
+    camadas.classList.add('clareando');
+    const d = descobertasDoLugar();
+    const nomeTempo = { garoa: 'garoa', lua: 'noite de lua', tempestade: 'tempestade', nevoa: 'névoa' }[tempo];
+    const faixa = document.createElement('div');
+    faixa.className = 'faixa-chegada';
+    faixa.setAttribute('role', 'status');
+    faixa.innerHTML = `<b>${esc(lugarNome)}</b><small>${esc(nomeTempo)} · ${primeiraVisita ? 'primeira visita' : d.total ? `descobertas ${d.vistos}/${d.total}` : ''}</small>`;
+    camadas.appendChild(faixa);
+    setTimeout(() => faixa.remove(), 2600);
   }
 }
 
@@ -659,16 +661,6 @@ function marcarVisitado(id) {
   if (v.has(id)) return;
   v.add(id);
   try { localStorage.setItem('mascara.visitados', JSON.stringify([...v])); } catch { /* sem armazenamento */ }
-}
-
-// Recado "Você chega a…": ligado por padrão; o jogador desliga no próprio recado e religa em Opções.
-const CHAVE_RECADO = 'mascara.semRecadoChegada';
-function recadoDeChegada(ligar) {
-  try {
-    if (ligar === true) localStorage.removeItem(CHAVE_RECADO);
-    else if (ligar === false) localStorage.setItem(CHAVE_RECADO, '1');
-    return localStorage.getItem(CHAVE_RECADO) !== '1';
-  } catch { return true; }
 }
 
 // Mapa do Rio: viajar entre os bairros. Entrar no lugar onde o personagem está volta para a cena dele.

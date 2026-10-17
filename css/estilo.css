@@ -1846,3 +1846,24 @@ body.sem-efeitos .respingo { display: none; }
 .cartao-abertura.sem-animacao, .cartao-abertura.sem-animacao.saindo { animation: none; }
 @keyframes cartao-entra { from { opacity: 0; letter-spacing: 0.3em; } to { opacity: 1; } }
 @keyframes cartao-sai { to { opacity: 0; } }
+
+/* --- Rodada 8: chegada, passagem de cena e ícones no alto. --- */
+.faixa-chegada { position: absolute; left: 50%; top: 4.6rem; z-index: 260; translate: -50% 0; display: grid; justify-items: center; gap: 0.1rem; padding: 0.5rem 2.6rem 0.6rem; pointer-events: none; text-align: center; background: linear-gradient(90deg, transparent, rgba(5, 5, 6, 0.78) 18%, rgba(5, 5, 6, 0.78) 82%, transparent); animation: faixa-chegada 2.5s ease-in-out forwards; }
+.faixa-chegada b { font-family: var(--titulo); font-weight: 700; font-size: clamp(1.8rem, 4.5vw, 2.8rem); line-height: 1; color: var(--texto-claro); text-shadow: 0 2px 16px #000; }
+.faixa-chegada small { font-family: var(--texto-livro); font-style: italic; color: var(--acento-claro); }
+@keyframes faixa-chegada { 0% { opacity: 0; translate: -50% -10px; } 15%, 80% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; translate: -50% -6px; } }
+.veu-passagem { position: absolute; inset: 0; z-index: 900; background: #050506; animation: veu 0.25s ease-in forwards; pointer-events: none; }
+@keyframes veu { from { opacity: 0; } to { opacity: 1; } }
+.tela-jogo.clareando { animation: clarear 0.4s ease-out; }
+@keyframes clarear { from { filter: brightness(0); } to { filter: none; } }
+@media (prefers-reduced-motion: reduce) { .tela-jogo.clareando { animation: none; } .faixa-chegada { animation-duration: 2.5s; animation-name: faixa-simples; } }
+@keyframes faixa-simples { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
+.hud-com-icone { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-width: 44px; min-height: 40px; }
+.hud-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.hud-com-icone .hud-nome { position: absolute; top: calc(100% + 6px); left: 50%; translate: -50% 0; padding: 0.2rem 0.5rem; white-space: nowrap; background: rgba(6, 6, 7, 0.92); border: 1px solid var(--linha-forte); font-size: 0.8rem; opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+.hud-com-icone:hover .hud-nome, .hud-com-icone:focus-visible .hud-nome { opacity: 1; }
+@media (max-width: 700px) {
+  .hud-com-icone { flex-direction: column; gap: 0.05rem; padding: 0.15rem 0.35rem !important; }
+  .hud-svg { width: 20px; height: 20px; }
+  .hud-com-icone .hud-nome { position: static; translate: none; padding: 0; background: none; border: 0; opacity: 1; font-size: 0.62rem; line-height: 1; }
+}
