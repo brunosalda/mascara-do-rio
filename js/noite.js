@@ -1246,6 +1246,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {
+    nome: p.nome,
     painel: raiz.querySelector('.painel-pergunta'),
     aoFalar: (voz, texto) => anotar(voz, texto),
     aoMostrarTudo: () => mostrarNumeros(),
@@ -1420,6 +1421,7 @@ export async function telaMapa(raiz, p) {
     visitados: visitados(),
     descobertas: contagem,
     retrato,
+    clima: { garoa: 'noite de garoa', lua: 'noite de lua', tempestade: 'tempestade', nevoa: 'noite de névoa' }[tempoDaNoite(noite?.numero || 0)] || '',
     aoEntrar: (id) => {
       gravarPosicao(p, noite, id);
       try { sessionStorage.setItem('mascara.chegou', id); } catch { /* sem armazenamento */ }

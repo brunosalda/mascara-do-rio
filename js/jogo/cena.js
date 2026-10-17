@@ -70,7 +70,7 @@ function htmlDepuracao(geo) {
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
-  painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  nome = '', painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
@@ -387,7 +387,7 @@ export function montarCena(raiz, {
     if (semPersonagem || caca || camadaAberta()) return false;
     const r = corpo.getBoundingClientRect();
     if (!(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom)) return false;
-    if (cliquesNoPersonagem++ % 3 === 0) falar('VOCÊ', falasDoCla[Math.floor(Math.random() * falasDoCla.length)], 3200);
+    if (cliquesNoPersonagem++ % 3 === 0) falar((nome || 'VOCÊ').toUpperCase(), falasDoCla[Math.floor(Math.random() * falasDoCla.length)], 3200);
     return true;
   }
 
