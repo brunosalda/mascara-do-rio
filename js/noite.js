@@ -27,6 +27,25 @@ function chavePlano(noite, p) {
   return `mascara.plano.${noite?.id}.${p.id}`;
 }
 
+// Onde o personagem está nesta noite: começa no local do estado (definido pelo Narrador) e muda
+// quando o jogador viaja pelo mapa. Guardado no aparelho, por noite: noite nova volta ao local do estado.
+function chavePosicao(p, noite) {
+  return `mascara.posicao.${p.id}.${noite?.id || 'sem-noite'}`;
+}
+
+export function lerPosicao(p, noite) {
+  let id = null;
+  try { id = localStorage.getItem(chavePosicao(p, noite)); } catch { /* sem armazenamento */ }
+  return LOCAIS.some((l) => l.id === id) ? id : (localDe(p.estado?.local)?.id || null);
+}
+
+export function gravarPosicao(p, noite, id) {
+  try {
+    if (id && id !== localDe(p.estado?.local)?.id) localStorage.setItem(chavePosicao(p, noite), id);
+    else localStorage.removeItem(chavePosicao(p, noite));
+  } catch { /* sem armazenamento */ }
+}
+
 export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   raiz.innerHTML = '<p class="carregando centro">A noite cai sobre o Rio…</p>';
   const [noite, narracoes, resolvidas] = await Promise.all([
@@ -43,6 +62,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   const opcoes = noite && Array.isArray(narracoes[0]?.opcoes) ? narracoes[0].opcoes.filter((o) => typeof o === 'string') : [];
 
   const localAtual = localDe(p.estado?.local);
+  // Rota #/lugar/<id> muda a posição; #/noite mostra onde o personagem está agora.
+  if (lugar) gravarPosicao(p, noite, lugar);
+  else lugar = lerPosicao(p, noite);
   const visitado = lugar ? LOCAIS.find((l) => l.id === lugar) : null;
   const emOutroLugar = visitado && visitado.id !== localAtual?.id;
   const lugarNome = emOutroLugar ? visitado.nome : (localAtual?.nome || p.estado?.local || 'Rio de Janeiro');
@@ -98,19 +120,24 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     cena?.atualizarPontos(montarPontos());
   }
 
+  // Selo compacto do plano, no alto à direita: a ação principal e o estado (a escolher, pronto, enviado).
+  // O plano completo abre no clique ou com P; o envio fica no próprio selo quando há algo para enviar.
   function desenharPlano() {
     if (!noite) { caixaPlano.hidden = true; return; }
-    const curtas = [plano.curta_1, plano.curta_2].filter((x) => x?.trim()).length;
     const enviado = acao && !alterado;
+    const pronto = !!plano.principal?.trim();
+    const estado = enviado ? 'enviado' : pronto ? 'pronto' : 'vazio';
+    const selo = enviado ? `Enviado ${esc(dataCurta(acao.atualizado_em))}` : pronto ? (acao ? 'Mudanças não enviadas' : 'Não enviado') : 'A escolher';
+    caixaPlano.className = `hud-plano plano-${estado}`;
     caixaPlano.innerHTML = `
-      <span class="grupo-rotulo">Plano da noite ${noite.numero}</span>
-      <p class="${plano.principal ? '' : 'vazio'}">${plano.principal ? esc(curto(plano.principal, 12)) : 'Ande pela cena e escolha o que fazer.'}</p>
-      <small>${plano.nao_cacar ? 'Sem caçar esta noite' : plano.cacada ? `Caçada: ${esc(curto(plano.cacada, 6))}` : 'Caçada do jeito de sempre'}${curtas ? ` · ${curtas} ação(ões) curta(s)` : ''}</small>
-      <div class="hud-plano-botoes">
-        <button type="button" class="btn-texto" data-hud="plano">Ver plano <kbd>P</kbd></button>
-        <button type="button" class="btn" data-hud="enviar" ${plano.principal?.trim() ? '' : 'disabled'}>${enviado ? 'Enviado ✓' : acao ? 'Reenviar' : 'Enviar'}</button>
-      </div>
-      ${enviado ? `<small class="ok">Enviado ${esc(dataCurta(acao.atualizado_em))}. Dá para mudar até a noite fechar.</small>` : alterado ? '<small class="aviso-plano">Mudanças ainda não enviadas.</small>' : ''}`;
+      <button type="button" class="plano-selo" data-hud="plano" title="Ver o plano completo (P)">
+        <span class="plano-marca" aria-hidden="true">${enviado ? '✓' : pronto ? '!' : '…'}</span>
+        <span class="plano-texto">
+          <small>Plano da noite ${noite.numero} · ${selo}</small>
+          <b>${pronto ? esc(curto(plano.principal, 9)) : 'Ande pela cena e escolha o que fazer'}</b>
+        </span>
+      </button>
+      ${pronto && !enviado ? `<button type="button" class="btn plano-enviar" data-hud="enviar">${acao ? 'Reenviar' : 'Enviar'}</button>` : ''}`;
   }
 
   async function enviar() {
@@ -351,7 +378,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     try { lido = localStorage.getItem(`mascara.lido.${atual.id}`) === '1'; } catch { /* sem armazenamento */ }
     if (!lido) abrirHistoria(true);
   }
-  if (emOutroLugar) {
+  // Recado de chegada só logo depois de viajar pelo mapa (não a cada recarga).
+  let chegou = false;
+  try { chegou = sessionStorage.getItem('mascara.chegou') === lugar; sessionStorage.removeItem('mascara.chegou'); } catch { /* sem armazenamento */ }
+  if (emOutroLugar && chegou) {
     abrirDialogo(camadas, {
       rotulo: visitado.nome,
       html: `<div class="texto-narracao"><p>Você chega ${esc(visitado.a)}. Ande pela cena para decidir o que fazer aqui esta noite.</p><p class="nota">O que você escolher aqui entra no seu plano da noite.</p></div>`,
@@ -362,7 +392,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
 
 // Mapa do Rio: viajar entre os bairros. Entrar no lugar onde o personagem está volta para a cena dele.
 export async function telaMapa(raiz, p) {
-  const localAtual = localDe(p.estado?.local);
+  const noite = await banco.noiteAberta();
+  const posicao = lerPosicao(p, noite);
   raiz.innerHTML = `
     <div class="tela-jogo tela-mapa">
       <div class="palco"></div>
@@ -375,8 +406,12 @@ export async function telaMapa(raiz, p) {
   raiz.querySelector('[data-voltar]').onclick = () => ir('noite');
   montarMapa(raiz.querySelector('.palco'), {
     cla: p.ficha?.cla,
-    localAtual: p.estado?.local,
-    aoEntrar: (id) => ir(id === localAtual?.id ? 'noite' : `lugar/${id}`),
+    atualId: posicao,
+    aoEntrar: (id) => {
+      gravarPosicao(p, noite, id);
+      try { sessionStorage.setItem('mascara.chegou', id); } catch { /* sem armazenamento */ }
+      ir('noite');
+    },
     aoTecla: (ev) => { if (ev.key === 'Escape' || ev.key.toLowerCase() === 'm') { ev.preventDefault(); ir('noite'); } },
   });
 }

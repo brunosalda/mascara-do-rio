@@ -25,8 +25,8 @@ function desenhoDoMapa() {
     <text class="mapa-agua" x="1610" y="470">Baía de Guanabara</text>
     <text class="mapa-agua" x="720" y="1030">Oceano Atlântico</text>`;
 }
-export function montarMapa(raiz, { cla, localAtual, aoEntrar, aoTecla } = {}) {
-  const atual = localDe(localAtual)?.id;
+export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla } = {}) {
+  const atual = atualId || localDe(localAtual)?.id;
   const inicio = POSICOES[atual] || POSICOES.lapa;
   raiz.innerHTML = `
     <div class="mapa">

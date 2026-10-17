@@ -1073,25 +1073,55 @@ kbd {
 .hud-icone[aria-pressed='true'] { color: var(--acento); border-color: var(--acento); }
 .hud-icone[aria-pressed='false'] { opacity: 0.6; }
 
+/* Selo do plano da noite: compacto, no alto à direita, abaixo dos botões do HUD. */
 .hud-plano {
   position: absolute;
+  top: 4.4rem;
   right: max(14px, env(safe-area-inset-right));
-  bottom: 3.2rem;
   z-index: 200;
-  width: min(330px, 86vw);
-  padding: 0.8rem 0.95rem;
-  background: rgba(8, 8, 9, 0.84);
+  display: flex;
+  align-items: stretch;
+  max-width: min(380px, 70vw);
+  background: rgba(8, 8, 9, 0.78);
   border: 1px solid var(--linha-forte);
-  border-left: 3px solid var(--acento);
   backdrop-filter: blur(4px);
 }
-.hud-plano p { margin: 0.2rem 0; font-family: var(--texto-livro); font-size: 0.92rem; color: var(--texto-claro); }
-.hud-plano p.vazio { color: var(--texto-suave); font-style: italic; }
-.hud-plano small { display: block; color: var(--texto-suave); font-size: 0.8rem; }
-.hud-plano small.ok { color: var(--ok); margin-top: 0.4rem; }
-.hud-plano small.aviso-plano { color: var(--acento-claro); margin-top: 0.4rem; }
-.hud-plano-botoes { display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; }
-.hud-plano .btn { padding: 0.45rem 1rem; }
+.plano-selo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--texto);
+}
+.plano-selo:hover { background: rgba(255, 255, 255, 0.04); }
+.plano-marca {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1.5px solid var(--linha-forte);
+  color: var(--texto-suave);
+}
+.plano-texto { display: flex; flex-direction: column; min-width: 0; }
+.plano-texto small { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); }
+.plano-texto b { font-family: var(--texto-livro); font-weight: 400; font-size: 0.88rem; color: var(--texto-claro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plano-vazio .plano-texto b { color: var(--texto-suave); font-style: italic; }
+.plano-pronto { border-color: rgba(226, 112, 62, 0.6); }
+.plano-pronto .plano-marca { border-color: var(--acento); color: var(--acento); }
+.plano-pronto .plano-texto small { color: var(--acento-claro); }
+.plano-enviado .plano-marca { border-color: var(--ok); color: var(--ok); }
+.plano-enviado .plano-texto small { color: var(--ok); }
+.plano-enviar { flex: none; border-radius: 0; padding: 0.4rem 0.9rem; font-size: 0.85rem; }
 .hud-dicas {
   position: absolute;
   left: 0;
@@ -1184,7 +1214,7 @@ body[data-tela='criacao'] main {
   .hud-noite { display: none; }
   .hud-botoes button { padding: 0.3rem 0.45rem; font-size: 0.85rem; }
   .hud-botoes kbd { display: none; }
-  .hud-plano { bottom: 0.6rem; right: 50%; transform: translateX(50%); }
+  .hud-plano { top: auto; bottom: 0.6rem; right: 50%; transform: translateX(50%); max-width: 92vw; }
   .hud-dicas { display: none; }
   .dialogo-cena { bottom: 0.4rem; max-height: 70vh; }
   .ponto-rotulo { max-width: 130px; font-size: 0.78rem; }

@@ -14,8 +14,14 @@ export function teclaNaCamada(ev) {
   return topo ? topo.tecla(ev) : false;
 }
 
+// A tela pode ter sido trocada antes (a camada já saiu da página): tira da pilha de qualquer jeito,
+// senão o laço nunca termina e a página congela.
 export function fecharTudo() {
-  while (pilha.length) pilha.at(-1).fechar();
+  while (pilha.length) {
+    const topo = pilha.at(-1);
+    topo.fechar();
+    if (pilha.at(-1) === topo) pilha.pop();
+  }
 }
 
 function empilhar(camada) {
@@ -48,9 +54,9 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
   const camada = empilhar({
     el,
     fechar() {
+      desempilhar(camada);
       if (!el.isConnected) return;
       el.remove();
-      desempilhar(camada);
       aoFechar?.();
     },
     tecla(ev) {
@@ -106,9 +112,9 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
     el: fundo,
     corpo,
     fechar() {
+      desempilhar(camada);
       if (!fundo.isConnected) return;
       fundo.remove();
-      desempilhar(camada);
     },
     tecla(ev) {
       if (ev.key === 'Escape') { camada.fechar(); return true; }
