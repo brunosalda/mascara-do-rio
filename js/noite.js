@@ -775,9 +775,16 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   function cacarAgora(onde) {
     if (avisarEncerrada() || !cena) return;
     // Tab mostra o estado da pessoa em palavras (rodada 26), como a vida em palavras dos RPGs clássicos.
-    const ESTADOS = ['distraído', 'com pressa', 'bêbado', 'olhando o celular', 'cansado', 'sozinho', 'esperando alguém'];
+    const ESTADOS = ['distraído', 'com pressa', 'olhando o celular', 'cansado', 'sozinho', 'esperando alguém'];
     const estadoDe = (id) => ESTADOS[[...`${id}.${noite?.numero || 0}`].reduce((a, c) => a + c.charCodeAt(0), 0) % ESTADOS.length];
-    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}`, estado: estadoDe(pr.id), temperamento: temperamentoDe(`${pr.id}.${noite?.numero || 0}`) }));
+    // Na vista do alto, a caçada escolhe entre a gente que está ali (rodada 33): até três figuras que podem
+    // ser presa, sorteadas pela noite; o segurança, o policial e a garçonete ficam de fora.
+    const daArea = geo.alto && geo.gente?.length
+      ? geo.gente.map((g, i) => ({ g, i, t: TIPOS_GENTE[g.tipo] })).filter((x) => x.t?.presa)
+        .sort((a, b) => Math.sin((noite?.numero || 0) * 31 + a.i * 7.3) - Math.sin((noite?.numero || 0) * 31 + b.i * 7.3)).slice(0, 3)
+        .map(({ g, i, t }) => ({ id: `presa-pessoa-${i}`, rotulo: t.rotulo, repara: t.repara, vulneravel: t.vulneravel, x: g.x, y: g.y, pessoa: i }))
+      : null;
+    const presas = (daArea?.length ? daArea : presasDoLugar(geo, noite?.numero || 0)).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}`, estado: estadoDe(pr.id), temperamento: temperamentoDe(`${pr.id}.${noite?.numero || 0}`) }));
     emCaca = { presas, onde, poderes: new Set() };
     fomeDesperta(true);
     som.acorde?.();

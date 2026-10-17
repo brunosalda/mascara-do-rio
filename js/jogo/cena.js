@@ -8,7 +8,7 @@ import { camadaAberta, teclaNaCamada, registrarCena } from './camadas.js';
 import { som } from '../ambiente.js';
 import { esc, grupoVoz } from '../ui.js';
 import { TIPOS_GENTE, figuraGente, FIGURAS_GENTE } from './gente.js';
-import { geografia, dentro, maisPertoDentro } from './lugares.js';
+import { geografia, dentro as dentroPoligono, maisPertoDentro } from './lugares.js';
 import { cerimoniasCurtas } from '../leitura.js';
 
 let ASPECTO = 1344 / 752;       // proporção da pintura (a vista do alto em 21:9 troca ao montar)
@@ -78,6 +78,8 @@ export function montarCena(raiz, {
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
+  // Obstáculos dentro do chão (o VLT parado no Centro): o ponto no chão só vale fora deles.
+  const dentro = (q, pol) => dentroPoligono(q, pol) && !(pol === geo.chao && (geo.obstaculos || []).some((o) => dentroPoligono(q, o)));
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
   // neles abre a conversa direto (sem andar até lá).
   const semPersonagem = !sprite?.url;
@@ -458,7 +460,11 @@ export function montarCena(raiz, {
   // pouco para dentro) de onde as duas retas ficam no chão.
   const retaNoChao = (a, b) => { for (let i = 1; i < 12; i++) { const t = i / 12; if (!dentro([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], geo.chao)) return false; } return true; };
   const centroChao = geo.chao.reduce((c, q) => [c[0] + q[0] / geo.chao.length, c[1] + q[1] / geo.chao.length], [0, 0]);
-  const cantos = geo.chao.map(([x, y]) => [x + (centroChao[0] - x) * 0.08, y + (centroChao[1] - y) * 0.08]).filter((q) => dentro(q, geo.chao));
+  const cantos = [
+    ...geo.chao.map(([x, y]) => [x + (centroChao[0] - x) * 0.08, y + (centroChao[1] - y) * 0.08]),
+    // Em volta de cada obstáculo, pontos um pouco para fora dos cantos dele.
+    ...(geo.obstaculos || []).flatMap((o) => { const c = o.reduce((a, q) => [a[0] + q[0] / o.length, a[1] + q[1] / o.length], [0, 0]); return o.map(([x, y]) => [x + (x - c[0]) * 0.6, y + (y - c[1]) * 0.6]); }),
+  ].filter((q) => dentro(q, geo.chao));
   function caminho(de, ate) {
     if (retaNoChao(de, ate)) return [];
     let melhor = null;
@@ -483,7 +489,11 @@ export function montarCena(raiz, {
     el.title = t?.nome || g.tipo;
     const figuras = FIGURAS_GENTE[g.tipo];
     const figura = figuras ? figuras[i % figuras.length] : null;
-    el.innerHTML = `${figura ? `<img src="img/gente/${figura}.png" alt="" draggable="false">` : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}</span>`;
+    // Tab mostra o nome do tipo e o estado em palavras (como as presas).
+    const ESTADOS_GENTE = ['distraído', 'com pressa', 'cansado', 'olhando o celular', 'esperando alguém', 'sozinho'];
+    const estado = ESTADOS_GENTE[(i * 7 + g.tipo.length) % ESTADOS_GENTE.length];
+    el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura ? `<img src="img/gente/${figura}.png" alt="" draggable="false">` : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${estado}</small></span>`;
+    el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
       el.classList.add('pessoa-pintada');
       // Tinge com a luz do lugar: mais clara perto de um poste ou néon, mais escura no breu.
@@ -502,7 +512,17 @@ export function montarCena(raiz, {
     p.el.classList.toggle('vira', p.dir < 0);
   }
   gente.forEach(posicionarPessoa);
+  let proximaVirada = performance.now() + 4000;
+  function virarAlguem(agora) {
+    if (agora < proximaVirada || !gente.length || pausado) return;
+    proximaVirada = agora + 3000 + Math.random() * 5000;
+    const p = gente[Math.floor(Math.random() * gente.length)];
+    if (p.anda) return;
+    p.el.classList.toggle('vira');
+    setTimeout(() => p.el.classList.toggle('vira'), 1400 + Math.random() * 1600);
+  }
   function andarGente(dt) {
+    virarAlguem(performance.now());
     for (const p of gente) {
       if (!p.anda || pausado) continue;
       if (p.parado > 0) { p.parado -= dt; continue; }

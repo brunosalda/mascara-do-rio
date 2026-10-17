@@ -3072,3 +3072,19 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
 .cena.vista-alto .personagem[data-dir='se'] .sombra-pe, .cena.vista-alto .personagem[data-dir='so'] .sombra-pe { translate: 0 10%; scale: 1.08 1; }
 .veu-longe { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1390; pointer-events: none; filter: blur(4px); mix-blend-mode: multiply; }
 .veu-longe[hidden] { display: none; }
+
+/* Rodada 32 (ajuste): o círculo sob o personagem mais largo e mais claro na vista do alto. */
+.cena.vista-alto .personagem .circulo-escolhido { width: 125%; border-width: 3px; border-color: rgba(255, 228, 160, 1); box-shadow: 0 0 10px rgba(255, 210, 130, 0.85), inset 0 0 8px rgba(255, 220, 150, 0.55); }
+.cena.vista-alto.em-caca .personagem .circulo-escolhido { border-color: rgba(255, 70, 80, 1); box-shadow: 0 0 10px rgba(255, 60, 70, 0.85); }
+/* Rodada 33: gente da área respira de leve, tem sombra de contato e círculo de seleção ao passar o mouse. */
+.pessoa.pessoa-pintada img { transform-origin: 50% 100%; animation: gente-respira 3.8s ease-in-out infinite; animation-delay: var(--atraso, 0s); }
+.pessoa.pessoa-pintada.vira img { animation: gente-respira-vira 3.8s ease-in-out infinite; animation-delay: var(--atraso, 0s); }
+@keyframes gente-respira { 50% { transform: scale(1.012, 1.018); } }
+@keyframes gente-respira-vira { 0%, 100% { transform: scaleX(-1); } 50% { transform: scale(-1.012, 1.018); } }
+.pessoa-sombra { position: absolute; left: 10%; right: 10%; bottom: -3%; height: 7%; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8), transparent 70%); pointer-events: none; }
+.pessoa-circulo { position: absolute; left: 50%; bottom: 0; width: 90%; aspect-ratio: 3.4 / 1; translate: -50% 45%; border-radius: 50%; border: 2px solid rgba(255, 228, 160, 0.95); box-shadow: 0 0 8px rgba(255, 210, 130, 0.7); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.pessoa:hover .pessoa-circulo, .pessoa:focus-visible .pessoa-circulo { opacity: 1; }
+.cena.em-caca .pessoa-circulo { border-color: rgba(255, 70, 80, 0.95); box-shadow: 0 0 8px rgba(255, 60, 70, 0.8); }
+.pessoa-nome small { display: none; font: italic 400 0.85rem/1.2 var(--texto-livro); color: #e9d8b4; }
+.cena.mostrar-tudo .pessoa-nome small { display: block; }
+body.sem-efeitos .pessoa.pessoa-pintada img { animation: none !important; }

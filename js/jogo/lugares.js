@@ -373,8 +373,7 @@ for (const [id, m] of Object.entries(MARCACAO)) {
 // Fase 2: as pinturas vistas do alto viram '<lugar>-alto', com os termos e o papel das âncoras da
 // vista antiga e as posições de lugares-alto.js. Câmera que rola, personagem pequeno, gente da área.
 for (const [id, a] of Object.entries(ALTOS)) {
-  const base = LUGARES[id];
-  if (!base) continue;
+  const base = LUGARES[id] || { ancoras: {} };
   const ancoras = {};
   for (const [nome, [x, y]] of Object.entries(a.ancoras)) {
     const b = base.ancoras[nome] || {};
@@ -382,7 +381,7 @@ for (const [id, a] of Object.entries(ALTOS)) {
   }
   LUGARES[`${id}-alto`] = {
     alto: true, aspecto: 1344 / 576, imagem: `img/cidade/alto/${id}.jpg`,
-    horizonte: 0.2, k: 0.17, chao: a.chao, entrada: a.entrada || [0.45, 0.88], saida: a.saida || [0.32, 0.97],
+    horizonte: a.escala ? a.escala[0] : 0.2, k: a.escala ? a.escala[1] : 0.17, chao: a.chao, obstaculos: a.obstaculos || [], entrada: a.entrada || [0.45, 0.88], saida: a.saida || [0.32, 0.97],
     ancoras, frente: a.frente ? [{ base: 0.995, poligono: a.frente }] : [], luzes: a.luzes, pontosLivres: a.pontos, gente: a.gente,
     vida: { passantes: [] },
   };
