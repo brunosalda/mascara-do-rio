@@ -2625,3 +2625,72 @@ body.sem-efeitos .retrato-grande .estado-cor { animation: none !important; }
 .tela-jogo.bg2.paineis-ocultos .mostrar-paineis { top: 10px; bottom: auto; left: 10px; right: auto; }
 .tela-jogo.bg2.paineis-ocultos .hud-plano { top: 10px; }
 .hud-icone .hud-nome { display: none; }
+
+/* =====================================================================================================
+   Rodada 26: interação no mundo. Círculo sob o personagem, marca no destino, cursores próprios (SVG),
+   estado das pessoas no Tab, saída pela borda, falas flutuando sobre a cabeça, fala do clã.
+   ===================================================================================================== */
+.personagem .circulo-escolhido {
+  position: absolute; left: 50%; bottom: 0; width: 78%; aspect-ratio: 3.4 / 1; translate: -50% 45%; border-radius: 50%; pointer-events: none;
+  border: 2px solid rgba(232, 200, 120, 0.85); box-shadow: 0 0 8px rgba(232, 200, 120, 0.45), inset 0 0 6px rgba(232, 200, 120, 0.3);
+  transition: border-color 0.3s, opacity 0.3s;
+}
+.cena.em-caca .personagem .circulo-escolhido { border-color: rgba(220, 40, 50, 0.9); box-shadow: 0 0 10px rgba(220, 40, 50, 0.55); }
+.personagem.manto .circulo-escolhido { opacity: 0.18; }
+.personagem.sem-personagem .circulo-escolhido { display: none; }
+.marca-destino {
+  position: absolute; z-index: 3; width: calc(34px * var(--escala, 1)); aspect-ratio: 3 / 1; translate: -50% -50%; border-radius: 50%; pointer-events: none;
+  border: 2px solid rgba(232, 200, 120, 0.9); box-shadow: 0 0 8px rgba(232, 200, 120, 0.5);
+}
+.marca-destino.correndo { width: calc(54px * var(--escala, 1)); }
+.marca-destino.pulsa { animation: destino-pulsa 1.2s ease-out infinite; }
+@keyframes destino-pulsa { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.25); opacity: 0.35; } }
+.cena.em-caca .marca-destino { border-color: rgba(220, 40, 50, 0.9); box-shadow: 0 0 8px rgba(220, 40, 50, 0.5); }
+
+/* Cursores próprios: normal, falar, examinar, caçar, entrar e viajar. No toque não muda nada. */
+@media (pointer: fine) {
+  .cena { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 3 L20 9 L13 12 L22 27 L18 29 L10 15 L5 21 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 3 L20 9 L13 12 L22 27 L18 29 L10 15 L5 21 Z' fill='%23c9a25a' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 3 3, crosshair; }
+  .cena .ponto-acao, .cena .ponto-historia, .cena .ponto-escrever { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M5 6 H27 V20 H15 L9 26 V20 H5 Z' fill='%232a1f14' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='16' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3Ccircle cx='21' cy='13' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 6 6, pointer; }
+  .cena .ponto-detalhe { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M2 16 Q16 4 30 16 Q16 28 2 16 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2 16 Q16 4 30 16 Q16 28 2 16 Z' fill='%232a1f14' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23c9a25a' stroke='%23120c08' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23120c08'/%3E%3C/svg%3E") 16 16, pointer; }
+  .cena .ponto-presa, .cena .ponto-cacar { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M4 8 Q16 14 28 8 L26 12 Q16 18 6 12 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M4 8 Q16 14 28 8 L26 12 Q16 18 6 12 Z' fill='%237a1520' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M9 12 L11 24 L13 13 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M9 12 L11 24 L13 13 Z' fill='%23f6efe0' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M23 12 L21 24 L19 13 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M23 12 L21 24 L19 13 Z' fill='%23f6efe0' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 16 12, pointer; }
+  .cena .ponto-saida { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='%234a3220' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='18' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 16 16, pointer; }
+  .cena .borda-saida.borda-dir { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='%23c9a25a' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 28 16, pointer; }
+  .cena .borda-saida.borda-esq { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M29 12 H14 V5 L2 16 L14 27 V20 H29 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M29 12 H14 V5 L2 16 L14 27 V20 H29 Z' fill='%23c9a25a' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 4 16, pointer; }
+}
+
+/* Saída pela borda: uma faixa estreita do lado da saída, que mostra o destino ao passar o mouse. */
+.borda-saida {
+  position: absolute; z-index: 240; top: 12%; bottom: 12%; width: 34px; padding: 0; border: 0; background: none; cursor: pointer;
+}
+.borda-saida.borda-esq { left: 0; background: linear-gradient(90deg, rgba(201, 162, 90, 0.18), transparent); }
+.borda-saida.borda-dir { right: 0; background: linear-gradient(270deg, rgba(201, 162, 90, 0.18), transparent); }
+.borda-saida[hidden] { display: none; }
+.borda-destino {
+  position: absolute; top: 50%; translate: 0 -50%; white-space: nowrap; padding: 0.2rem 0.5rem; pointer-events: none;
+  font: italic 600 1.05rem/1.2 var(--titulo); color: #f6ead6; text-shadow: 0 0 6px #000, 0 1px 2px #000; opacity: 0; transition: opacity 0.2s;
+}
+.borda-esq .borda-destino { left: 38px; }
+.borda-dir .borda-destino { right: 38px; }
+.borda-saida:hover .borda-destino, .borda-saida:focus-visible .borda-destino { opacity: 1; }
+.borda-saida:hover { background-color: rgba(201, 162, 90, 0.08); }
+@media (pointer: coarse) { .borda-saida { display: none; } }
+
+/* Tab: o estado das pessoas em palavras, embaixo do nome. */
+.ponto-estado { display: none; font: italic 400 0.92rem/1.2 var(--texto-livro); color: #e9d8b4; }
+.cena.mostrar-tudo .ponto-estado { display: block; }
+
+/* Falas de passagem: texto flutuando sobre a cabeça, sem balão, na cor da voz; sobe e some. */
+.balao-voz:not(.balao-escolha) {
+  background: none; border: 0; box-shadow: none; padding: 0; max-width: 320px; text-align: center;
+  font: italic 500 1.08rem/1.3 var(--texto-livro); color: var(--cor-fala, #f2e8d6);
+  text-shadow: 0 0 3px #000, 0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  animation: fala-sobe 3.6s ease-out forwards;
+}
+.balao-voz:not(.balao-escolha) b { display: block; font-style: normal; font-size: 0.7rem; color: var(--cor-fala, #c9a25a); opacity: 0.9; }
+.balao-voz.voz-besta:not(.balao-escolha) { --cor-fala: #ff6b74; }
+.balao-voz.voz-alma:not(.balao-escolha) { --cor-fala: #f0e2b6; }
+.balao-voz.voz-mental:not(.balao-escolha), .balao-voz.voz-social:not(.balao-escolha), .balao-voz.voz-fisico:not(.balao-escolha) { --cor-fala: #b9cbe0; }
+.balao-voz.voz-disciplina:not(.balao-escolha) { --cor-fala: #f08a98; }
+@keyframes fala-sobe { 0% { opacity: 0; translate: 0 6px; } 10% { opacity: 1; translate: 0 0; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -14px; } }
+.fala-passagem { background: none !important; border: 0 !important; box-shadow: none !important; font-style: italic; color: #e6dccb; text-shadow: 0 0 3px #000, 0 0 6px #000, 1px 1px 0 #000, -1px -1px 0 #000; }
+body.sem-efeitos .balao-voz:not(.balao-escolha), body.sem-efeitos .marca-destino { animation: none !important; }

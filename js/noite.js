@@ -688,7 +688,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     else if (emCaca) cena.mostrarPoderAtivo(nome, 999);
     if (emCaca) {
       emCaca.poderes.add(nome);
-      if (id === 'perscrutar-alma') emCaca.perscrutou = true;
+      if (id === 'perscrutar-alma') {
+        emCaca.perscrutou = true;
+        // Com Perscrutar, o Tab mostra também o temperamento de cada presa.
+        if (!emCaca.alvo) {
+          emCaca.presas = emCaca.presas.map((pr) => ({ ...pr, estado: pr.temperamento ? `${pr.estado} · ${TEMPERAMENTOS[pr.temperamento].nome.toLowerCase()}` : pr.estado }));
+          cena.atualizarPontos(emCaca.presas);
+        }
+      }
       if (id === 'assombro' || id === 'intimidar') emCaca.presenca = id;
       if (id === 'nublar-memoria') emCaca.nublar = true;
     } else {
@@ -741,7 +748,10 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   }
   function cacarAgora(onde) {
     if (avisarEncerrada() || !cena) return;
-    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}`, temperamento: temperamentoDe(`${pr.id}.${noite?.numero || 0}`) }));
+    // Tab mostra o estado da pessoa em palavras (rodada 26), como a vida em palavras dos RPGs clássicos.
+    const ESTADOS = ['distraído', 'com pressa', 'bêbado', 'olhando o celular', 'cansado', 'sozinho', 'esperando alguém'];
+    const estadoDe = (id) => ESTADOS[[...`${id}.${noite?.numero || 0}`].reduce((a, c) => a + c.charCodeAt(0), 0) % ESTADOS.length];
+    const presas = presasDoLugar(geo, noite?.numero || 0).map((pr) => ({ ...pr, tipo: 'presa', icone: '♦', acao: `Escolher: ${pr.rotulo}`, estado: estadoDe(pr.id), temperamento: temperamentoDe(`${pr.id}.${noite?.numero || 0}`) }));
     emCaca = { presas, onde, poderes: new Set() };
     fomeDesperta(true);
     som.acorde?.();

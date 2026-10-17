@@ -47,6 +47,7 @@ function htmlBoneco(sprite) {
   return `
     <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}" style="${vars}">
       <span class="sombra-pe"></span>
+      <span class="circulo-escolhido" aria-hidden="true"></span>
       <span class="sprite reflexo" style="${folha}"></span>
       <span class="sprite corpo-sprite" style="${folha}"></span>
       <span class="sprite tinta" style="${mascara}"></span>
@@ -96,12 +97,14 @@ export function montarCena(raiz, {
         <div class="balao-voz" hidden></div>
         <div class="fala-passagem" hidden></div>
         <svg class="fio-escolha" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><line pathLength="1" x1="0" y1="0" x2="0" y2="0"/></svg>
+        <span class="marca-destino" aria-hidden="true" hidden></span>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
       </div>
       <svg class="linha-conversa" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3.5" cx="0" cy="0"/></svg>
       <div class="dica-interagir" hidden></div>
       <div class="atencao-rua" hidden role="status"><span class="olho" aria-hidden="true"></span><span class="palavras"></span><span class="poderes-ativos"></span><button type="button" class="caca-ajuda" data-caca-ajuda aria-label="Como funciona a caçada">?</button><button type="button" class="caca-sair" data-caca-desistir>Desistir</button></div>
+      <button type="button" class="borda-saida" hidden><span class="borda-destino"></span></button>
       <button type="button" class="seta-borda seta-esq" hidden aria-label="Pontos à esquerda">‹ <b></b></button>
       <button type="button" class="seta-borda seta-dir" hidden aria-label="Pontos à direita"><b></b> ›</button>
       ${depurar ? '<pre class="depuracao-coord">Modo de edição: clique na pintura para ver a coordenada.</pre>' : ''}
@@ -204,12 +207,13 @@ export function montarCena(raiz, {
         <span class="ponto-luz" aria-hidden="true"></span>
         <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="ponto-contorno" aria-hidden="true"></span>
-        <span class="ponto-rotulo">${/^\d$/.test(p.icone || '') ? `${p.icone} · ` : ''}${esc(p.rotulo)}</span>
+        <span class="ponto-rotulo">${/^\d$/.test(p.icone || '') ? `${p.icone} · ` : ''}${esc(p.rotulo)}${p.estado ? `<small class="ponto-estado">${esc(p.estado)}</small>` : ''}</span>
       </button>`).join('');
     camadaContornos.innerHTML = lista.filter((p) => p.contorno?.length).map((p) =>
       `<polygon data-contorno="${esc(p.id)}" points="${p.contorno.map(([x, y]) => `${x},${y}`).join(' ')}"/>`).join('');
     perto = null;
     proximaChecagem = 0;
+    prepararBorda?.();
   }
 
   function alcanceEm(y) { return ALCANCE * limitar(altura(y) / ALTURA_REF, 0.6, 1.2); }
@@ -266,6 +270,10 @@ export function montarCena(raiz, {
     if (balaoEscolha && performance.now() < balaoEscolha.ate && !balaoEscolha.noPainel) return;
     balao.className = `balao-voz voz-${grupoVoz(voz)}`;
     balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}`;
+    // A fala flutua e sobe de novo a cada fala (reinicia a animação).
+    balao.style.animation = 'none';
+    void balao.offsetWidth;
+    balao.style.animation = '';
     balao.hidden = false;
     falaAte = performance.now() + ms;
     som.voz?.();
@@ -323,6 +331,65 @@ export function montarCena(raiz, {
   };
   balao.addEventListener('click', cliqueResposta);
   painel?.addEventListener('click', cliqueResposta);
+
+  // --- Interação no mundo (rodada 26) ---------------------------------------------------------------
+  // Marca no destino: um círculo pequeno pulsa onde ele vai parar e some quando ele chega.
+  const marcaDestino = cena.querySelector('.marca-destino');
+  function mostrarDestino(x, y, correr) {
+    marcaDestino.style.left = pct(x);
+    marcaDestino.style.top = pct(y);
+    marcaDestino.style.setProperty('--escala', escalaPonto(y));
+    marcaDestino.classList.toggle('correndo', !!correr);
+    marcaDestino.hidden = false;
+    marcaDestino.classList.remove('pulsa');
+    void marcaDestino.offsetWidth;
+    marcaDestino.classList.add('pulsa');
+  }
+  // Saída pela borda: uma faixa do lado da saída do lugar. O cursor vira a seta de viagem, o destino
+  // aparece, e o clique faz o personagem andar até a saída e sair.
+  const bordaSaida = cena.querySelector('.borda-saida');
+  function prepararBorda() {
+    const s = lista.find((p) => p.tipo === 'saida');
+    bordaSaida.hidden = !s || semPersonagem;
+    if (!s) return;
+    bordaSaida.classList.toggle('borda-esq', s.x < 0.5);
+    bordaSaida.classList.toggle('borda-dir', s.x >= 0.5);
+    bordaSaida.querySelector('.borda-destino').textContent = `para o ${s.rotulo.replace(/^Voltar ao /, '').replace(/^Mapa do Rio$/, 'mapa do Rio')}`;
+    bordaSaida.setAttribute('aria-label', s.acao || s.rotulo);
+  }
+  bordaSaida.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const s = lista.find((p) => p.tipo === 'saida');
+    if (!s || camadaAberta() || caca) return;
+    if (s === perto) { interagir(s); return; }
+    const [x, y] = s.parada && dentro(s.parada, geo.chao) ? s.parada : maisPertoDentro([s.x, s.y], geo.chao, ASPECTO);
+    alvo = { x, y, ponto: s, correr: true };
+    mostrarDestino(x, y, true);
+    virarPara(x < pos.x);
+    semProgresso = 0;
+  });
+  // Clicar no próprio personagem: uma fala curta do clã (nada da crônica), uma a cada três cliques.
+  const FALAS_CLA = {
+    nosferatu: ['Ninguém olha para baixo.', 'O esgoto também é endereço.', 'Melhor do escuro.', 'Eles nem me veem passar.'],
+    toreador: ['Que noite bonita para estragar.', 'Esta luz merecia um quadro.', 'Tudo aqui é cenário.', 'Ninguém se veste mais para a noite.'],
+    brujah: ['Alguém vai pagar por isso.', 'Nada nesta cidade é justo.', 'Paciência é para quem tem tempo.'],
+    ventrue: ['Tudo tem um preço.', 'Esta rua ainda não sabe quem manda.', 'Calma. Eu decido o ritmo.'],
+    malkaviano: ['A chuva está contando alguma coisa.', 'Os postes estão olhando.', 'Já vivi esta noite. Ou vou viver.'],
+    gangrel: ['Cheiro de chuva e de medo.', 'A cidade é só outro mato.', 'Prefiro o telhado.'],
+    tremere: ['Tudo tem uma regra. Até isto.', 'O sangue lembra.', 'Paciência e anotações.'],
+    lasombra: ['A sombra obedece.', 'A noite é minha casa.', 'Luz demais nesta rua.'],
+    caitiff: ['Ninguém me disse como fazer isto.', 'Sem nome, sem dono.', 'Aprendo sozinho.'],
+    'sangue-fraco': ['Ainda sinto o gosto do café.', 'Meio morto, meio vivo.', 'O sol ainda me assusta menos.'],
+  };
+  const falasDoCla = FALAS_CLA[cla] || ['A noite ainda é longa.', 'Fome. Sempre a fome.', 'Melhor não chamar atenção.'];
+  let cliquesNoPersonagem = 0;
+  function cliqueNoPersonagem(ev) {
+    if (semPersonagem || caca || camadaAberta()) return false;
+    const r = corpo.getBoundingClientRect();
+    if (!(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom)) return false;
+    if (cliquesNoPersonagem++ % 3 === 0) falar('VOCÊ', falasDoCla[Math.floor(Math.random() * falasDoCla.length)], 3200);
+    return true;
+  }
 
   // --- A escolha da noite ganha corpo (rodada 24) -----------------------------------------------------
   // Ao confirmar a ação principal: o personagem vira para o objeto, a câmera enquadra os dois, um fio de
@@ -907,6 +974,7 @@ export function montarCena(raiz, {
     falouDePassagem = true;
     try { sessionStorage.setItem(chaveFala, '1'); } catch { /* sem armazenamento */ }
     falaPassagem.textContent = FALAS_DE_PASSAGEM[Math.floor(Math.random() * FALAS_DE_PASSAGEM.length)];
+    aoFalar?.('ALGUÉM', falaPassagem.textContent);
     falaPassagem.style.transform = `translate3d(${(x * mw).toFixed(1)}px, ${((y - h * 0.45) * mh).toFixed(1)}px, 0) translate(-50%, -100%)`;
     falaPassagem.hidden = false;
     falaPassagem.classList.remove('sumindo');
@@ -1291,6 +1359,7 @@ export function montarCena(raiz, {
     atualizarCamera(dt);
     if (conversa && pontoDaConversa) desenharLinha();
 
+    if (!alvo && !marcaDestino.hidden) marcaDestino.hidden = true;
     // Pergunta no painel de baixo: o prazo vence como no balão.
     if (balaoEscolha?.noPainel && agora > balaoEscolha.ate + 400) {
       const expirou = balaoEscolha;
@@ -1422,6 +1491,7 @@ export function montarCena(raiz, {
       painelCoord.textContent = `${linha}\n${painelCoord.textContent.split('\n').slice(0, 7).join('\n')}`;
     }
     const botao = ev.target.closest('[data-ponto]');
+    if (!botao && cliqueNoPersonagem(ev)) return;
     if (botao) {
       const p = lista.find((x) => x.id === botao.dataset.ponto);
       if (!p) return;
@@ -1453,6 +1523,7 @@ export function montarCena(raiz, {
     const [x, y] = maisPertoDentro([px, py], geo.chao, ASPECTO);
     const longeChao = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
     alvo = { x, y, correr: longeChao && !andarSemCorrer(longeChao) };
+    mostrarDestino(x, y, alvo.correr);
     virarPara(x < pos.x);
     esperaAte = performance.now() + (reduzido() ? 0 : 80);
     semProgresso = 0;
@@ -1472,7 +1543,7 @@ export function montarCena(raiz, {
         return;
       }
     }
-    if (alvo) alvo.correr = true;
+    if (alvo) { alvo.correr = true; marcaDestino.classList.add('correndo'); }
   });
 
   document.addEventListener('keydown', aoApertar);
