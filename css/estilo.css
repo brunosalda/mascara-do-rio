@@ -1885,3 +1885,56 @@ body.cerimonias-curtas .letreiro-envio { animation-name: letreiro-surgir; }
 body.cerimonias-curtas .tela-jogo.clareando { animation: none; }
 body.cerimonias-curtas .faixa-chegada { animation-name: faixa-simples; }
 body.cerimonias-curtas .brilho-luz { animation: none; }
+
+/* --- Rodada 10: fim da criação, glossário ao toque, pergunta do jogo --------------------------- */
+/* Termo da V5 com frase ao toque: sublinhado de leve, sem cara de botão. */
+.termo {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: help;
+  text-decoration: underline dotted rgba(216, 208, 192, 0.45); text-underline-offset: 3px; text-decoration-thickness: 1px;
+  text-align: inherit; letter-spacing: inherit; text-transform: inherit;
+}
+.termo:hover, .termo:focus-visible { text-decoration-color: var(--acento-claro); color: var(--texto-claro); outline: none; }
+.glossario-balao {
+  position: fixed; z-index: 2000; padding: 0.6rem 0.8rem; font: 0.95rem/1.45 var(--texto-livro); color: var(--texto);
+  background: var(--superficie-solida); border: 1px solid var(--linha-forte); border-left: 2px solid var(--acento);
+  box-shadow: 0 14px 34px -12px #000; pointer-events: none; text-transform: none; letter-spacing: normal;
+}
+.glossario-balao b { display: block; font: 600 0.8rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento-claro); margin-bottom: 0.15rem; }
+
+/* Fim da criação: o personagem grande, o essencial, o envio à vista e o resto dobrado. */
+.fim-abertura .texto-narracao p { margin: 0.2rem 0; }
+.fim-dossie { display: grid; grid-template-columns: minmax(160px, 230px) 1fr; gap: 1.4rem; align-items: start; margin: 0.6rem 0 0.4rem; }
+.fim-retrato { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border: 1px solid var(--linha-forte); box-shadow: 0 18px 40px -18px #000, 0 0 0 4px rgba(0, 0, 0, 0.5); }
+.fim-nome { font: 600 2.2rem/1.05 var(--titulo); margin: 0.15rem 0 0; color: var(--texto-claro); }
+.em-vida { margin: 0.1rem 0 0.3rem; font-style: italic; color: var(--texto-suave); }
+.fim-conceito { margin: 0.2rem 0 0.6rem; color: var(--texto-suave); }
+.fim-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.4rem; }
+.fim-colunas h3 { font: 600 0.8rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); margin: 0.4rem 0 0.2rem; }
+.nivel-defeito { color: var(--sangue-vivo); font-weight: 600; }
+.fim-frases p { margin: 0.35rem 0; line-height: 1.45; }
+.fim-frases .nota { font-size: 0.92em; }
+.fim-envio { border-top: 1px solid var(--linha); padding-top: 0.7rem; margin-top: 0.6rem; }
+.fim-depois { margin: 0 0 0.2rem; color: var(--texto-suave); font-size: 0.95rem; }
+.fim-envio .final-conversa { margin-top: 0.7rem; }
+.fim-dobra { margin-top: 0.8rem; border-top: 1px solid var(--linha); padding-top: 0.5rem; }
+.fim-dobra > summary { cursor: pointer; font: 600 0.9rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave); padding: 0.3rem 0; }
+.fim-dobra > summary:hover { color: var(--texto-claro); }
+.fim-dobra[open] > summary { color: var(--acento-claro); }
+.sugestao-explica { margin: 0.2rem 0 0.6rem; }
+@media (max-width: 700px) {
+  .fim-dossie { grid-template-columns: 96px 1fr; gap: 0.8rem; margin-top: 0.3rem; }
+  .fim-nome { font-size: 1.6rem; }
+  .fim-colunas { grid-column: 1 / -1; grid-template-columns: 1fr; }
+  .fim-texto { display: contents; }
+  .fim-texto > .grupo-rotulo, .fim-nome, .em-vida, .fim-conceito { grid-column: 2; }
+  .fim-retrato { grid-row: 1 / span 4; }
+  .fim-frases { grid-column: 1 / -1; }
+  .fim-abertura .texto-narracao { font-size: 0.95em; }
+}
+
+/* Pergunta do jogo no lugar de confirm(): caixa central, com o resto escurecido. */
+.dialogo-cena.dialogo-pergunta {
+  z-index: 340; width: min(560px, 92vw); top: 28vh; bottom: auto; max-height: 60vh;
+  box-shadow: 0 24px 70px -20px #000, 0 0 0 100vmax rgba(0, 0, 0, 0.55);
+}
+.dialogo-pergunta .dialogo-corpo p { margin: 0.2rem 0 0.4rem; }

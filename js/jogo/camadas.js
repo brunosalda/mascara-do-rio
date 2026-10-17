@@ -128,6 +128,33 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
   return camada;
 }
 
+// Pergunta numa caixa do jogo, com escolhas numeradas, no lugar de confirm(). Resolve com o índice
+// escolhido, ou null se o jogador fechar (Esc ou ✕). Fora da cena (na criação), a própria caixa
+// escuta o teclado.
+export function perguntar(raiz, { rotulo = '', texto = '', opcoes = [] } = {}) {
+  return new Promise((resolver) => {
+    let feito = false;
+    let ouvinte = null;
+    const terminar = (valor) => {
+      if (feito) return;
+      feito = true;
+      if (ouvinte) document.removeEventListener('keydown', ouvinte, true);
+      resolver(valor);
+    };
+    const lista = `<ol class="escolhas">${opcoes.map((o, i) => `<li><button type="button" data-escolha="${i}"><span class="escolha-num">${i + 1}.</span> — ${o}</button></li>`).join('')}</ol>`;
+    const camada = abrirDialogo(raiz, { rotulo, html: `<div class="texto-narracao">${texto}</div>${lista}`, aoFechar: () => terminar(null) });
+    camada.el.classList.add('dialogo-pergunta');
+    camada.el.querySelectorAll('[data-escolha]').forEach((b) => {
+      b.onclick = () => confirmarEscolha(b, () => { terminar(Number(b.dataset.escolha)); camada.fechar(); });
+    });
+    if (!cenaAtual) {
+      ouvinte = (ev) => { if (camada.tecla(ev)) { ev.preventDefault(); ev.stopPropagation(); } };
+      document.addEventListener('keydown', ouvinte, true);
+    }
+    setTimeout(() => camada.el.querySelector('[data-escolha]')?.focus({ preventScroll: true }), 50);
+  });
+}
+
 // --- Janelas (ficha, diário, plano da noite) ----------------------------------------------------
 export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
   const fundo = document.createElement('div');

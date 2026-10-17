@@ -1,14 +1,15 @@
 // Ficha do personagem em palavras (e, se pedido, a ficha técnica com pontos).
 import * as v5 from './motor/v5.js';
 import { esc, pontos } from './ui.js';
-import { imagemDoCla, localDe } from './cidade.js';
+import { retratoDe, retratoProvisorio, localDe } from './cidade.js';
+import { termo, termoDe, ligarGlossario } from './glossario.js';
 
 // Retrato emoldurado, nome, clã e onde o personagem está.
-// Até o Narrador pintar o retrato do personagem, mostra a imagem do clã.
+// Até o Narrador pintar o retrato do personagem, mostra o retrato provisório (silhueta do clã).
 export function cabecalhoPersonagem(p) {
   const f = p.ficha || {};
   const c = v5.cla(f.cla);
-  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(f.cla);
+  const retrato = retratoDe(p);
   const local = p.estado?.local;
   return `
     <header class="cabecalho-personagem">
@@ -31,6 +32,43 @@ function nomeItem(lista, id) {
   return lista.find((x) => x.id === id)?.nome || id;
 }
 
+// Respostas digitadas às vezes terminam com ponto ("Ana."): tira antes de juntar com outro texto.
+export const semPontoFinal = (t) => String(t || '').trim().replace(/[\s.,;:!]+$/u, '');
+
+// A pessoa que prende o personagem à humanidade, com a relação ("Ana, amizade de infância").
+function pedraDeToque(c) {
+  const relacao = c?.touchstone?.relacao === 'amigo de infância' ? 'amizade de infância' : c?.touchstone?.relacao;
+  return [semPontoFinal(c?.touchstone?.nome), relacao].filter(Boolean).join(', ');
+}
+export { pedraDeToque };
+
+// "em vida, Nome Completo", quando o nome nas ruas é outro.
+export function linhaEmVida(f) {
+  const vida = semPontoFinal(f?.origem?.nomeEmVida);
+  return vida && vida !== semPontoFinal(f?.nome) ? `<p class="em-vida">em vida, ${esc(vida)}</p>` : '';
+}
+
+// O essencial para a tela final da criação: os 3 pontos mais fortes e os 2 mais fracos, em palavras.
+export function fortesEFracos(f) {
+  const calc = v5.calcular(f);
+  const atr = v5.ATRIBUTOS.map((a) => ({ tipo: 'atributo', id: a.id, nome: a.nome, n: calc.atributos[a.id] }));
+  const habs = v5.HABILIDADES.filter((h) => calc.habilidades[h.id] > 0)
+    .map((h) => ({ tipo: 'habilidade', id: h.id, nome: h.nome, n: calc.habilidades[h.id], esp: calc.especializacoes.find((e) => e.hab === h.id && e.nome?.trim())?.nome }))
+    .sort((a, b) => b.n - a.n);
+  const porNivel = [...atr].sort((a, b) => b.n - a.n);
+  const fortes = [porNivel[0], ...habs.slice(0, 2)].filter(Boolean);
+  const defeito = calc.defeitos.filter((x) => x.nivel > 0).sort((a, b) => b.nivel - a.nivel)[0];
+  const fracos = [porNivel.at(-1)];
+  if (defeito) fracos.push({ tipo: 'defeito', id: defeito.id, nome: nomeItem(v5.DEFEITOS, defeito.id) });
+  else fracos.push(porNivel.at(-2));
+  return { fortes, fracos };
+}
+
+export function itemFortesFracos(x) {
+  const nivel = x.tipo === 'defeito' ? 'defeito' : v5.palavra(x.tipo, x.n);
+  return `<li><span>${termoDe(x.tipo, x.id, x.nome)}${x.esp ? ` <small class="inline">(${esc(x.esp)})</small>` : ''}</span><b class="${x.tipo === 'defeito' ? 'nivel-defeito' : `nivel-${x.n}`}">${nivel}</b></li>`;
+}
+
 export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
   if (!f?.cla) return '<p class="nota">A ficha ainda está no começo.</p>';
   const calc = v5.calcular(f);
@@ -41,7 +79,7 @@ export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
     <div>
       <span class="grupo-rotulo">${nome}</span>
       <ul class="lista-palavras compacta">
-        ${v5.ATRIBUTOS.filter((a) => a.grupo === g).map((a) => `<li><span>${a.nome}</span>${nivelOuPalavra('atributo', calc.atributos[a.id], tecnica)}</li>`).join('')}
+        ${v5.ATRIBUTOS.filter((a) => a.grupo === g).map((a) => `<li><span>${termo(a.nome, a.desc)}</span>${nivelOuPalavra('atributo', calc.atributos[a.id], tecnica)}</li>`).join('')}
       </ul>
     </div>`).join('');
 
@@ -55,31 +93,33 @@ export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
     const poderes = d.poderes.filter((pw) => calc.poderes.includes(pw.id));
     return `
       <li>
-        <span>${d.nome}</span>${nivelOuPalavra('disciplina', n, tecnica)}
-        <small>${poderes.map((pw) => pw.nome).join(' · ') || 'Nenhum poder escolhido'}</small>
+        <span>${termoDe('disciplina', id, d.nome)}</span>${nivelOuPalavra('disciplina', n, tecnica)}
+        <small>${poderes.map((pw) => termo(pw.nome, pw.desc)).join(' · ') || 'Nenhum poder escolhido'}</small>
       </li>`;
   }).join('');
 
-  const marcas = (lista, catalogo) => lista
+  const marcas = (lista, catalogo, tipo) => lista
     .filter((x) => x.nivel > 0)
-    .map((x) => `<li><span>${nomeItem(catalogo, x.id)}${x.nota ? ` <small class="inline">(${esc(x.nota)})</small>` : ''}</span>${pontos(x.nivel, x.nivel)}</li>`)
+    .map((x) => `<li><span>${termoDe(tipo, x.id, nomeItem(catalogo, x.id))}${x.nota ? ` <small class="inline">(${esc(x.nota)})</small>` : ''}</span>${pontos(x.nivel, x.nivel)}</li>`)
     .join('');
 
   const sangueFraco = c?.sangueFraco
-    ? `${(f.meritosSangueFraco || []).map((id) => `<li><span>${nomeItem(v5.MERITOS_SANGUE_FRACO, id)}</span><small>mérito</small></li>`).join('')}
-       ${(f.defeitosSangueFraco || []).map((id) => `<li><span>${nomeItem(v5.DEFEITOS_SANGUE_FRACO, id)}</span><small>defeito</small></li>`).join('')}`
+    ? `${(f.meritosSangueFraco || []).map((id) => `<li><span>${termoDe('sangue-fraco', id, nomeItem(v5.MERITOS_SANGUE_FRACO, id))}</span><small>mérito</small></li>`).join('')}
+       ${(f.defeitosSangueFraco || []).map((id) => `<li><span>${termoDe('sangue-fraco', id, nomeItem(v5.DEFEITOS_SANGUE_FRACO, id))}</span><small>defeito</small></li>`).join('')}`
     : '';
 
   const conviccoes = (f.conviccoes || []).filter((x) => x?.texto?.trim()).map((x) => `
-    <li><span>${esc(x.texto)}</span><small>${esc(x.touchstone?.nome || '')}${x.touchstone?.relacao ? `, ${esc(x.touchstone.relacao)}` : ''}</small></li>`).join('');
+    <li><span>${esc(x.texto)}</span><small>${esc(pedraDeToque(x))}</small></li>`).join('');
+  ligarGlossario();
 
   return `
     <div class="ficha">
       <div class="ficha-cabeca" ${semCabeca ? 'hidden' : ''}>
-        <img class="retrato" src="${imagemDoCla(f.cla)}" alt="">
+        <img class="retrato" src="${retratoProvisorio(f.cla)}" alt="">
         <div>
-          <span class="grupo-rotulo">${esc(c?.nome || '')}${pr ? ` · ${esc(pr.nome)}` : ''}</span>
+          <span class="grupo-rotulo">${c ? termoDe('cla', c.id, c.nome) : ''}${pr ? ` · ${termoDe('predador', pr.id, pr.nome)}` : ''}</span>
           <h2>${esc(f.nome || f.origem?.nomeEmVida || 'Sem nome')}</h2>
+          ${linhaEmVida(f)}
           <p>${esc(f.origem?.conceito || '')}</p>
           ${f.origem?.bairro ? `<p class="nota">Bairro: ${esc(f.origem.bairro)}${f.origem?.abraco ? ` · Abraçado ${esc(f.origem.abraco)}` : ''}.</p>` : ''}
         </div>
@@ -88,20 +128,20 @@ export function resumoFicha(f, { tecnica = false, semCabeca = false } = {}) {
       <div class="ficha-secao">
         <h3>Habilidades</h3>
         <ul class="lista-palavras compacta duas">
-          ${treinadas.map((h) => `<li><span>${h.nome}${espDe(h.id).length ? ` <small class="inline">(${espDe(h.id).join(', ')})</small>` : ''}</span>${nivelOuPalavra('habilidade', calc.habilidades[h.id], tecnica)}</li>`).join('') || '<li class="nota">Nenhuma ainda.</li>'}
+          ${treinadas.map((h) => `<li><span>${termo(h.nome, h.desc)}${espDe(h.id).length ? ` <small class="inline">(${espDe(h.id).join(', ')})</small>` : ''}</span>${nivelOuPalavra('habilidade', calc.habilidades[h.id], tecnica)}</li>`).join('') || '<li class="nota">Nenhuma ainda.</li>'}
         </ul>
       </div>
       <div class="ficha-secao"><h3>Disciplinas</h3><ul class="lista-palavras">${disciplinas || '<li class="nota">Nenhuma ainda.</li>'}</ul></div>
       <div class="ficha-secao duas-colunas">
-        <div><h3>Vantagens</h3><ul class="lista-palavras compacta">${marcas(calc.vantagens, v5.VANTAGENS) || '<li class="nota">Nenhuma.</li>'}${sangueFraco}</ul></div>
-        <div><h3>Defeitos</h3><ul class="lista-palavras compacta">${marcas(calc.defeitos, v5.DEFEITOS) || '<li class="nota">Nenhum.</li>'}</ul></div>
+        <div><h3>Vantagens</h3><ul class="lista-palavras compacta">${marcas(calc.vantagens, v5.VANTAGENS, 'vantagem') || '<li class="nota">Nenhuma.</li>'}${sangueFraco}</ul></div>
+        <div><h3>Defeitos</h3><ul class="lista-palavras compacta">${marcas(calc.defeitos, v5.DEFEITOS, 'defeito') || '<li class="nota">Nenhum.</li>'}</ul></div>
       </div>
       <div class="ficha-secao">
         <h3>O que te prende à humanidade</h3>
         <ul class="lista-palavras">${conviccoes || '<li class="nota">Nenhuma convicção ainda.</li>'}</ul>
-        ${f.ambicao ? `<p><b>Ambição.</b> ${esc(f.ambicao)}</p>` : ''}
-        ${f.desejo ? `<p><b>Desejo.</b> ${esc(f.desejo)}</p>` : ''}
-        <p><b>Humanidade.</b> ${v5.textoHumanidade(calc.humanidade)}${tecnica ? ` (${calc.humanidade})` : ''}</p>
+        ${f.ambicao ? `<p><b>${termoDe('geral', 'ambicao', 'Ambição')}.</b> ${esc(f.ambicao)}</p>` : ''}
+        ${f.desejo ? `<p><b>${termoDe('geral', 'desejo', 'Desejo')}.</b> ${esc(f.desejo)}</p>` : ''}
+        <p><b>${termoDe('geral', 'humanidade', 'Humanidade')}.</b> ${v5.textoHumanidade(calc.humanidade)}${tecnica ? ` (${calc.humanidade})` : ''}</p>
       </div>
       ${f.aparencia ? `<div class="ficha-secao"><h3>Aparência</h3><p>${esc(f.aparencia)}</p></div>` : ''}
     </div>`;
@@ -142,7 +182,7 @@ export async function telaFicha(raiz, p) {
     // Dossiê: o retrato grande e o estado em frases à esquerda; o que o personagem sabe fazer,
     // em palavras, à direita. Sem cartões.
     const f = p.ficha || {};
-    const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(f.cla);
+    const retrato = retratoDe(p);
     const local = p.estado?.local;
     raiz.innerHTML = `
       <section class="dossie">
@@ -150,6 +190,7 @@ export async function telaFicha(raiz, p) {
           <img class="dossie-retrato" src="${esc(retrato)}" alt="Retrato de ${esc(p.nome)}">
           <span class="grupo-rotulo">${esc(v5.cla(f.cla)?.nome || '')}${local ? ` · ${esc(localDe(local)?.nome || local)}` : ''}</span>
           <h1 class="nome-personagem">${esc(p.nome || 'Sem nome')}</h1>
+          ${linhaEmVida({ ...f, nome: p.nome })}
           ${f.origem?.conceito ? `<p class="dossie-conceito">${esc(f.origem.conceito)}</p>` : ''}
           ${painelEstado(p.estado, { tecnica })}
           <label class="interruptor"><input type="checkbox" id="tecnica" ${tecnica ? 'checked' : ''}> Ficha técnica (com pontos)</label>

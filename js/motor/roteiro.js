@@ -109,7 +109,7 @@ Depois dela, você nunca mais vai ver o sol nascer.
     opcoes: [
       { texto: 'Família grande e barulhenta, sempre por perto.', dados: { relacao: 'da família' }, pesos: e({ vant: { aliados: 1 } }), reacao: '[HUMANIDADE] Sua família ainda deixa a luz da varanda acesa para você.' },
       { texto: 'Uma pessoa só, que era tudo para mim.', dados: { relacao: 'o grande amor' }, pesos: e({ atr: { determinacao: 1 } }), reacao: '[HUMANIDADE] Uma pessoa só basta para manter você humano.' },
-      { texto: 'A turma da rua, os amigos de sempre.', dados: { relacao: 'amigo de infância' }, pesos: e({ vant: { aliados: 1, contatos: 1 } }), reacao: '[HUMANIDADE] Seus amigos vão perguntar por você. O que você vai dizer?' },
+      { texto: 'A turma da rua, os amigos de sempre.', dados: { relacao: 'amizade de infância' }, pesos: e({ vant: { aliados: 1, contatos: 1 } }), reacao: '[HUMANIDADE] Seus amigos vão perguntar por você. O que você vai dizer?' },
       { texto: 'Ninguém. E estava bem assim.', dados: { relacao: 'alguém que ainda importa, mesmo que pouco' }, pesos: e({ atr: { autocontrole: 1, determinacao: 1 }, def: { 'sem-refugio': 1 } }), reacao: '[A BESTA] Ótimo. Ninguém para chorar.' },
     ],
   },

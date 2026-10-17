@@ -5,9 +5,11 @@ import { CENAS, FALAS_CLA, trocar, clasSugeridos, montarFicha } from './motor/ro
 import * as banco from './banco.js';
 import { esc, narracao, aviso, on } from './ui.js';
 import { estado as app, recarregarPersonagens, ir } from './app.js';
-import { resumoFicha } from './ficha.js';
-import { imagemDoCla } from './cidade.js';
+import { resumoFicha, fortesEFracos, itemFortesFracos, linhaEmVida, pedraDeToque, semPontoFinal } from './ficha.js';
+import { imagemDoCla, retratoProvisorio } from './cidade.js';
 import { som } from './ambiente.js';
+import { termoDe } from './glossario.js';
+import { perguntar } from './jogo/camadas.js';
 
 const PERGUNTAS = CENAS.filter((c) => c.tipo !== 'fim').length;
 
@@ -84,6 +86,7 @@ function htmlCena(c, e) {
         </button>`;
     };
     return comAtraso(`${base}
+      <p class="nota sugestao-explica">Suas lembranças apontam para estes três.</p>
       <div class="sugestoes-cla">${sugeridos.map((id) => cartao(id, true)).join('')}</div>
       <details class="todas-linhagens">
         <summary>Ver todas as linhagens</summary>
@@ -93,22 +96,55 @@ function htmlCena(c, e) {
   return '';
 }
 
-function htmlFim(ficha, ok) {
+// O fim da criação: o personagem grande, com o essencial em palavras. A ficha completa e a conversa
+// ficam dobradas embaixo; o envio fica à vista, com uma linha que diz o que acontece depois.
+function htmlFim(ficha, ok, e) {
+  const c = v5.cla(ficha.cla);
+  const pr = v5.predador(ficha.predador?.id);
+  const { fortes, fracos } = fortesEFracos(ficha);
+  const conv = (ficha.conviccoes || []).find((x) => x?.texto?.trim());
+  const pedra = conv ? pedraDeToque(conv) : '';
   return `
-    <div class="lembranca surgir">
+    <div class="lembranca surgir fim-abertura">
       <div class="texto-narracao">${narracao(`Você abre os olhos num quarto que não conhece. A sede de sangue, essa você já conhece bem.
 
 [O SANGUE] Pronto. Agora você é um de nós.`)}</div>
     </div>
-    <div class="surgir" style="animation-delay:500ms">
+    <div class="fim-dossie surgir" style="animation-delay:450ms">
+      <img class="fim-retrato" src="${retratoProvisorio(ficha.cla)}" alt="Retrato provisório, até o Narrador pintar o seu">
+      <div class="fim-texto">
+        <span class="grupo-rotulo">${c ? termoDe('cla', c.id, c.nome) : ''}${pr ? ` · ${termoDe('predador', pr.id, pr.nome)}` : ''}</span>
+        <h2 class="fim-nome">${esc(semPontoFinal(ficha.nome) || 'Sem nome')}</h2>
+        ${linhaEmVida(ficha)}
+        ${ficha.origem?.conceito ? `<p class="fim-conceito">${esc(ficha.origem.conceito)}</p>` : ''}
+        <div class="fim-colunas">
+          <div><h3>Seus pontos fortes</h3><ul class="lista-palavras compacta">${fortes.map(itemFortesFracos).join('')}</ul></div>
+          <div><h3>Seus pontos fracos</h3><ul class="lista-palavras compacta">${fracos.map(itemFortesFracos).join('')}</ul></div>
+        </div>
+        <div class="fim-frases">
+          ${conv ? `<p><b>${termoDe('geral', 'conviccao', 'Convicção')}.</b> ${esc(semPontoFinal(conv.texto))}${pedra ? `. <span class="nota">Quem ainda te prende à humanidade: ${esc(pedra)}.</span>` : ''}</p>` : ''}
+          ${ficha.ambicao ? `<p><b>${termoDe('geral', 'ambicao', 'Ambição')}.</b> ${esc(semPontoFinal(ficha.ambicao))}.</p>` : ''}
+          ${ficha.desejo ? `<p><b>${termoDe('geral', 'desejo', 'Desejo')}.</b> ${esc(semPontoFinal(ficha.desejo))}.</p>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="fim-envio surgir" style="animation-delay:800ms">
       ${ok ? '' : '<p class="nota">Faltou algum detalhe na ficha. Use "Ajustar detalhes" para completar.</p>'}
-      ${resumoFicha(ficha)}
+      <p class="fim-depois">Depois de enviar, o Narrador lê sua ficha, encaixa você na cidade e escreve o seu prelúdio. Costuma levar até 2 horas. Até ele começar, você ainda pode ajustar.</p>
       <div class="botoes final-conversa">
         <button type="button" class="btn-secundario" data-ajustar>Ajustar detalhes</button>
         <button type="button" class="btn" data-enviar-conversa ${ok ? '' : 'disabled'}>Enviar para o Narrador</button>
       </div>
-      <p class="nota centro"><button type="button" class="btn-texto" data-recomecar>Recomeçar a conversa</button></p>
-    </div>`;
+    </div>
+    <details class="fim-dobra">
+      <summary>Ver a ficha completa</summary>
+      ${resumoFicha(ficha, { semCabeca: true })}
+    </details>
+    <details class="fim-dobra">
+      <summary>Reler as lembranças</summary>
+      <div class="dialogo">${htmlLog(e)}</div>
+    </details>
+    <p class="nota centro"><button type="button" class="btn-texto" data-recomecar>Recomeçar a conversa</button></p>`;
 }
 
 export async function telaEntrevista(raiz, personagem) {
@@ -136,8 +172,8 @@ export async function telaEntrevista(raiz, personagem) {
           <div class="progresso" aria-hidden="true"><span style="width:${Math.round((e.passo / PERGUNTAS) * 100)}%"></span></div>
           <div class="dialogo-corpo">
             <div class="dialogo">
-              ${htmlLog(e)}
-              <div class="lembranca atual" id="cena-atual">${fim ? htmlFim(ficha, ok) : htmlCena(c, e)}</div>
+              ${fim ? '' : htmlLog(e)}
+              <div class="lembranca atual" id="cena-atual">${fim ? htmlFim(ficha, ok, e) : htmlCena(c, e)}</div>
             </div>
           </div>
         </section>
@@ -152,7 +188,8 @@ export async function telaEntrevista(raiz, personagem) {
       raiz.querySelector('.dialogo-criacao').appendChild(pe);
     }
     const corpo = raiz.querySelector('.dialogo-corpo');
-    if (e.log.length) requestAnimationFrame(() => { corpo.scrollTop = atual.offsetTop - 12; });
+    if (fim) corpo.scrollTop = 0;
+    else if (e.log.length) requestAnimationFrame(() => { corpo.scrollTop = atual.offsetTop - 12; });
     const primeiro = atual.querySelector('[data-campo-conversa]');
     if (primeiro) setTimeout(() => primeiro.focus({ preventScroll: true }), 600);
   }
@@ -189,7 +226,8 @@ export async function telaEntrevista(raiz, personagem) {
     if (c.tipo !== 'campos') return;
     for (const f of c.campos) {
       const el = raiz.querySelector(`[data-campo-conversa="${f.id}"]`);
-      const valor = el.value.trim();
+      // Nomes e respostas curtas sem o ponto final ("Ana." vira "Ana"); textos longos ficam como estão.
+      const valor = f.longo ? el.value.trim() : semPontoFinal(el.value);
       if (f.obrigatorio && !valor) { aviso('Escreva antes de continuar.'); el.focus(); return; }
       e.campos[f.id] = valor;
     }
@@ -215,8 +253,13 @@ export async function telaEntrevista(raiz, personagem) {
   };
   document.addEventListener('keydown', teclas);
 
-  on(raiz, 'click', '[data-recomecar]', () => {
-    if (!confirm('Recomeçar a conversa do zero?')) return;
+  on(raiz, 'click', '[data-recomecar]', async () => {
+    const r = await perguntar(raiz.querySelector('.tela-criacao') || raiz, {
+      rotulo: 'Recomeçar',
+      texto: '<p>Recomeçar a conversa do zero? As respostas de agora se perdem.</p>',
+      opcoes: ['Recomeçar do zero', 'Continuar com esta ficha'],
+    });
+    if (r !== 0) return;
     e = novoEstado();
     guardar(e);
     desenhar();
@@ -252,6 +295,12 @@ export async function telaEntrevista(raiz, personagem) {
 
   on(raiz, 'click', '[data-enviar-conversa]', async (_ev, el) => {
     if (ocupado) return;
+    const r = await perguntar(raiz.querySelector('.tela-criacao') || raiz, {
+      rotulo: 'Enviar a ficha',
+      texto: '<p>O Narrador vai ler sua ficha e escrever o seu prelúdio. Até ele começar, você ainda pode voltar e ajustar.</p>',
+      opcoes: ['Enviar ao Narrador', 'Revisar mais um pouco'],
+    });
+    if (r !== 0 || ocupado) return;
     ocupado = true;
     el.disabled = true;
     try {

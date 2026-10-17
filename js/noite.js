@@ -5,7 +5,7 @@ import * as banco from './banco.js';
 import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, aviso } from './ui.js';
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
-import { imagemDoCla, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
+import { retratoDe, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
 import { som, efeitos, definirTempo, definirSomDoLugar } from './ambiente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
@@ -98,7 +98,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   let alterado = false;
 
   // --- Interface sobre a cena ---------------------------------------------------------------
-  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(p.ficha?.cla);
+  const retrato = retratoDe(p);
   const fome = p.estado?.fome ?? 0;
   raiz.innerHTML = `
     <div class="tela-jogo">
@@ -709,7 +709,7 @@ export async function telaMapa(raiz, p) {
     try { vistos = todos.filter((d) => localStorage.getItem(`mascara.visto.${l.id}.${d.id}`) === '1').length; } catch { /* sem armazenamento */ }
     contagem[l.id] = { vistos, total: todos.length };
   }
-  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(p.ficha?.cla);
+  const retrato = retratoDe(p);
   montarMapa(raiz.querySelector('.palco'), {
     cla: p.ficha?.cla,
     atualId: posicao,
