@@ -60,7 +60,8 @@ function desenhoDoMapa() {
 const AREA = { x: 90, y: 50, w: 1790, h: 860 };
 
 // Brasas das descobertas dentro do rótulo do bairro (sem números; pedido do Bruno).
-const brasasSvg = (d) => (d?.total ? `<tspan class="mapa-brasas" dx="12" dy="-3">${Array.from({ length: d.total }, (_, i) => `<tspan class="brasa-svg${i < d.vistos ? ' acesa' : ''}" dx="${i ? 5 : 0}">●</tspan>`).join('')}</tspan>` : '');
+// Pedido do Bruno: as brasas ficam centralizadas logo acima do medalhão, como uma coroa pequena.
+const brasasSvg = (d) => (d?.total ? `<text class="mapa-brasas mapa-coroa" y="-36">${Array.from({ length: d.total }, (_, i) => `<tspan class="brasa-svg${i < d.vistos ? ' acesa' : ''}" dx="${i ? 5 : 0}">●</tspan>`).join('')}</text>` : '');
 
 // visitados: bairros já vistos (os outros ficam sob névoa); descobertas: { id: { vistos, total } };
 // retrato: aparece no "você está aqui". Clique ou toque num bairro viaja direto, com a rota animada;
@@ -86,8 +87,9 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 <circle class="medalhao-aro" r="28"/>
                 ${l.imagem ? `<image class="medalhao-pintura" href="${esc(l.imagem)}" x="-23" y="-23" width="46" height="46" clip-path="url(#recorte-medalhao)" preserveAspectRatio="xMidYMid slice"/>` : '<circle class="medalhao-vazio" r="23"/>'}
                 <circle class="medalhao-filete" r="23"/>
-                ${l.id === atual ? '<circle class="mapa-pulso" r="34"/><path class="mapa-gota" d="M0 -66 C6 -56 10 -51 10 -45 A10 10 0 0 1 -10 -45 C-10 -51 -6 -56 0 -66 Z"/>' : ''}
-                <text class="mapa-nome" y="50">${esc(l.nome)}${novo ? '' : brasasSvg(d)}</text>
+                ${l.id === atual ? '<circle class="mapa-pulso" r="34"/><path class="mapa-gota" d="M0 -84 C6 -74 10 -69 10 -63 A10 10 0 0 1 -10 -63 C-10 -69 -6 -74 0 -84 Z"/>' : ''}
+                ${novo ? '' : brasasSvg(d)}
+                <text class="mapa-nome" y="50">${esc(l.nome)}</text>
                 ${l.id === atual ? '<text class="mapa-aqui" y="70">você está aqui</text>' : ''}
                 <text class="mapa-descobertas" y="${l.id === atual ? 90 : 70}">${esc(frase)}${clima ? ` · ${esc(clima)}` : ''}</text>
               </g>`;

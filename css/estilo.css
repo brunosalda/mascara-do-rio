@@ -3019,3 +3019,4 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
   padding-left: max(1.3rem, calc((100% - 54rem) / 2)); padding-right: max(1.3rem, calc((100% - 54rem) / 2));
 }
 .dialogo-cena.dialogo-baixo .dialogo-corpo .texto-narracao, .dialogo-cena.dialogo-baixo .escolhas button { font-size: 1.2rem; }
+.mapa-coroa { text-anchor: middle; font-size: 15px; paint-order: stroke; stroke: rgba(240, 226, 192, 0.85); stroke-width: 4px; }

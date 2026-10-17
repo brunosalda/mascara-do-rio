@@ -11,7 +11,7 @@ import { TIPOS_GENTE, figuraGente } from './gente.js';
 import { geografia, dentro, maisPertoDentro } from './lugares.js';
 import { cerimoniasCurtas } from '../leitura.js';
 
-const ASPECTO = 1344 / 752;     // proporção das pinturas
+let ASPECTO = 1344 / 752;       // proporção da pintura (a vista do alto em 21:9 troca ao montar)
 const VEL_X = 0.18;             // larguras da pintura por segundo, no tamanho de referência
 const VEL_Y = 0.15;             // alturas da pintura por segundo
 const CORRIDA = 1.7;            // Shift ou clique duplo
@@ -77,6 +77,7 @@ export function montarCena(raiz, {
   nome = '', nevoa = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
 } = {}) {
   const geo = geografia(lugar);
+  ASPECTO = geo.aspecto || 1344 / 752;
   // Sem caminhada própria, não há personagem na cena: os pontos ficam todos à vista e um clique
   // neles abre a conversa direto (sem andar até lá).
   const semPersonagem = !sprite?.url;
