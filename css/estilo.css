@@ -3693,3 +3693,6 @@ body.celular .quadro-cabeca { min-height: 44px; }
 /* Nomes de pontos e pessoas numa linha só ("A garrafa" não quebra em pé). */
 .ponto-rotulo, .pessoa-nome { white-space: nowrap; }
 body.celular .ponto-rotulo { max-width: none; }
+/* Celular em pé: o pé da pintura se funde na faixa de pedra (degradê de 24 px) em vez de terminar em linha reta. */
+body.celular .cena.vista-alto .mundo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(28, 21, 15, 0), rgba(28, 21, 15, 0.95)); }
