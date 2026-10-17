@@ -139,15 +139,22 @@ export function gravarTecnica(v) {
 export async function telaFicha(raiz, p) {
   let tecnica = lerTecnica();
   const desenhar = () => {
+    // Dossiê: o retrato grande e o estado em frases à esquerda; o que o personagem sabe fazer,
+    // em palavras, à direita. Sem cartões.
+    const f = p.ficha || {};
+    const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(f.cla);
+    const local = p.estado?.local;
     raiz.innerHTML = `
-      <section>
-        <div class="linha-titulo">
-          <p class="sobretitulo">Ficha</p>
-          <label class="interruptor"><input type="checkbox" id="tecnica" ${tecnica ? 'checked' : ''}> Ficha técnica</label>
-        </div>
-        ${cabecalhoPersonagem(p)}
-        ${painelEstado(p.estado, { tecnica })}
-        ${resumoFicha(p.ficha, { tecnica, semCabeca: true })}
+      <section class="dossie">
+        <aside class="dossie-lado">
+          <img class="dossie-retrato" src="${esc(retrato)}" alt="Retrato de ${esc(p.nome)}">
+          <span class="grupo-rotulo">${esc(v5.cla(f.cla)?.nome || '')}${local ? ` · ${esc(localDe(local)?.nome || local)}` : ''}</span>
+          <h1 class="nome-personagem">${esc(p.nome || 'Sem nome')}</h1>
+          ${f.origem?.conceito ? `<p class="dossie-conceito">${esc(f.origem.conceito)}</p>` : ''}
+          ${painelEstado(p.estado, { tecnica })}
+          <label class="interruptor"><input type="checkbox" id="tecnica" ${tecnica ? 'checked' : ''}> Ficha técnica (com pontos)</label>
+        </aside>
+        <div class="dossie-texto">${resumoFicha(p.ficha, { tecnica, semCabeca: true })}</div>
       </section>`;
     raiz.querySelector('#tecnica').onchange = (e) => { tecnica = e.target.checked; gravarTecnica(tecnica); desenhar(); };
   };

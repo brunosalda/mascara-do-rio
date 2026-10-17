@@ -6,13 +6,13 @@ import { esc, escolhas, narracao, narracaoComPaineis, dataLonga, dataCurta, avis
 import { telaFicha } from './ficha.js';
 import { telaDiario } from './diario.js';
 import { imagemDoCla, imagemDoLocal, localDe, LOCAIS, CENARIO_ABERTURA } from './cidade.js';
-import { som, efeitos } from './ambiente.js';
+import { som, efeitos, definirTempo, definirSomDoLugar } from './ambiente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
-import { descobertas } from './jogo/detalhes.js';
+import { descobertas, todasDescobertas } from './jogo/detalhes.js';
 
 const MAX_MARCADORES = 5; // à vista ao entrar; o resto aparece de perto ou com Tab
 const comentadosNaSessao = new Set(); // reserva, se o aparelho não guardar nada
@@ -70,7 +70,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   // Geografia da pintura (chão, âncoras, objetos, luzes) e o que dá para descobrir no lugar.
   const lugarId = emOutroLugar ? visitado.id : (localAtual?.id || null);
   const geo = geografia(lugarId);
-  const achados = descobertas(lugarId);
+  const achados = descobertas(lugarId, noite?.numero || 0);
+  // Cada noite tem um tempo (garoa, tempestade, lua, névoa), sorteado pelo número dela: o mesmo para
+  // todos os jogadores, diferente de uma noite para outra.
+  const tempo = tempoDaNoite(noite?.numero || 0);
+  definirTempo(tempo);
+  definirSomDoLugar(lugarId);
+  if (lugarId) marcarVisitado(lugarId);
   const chaveVisto = (id) => `mascara.visto.${lugarId}.${id}`;
   const visto = (id) => { try { return localStorage.getItem(chaveVisto(id)) === '1'; } catch { return false; } };
 
@@ -423,6 +429,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     pontos: montarPontos(),
     comentarios: achados.comentarios,
     comentar: podeComentar,
+    tempo,
     aoInteragir: (pt) => {
       if (pt.tipo === 'historia') abrirHistoria(false);
       else if (pt.tipo === 'acao') abrirOpcao(pt);
@@ -462,6 +469,22 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   }
 }
 
+const TEMPOS = ['garoa', 'lua', 'tempestade', 'nevoa'];
+export function tempoDaNoite(n) {
+  return TEMPOS[(Math.imul(n + 7, 2654435761) >>> 0) % TEMPOS.length];
+}
+
+// Bairros já visitados neste aparelho (o mapa mostra névoa nos outros).
+export function visitados() {
+  try { return new Set(JSON.parse(localStorage.getItem('mascara.visitados')) || []); } catch { return new Set(); }
+}
+function marcarVisitado(id) {
+  const v = visitados();
+  if (v.has(id)) return;
+  v.add(id);
+  try { localStorage.setItem('mascara.visitados', JSON.stringify([...v])); } catch { /* sem armazenamento */ }
+}
+
 // Recado "Você chega a…": ligado por padrão; o jogador desliga no próprio recado e religa em Opções.
 const CHAVE_RECADO = 'mascara.semRecadoChegada';
 function recadoDeChegada(ligar) {
@@ -480,15 +503,27 @@ export async function telaMapa(raiz, p) {
     <div class="tela-jogo tela-mapa">
       <div class="palco"></div>
       <header class="hud-topo">
-        <div class="hud-noite"><b>Mapa do Rio</b><small>Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique num bairro</small></div>
+        <div class="hud-noite"><b>Mapa do Rio</b><small><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou </span>clique num bairro para viajar</small></div>
         <nav class="hud-botoes"><button type="button" data-voltar>Voltar à cena <kbd>M</kbd></button></nav>
       </header>
       <footer class="hud-dicas"><kbd>E</kbd> entrar no bairro · <kbd>M</kbd> ou <kbd>Esc</kbd> volta · visitar outro bairro deixa você planejar o que fazer lá</footer>
     </div>`;
   raiz.querySelector('[data-voltar]').onclick = () => ir('noite');
+  // Quanto já foi descoberto em cada bairro (detalhes examinados neste aparelho).
+  const contagem = {};
+  for (const l of LOCAIS) {
+    const todos = todasDescobertas(l.id);
+    let vistos = 0;
+    try { vistos = todos.filter((d) => localStorage.getItem(`mascara.visto.${l.id}.${d.id}`) === '1').length; } catch { /* sem armazenamento */ }
+    contagem[l.id] = { vistos, total: todos.length };
+  }
+  const retrato = typeof p.retrato === 'string' && /^https:\/\//.test(p.retrato) ? p.retrato : imagemDoCla(p.ficha?.cla);
   montarMapa(raiz.querySelector('.palco'), {
     cla: p.ficha?.cla,
     atualId: posicao,
+    visitados: visitados(),
+    descobertas: contagem,
+    retrato,
     aoEntrar: (id) => {
       gravarPosicao(p, noite, id);
       try { sessionStorage.setItem('mascara.chegou', id); } catch { /* sem armazenamento */ }

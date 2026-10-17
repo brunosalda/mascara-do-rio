@@ -62,7 +62,7 @@ function htmlDepuracao(geo) {
 
 export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
-  aoInteragir, aoTecla, comentarios = [], comentar,
+  aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
 } = {}) {
   const geo = geografia(lugar);
   const depurar = /[?&](editar|depurar)\b/.test(location.hash);
@@ -72,6 +72,7 @@ export function montarCena(raiz, {
       <div class="mundo">
         <div class="pintura" style="background-image:url('${fundoUrl}')"></div>
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
+        <div class="nevoa-cena" aria-hidden="true"></div>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
         ${sprite?.url && geo.vida?.passantes?.length ? `<span class="passante" style="background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}" hidden></span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
@@ -153,6 +154,8 @@ export function montarCena(raiz, {
   // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
   const efeitosLigados = () => !document.body.classList.contains('sem-efeitos');
   const sorteio = (min, max) => min + Math.random() * (max - min);
+  // O clima da noite muda quanta gente passa: noite seca com lua tem mais gente; tempestade, quase ninguém.
+  const INTERVALO_PASSANTE = { lua: [6000, 14000], garoa: [10000, 25000], nevoa: [14000, 30000], tempestade: [25000, 45000] }[tempo] || [10000, 25000];
   const vida = { proximoPassante: performance.now() + sorteio(3000, 7000), passante: null, proximaFalha: performance.now() + sorteio(2500, 6000), falhando: -1, falhaAte: 0, proximoFarol: performance.now() + sorteio(5000, 10000) };
   const feitosAntes = new Set();
 
@@ -325,7 +328,7 @@ export function montarCena(raiz, {
         if (p.x < p.f.x0 - 0.02 || p.x > p.f.x1 + 0.02 || !ligado) {
           vida.passante = null;
           passante.hidden = true;
-          vida.proximoPassante = agora + sorteio(10000, 25000);
+          vida.proximoPassante = agora + sorteio(...INTERVALO_PASSANTE);
         }
       }
     }
@@ -427,12 +430,47 @@ export function montarCena(raiz, {
       seta.hidden = !grupo.length || conversa;
       seta.querySelector('b').textContent = grupo.length;
     }
+    separarRotulos(agora);
     // No toque, a dica fica logo abaixo do ponto mais perto.
     if (toque && perto) {
       dica.style.left = `${(cam.x + perto.x * mw * cam.z).toFixed(0)}px`;
       dica.style.top = `${(cam.y + perto.y * mh * cam.z + 10).toFixed(0)}px`;
     }
   }
+  // Rótulos que se cruzam na tela: o do ponto mais distante do personagem fica só com o ícone (o texto
+  // volta com o ponto perto, com o mouse em cima ou com "mostrar tudo", aí empilhado para cima).
+  function separarRotulos(agora) {
+    const tudo = agora < mostrarTudoAte;
+    const itens = [];
+    for (const el of camadaPontos.children) {
+      const p = lista.find((x) => x.id === el.dataset.ponto);
+      if (!p || (p.discreto && !visivel(p, agora))) { el.classList.remove('sem-rotulo'); continue; }
+      el.style.removeProperty('--empilhar');
+      itens.push({ el, p, d: el === camadaPontos.querySelector('.perto') ? -1 : dist(p.x, p.y, pos.x, pos.y) });
+    }
+    itens.sort((a, b) => a.d - b.d);
+    const ocupados = [];
+    const cruza = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 6 && b.top < a.bottom + 6;
+    for (const it of itens) {
+      const rotulo = it.el.querySelector('.ponto-rotulo');
+      if (!rotulo) continue;
+      let r = rotulo.getBoundingClientRect();
+      let bate = ocupados.some((o) => cruza(r, o));
+      if (bate && tudo) {
+        // Empilha para cima até achar espaço.
+        let sobe = 0;
+        while (bate && sobe < 200) {
+          sobe += r.height + 6;
+          const r2 = { left: r.left, right: r.right, top: r.top - sobe, bottom: r.bottom - sobe };
+          bate = ocupados.some((o) => cruza(r2, o));
+          if (!bate) { it.el.style.setProperty('--empilhar', `${-sobe}px`); r = r2; }
+        }
+      }
+      it.el.classList.toggle('sem-rotulo', bate && !tudo);
+      if (!bate || tudo) ocupados.push(r);
+    }
+  }
+
   function irParaFora(grupo) {
     const p = grupo.reduce((a, b) => (dist(a.x, a.y, pos.x, pos.y) < dist(b.x, b.y, pos.x, pos.y) ? a : b));
     const [x, y] = maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
@@ -658,6 +696,7 @@ export function montarCena(raiz, {
       if (aberta && !conversa) ladoDialogo = ladoLivre();
       conversa = aberta;
       document.body.classList.toggle('em-conversa', aberta);
+      som.abafar?.(aberta);
       if (aberta) { balao.hidden = true; falaAte = 0; }
     },
   });

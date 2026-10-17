@@ -19,13 +19,18 @@ export const POSICOES = {
 
 function desenhoDoMapa() {
   return `
-    <defs><radialGradient id="brilho-lugar"><stop offset="0" stop-color="#ffb070" stop-opacity="0.6"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient></defs>
+    <defs>
+      <radialGradient id="nevoa-lugar"><stop offset="0" stop-color="#c9d3db" stop-opacity="0.55"/><stop offset="1" stop-color="#c9d3db" stop-opacity="0"/></radialGradient>
+      <clipPath id="recorte-retrato"><circle r="28"/></clipPath>
+      <radialGradient id="brilho-lugar"><stop offset="0" stop-color="#ffb070" stop-opacity="0.6"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient></defs>
     <image href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice"/>
     <rect width="${LARGURA}" height="${ALTURA}" fill="rgba(5, 8, 10, 0.18)"/>
     <text class="mapa-agua" x="1610" y="470">Baía de Guanabara</text>
     <text class="mapa-agua" x="720" y="1030">Oceano Atlântico</text>`;
 }
-export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla } = {}) {
+// visitados: bairros já vistos (os outros ficam sob névoa); descobertas: { id: { vistos, total } };
+// retrato: aparece no "você está aqui". Clique ou toque num bairro viaja direto, com a rota animada.
+export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, aoTecla, visitados = null, descobertas = {}, retrato = '' } = {}) {
   const atual = atualId || localDe(localAtual)?.id;
   const inicio = POSICOES[atual] || POSICOES.lapa;
   raiz.innerHTML = `
@@ -35,16 +40,22 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
         <g class="mapa-lugares">
           ${LOCAIS.map((l) => {
             const [x, y] = POSICOES[l.id] || [0, 0];
+            const novo = visitados && !visitados.has(l.id) && l.id !== atual;
+            const d = descobertas[l.id];
             return `
-              <g class="mapa-lugar ${l.id === atual ? 'atual' : ''}" data-lugar="${l.id}" transform="translate(${x} ${y})">
+              <g class="mapa-lugar ${l.id === atual ? 'atual' : ''} ${novo ? 'nao-visitado' : ''}" data-lugar="${l.id}" transform="translate(${x} ${y})">
+                ${novo ? '<circle class="mapa-nevoa" r="70" fill="url(#nevoa-lugar)"/>' : ''}
                 <circle class="mapa-brilho" r="60" fill="url(#brilho-lugar)"/>
-                <circle class="mapa-ponto" r="9"/>
-                ${l.id === atual ? '<circle class="mapa-voce" r="18"/>' : ''}
-                <text class="mapa-nome" y="-20">${esc(l.nome)}</text>
-                ${l.id === atual ? '<text class="mapa-aqui" y="34">você está aqui</text>' : ''}
+                ${l.id === atual && retrato
+                  ? `<circle class="mapa-voce" r="34"/><image class="mapa-retrato" href="${esc(retrato)}" x="-28" y="-28" width="56" height="56" clip-path="url(#recorte-retrato)" preserveAspectRatio="xMidYMid slice"/>`
+                  : `<circle class="mapa-ponto" r="9"/>${l.id === atual ? '<circle class="mapa-voce" r="18"/>' : ''}`}
+                <text class="mapa-nome" y="${l.id === atual && retrato ? -42 : -20}">${esc(l.nome)}</text>
+                ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 52 : 34}">você está aqui</text>` : ''}
+                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 74 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `detalhes descobertos: ${d.vistos} de ${d.total}` : ''}</text>
               </g>`;
           }).join('')}
         </g>
+        <path class="mapa-rota" d="" hidden/>
         <g class="mapa-vampiro" style="--cor-cla:${COR_CLA[cla] || '#e2703e'}">
           <ellipse rx="14" ry="5" cy="14" class="sombra"/>
           <circle r="11" class="cabeca-mapa"/>
@@ -74,15 +85,45 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     return menor <= ALCANCE ? melhor : null;
   }
 
+  let viajando = false;
   function entrar(id) {
-    if (!id || camadaAberta()) return;
+    if (!id || camadaAberta() || viajando) return;
     som.toque();
     aoEntrar?.(id);
+  }
+
+  // Viagem direta: uma linha tracejada sai do bairro atual até o destino (600 ms) e a cena abre.
+  const rota = raiz.querySelector('.mapa-rota');
+  function viajar(id) {
+    if (viajando || camadaAberta()) return;
+    const de = POSICOES[atual] || [pos.x, pos.y];
+    const ate = POSICOES[id];
+    if (!ate || id === atual) { entrar(id); return; }
+    viajando = true;
+    const mx = (de[0] + ate[0]) / 2;
+    const my = Math.min(de[1], ate[1]) - Math.hypot(ate[0] - de[0], ate[1] - de[1]) * 0.25;
+    rota.setAttribute('d', `M${de[0]},${de[1]} Q${mx},${my} ${ate[0]},${ate[1]}`);
+    rota.hidden = false;
+    const comprimento = rota.getTotalLength();
+    rota.style.strokeDasharray = `14 10`;
+    rota.animate([{ strokeDashoffset: comprimento, opacity: 0.2, clipPath: 'inset(0 100% 0 0)' }, { strokeDashoffset: 0, opacity: 1, clipPath: 'inset(0 0 0 0)' }], { duration: 600, easing: 'ease-in-out', fill: 'forwards' });
+    let t0 = null;
+    const passo = (agora) => {
+      t0 ??= agora;
+      const k = Math.min(1, (agora - t0) / 600);
+      const p = rota.getPointAtLength(comprimento * k);
+      vampiro.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
+      pos.x = p.x; pos.y = p.y;
+      if (k < 1) requestAnimationFrame(passo);
+      else { viajando = false; entrar(id); }
+    };
+    requestAnimationFrame(passo);
   }
 
   function quadro(agora) {
     if (!vivo) return;
     if (!raiz.isConnected) { desmontar(); return; }
+    if (viajando) { ultimo = agora; requestAnimationFrame(quadro); return; }
     const dt = Math.min(0.12, (agora - ultimo) / 1000);
     ultimo = agora;
     let dx = 0;
@@ -129,9 +170,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
     pt.y = ev.clientY;
     const p = pt.matrixTransform(svg.getScreenCTM().inverse());
     if (g) {
-      const [x, y] = POSICOES[g.dataset.lugar];
-      if (g.dataset.lugar === perto) entrar(perto);
-      else alvo = { x, y, lugar: g.dataset.lugar };
+      viajar(g.dataset.lugar);
     } else {
       alvo = { x: p.x, y: p.y };
     }

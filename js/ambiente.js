@@ -18,6 +18,15 @@ export const efeitos = {
 
 let clima = { tela: 'login', fome: null };
 
+// Tempo da noite (garoa, tempestade, lua, névoa): muda a chuva, os relâmpagos e, pelo CSS, a pintura.
+let tempo = null;
+const CHUVA = { garoa: 0.7, tempestade: 1.6, lua: 0, nevoa: 0.12 };
+const fatorChuva = () => (tempo == null ? 1 : (CHUVA[tempo] ?? 1));
+export function definirTempo(t) {
+  tempo = t || null;
+  document.body.dataset.tempo = tempo || '';
+}
+
 // --- Chuva -------------------------------------------------------------------------------
 
 function iniciarChuva() {
@@ -36,7 +45,8 @@ function iniciarChuva() {
     canvas.height = altura * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const qtd = Math.round(Math.min(240, (largura * altura) / 6000));
-    gotas = Array.from({ length: qtd }, () => novaGota(true));
+    gotas = Array.from({ length: Math.round(qtd * 1.6) }, () => novaGota(true)); // até 1,6x na tempestade
+    gotas.base = qtd;
   }
 
   function novaGota(qualquerAltura) {
@@ -54,7 +64,9 @@ function iniciarChuva() {
     if (document.hidden || !efeitos.ligados()) { ctx.clearRect(0, 0, largura, altura); requestAnimationFrame(quadro); return; }
     ctx.clearRect(0, 0, largura, altura);
     ctx.lineCap = 'round';
-    for (const g of gotas) {
+    const visiveis = Math.round((gotas.base || gotas.length) * fatorChuva());
+    for (let i = 0; i < visiveis && i < gotas.length; i++) {
+      const g = gotas[i];
       ctx.strokeStyle = `rgba(190, 210, 220, ${g.a})`;
       ctx.lineWidth = g.a > 0.2 ? 1.4 : 1;
       ctx.beginPath();
@@ -78,9 +90,9 @@ function iniciarChuva() {
 function iniciarRelampagos() {
   const flash = document.getElementById('relampago');
   if (!flash) return;
-  const proximo = () => setTimeout(raio, 9000 + Math.random() * 22000);
+  const proximo = () => setTimeout(raio, tempo === 'tempestade' ? 4000 + Math.random() * 9000 : 9000 + Math.random() * 22000);
   function raio() {
-    if (!document.hidden && efeitos.ligados()) {
+    if (!document.hidden && efeitos.ligados() && tempo !== 'lua' && tempo !== 'nevoa') {
       flash.classList.remove('ativo');
       document.body.classList.remove('clarao');
       void flash.offsetWidth; // reinicia a animação
@@ -224,6 +236,12 @@ export const som = {
       audio.mestre.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.3);
     }
     reagendarBatimento();
+    montarCamadaDoLugar();
+  },
+  // Durante a conversa, o som do lugar fica mais baixo.
+  abafar(sim) {
+    abafado = !!sim;
+    if (camada && audio) camada.g.gain.setTargetAtTime(abafado ? 0.25 : 1, audio.ctx.currentTime, 0.35);
   },
   trovao(intensidade = 1) {
     if (!audio || !this.ligado()) return;
@@ -298,6 +316,162 @@ export const som = {
   },
 };
 
+// --- Som de cada lugar -------------------------------------------------------------------------
+// Uma "cama" sonora sintetizada por bairro, por cima da chuva e da cidade ao longe.
+
+const SOM_DO_LUGAR = {
+  lapa: ['burburinho', 'musica'],
+  baixada: ['burburinho', 'musica', 'cachorro'],
+  'zona-norte': ['burburinho', 'bateria'],
+  morro: ['cachorro', 'baixo'],
+  cemiterio: ['grilos', 'vento'],
+  porto: ['ondas', 'sino'],
+  'zona-sul': ['ondas'],
+  barra: ['ondas', 'vento'],
+  niteroi: ['ondas', 'sino'],
+  centro: ['vento', 'bonde'],
+  'santa-teresa': ['grilos', 'bonde'],
+};
+let lugarDoSom = null;
+let camada = null;
+let abafado = false;
+let trocaDeLugar = null;
+
+function laco(ctx, tipo, segundos = 4) {
+  const f = ctx.createBufferSource();
+  f.buffer = ruido(ctx, segundos, tipo);
+  f.loop = true;
+  return f;
+}
+
+// Batida curta num destino qualquer (grave, surdo, baixo).
+function batida(dest, quando, freq, volume, dur = 0.25) {
+  const o = audio.ctx.createOscillator();
+  const g = audio.ctx.createGain();
+  o.frequency.setValueAtTime(freq, quando);
+  o.frequency.exponentialRampToValueAtTime(freq * 0.55, quando + dur * 0.8);
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  o.connect(g).connect(dest);
+  o.start(quando);
+  o.stop(quando + dur + 0.05);
+}
+
+function rajada(dest, quando, freq, q, volume, dur) {
+  const f = audio.ctx.createBufferSource();
+  f.buffer = ruido(audio.ctx, dur + 0.05, 'branco');
+  const filtro = audio.ctx.createBiquadFilter();
+  filtro.type = 'bandpass';
+  filtro.frequency.value = freq;
+  filtro.Q.value = q;
+  const g = audio.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + dur * 0.2);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  f.connect(filtro).connect(g).connect(dest);
+  f.start(quando);
+  f.stop(quando + dur + 0.05);
+}
+
+function fundoContinuo(c, { tipo, filtroTipo, freq, q = 0.7, volume, lfo = 0, lfoForca = 0 }) {
+  const ctx = audio.ctx;
+  const fonte = laco(ctx, tipo, 4);
+  const filtro = ctx.createBiquadFilter();
+  filtro.type = filtroTipo;
+  filtro.frequency.value = freq;
+  filtro.Q.value = q;
+  const g = ctx.createGain();
+  g.gain.value = volume;
+  fonte.connect(filtro).connect(g).connect(c.g);
+  if (lfo) {
+    const o = ctx.createOscillator();
+    o.frequency.value = lfo;
+    const og = ctx.createGain();
+    og.gain.value = lfoForca;
+    o.connect(og).connect(g.gain);
+    o.start();
+    c.fontes.push(o);
+  }
+  fonte.start();
+  c.fontes.push(fonte);
+}
+
+function repetir(c, minimo, maximo, fn) {
+  const agenda = () => {
+    c.timers.push(setTimeout(() => { if (camada === c) { fn(audio.ctx.currentTime + 0.02); agenda(); } }, minimo + Math.random() * (maximo - minimo)));
+  };
+  agenda();
+}
+
+const CAMADAS = {
+  ondas: (c) => fundoContinuo(c, { tipo: 'marrom', filtroTipo: 'lowpass', freq: 650, volume: 0.22, lfo: 0.09, lfoForca: 0.16 }),
+  vento: (c) => fundoContinuo(c, { tipo: 'marrom', filtroTipo: 'bandpass', freq: 320, q: 0.5, volume: 0.12, lfo: 0.05, lfoForca: 0.08 }),
+  burburinho: (c) => fundoContinuo(c, { tipo: 'branco', filtroTipo: 'bandpass', freq: 480, q: 0.9, volume: 0.035, lfo: 0.3, lfoForca: 0.012 }),
+  musica: (c) => repetir(c, 520, 560, (t) => batida(c.g, t, 58, 0.05, 0.3)),
+  baixo: (c) => repetir(c, 440, 500, (t) => batida(c.g, t, 46, 0.045, 0.35)),
+  bateria: (c) => {
+    repetir(c, 980, 1020, (t) => batida(c.g, t, 62, 0.07, 0.45));
+    repetir(c, 240, 260, (t) => rajada(c.g, t, 3200, 1.5, 0.01, 0.05));
+  },
+  cachorro: (c) => repetir(c, 8000, 20000, (t) => { rajada(c.g, t, 650, 3, 0.05, 0.13); rajada(c.g, t + 0.28, 600, 3, 0.04, 0.12); }),
+  grilos: (c) => repetir(c, 900, 1600, (t) => { for (let i = 0; i < 3; i++) batida(c.g, t + i * 0.05, 4600, 0.008, 0.03); }),
+  sino: (c) => repetir(c, 20000, 40000, (t) => {
+    for (const [f, v] of [[520, 0.05], [1040, 0.02], [1560, 0.008]]) {
+      const o = audio.ctx.createOscillator();
+      const g = audio.ctx.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
+      o.connect(g).connect(c.g);
+      o.start(t);
+      o.stop(t + 3.3);
+    }
+  }),
+  bonde: (c) => repetir(c, 25000, 50000, (t) => {
+    const o = audio.ctx.createOscillator();
+    const g = audio.ctx.createGain();
+    o.frequency.setValueAtTime(2300, t);
+    o.frequency.exponentialRampToValueAtTime(1700, t + 1.2);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.012, t + 0.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    o.connect(g).connect(c.g);
+    o.start(t);
+    o.stop(t + 1.4);
+    rajada(c.g, t, 120, 0.5, 0.08, 2.2);
+  }),
+};
+
+function desmontarCamada() {
+  if (!camada) return;
+  const velha = camada;
+  camada = null;
+  velha.timers.forEach(clearTimeout);
+  if (audio) velha.g.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.3);
+  setTimeout(() => { velha.fontes.forEach((f) => { try { f.stop(); } catch { /* já parou */ } }); velha.g.disconnect(); }, 1200);
+}
+
+function montarCamadaDoLugar() {
+  desmontarCamada();
+  if (!audio || !som.ligado() || !SOM_DO_LUGAR[lugarDoSom]) return;
+  const g = audio.ctx.createGain();
+  g.gain.value = 0;
+  g.connect(audio.mestre);
+  g.gain.setTargetAtTime(abafado ? 0.25 : 1, audio.ctx.currentTime, 0.5);
+  camada = { g, fontes: [], timers: [], lugar: lugarDoSom };
+  for (const t of SOM_DO_LUGAR[lugarDoSom]) CAMADAS[t]?.(camada);
+}
+
+// Troca o som do lugar (null: nenhum). Espera um instante, para uma tela que se redesenha no mesmo
+// lugar não reiniciar o som.
+export function definirSomDoLugar(id) {
+  lugarDoSom = id || null;
+  clearTimeout(trocaDeLugar);
+  trocaDeLugar = setTimeout(() => { if (camada?.lugar !== lugarDoSom) montarCamadaDoLugar(); }, 120);
+}
+
 // --- API ------------------------------------------------------------------------------------
 
 export function definirClima(novo) {
@@ -318,6 +492,7 @@ export function iniciarAmbiente() {
         audio.ctx.resume();
         audio.mestre.gain.setTargetAtTime(0.9, audio.ctx.currentTime, 0.6);
         reagendarBatimento();
+        montarCamadaDoLugar();
       }
       window.removeEventListener('pointerdown', retomar);
       window.removeEventListener('keydown', retomar);

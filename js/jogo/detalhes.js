@@ -166,6 +166,172 @@ export const DESCOBERTAS = {
   },
 };
 
-export function descobertas(id) {
-  return DESCOBERTAS[id] || { detalhes: [], comentarios: [] };
+// Mais descobertas por lugar: cada noite mostra só uma parte delas (escolhidas pelo número da noite),
+// para a cena não ser igual em todas as noites.
+const MAIS = {
+  lapa: {
+    detalhes: [
+      { id: 'selaron', x: 0.04, y: 0.8, rotulo: 'Azulejos no chão', voz: 'ACADÊMICOS',
+        texto: 'Cacos de azulejo colorido grudados num degrau. Vieram da Escadaria Selarón, aqui do lado, que um artista chileno cobriu de azulejos durante vinte anos.' },
+      { id: 'garrafa', x: 0.66, y: 0.7, rotulo: 'A garrafa', voz: 'PRONTIDÃO',
+        texto: 'Uma garrafa quebrada no meio-fio, com o gargalo ainda inteiro. Alguém saiu daqui com pressa, ou com raiva.' },
+    ],
+    comentarios: [
+      { id: 'samba', x: 0.5, y: 0.75, raio: 0.1, voz: 'PERFORMANCE', texto: 'Um samba sai de algum bar. O cavaquinho está meio tom abaixo, e ninguém liga.' },
+      { id: 'policia', x: 0.66, y: 0.68, raio: 0.08, voz: 'PRONTIDÃO', texto: 'Viatura parada na esquina, motor ligado. Melhor não olhar demais.' },
+    ],
+  },
+  'santa-teresa': {
+    detalhes: [
+      { id: 'escadinha', x: 0.05, y: 0.82, rotulo: 'A escadinha', voz: 'ATLETISMO',
+        texto: 'Degraus de pedra gastos, subindo entre as casas. Atalho de morador, íngreme e escuro. Dá para sumir por aqui em segundos.' },
+      { id: 'grade', x: 0.5, y: 0.76, rotulo: 'O portão de ferro', voz: 'INVESTIGAÇÃO',
+        texto: 'Um portão de ferro trabalhado, com cadeado novo num casarão velho. Alguém ainda tem algo a guardar aí dentro.' },
+    ],
+    comentarios: [
+      { id: 'cachorro', x: 0.45, y: 0.8, raio: 0.1, voz: 'A FOME', texto: 'Um cachorro late num quintal. Os animais sempre sabem.' },
+      { id: 'atelie', x: 0.12, y: 0.82, raio: 0.08, voz: 'INTUIÇÃO', texto: 'Luz acesa num ateliê. Artista trabalha de madrugada. Ninguém estranha quem anda acordado aqui.' },
+    ],
+  },
+  centro: {
+    detalhes: [
+      { id: 'cartaz', x: 0.75, y: 0.7, rotulo: 'O cartaz', voz: 'POLÍTICA',
+        texto: 'Um cartaz de protesto colado no poste, já meio rasgado: "O Centro é do povo". Embaixo, outro, de um show de pagode.' },
+      { id: 'pombos', x: 0.45, y: 0.78, rotulo: 'Os pombos', voz: 'SOBREVIVÊNCIA',
+        texto: 'Os pombos dormem nas cornijas do teatro. Nenhum se mexe quando você passa. Bicho dormindo não sente perigo.' },
+    ],
+    comentarios: [
+      { id: 'vazio', x: 0.6, y: 0.75, raio: 0.1, voz: 'INTUIÇÃO', texto: 'De madrugada, o Centro parece abandonado. Por isso mesmo, quem está acordado aqui está procurando alguma coisa.' },
+      { id: 'janela', x: 0.2, y: 0.78, raio: 0.08, voz: 'PRONTIDÃO', texto: 'O bonde parado está com uma janela aberta. Dentro, ninguém. Ou ninguém à vista.' },
+    ],
+  },
+  'zona-sul': {
+    detalhes: [
+      { id: 'quiosque', x: 0.06, y: 0.64, rotulo: 'O quiosque', voz: 'MANHA',
+        texto: 'O quiosque fecha tarde e abre cedo. O dono vê tudo o que passa no calçadão e só conta para quem paga a conta.' },
+      { id: 'pegadas', x: 0.78, y: 0.82, rotulo: 'Pegadas na areia', voz: 'INVESTIGAÇÃO',
+        texto: 'Pegadas descalças indo para o mar. Nenhuma voltando. Deve ter sido a maré. Deve.' },
+    ],
+    comentarios: [
+      { id: 'corredor', x: 0.45, y: 0.62, raio: 0.09, voz: 'ATLETISMO', texto: 'Um corredor passa de fone, sem olhar para os lados. Fácil. Fácil demais.' },
+      { id: 'predios', x: 0.85, y: 0.82, raio: 0.09, voz: 'INTUIÇÃO', texto: 'As luzes dos prédios apagam uma a uma. A orla fica para quem não dorme.' },
+    ],
+  },
+  barra: {
+    detalhes: [
+      { id: 'palmeira', x: 0.06, y: 0.77, rotulo: 'As palmeiras', voz: 'ACADÊMICOS',
+        texto: 'Palmeiras plantadas em fila, todas da mesma idade. A Barra foi desenhada em prancheta nos anos 1970: tudo aqui é novo e reto.' },
+      { id: 'carro', x: 0.4, y: 0.72, rotulo: 'O carro parado', voz: 'CONDUÇÃO',
+        texto: 'Um carro importado parado no acostamento, pisca-alerta ligado, ninguém dentro. Chave na ignição.' },
+    ],
+    comentarios: [
+      { id: 'vento', x: 0.45, y: 0.85, raio: 0.1, voz: 'SOBREVIVÊNCIA', texto: 'O vento vem da lagoa com cheiro de mangue. Nenhum cheiro de gente por perto.' },
+      { id: 'condo', x: 0.12, y: 0.73, raio: 0.08, voz: 'FINANÇAS', texto: 'Cada apartamento desses vale uma vida inteira de quem passa a pé por aqui.' },
+    ],
+  },
+  'zona-norte': {
+    detalhes: [
+      { id: 'bandeira', x: 0.62, y: 0.65, rotulo: 'As cores da escola', voz: 'PERFORMANCE',
+        texto: 'Azul e branco pintados na parede da quadra. A comunidade inteira veste essas cores em fevereiro, até quem jura que não gosta de samba.' },
+      { id: 'trem', x: 0.47, y: 0.68, rotulo: 'O trem no viaduto', voz: 'PRONTIDÃO',
+        texto: 'O trem passa no viaduto e o chão treme. Por alguns segundos, ninguém escuta nada aqui embaixo.' },
+    ],
+    comentarios: [
+      { id: 'tamborim', x: 0.58, y: 0.66, raio: 0.08, voz: 'PERFORMANCE', texto: 'O tamborim errou a entrada. O mestre de bateria vai cobrar.' },
+      { id: 'vendedor', x: 0.84, y: 0.76, raio: 0.08, voz: 'INTUIÇÃO', texto: 'O vendedor de frutas guarda o dinheiro na meia. Já foi assaltado antes.' },
+    ],
+  },
+  morro: {
+    detalhes: [
+      { id: 'grafite', x: 0.3, y: 0.62, rotulo: 'O muro pintado', voz: 'MANHA',
+        texto: 'Um nome pintado no muro, com data e uma cruz. Homenagem a alguém da comunidade. Aqui todo mundo sabe quem foi.' },
+      { id: 'radio', x: 0.37, y: 0.82, rotulo: 'O rádio', voz: 'PERFORMANCE',
+        texto: 'Um rádio toca funk baixinho numa laje. O grave atravessa as paredes de tijolo e chega até a escada.' },
+    ],
+    comentarios: [
+      { id: 'olheiro', x: 0.3, y: 0.7, raio: 0.06, voz: 'PRONTIDÃO', texto: 'Um assobio lá em cima, e outro responde. Já sabem que você está subindo.' },
+      { id: 'rede', x: 0.32, y: 0.66, raio: 0.06, voz: 'A FOME', texto: 'Janela aberta, alguém dormindo de rede. A Fome conta os passos até lá.' },
+    ],
+  },
+  cemiterio: {
+    detalhes: [
+      { id: 'flores', x: 0.75, y: 0.86, rotulo: 'As flores', voz: 'INTUIÇÃO',
+        texto: 'Flores frescas num túmulo de cem anos. Alguém ainda lembra. Ou alguém ainda deve.' },
+      { id: 'corrente', x: 0.6, y: 0.82, rotulo: 'O cadeado', voz: 'FURTO',
+        texto: 'O cadeado do portão é velho e a corrente está frouxa. Quem quer entrar à noite, entra.' },
+    ],
+    comentarios: [
+      { id: 'coruja', x: 0.5, y: 0.82, raio: 0.09, voz: 'SOBREVIVÊNCIA', texto: 'Uma coruja olha você de cima de uma cruz. Ela não foge.' },
+      { id: 'terra', x: 0.88, y: 0.88, raio: 0.08, voz: 'OCULTISMO', texto: 'Terra revirada há pouco num canto. Enterro de hoje, ou coisa pior.' },
+    ],
+  },
+  porto: {
+    detalhes: [
+      { id: 'navio', x: 0.2, y: 0.8, rotulo: 'O navio ao longe', voz: 'PRONTIDÃO',
+        texto: 'Um navio cargueiro espera para atracar, todo aceso. Contêiner entra e sai deste porto sem ninguém abrir metade deles.' },
+      { id: 'maua', x: 0.62, y: 0.82, rotulo: 'A Praça Mauá', voz: 'ACADÊMICOS',
+        texto: 'Até 2013, um viaduto escuro passava por cima desta orla. Derrubaram, e o porto virou cartão-postal. As ruas de trás continuam as mesmas.' },
+    ],
+    comentarios: [
+      { id: 'sino', x: 0.4, y: 0.72, raio: 0.09, voz: 'INTUIÇÃO', texto: 'Um sino de navio toca longe, na baía. Alguém chegando de madrugada.' },
+      { id: 'porta', x: 0.95, y: 0.85, raio: 0.08, voz: 'MANHA', texto: 'Armazém de porta entreaberta. Aqui, quem entra sem ser chamado não sai contando.' },
+    ],
+  },
+  baixada: {
+    detalhes: [
+      { id: 'gato', x: 0.55, y: 0.7, rotulo: 'A ligação clandestina', voz: 'TECNOLOGIA',
+        texto: 'Fios puxados do poste para três casas, com fita isolante. Gato de luz. Quando chove forte, falta luz na rua toda.' },
+      { id: 'igreja', x: 0.45, y: 0.62, rotulo: 'A placa da igreja', voz: 'INTUIÇÃO',
+        texto: 'Uma placa pintada à mão: "Culto de libertação, sexta 19h". Aqui, quem promete expulsar demônio enche o salão.' },
+    ],
+    comentarios: [
+      { id: 'resolve', x: 0.22, y: 0.82, raio: 0.08, voz: 'MANHA', texto: 'Ninguém aqui chama a polícia. Resolve na birosca.' },
+      { id: 'cachorros', x: 0.62, y: 0.72, raio: 0.09, voz: 'A FOME', texto: 'Os cachorros da rua param de latir quando você passa. Todos ao mesmo tempo.' },
+    ],
+  },
+  niteroi: {
+    detalhes: [
+      { id: 'rampa', x: 0.2, y: 0.64, rotulo: 'A rampa vermelha', voz: 'ACADÊMICOS',
+        texto: 'A rampa vermelha sobe em curva até a entrada do museu. Niemeyer dizia que a linha reta não tinha graça.' },
+      { id: 'pescador', x: 0.9, y: 0.75, rotulo: 'A vara de pesca', voz: 'SOBREVIVÊNCIA',
+        texto: 'Uma vara de pesca esquecida na mureta, com a linha ainda na água. Do pescador, só o balde vazio.' },
+    ],
+    comentarios: [
+      { id: 'vento', x: 0.6, y: 0.75, raio: 0.1, voz: 'PRONTIDÃO', texto: 'O vento da baía leva qualquer som. Do outro lado, ninguém escuta nada.' },
+      { id: 'rio', x: 0.75, y: 0.64, raio: 0.08, voz: 'INTUIÇÃO', texto: 'Visto daqui, o Rio parece tranquilo. Você sabe que não é.' },
+    ],
+  },
+};
+
+// Sorteio fixo: a mesma noite mostra sempre as mesmas descobertas; outra noite, outras.
+function embaralhar(lista, semente) {
+  const r = [...lista];
+  let a = semente >>> 0;
+  const aleatorio = () => { // mulberry32: sementes vizinhas dão sorteios bem diferentes
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(aleatorio() * (i + 1));
+    [r[i], r[j]] = [r[j], r[i]];
+  }
+  return r;
+}
+
+// Todas as descobertas do lugar (para o mapa contar quantas faltam).
+export function todasDescobertas(id) {
+  return [...(DESCOBERTAS[id]?.detalhes || []), ...(MAIS[id]?.detalhes || [])];
+}
+
+export function descobertas(id, noite = 0) {
+  const detalhes = todasDescobertas(id);
+  const comentarios = [...(DESCOBERTAS[id]?.comentarios || []), ...(MAIS[id]?.comentarios || [])];
+  const semente = (noite || 0) * 7919 + [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return {
+    detalhes: embaralhar(detalhes, semente).slice(0, 3),
+    comentarios: embaralhar(comentarios, semente + 1).slice(0, 2),
+  };
 }

@@ -166,15 +166,15 @@ export const LUGARES = {
   // direita ficam na frente de quem anda pela rua.
   'zona-norte': {
     horizonte: 0.5,
-    k: 1.05,
+    k: 0.95,
     chao: [[0.43, 0.8], [0.42, 0.68], [0.44, 0.64], [0.55, 0.63], [0.7, 0.62], [0.8, 0.63], [0.86, 0.68], [0.9, 0.78], [0.92, 0.9], [0.44, 0.9]],
     entrada: [0.62, 0.84],
-    saida: [0.5, 0.88],
+    saida: [0.56, 0.885],
     ancoras: {
       quadra: { x: 0.57, y: 0.645, papel: 'memoria', termos: ['samba', 'escola', 'quadra', 'ensaio', 'bateria'] },
       bar: { x: 0.47, y: 0.78, termos: ['bar', 'boteco', 'cerveja', 'mesa', 'pagode', 'dono'] },
       feira: { x: 0.86, y: 0.76, termos: ['feira', 'fruta', 'barraca', 'vendedor', 'camelo'] },
-      rua: { x: 0.66, y: 0.8, papel: 'livre', termos: ['rua', 'gente', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
+      rua: { x: 0.72, y: 0.82, papel: 'livre', termos: ['rua', 'gente', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
       fundo: { x: 0.76, y: 0.635, termos: ['maracana', 'estadio', 'seguir', 'caminho', 'procurar', 'encontrar'] },
       viaduto: { x: 0.46, y: 0.66, papel: 'escuro', termos: ['viaduto', 'pilastra', 'escuro', 'esconder', 'sombra'] },
     },
@@ -198,13 +198,13 @@ export const LUGARES = {
     k: 0.55,
     chao: [[0.255, 0.58], [0.3, 0.58], [0.33, 0.68], [0.37, 0.78], [0.41, 0.87], [0.44, 0.94], [0.19, 0.94], [0.2, 0.85], [0.23, 0.78], [0.25, 0.68]],
     entrada: [0.31, 0.88],
-    saida: [0.24, 0.92],
+    saida: [0.22, 0.91],
     ancoras: {
-      vizinho: { x: 0.25, y: 0.8, papel: 'memoria', termos: ['vizinho', 'morador', 'homem', 'conversar', 'senhor'] },
-      escadaria: { x: 0.31, y: 0.8, papel: 'livre', termos: ['escada', 'beco', 'gente', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
-      laje: { x: 0.39, y: 0.85, termos: ['laje', 'vista', 'cidade', 'olhar', 'observar', 'vigiar'] },
-      topo: { x: 0.28, y: 0.61, termos: ['subir', 'seguir', 'boca', 'procurar', 'encontrar', 'caminho'] },
-      janela: { x: 0.32, y: 0.69, termos: ['casa', 'janela', 'porta', 'barraco'] },
+      vizinho: { x: 0.245, y: 0.74, papel: 'memoria', termos: ['vizinho', 'morador', 'homem', 'conversar', 'senhor'] },
+      escadaria: { x: 0.34, y: 0.79, papel: 'livre', termos: ['escada', 'beco', 'gente', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
+      laje: { x: 0.385, y: 0.85, termos: ['laje', 'vista', 'cidade', 'olhar', 'observar', 'vigiar'] },
+      topo: { x: 0.275, y: 0.6, termos: ['subir', 'seguir', 'boca', 'procurar', 'encontrar', 'caminho'] },
+      janela: { x: 0.305, y: 0.67, termos: ['casa', 'janela', 'porta', 'barraco'] },
       escuro: { x: 0.42, y: 0.92, papel: 'escuro', termos: ['escuro', 'esconder', 'sombra', 'esquina'] },
     },
     frente: [
@@ -276,7 +276,7 @@ export const LUGARES = {
   // Baixada: a rua de paralelepípedo, o bar de esquina e a moto. A moto e os homens do bar ficam na frente.
   baixada: {
     horizonte: 0.55,
-    k: 1.3,
+    k: 1.1,
     chao: [[0.12, 0.8], [0.25, 0.72], [0.38, 0.64], [0.44, 0.6], [0.5, 0.6], [0.6, 0.63], [0.72, 0.7], [0.85, 0.8], [0.93, 0.9], [0.08, 0.9]],
     entrada: [0.55, 0.85],
     saida: [0.47, 0.605],

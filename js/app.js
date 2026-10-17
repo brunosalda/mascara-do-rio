@@ -6,7 +6,7 @@ import { telaEntrevista } from './entrevista.js';
 import { telaNoite, telaMapa, telaEspera } from './noite.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
 import { fecharTudo } from './jogo/camadas.js';
-import { iniciarAmbiente, definirClima, som, efeitos } from './ambiente.js';
+import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos } from './ambiente.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
 
@@ -61,19 +61,31 @@ function desenharCabecalho(rota) {
 // --- Login -----------------------------------------------------------------
 
 function telaLogin(raiz) {
+  // Tela de título: a Lapa em tela cheia, o nome do jogo grande e a entrada numa caixa igual à da
+  // conversa do jogo. Sem cabeçalho nem rodapé de site; o aviso legal fica dentro da caixa.
+  document.body.dataset.tela = 'cena';
   raiz.innerHTML = `
-    <section class="login">
-      <p class="sobretitulo">Rio de Janeiro, depois da meia-noite</p>
-      <h1 class="titulo-grande">A Máscara do Rio</h1>
-      <p class="lead">Uma crônica de Vampiro: A Máscara para poucos convidados. Entre com o e-mail que recebeu o convite.</p>
-      <form id="form-login" class="cartao">
-        <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
-        <label>Senha<input type="password" name="senha" autocomplete="current-password"></label>
-        <button class="btn" type="submit">Entrar</button>
-        <button class="btn-texto" type="button" id="link-email">Prefiro receber um link de acesso por e-mail</button>
-        <p class="nota" id="msg-login" role="status"></p>
-      </form>
-    </section>`;
+    <div class="tela-jogo tela-entrada">
+      <div class="titulo-entrada">
+        <p class="sobretitulo">Rio de Janeiro, depois da meia-noite</p>
+        <h1 class="titulo-grande">A Máscara do Rio</h1>
+        <p class="lead">Uma crônica de Vampiro: A Máscara para poucos convidados.</p>
+      </div>
+      <section class="dialogo-cena dialogo-direita caixa-entrada login">
+        <header class="dialogo-cabeca"><span class="grupo-rotulo">Entrar na crônica</span></header>
+        <div class="dialogo-corpo">
+          <p class="nota">Entre com o e-mail que recebeu o convite.</p>
+          <form id="form-login">
+            <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
+            <label>Senha<input type="password" name="senha" autocomplete="current-password"></label>
+            <button class="btn" type="submit">Entrar</button>
+            <button class="btn-texto" type="button" id="link-email">Prefiro receber um link de acesso por e-mail</button>
+            <p class="nota" id="msg-login" role="status"></p>
+          </form>
+          <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
+        </div>
+      </section>
+    </div>`;
   const form = raiz.querySelector('#form-login');
   const msg = raiz.querySelector('#msg-login');
   form.onsubmit = async (e) => {
@@ -109,6 +121,9 @@ function definirCenario(tipoTela, p) {
   const fome = tipoTela === 'jogo' ? (p?.estado?.fome ?? null) : null;
   document.body.dataset.fome = fome ?? '';
   definirClima({ tela: tipoTela, fome });
+  // Tempo e som do lugar só valem na cena; ela mesma os define de novo ao montar.
+  definirTempo(null);
+  definirSomDoLugar(null);
 }
 
 function modoDeCriacao(p) {
@@ -122,7 +137,8 @@ async function desenhar() {
   const tela = document.createElement('div');
   tela.className = 'tela';
   main.replaceChildren(tela);
-  const rota = location.hash.replace(/^#\/?/, '');
+  // A consulta (?editar) não faz parte da rota: #/lugar/lapa?editar abre a Lapa no modo de edição.
+  const rota = location.hash.replace(/^#\/?/, '').split('?')[0];
   desenharCabecalho(rota);
 
   fecharTudo();
