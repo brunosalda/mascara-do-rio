@@ -956,7 +956,6 @@ kbd {
   will-change: transform;
   pointer-events: none;
 }
-.camada-b { opacity: 0; }
 .personagem .silhueta { transform: scaleX(var(--virar, 1)); filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6)); }
 .personagem.com-sprite { width: calc(var(--altura, 27vh) * var(--proporcao, 0.55)); }
 .sprite {
@@ -1164,6 +1163,8 @@ kbd {
 .dialogo-corpo label { margin-top: 0.6rem; }
 .dialogo-rodape { padding: 0.4rem 1.3rem 0.8rem; }
 .dialogo-rodape:empty { display: none; }
+.rodape-recado { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rodape-recado .btn-texto { padding: 0.3rem 0; text-transform: none; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; }
 
 /* --- Janelas (ficha, diário, plano, opções) --- */
 .janela-fundo { position: absolute; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px); padding: 3vh 3vw; }

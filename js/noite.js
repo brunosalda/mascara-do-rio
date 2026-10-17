@@ -321,10 +321,13 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
           <div class="menu-opcoes">
             <button type="button" class="btn-secundario" data-m="novo">Criar outro personagem</button>
             <button type="button" class="btn-secundario" data-m="sair">Sair da conta</button>
+            ${recadoDeChegada() ? '' : '<button type="button" class="btn-secundario" data-m="recado">Voltar a mostrar o recado de chegada</button>'}
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
         corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); await banco.sair(); };
+        const religar = corpo.querySelector('[data-m="recado"]');
+        if (religar) religar.onclick = () => { recadoDeChegada(true); religar.remove(); };
       },
     });
   }
@@ -378,16 +381,28 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     try { lido = localStorage.getItem(`mascara.lido.${atual.id}`) === '1'; } catch { /* sem armazenamento */ }
     if (!lido) abrirHistoria(true);
   }
-  // Recado de chegada só logo depois de viajar pelo mapa (não a cada recarga).
+  // Recado de chegada só logo depois de viajar pelo mapa (não a cada recarga), e nunca para quem
+  // pediu para não ver mais.
   let chegou = false;
   try { chegou = sessionStorage.getItem('mascara.chegou') === lugar; sessionStorage.removeItem('mascara.chegou'); } catch { /* sem armazenamento */ }
-  if (emOutroLugar && chegou) {
-    abrirDialogo(camadas, {
+  if (emOutroLugar && chegou && recadoDeChegada()) {
+    const recado = abrirDialogo(camadas, {
       rotulo: visitado.nome,
       html: `<div class="texto-narracao"><p>Você chega ${esc(visitado.a)}. Ande pela cena para decidir o que fazer aqui esta noite.</p><p class="nota">O que você escolher aqui entra no seu plano da noite.</p></div>`,
-      rodape: '<span class="nota"><kbd>Esc</kbd> fecha</span>',
+      rodape: '<div class="rodape-recado"><span class="nota"><kbd>Esc</kbd> fecha</span><button type="button" class="btn-texto" data-nao-mostrar>Não mostrar de novo</button></div>',
     });
+    recado.el.querySelector('[data-nao-mostrar]').onclick = () => { recadoDeChegada(false); recado.fechar(); };
   }
+}
+
+// Recado "Você chega a…": ligado por padrão; o jogador desliga no próprio recado e religa em Opções.
+const CHAVE_RECADO = 'mascara.semRecadoChegada';
+function recadoDeChegada(ligar) {
+  try {
+    if (ligar === true) localStorage.removeItem(CHAVE_RECADO);
+    else if (ligar === false) localStorage.setItem(CHAVE_RECADO, '1');
+    return localStorage.getItem(CHAVE_RECADO) !== '1';
+  } catch { return true; }
 }
 
 // Mapa do Rio: viajar entre os bairros. Entrar no lugar onde o personagem está volta para a cena dele.

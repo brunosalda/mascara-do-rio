@@ -1,18 +1,18 @@
 // Motor da cena: o personagem anda sobre a pintura do lugar (WASD, setas ou clique),
 // chega perto dos pontos de interesse e interage (E, Enter ou clique). A câmera acompanha.
-// Com folha de caminhada (sprite), os quadros trocam conforme a distância andada, para os pés
-// acompanharem o chão; sem ela, aparece a silhueta.
+// Com folha de caminhada (sprite, 8 poses de uma passada), os quadros trocam um a um conforme a
+// distância andada, para os pés acompanharem o chão; sem ela, aparece a silhueta.
 import { silhueta } from './silhueta.js';
 import { camadaAberta, teclaNaCamada } from './camadas.js';
 import { som } from '../ambiente.js';
 
 const CHAO = { topo: 0.58, base: 0.92 }; // faixa onde dá para andar, em fração da altura da tela
-const VEL_X = 0.22;                       // larguras de tela por segundo
+const VEL_X = 0.18;                       // larguras de tela por segundo
 const VEL_Y = 0.5;                        // faixas por segundo
 const ACELERACAO = 9;                     // quanto mais alto, mais rápido arranca e para
 const ALCANCE = 0.08;                     // distância para interagir
 const ALTURA_BONECO = 0.31;               // altura do personagem (fração da tela) no meio do chão
-const PIXELS_POR_QUADRO = 0.022;          // distância (em telas) entre um quadro e o seguinte
+const PASSADA = 0.9;                      // uma passada completa (todas as poses) anda 0,9 altura do boneco
 const TECLAS = {
   w: [0, -1], arrowup: [0, -1], s: [0, 1], arrowdown: [0, 1],
   a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0],
@@ -25,14 +25,11 @@ const escala = (y) => 0.75 + y * 0.5;
 function htmlBoneco(cla, sprite) {
   if (!sprite?.url) return `<div class="personagem">${silhueta(cla)}</div>`;
   const estilo = `background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}`;
-  // Duas camadas do corpo: a de cima mostra o quadro seguinte e vai aparecendo,
-  // o que transforma 6 quadros numa passada contínua.
   return `
     <div class="personagem com-sprite">
       <span class="sombra-pe"></span>
       <span class="sprite reflexo" style="${estilo}"></span>
-      <span class="sprite corpo-sprite camada-a" style="${estilo}"></span>
-      <span class="sprite corpo-sprite camada-b" style="${estilo}"></span>
+      <span class="sprite corpo-sprite" style="${estilo}"></span>
     </div>`;
 }
 
@@ -46,8 +43,7 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
   const cena = raiz.querySelector('.cena');
   const camadaPontos = cena.querySelector('.cena-pontos');
   const boneco = cena.querySelector('.personagem');
-  const camadaA = boneco.querySelector('.camada-a');
-  const camadaB = boneco.querySelector('.camada-b');
+  const corpo = boneco.querySelector('.corpo-sprite');
   const reflexo = boneco.querySelector('.reflexo');
   const dica = cena.querySelector('.dica-interagir');
   const fundo = document.getElementById('cenario');
@@ -69,6 +65,7 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
   let olhandoEsquerda = false;
   let ultimo = performance.now();
   let fase = sprite?.parado ?? 0; // posição na passada, em quadros (fracionária)
+  let quadroVisivel = -1;
   let proximoPasso = 0;
   let vivo = true;
 
@@ -101,18 +98,15 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
 
   const posicaoDoQuadro = (n) => `${sprite.quadros > 1 ? (n / (sprite.quadros - 1)) * 100 : 0}% 0`;
 
-  // Mostra a passada na fase f: a camada A no quadro atual, a B no seguinte, aparecendo aos poucos.
+  // Mostra a pose da fase f, uma de cada vez (sem misturar duas poses, o que deixava um fantasma).
   function mostrarFase(f) {
     if (!sprite?.url) return;
     const n = sprite.quadros;
-    const base = Math.floor(f);
-    const a = ((base % n) + n) % n;
-    const b = (a + 1) % n;
-    const t = f - base;
-    camadaA.style.backgroundPosition = posicaoDoQuadro(a);
-    camadaB.style.backgroundPosition = posicaoDoQuadro(b);
-    camadaB.style.opacity = (t * t * (3 - 2 * t)).toFixed(3); // suavizado
-    reflexo.style.backgroundPosition = posicaoDoQuadro(t < 0.5 ? a : b);
+    const q = ((Math.floor(f) % n) + n) % n;
+    if (q === quadroVisivel) return;
+    quadroVisivel = q;
+    corpo.style.backgroundPosition = posicaoDoQuadro(q);
+    reflexo.style.backgroundPosition = posicaoDoQuadro(q);
   }
 
   function quadro(agora) {
@@ -156,17 +150,20 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
     const andando = rapidez > 0.15;
     if (Math.abs(vel.x) > 0.02) olhandoEsquerda = vel.x < 0;
 
-    // Passada: avança pela distância andada, com mistura entre quadros. Ao parar, termina o
-    // passo até o quadro de descanso em vez de pular para ele.
+    // Passada: avança pela distância andada, medida em pixels e proporcional ao tamanho do boneco
+    // (perto da tela ele é maior e dá passos maiores). Ao parar, termina o passo depressa até a
+    // pose de pernas juntas mais próxima (há uma em cada metade da passada).
     if (sprite?.url) {
       const n = sprite.quadros;
-      const parado = sprite.parado ?? 0;
       if (rapidez > 0.05) {
-        fase += (Math.hypot(vel.x, vel.y * (CHAO.base - CHAO.topo)) * dt) / PIXELS_POR_QUADRO;
+        const andouPx = Math.hypot(vel.x * telaL, vel.y * (CHAO.base - CHAO.topo) * telaA) * dt;
+        const passoPx = (ALTURA_BONECO * telaA * escala(pos.y) * PASSADA) / n;
+        fase += andouPx / passoPx;
       } else {
-        const falta = ((parado - fase) % n + n) % n; // quadros até o descanso, sempre para a frente
-        if (falta > 0.02 && falta < n - 0.02) fase += Math.min(falta, dt * 9);
-        else fase = Math.round(fase);
+        const parado = sprite.parado ?? 0;
+        const juntas = n % 2 === 0 ? [parado, (parado + n / 2) % n] : [parado];
+        const falta = Math.min(...juntas.map((j) => ((j - Math.floor(fase)) % n + n) % n));
+        if (falta > 0) fase = Math.floor(fase) + Math.min(falta, (fase % 1) + dt * 16);
       }
       mostrarFase(fase);
     }
