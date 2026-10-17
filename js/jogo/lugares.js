@@ -378,7 +378,7 @@ for (const [id, a] of Object.entries(ALTOS)) {
   for (const [nome, [x, y, papelProprio]] of Object.entries(a.ancoras)) {
     const b = base.ancoras[nome] || {};
     const papel = b.papel || papelProprio;
-    ancoras[nome] = { x, y, termos: b.termos || [nome], ...(papel ? { papel } : {}) };
+    ancoras[nome] = { x, y, termos: b.termos || [nome], ...(papel ? { papel } : {}), ...((a.portas || []).includes(nome) ? { porta: true } : {}) };
   }
   LUGARES[`${id}-alto`] = {
     alto: true, aspecto: 1344 / 576, imagem: `img/cidade/alto/${id}.jpg`,

@@ -211,7 +211,7 @@ export function montarCena(raiz, {
   // --- Pontos ----------------------------------------------------------------------------------
   function desenharPontos(recemFeitos = new Set()) {
     camadaPontos.innerHTML = lista.map((p) => `
-      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}${p.brasa ? ` brasa-${p.brasa}` : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
+      <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}${p.brasa ? ` brasa-${p.brasa}` : ''}${p.porta ? ' ponto-porta' : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-luz" aria-hidden="true"></span>
         <span class="ponto-faiscas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>

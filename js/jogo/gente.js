@@ -84,3 +84,19 @@ export const FIGURAS_GENTE = {
   garconete: ['garconete'],
   idoso: ['idoso-banco'],
 };
+
+// Pistas nas conversas (rodada 34): uma por lugar, com um tipo de pessoa. Conversar com ela dá uma
+// vantagem ✦, como os detalhes: liga a uma opção da noite (termos) ou à caçada. Textos genéricos.
+export const PISTAS_CONVERSA = {
+  lapa: { ambulante: { fala: 'Vi um homem de terno subir a escadaria sem olhar para trás. Ninguém sobe aquilo de terno.', termos: ['seguir', 'escadaria', 'terno', 'homem'], nota: 'o ambulante viu para onde o homem de terno foi' } },
+  centro: { ambulante: { fala: 'Tem gente que entra no Theatro pela porta dos fundos, depois que fecha.', termos: ['teatro', 'investigar', 'procurar', 'entrar'], nota: 'sabe da porta dos fundos do Theatro' } },
+  'santa-teresa': { idoso: { fala: 'Aquele casarão de muro alto vive de luz apagada. Mas alguém entra lá toda noite.', termos: ['casa', 'casarao', 'vizinho', 'procurar'], nota: 'sabe que o casarão de muro alto tem visita toda noite' } },
+  'zona-sul': { ambulante: { fala: 'Depois das duas, o trecho perto do posto fica sem ninguém. Nem a polícia passa.', cacada: true, nota: 'sabe a hora em que a orla esvazia' } },
+  barra: { turista: { fala: 'O porteiro do prédio da esquina dorme no turno. Eu vi.', termos: ['predio', 'entrar', 'procurar', 'investigar'], nota: 'sabe que o porteiro da esquina dorme no turno' } },
+  'zona-norte': { ambulante: { fala: 'Debaixo do viaduto, depois que a feira fecha, a luz apaga toda.', cacada: true, nota: 'sabe que o viaduto fica no escuro depois da feira' } },
+  morro: { idoso: { fala: 'Quem manda aqui não gosta de cara nova. Fala com a dona do bar antes.', termos: ['vizinho', 'perguntar', 'conversar', 'bar'], nota: 'sabe com quem falar antes de circular no morro' } },
+  cemiterio: { passante: { fala: 'O vigia faz a ronda da capela à meia-noite e some por uma hora.', cacada: true, nota: 'sabe quando o vigia some da ronda' } },
+  porto: { entregador: { fala: 'O armazém do mural tem uma porta lateral que nunca trancam.', termos: ['armazem', 'entrar', 'investigar', 'procurar'], nota: 'sabe da porta lateral do armazém' } },
+  baixada: { bebado: { fala: 'O dono do bar da esquina sabe de tudo. Mas só fala depois da terceira.', termos: ['bar', 'dono', 'perguntar'], nota: 'sabe como fazer o dono do bar falar' } },
+  niteroi: { turista: { fala: 'Tem uma escada que desce até a pedra, atrás do museu. Ninguém vai lá à noite.', cacada: true, nota: 'achou a escada escura atrás do museu' } },
+};

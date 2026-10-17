@@ -3088,3 +3088,18 @@ body.cena-pausada .pessoa { animation-play-state: paused; }
 .pessoa-nome small { display: none; font: italic 400 0.85rem/1.2 var(--texto-livro); color: #e9d8b4; }
 .cena.mostrar-tudo .pessoa-nome small { display: block; }
 body.sem-efeitos .pessoa.pessoa-pintada img { animation: none !important; }
+
+/* Rodada 34: portas pintadas com o cursor de porta; a saída marcada no chão com o cursor de viagem. */
+@media (pointer: fine) {
+  .cena .ponto-porta { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M8 29 V7 Q16 1 24 7 V29 Z' fill='%234a3220' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='18' r='1.6' fill='%23f6e6c0'/%3E%3C/svg%3E") 16 16, pointer; }
+  .cena.vista-alto .ponto-saida { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='%23c9a25a' stroke='%23f6e6c0' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 28 16, pointer; }
+}
+.cena.vista-alto .ponto-saida::before {
+  content: ''; position: absolute; left: 50%; bottom: -10px; width: 64px; height: 22px; translate: -50% 0; border-radius: 50%; pointer-events: none;
+  border: 2px dashed rgba(255, 228, 160, 0.85); box-shadow: 0 0 10px rgba(255, 210, 130, 0.5);
+}
+.cena.vista-alto .ponto-saida .ponto-rotulo { opacity: 0.9; }
+.cena.vista-alto .ponto-porta::after {
+  content: ''; position: absolute; left: 50%; bottom: 6px; width: 10px; height: 14px; translate: -50% 0; border-radius: 5px 5px 0 0; pointer-events: none;
+  border: 2px solid rgba(255, 228, 160, 0.9); border-bottom: 0; box-shadow: 0 0 6px rgba(255, 210, 130, 0.6);
+}

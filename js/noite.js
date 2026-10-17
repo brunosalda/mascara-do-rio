@@ -9,7 +9,7 @@ import { retratoDe, imagemDoLocal, localDe, LOCAIS, LOCAIS_EXTRA, CENARIO_ABERTU
 import { som, efeitos, definirTempo, definirSomDoLugar, definirClima } from './ambiente.js';
 import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_FRENTE, textoDaCacada } from './jogo/cacada.js';
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
-import { TIPOS_GENTE } from './jogo/gente.js';
+import { TIPOS_GENTE, PISTAS_CONVERSA } from './jogo/gente.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
@@ -89,7 +89,20 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   const geoAlto = querAlto ? geografia(`${lugarId}-alto`) : null;
   const geo = geoAlto?.alto ? geoAlto : geografia(lugarId);
   const achados = descobertas(lugarId, noite?.numero || 0);
-  if (geo.alto && geo.pontosLivres) achados.detalhes = achados.detalhes.map((d, i) => ({ ...d, x: geo.pontosLivres[i % geo.pontosLivres.length][0], y: geo.pontosLivres[i % geo.pontosLivres.length][1] }));
+  if (geo.alto && geo.pontosLivres) {
+    // Rodada 34: um detalhe nunca fica colado numa pessoa da área (o clique na pessoa tem de valer para
+    // ela). Pontos livres a menos de ~0,07 de alguém são empurrados para longe dela.
+    const longeDaGente = ([x, y]) => {
+      // A figura ocupa a área acima dos pés: um detalhe nessa faixa (ou logo ao lado) vai para o lado.
+      for (const g of geo.gente || []) {
+        const dx = (x - g.x) * (geo.aspecto || 1.78);
+        const dy = y - g.y;
+        if (Math.abs(dx) < 0.11 && dy > -0.16 && dy < 0.05) x = g.x + (dx >= 0 ? 1 : -1) * 0.11 / (geo.aspecto || 1.78);
+      }
+      return [x, y];
+    };
+    achados.detalhes = achados.detalhes.map((d, i) => { const [x, y] = longeDaGente(geo.pontosLivres[i % geo.pontosLivres.length]); return { ...d, x, y }; });
+  }
   // Cada noite tem um tempo (garoa, tempestade, lua, névoa), sorteado pelo número dela: o mesmo para
   // todos os jogadores, diferente de uma noite para outra.
   const tempo = tempoDaNoite(noite?.numero || 0);
@@ -383,7 +396,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const ancoras = distribuirAncoras(geo, pedidos);
     const pts = [
       { id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: geo.saida[0], y: geo.saida[1] },
-      ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82, parada: a?.parada, lado: a?.lado, baixo: a?.baixo, contorno: a?.contorno }; }),
+      ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82, parada: a?.parada, lado: a?.lado, baixo: a?.baixo, contorno: a?.contorno, porta: a?.porta }; }),
     ];
     // A caçada é obrigatória: fica sempre à vista; o limite de 5 vale para os outros.
     let vistos = 0;
@@ -807,6 +820,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       aoEscolher: (i) => {
         if (i !== 0) return;
         anotar('VOCÊ', `conversa com ${t.rotulo}.`);
+        // Pista ✦: a primeira pessoa do tipo certo, neste lugar, conta algo que ajuda (uma vez por noite).
+        const pista = PISTAS_CONVERSA[lugarId]?.[pt.tipoGente];
+        const idPista = `${lugarId}.conversa.${pt.tipoGente}`;
+        if (pista && !lerVantagens().some((v) => v.id === idPista)) {
+          cena.falar(t.nome.toUpperCase(), pista.fala, 5200);
+          setTimeout(() => ganharVantagem({ id: idPista, lugar: lugarId, x: pt.x, y: pt.y, nota: pista.nota, termos: pista.termos, cacada: pista.cacada }), 1800);
+          return;
+        }
         cena.falar(t.nome.toUpperCase(), t.falas.find((f) => f !== fala) || fala, 3200);
         setTimeout(() => cena.falar('PRONTIDÃO', `${t.repara.charAt(0).toUpperCase()}${t.repara.slice(1)}.`, 3600), 1400);
       },
