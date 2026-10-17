@@ -3531,3 +3531,7 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 /* PROVISÓRIO (vitrine): o botão "Ver o jogo (demonstração)" da entrada. */
 .caixa-entrada .ver-demo { display: flex; align-items: center; justify-content: center; min-height: 48px; margin: 0.8rem 0 0.2rem; text-decoration: none;
   border: 2px solid #c9a25a; border-radius: 999px; color: #fbeccb; background: linear-gradient(180deg, #6e5229, #3a2a1a); font: 700 0.95rem var(--sans); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* Celular (ordem de 17/10), item 1: a cena fica com o toque (o navegador não rouba o arrasto); a página não
+   rola nem puxa para atualizar por trás da cena. */
+.cena.vista-alto { touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

@@ -410,27 +410,64 @@ export function montarCena(raiz, {
       cena.classList.toggle('rolando-borda', !!(bx || by));
     });
     cena.addEventListener('pointerleave', () => { camLivre.borda = { x: 0, y: 0 }; atualizarVelCamera(); cena.classList.remove('rolando-borda'); });
-    // Arrastar: mais de 8 px com o botão apertado rola a área (e o clique que soltou não anda).
+    // Arrastar: com o mouse (botão apertado) ou com um dedo (celular, ordem de 17/10), mais de 8 px (10 no
+    // toque) rola a área, e o toque ou clique que soltou não anda. No dedo, a câmera segue com inércia.
+    // Toque curto anda ou interage (o clique normal); dois dedos dão zoom (abaixo); toque duplo centraliza.
+    const dedos = new Map();
+    let inercia = 0;
+    let ultimoToque = { t: 0, x: 0, y: 0 };
     cena.addEventListener('pointerdown', (ev) => {
-      if (ev.pointerType === 'touch') return; // no toque, rola com dois dedos (abaixo)
-      if ((ev.button !== 0 && ev.button !== 2) || ev.target.closest('[data-ponto], button')) return;
+      const toque = ev.pointerType === 'touch';
+      if (!toque && ev.button !== 0 && ev.button !== 2) return;
+      if (ev.target.closest('button, a, input, textarea, .balao-voz, .painel-pergunta')) return;
+      if (!toque && ev.target.closest('[data-ponto]')) return;
+      cancelAnimationFrame(inercia);
+      if (toque) {
+        // Toque duplo (dois toques rápidos no mesmo lugar) centraliza no personagem.
+        const agora = performance.now();
+        if (agora - ultimoToque.t < 320 && Math.hypot(ev.clientX - ultimoToque.x, ev.clientY - ultimoToque.y) < 30) { camLivre.centrar = true; ultimoToque.t = 0; }
+        else ultimoToque = { t: agora, x: ev.clientX, y: ev.clientY };
+      }
+      const limiar = toque ? 10 : 8;
       const x0 = ev.clientX; const y0 = ev.clientY; const c0 = { x: camLivre.x, y: camLivre.y };
+      let rastro = [{ x: ev.clientX, y: ev.clientY, t: performance.now() }];
       const mover = (e) => {
-        if (!camLivre.arrastando && Math.hypot(e.clientX - x0, e.clientY - y0) < 8) return;
+        if (e.pointerId !== ev.pointerId || dedos.size >= 2) return;
+        if (!camLivre.arrastando && Math.hypot(e.clientX - x0, e.clientY - y0) < limiar) return;
         camLivre.arrastando = true;
+        camLivre.suave = false;
         cena.classList.add('arrastando');
         camLivre.x = c0.x + (e.clientX - x0);
         camLivre.y = c0.y + (e.clientY - y0);
+        rastro.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+        if (rastro.length > 6) rastro.shift();
       };
       const soltar = (e) => {
+        if (e && e.pointerId !== ev.pointerId) return;
         cena.removeEventListener('pointermove', mover);
-        if (e && Math.hypot(e.clientX - x0, e.clientY - y0) >= 8) mover(e);
-        if (camLivre.arrastando) { ignorarClique = true; setTimeout(() => { ignorarClique = false; }, 0); }
+        window.removeEventListener('pointerup', soltar);
+        window.removeEventListener('pointercancel', soltar);
+        const arrastou = camLivre.arrastando;
+        if (e && e.type === 'pointerup' && Math.hypot(e.clientX - x0, e.clientY - y0) >= limiar) mover(e);
+        if (arrastou) { ignorarClique = true; setTimeout(() => { ignorarClique = false; }, 0); }
         camLivre.arrastando = false;
         cena.classList.remove('arrastando');
+        // Inércia no dedo: a câmera continua um pouco na direção do arrasto e para devagar.
+        if (toque && arrastou && !reduzido() && rastro.length > 1) {
+          const a = rastro[0]; const z = rastro.at(-1); const dt = Math.max(16, z.t - a.t);
+          let vx = ((z.x - a.x) / dt) * 16; let vy = ((z.y - a.y) / dt) * 16;
+          const passo = () => {
+            vx *= 0.92; vy *= 0.92;
+            if (Math.hypot(vx, vy) < 0.4 || camLivre.arrastando) return;
+            camLivre.x += vx; camLivre.y += vy;
+            inercia = requestAnimationFrame(passo);
+          };
+          inercia = requestAnimationFrame(passo);
+        }
       };
       cena.addEventListener('pointermove', mover);
-      window.addEventListener('pointerup', soltar, { once: true });
+      window.addEventListener('pointerup', soltar);
+      window.addEventListener('pointercancel', soltar);
     });
     // Roda do mouse: aproxima e afasta em degraus.
     let rodaAte = 0;
@@ -442,8 +479,7 @@ export function montarCena(raiz, {
     }, { passive: false });
     // Botão direito arrasta (sem abrir o menu do navegador).
     cena.addEventListener('contextmenu', (ev) => ev.preventDefault());
-    // Celular: dois dedos rolam a área.
-    const dedos = new Map();
+    // Celular: dois dedos dão zoom (pinça) e também rolam a área.
     let doisDedos = null;
     cena.addEventListener('pointerdown', (ev) => {
       if (ev.pointerType !== 'touch') return;
