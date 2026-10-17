@@ -8,6 +8,7 @@ import { esc } from '../ui.js';
 import { cerimoniasCurtas } from '../leitura.js';
 import { fraseDescobertas } from './detalhes.js';
 import { preCarregar } from './imagens.js';
+import { NIVEIS_NOME_BAIRRO } from './progressao-textos.js';
 import { ALTOS } from './lugares-alto.js';
 
 const LARGURA = 1920;
@@ -88,7 +89,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 ${novo ? '<circle class="mapa-nevoa" r="70" fill="url(#nevoa-lugar)"/>' : ''}
                 <circle class="mapa-brilho" r="62" fill="url(#brilho-lugar)"/>
                 <circle class="medalhao-aro" r="28"/>
-                ${bairros[l.id] ? `<circle class="anel-bairro nivel-${bairros[l.id]}" r="33"/>` : ''}
+                ${bairros[l.id] != null ? `<circle class="anel-bairro-trilho" r="33"/><circle class="anel-bairro nivel-${bairros[l.id]}" r="33" transform="rotate(-90)" stroke-dasharray="${([0, 0.25, 0.5, 1][Math.min(3, bairros[l.id])] * 207.3).toFixed(1)} 207.3"><title>Seu nome aqui: ${esc(NIVEIS_NOME_BAIRRO[bairros[l.id]] || '')}</title></circle>` : ''}
                 ${l.imagem ? `<image class="medalhao-pintura" href="${esc(l.imagem)}" x="-23" y="-23" width="46" height="46" clip-path="url(#recorte-medalhao)" preserveAspectRatio="xMidYMid slice"/>` : '<circle class="medalhao-vazio" r="23"/>'}
                 <circle class="medalhao-filete" r="23"/>
                 ${l.id === atual ? '<circle class="mapa-pulso" r="34"/><path class="mapa-gota" d="M0 -84 C6 -74 10 -69 10 -63 A10 10 0 0 1 -10 -63 C-10 -69 -6 -74 0 -84 Z"/>' : ''}

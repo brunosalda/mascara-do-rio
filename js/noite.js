@@ -1390,7 +1390,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     // O cartão usa a pintura na altura dos olhos (a de antes), que continua no jogo.
     const imagemCartao = emOutroLugar ? (visitado.imagem || imagem) : (localAtual?.imagem || imagem);
     cartao.style.setProperty('--fundo', `url('${new URL(imagemCartao, location.href).href}')`);
-    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é: <b>${esc(NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '')}</b></p>` : ''}<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
+    cartao.innerHTML = `<div class="cartao-moldura"><small>Você chega</small><h2>${esc(lugarNome)}</h2>${(p.estado?.bairros?.[lugarId] ?? 0) > 0 ? `<p class="cartao-bairro">Aqui você é <b>${esc((NIVEIS_NOME_BAIRRO[p.estado.bairros[lugarId]] || '').toLowerCase())}</b></p>` : ''}<p class="cartao-dica"><b>Dica</b> ${esc(DICAS_PASSAGEM[i])}</p><div class="cartao-botoes"><button type="button" class="btn" data-cartao="seguir">Seguir</button><button type="button" class="btn-texto" data-cartao="nunca">Não mostrar mais neste bairro</button></div><span class="cartao-pular">clique, toque ou Enter para seguir</span></div>`;
     camadas.appendChild(cartao);
     const t0 = performance.now();
     const tirar = () => {
@@ -1428,6 +1428,19 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     numerosAte = Date.now() + 2600;
     setTimeout(() => { if (Date.now() >= numerosAte) camadas.classList.remove('mostrar-numeros'); }, 2700);
   }
+
+  // Rodada 38: quando o nome no bairro sobe (o Narrador grava em estado.bairros), uma linha no registro e
+  // um som curto, uma vez só.
+  setTimeout(() => {
+    const nivel = p.estado?.bairros?.[lugarId] ?? 0;
+    const chave = `mascara.nivel-bairro.${p.id}.${lugarId}`;
+    let antes = null;
+    try { antes = localStorage.getItem(chave); localStorage.setItem(chave, String(nivel)); } catch { /* sem armazenamento */ }
+    if (antes != null && nivel > Number(antes)) {
+      const frase = [null, `Em ${lugarNome}, já te conhecem.`, `Em ${lugarNome}, você agora é de casa.`, `Em ${lugarNome}, você agora é gente nossa.`][Math.min(3, nivel)];
+      if (frase) { anotar('A CIDADE', frase); som.anel?.(); }
+    }
+  }, 1800);
 
   // --- Cena -----------------------------------------------------------------------------------
   const cena = montarCena(palco, {

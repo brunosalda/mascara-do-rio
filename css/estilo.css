@@ -3323,3 +3323,8 @@ body.sem-efeitos .vivo { animation: none !important; opacity: 0 !important; }
   .arvore-raizes { display: none; }
   .arvore-tronco { margin-top: 1rem; }
 }
+
+/* Rodada 38, item 2: o anel do nome no bairro enche (estranho vazio, conhecido um quarto, de casa metade,
+   gente nossa cheio), sobre um trilho fino. */
+.anel-bairro-trilho { fill: none; stroke: rgba(138, 20, 32, 0.28); stroke-width: 2.5; }
+.anel-bairro, .anel-bairro.nivel-2, .anel-bairro.nivel-3 { fill: none; stroke: #c01a2c; stroke-width: 3; stroke-linecap: round; opacity: 0.95; }
