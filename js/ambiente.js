@@ -214,6 +214,10 @@ export const som = {
     if (!audio || !this.ligado()) return;
     pulso(audio, audio.ctx.currentTime + 0.01, 420, 0.05);
   },
+  passo() {
+    if (!audio || !this.ligado()) return;
+    pulso(audio, audio.ctx.currentTime + 0.01, 95 + Math.random() * 25, 0.06);
+  },
 };
 
 // --- API ------------------------------------------------------------------------------------

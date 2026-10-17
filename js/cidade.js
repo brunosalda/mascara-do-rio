@@ -7,17 +7,17 @@ export const CENARIO_ABERTURA = 'img/cidade/lapa.jpg'; // tela de entrada e cria
 export const RETRATO_PADRAO = 'img/retrato-padrao.svg';
 
 export const LOCAIS = [
-  { id: 'lapa', nome: 'Lapa', imagem: 'img/cidade/lapa.jpg', termos: ['lapa', 'arcos', 'mem de sa', 'lavradio', 'selaron', 'riachuelo'] },
-  { id: 'centro', nome: 'Centro', imagem: 'img/cidade/centro.jpg', termos: ['centro', 'cinelandia', 'theatro municipal', 'teatro municipal', 'praca xv', 'candelaria', 'saara', 'central do brasil'] },
-  { id: 'santa-teresa', nome: 'Santa Teresa', imagem: 'img/cidade/santa-teresa.jpg', termos: ['santa teresa', 'bondinho', 'largo dos guimaraes'] },
-  { id: 'zona-sul', nome: 'Zona Sul', imagem: 'img/cidade/zona-sul.jpg', termos: ['copacabana', 'ipanema', 'leblon', 'botafogo', 'flamengo', 'urca', 'leme', 'lagoa', 'gavea', 'zona sul'] },
-  { id: 'barra', nome: 'Barra', imagem: 'img/cidade/barra.jpg', termos: ['barra', 'recreio', 'jacarepagua'] },
-  { id: 'zona-norte', nome: 'Zona Norte', imagem: 'img/cidade/zona-norte.jpg', termos: ['tijuca', 'madureira', 'maracana', 'meier', 'vila isabel', 'penha', 'zona norte'] },
-  { id: 'morro', nome: 'Morro', imagem: 'img/cidade/morro.jpg', termos: ['morro', 'favela', 'comunidade', 'rocinha', 'vidigal', 'alemao', 'mare'] },
-  { id: 'cemiterio', nome: 'Cemitério', imagem: 'img/cidade/cemiterio.jpg', termos: ['cemiterio', 'sao joao batista', 'caju'] },
-  { id: 'porto', nome: 'Zona Portuária', imagem: 'img/cidade/porto.jpg', termos: ['porto', 'gamboa', 'saude', 'museu do amanha', 'praca maua', 'pequena africa'] },
-  { id: 'baixada', nome: 'Baixada', imagem: 'img/cidade/baixada.jpg', termos: ['baixada', 'nova iguacu', 'duque de caxias', 'sao joao de meriti'] },
-  { id: 'niteroi', nome: 'Niterói', imagem: 'img/cidade/niteroi.jpg', termos: ['niteroi', 'icarai', 'mac'] },
+  { id: 'lapa', nome: 'Lapa', em: 'na Lapa', a: 'à Lapa', imagem: 'img/cidade/lapa.jpg', termos: ['lapa', 'arcos', 'mem de sa', 'lavradio', 'selaron', 'riachuelo'] },
+  { id: 'centro', nome: 'Centro', em: 'no Centro', a: 'ao Centro', imagem: 'img/cidade/centro.jpg', termos: ['centro', 'cinelandia', 'theatro municipal', 'teatro municipal', 'praca xv', 'candelaria', 'saara', 'central do brasil'] },
+  { id: 'santa-teresa', nome: 'Santa Teresa', em: 'em Santa Teresa', a: 'a Santa Teresa', imagem: 'img/cidade/santa-teresa.jpg', termos: ['santa teresa', 'bondinho', 'largo dos guimaraes'] },
+  { id: 'zona-sul', nome: 'Zona Sul', em: 'na Zona Sul', a: 'à Zona Sul', imagem: 'img/cidade/zona-sul.jpg', termos: ['copacabana', 'ipanema', 'leblon', 'botafogo', 'flamengo', 'urca', 'leme', 'lagoa', 'gavea', 'zona sul'] },
+  { id: 'barra', nome: 'Barra', em: 'na Barra', a: 'à Barra', imagem: 'img/cidade/barra.jpg', termos: ['barra', 'recreio', 'jacarepagua'] },
+  { id: 'zona-norte', nome: 'Zona Norte', em: 'na Zona Norte', a: 'à Zona Norte', imagem: 'img/cidade/zona-norte.jpg', termos: ['tijuca', 'madureira', 'maracana', 'meier', 'vila isabel', 'penha', 'zona norte'] },
+  { id: 'morro', nome: 'Morro', em: 'no morro', a: 'ao morro', imagem: 'img/cidade/morro.jpg', termos: ['morro', 'favela', 'comunidade', 'rocinha', 'vidigal', 'alemao', 'mare'] },
+  { id: 'cemiterio', nome: 'Cemitério', em: 'no cemitério', a: 'ao cemitério', imagem: 'img/cidade/cemiterio.jpg', termos: ['cemiterio', 'sao joao batista', 'caju'] },
+  { id: 'porto', nome: 'Zona Portuária', em: 'na Zona Portuária', a: 'à Zona Portuária', imagem: 'img/cidade/porto.jpg', termos: ['porto', 'gamboa', 'saude', 'museu do amanha', 'praca maua', 'pequena africa'] },
+  { id: 'baixada', nome: 'Baixada', em: 'na Baixada', a: 'à Baixada', imagem: 'img/cidade/baixada.jpg', termos: ['baixada', 'nova iguacu', 'duque de caxias', 'sao joao de meriti'] },
+  { id: 'niteroi', nome: 'Niterói', em: 'em Niterói', a: 'a Niterói', imagem: 'img/cidade/niteroi.jpg', termos: ['niteroi', 'icarai', 'mac'] },
 ];
 
 // Retratos que representam cada clã (Higgsfield, 17/10/2026), em img/clas/<id>.jpg.

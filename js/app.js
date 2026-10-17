@@ -3,10 +3,9 @@ import * as banco from './banco.js';
 import { esc, aviso, on } from './ui.js';
 import { telaCriacao } from './criacao.js';
 import { telaEntrevista } from './entrevista.js';
-import { telaNoite } from './noite.js';
-import { telaFicha } from './ficha.js';
-import { telaDiario } from './diario.js';
+import { telaNoite, telaMapa, telaEspera } from './noite.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
+import { fecharTudo } from './jogo/camadas.js';
 import { iniciarAmbiente, definirClima, som, efeitos } from './ambiente.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
@@ -126,10 +125,13 @@ async function desenhar() {
   const rota = location.hash.replace(/^#\/?/, '');
   desenharCabecalho(rota);
 
+  fecharTudo();
   const p = estado.atual;
   const novo = rota === 'novo' || rota === 'detalhado';
-  const emCriacao = !estado.sessao || novo || !p || p.status === 'criacao' || p.status === 'revisao';
-  definirCenario(!estado.sessao ? 'login' : emCriacao ? 'criacao' : 'jogo', p);
+  const emCriacao = !estado.sessao || novo || !p || p.status === 'criacao';
+  // 'cena': telas de jogo em tela cheia (sem cabeçalho nem rodapé do site).
+  definirCenario(!estado.sessao ? 'login' : emCriacao ? 'criacao' : p.status === 'revisao' ? 'cena' : 'jogo', p);
+  if (estado.sessao && !emCriacao) document.body.dataset.tela = 'cena';
 
   if (!estado.sessao) return telaLogin(tela);
 
@@ -138,9 +140,20 @@ async function desenhar() {
     if (rota === 'detalhado') return await telaCriacao(tela, null);
     if (rota === 'novo' || !p) return await telaEntrevista(tela, null);
     if (p.status === 'criacao' && modoDeCriacao(p) === 'conversa') return await telaEntrevista(tela, p);
-    if (p.status === 'criacao' || p.status === 'revisao') return await telaCriacao(tela, p);
-    if (rota === 'ficha') return await telaFicha(tela, p);
-    if (rota === 'diario') return await telaDiario(tela, p);
+    if (p.status === 'criacao') return await telaCriacao(tela, p);
+    if (p.status === 'revisao') {
+      return await telaEspera(tela, p, {
+        aoEditar: async () => {
+          await banco.salvarFicha(p.id, p.ficha, 'criacao');
+          await recarregarPersonagens(p.id);
+          desenhar();
+        },
+      });
+    }
+    // Jogo: cena do lugar, mapa, bairro visitado; ficha e diário abrem como janelas sobre a cena.
+    if (rota === 'mapa') return await telaMapa(tela, p);
+    if (rota.startsWith('lugar/')) return await telaNoite(tela, p, { lugar: rota.slice(6) });
+    if (rota === 'ficha' || rota === 'diario') return await telaNoite(tela, p, { abrir: rota });
     return await telaNoite(tela, p);
   } catch (err) {
     console.error(err);

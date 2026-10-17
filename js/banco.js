@@ -49,7 +49,7 @@ export async function sair() {
 export async function meusPersonagens() {
   const { data, error } = await sb
     .from('personagens')
-    .select('id, nome, status, ficha, estado, retrato, criado_em, atualizado_em')
+    .select('id, nome, status, ficha, estado, retrato, sprite, criado_em, atualizado_em')
     .order('criado_em', { ascending: true });
   falha(error, 'Não foi possível carregar seus personagens.');
   return data;

@@ -854,6 +854,338 @@ body.sem-efeitos #chuva, body.sem-efeitos #nevoa, body.sem-efeitos #luzes, body.
 .final-conversa { margin-top: 1.5rem; }
 .centro { text-align: center; }
 
+/* === Tela de jogo em tela cheia ============================================================== */
+
+body[data-tela='cena'] .topo, body[data-tela='cena'] .rodape { display: none; }
+body[data-tela='cena'] main { position: fixed; inset: 0; max-width: none; margin: 0; padding: 0; background: none; border: 0; backdrop-filter: none; }
+body[data-tela='cena'] #cenario { animation: none; transition: transform 0.1s linear, filter 0.15s; }
+/* Na cena, a pintura aparece inteira: só uma sombra leve no topo e no rodapé, para o HUD ficar legível. */
+body[data-tela='cena'] #cenario::after { background: linear-gradient(180deg, rgba(5, 5, 6, 0.45) 0%, rgba(5, 5, 6, 0) 18%, rgba(5, 5, 6, 0) 75%, rgba(5, 5, 6, 0.4) 100%); }
+body[data-tela='cena'] .tela { position: absolute; inset: 0; animation: entrar 0.6s ease-out both; }
+.tela-jogo { position: absolute; inset: 0; overflow: clip; } /* clip: nada rola a cena, nem o foco */
+.palco { position: absolute; inset: 0; }
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--linha-forte);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 0.78em;
+  font-weight: 700;
+  text-align: center;
+  color: var(--texto-claro);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* --- Cena: chão, pontos e personagem --- */
+.cena { position: absolute; inset: 0; cursor: crosshair; }
+.cena-pontos { position: absolute; inset: 0; }
+.ponto {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(var(--escala, 1));
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--texto-claro);
+}
+.ponto-anel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+  border-radius: 50%;
+  border: 2px solid var(--acento);
+  box-shadow: 0 0 18px rgba(226, 112, 62, 0.6), inset 0 0 12px rgba(226, 112, 62, 0.4);
+  animation: anel 2s ease-in-out infinite;
+}
+@keyframes anel { 50% { transform: scale(1.25); opacity: 0.45; } }
+.ponto-icone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(10, 8, 8, 0.72);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--acento-claro);
+}
+.ponto-rotulo {
+  max-width: 190px;
+  padding: 0.2rem 0.55rem;
+  background: rgba(6, 6, 7, 0.78);
+  border: 1px solid var(--linha-forte);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  text-align: center;
+  opacity: 0.8;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+.ponto:hover .ponto-rotulo, .ponto.perto .ponto-rotulo { opacity: 1; border-color: var(--acento); color: #fff; }
+.ponto:hover .ponto-icone, .ponto.perto .ponto-icone { background: var(--acento); color: #1a0d07; }
+.ponto.perto .ponto-anel { border-color: #ffd2b0; animation-duration: 0.9s; }
+.ponto-historia .ponto-anel { border-color: #e9e0cf; box-shadow: 0 0 18px rgba(233, 224, 207, 0.5); }
+.ponto-historia .ponto-icone { color: #f2e9d8; }
+.ponto-cacar .ponto-anel { border-color: var(--sangue-vivo); box-shadow: 0 0 18px rgba(216, 33, 61, 0.7); }
+.ponto-cacar .ponto-icone { color: #ff8a9a; }
+.ponto-escrever .ponto-anel { border-color: var(--voz-mental); box-shadow: 0 0 18px rgba(99, 182, 219, 0.5); }
+.ponto-escrever .ponto-icone { color: var(--voz-mental); }
+.ponto-saida .ponto-anel { border-style: dashed; border-color: var(--texto-suave); box-shadow: none; }
+.ponto.feito .ponto-icone::after { content: '✓'; position: absolute; right: -4px; top: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--ok); color: #0b1a10; font-size: 0.7rem; display: grid; place-items: center; }
+
+/* Personagem: a altura vem da profundidade (--altura); --virar = 1 (direita) ou -1 (esquerda). */
+.personagem {
+  position: absolute;
+  height: var(--altura, 27vh);
+  width: calc(var(--altura, 27vh) * 0.4);
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+}
+.personagem .silhueta { transform: scaleX(var(--virar, 1)); filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6)); }
+.personagem.com-sprite { width: calc(var(--altura, 27vh) * var(--proporcao, 0.55)); }
+.sprite {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: calc(var(--quadros, 6) * 100%) 100%;
+}
+.corpo-sprite {
+  top: 0;
+  transform: scaleX(var(--virar, 1)) rotate(var(--inclinar, 0deg));
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5)) brightness(0.94) contrast(1.05);
+}
+/* Reflexo no chão molhado: a mesma figura, virada de cabeça para baixo e esmaecendo. */
+.reflexo {
+  top: 100%;
+  transform: scaleX(var(--virar, 1)) scaleY(-1);
+  transform-origin: 50% 50%;
+  opacity: 0.28;
+  filter: blur(1.2px) brightness(0.75) saturate(1.2);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+  mask-image: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+}
+.sombra-pe {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.6vh;
+  height: 1.8vh;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7), transparent 70%);
+  transition: transform 0.2s;
+}
+.andando .sombra-pe { transform: scaleX(1.1); }
+.silhueta { width: 100%; height: 100%; overflow: visible; }
+.silhueta .sombra { fill: rgba(0, 0, 0, 0.55); }
+.silhueta .casaco, .silhueta .braco path, .silhueta .perna path, .silhueta .cabeca, .silhueta .cabelo, .silhueta .gola {
+  fill: #0b0b0d;
+  stroke: var(--cor-cla);
+  stroke-width: 1.4;
+  stroke-opacity: 0.9;
+}
+.silhueta .cabelo { fill: #050506; stroke-width: 0.8; }
+.silhueta .gola { fill: #17141a; }
+.silhueta .sapato { fill: #050506; }
+.silhueta .olho { fill: #ff3d33; filter: drop-shadow(0 0 2px #ff3d33); animation: piscar 5s infinite; }
+@keyframes piscar { 0%, 96%, 100% { opacity: 1; } 97%, 99% { opacity: 0; } }
+.silhueta .corpo { animation: respirar 3.6s ease-in-out infinite; transform-origin: 40px 190px; }
+@keyframes respirar { 50% { transform: scaleY(1.012); } }
+.silhueta .perna, .silhueta .braco { transform-box: fill-box; }
+.silhueta .perna { transform-origin: 50% 0; }
+.silhueta .braco { transform-origin: 50% 0; }
+.andando .silhueta .corpo { animation: passo 0.5s ease-in-out infinite; }
+.andando .silhueta .perna-esq, .andando .silhueta .braco-dir { animation: balanco 0.5s ease-in-out infinite; }
+.andando .silhueta .perna-dir, .andando .silhueta .braco-esq { animation: balanco 0.5s ease-in-out infinite reverse; }
+@keyframes passo { 0%, 50%, 100% { transform: translateY(0); } 25%, 75% { transform: translateY(-3px); } }
+@keyframes balanco { 0% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } 100% { transform: rotate(16deg); } }
+
+.dica-interagir {
+  position: absolute;
+  left: 50%;
+  bottom: 13vh;
+  transform: translateX(-50%);
+  padding: 0.45rem 0.9rem;
+  background: rgba(6, 6, 7, 0.85);
+  border: 1px solid var(--acento);
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--texto-claro);
+  z-index: 150;
+  pointer-events: none;
+}
+
+/* --- HUD --- */
+.hud-topo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem max(14px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, rgba(5, 5, 6, 0.75), rgba(5, 5, 6, 0));
+  pointer-events: none;
+}
+.hud-topo > * { pointer-events: auto; }
+.hud-personagem { display: flex; gap: 0.7rem; align-items: center; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; color: var(--texto); }
+.hud-personagem img { width: 52px; height: 65px; object-fit: cover; border: 2px solid #050505; outline: 1px solid var(--linha-forte); }
+.hud-personagem b { display: block; font-family: var(--sans); font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-claro); }
+.hud-personagem small { display: block; font-size: 0.82rem; color: var(--texto-suave); }
+.hud-personagem .gotas { margin-top: 0.2rem; }
+.hud-noite { text-align: center; text-shadow: 0 1px 6px #000; }
+.hud-noite b { display: block; font-family: var(--titulo); font-size: 1.4rem; color: var(--texto-claro); }
+.hud-noite small { color: var(--texto-suave); }
+.hud-botoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }
+.hud-botoes button {
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  background: rgba(6, 6, 7, 0.7);
+  border: 1px solid var(--linha-forte);
+  color: var(--texto-claro);
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.hud-botoes button:hover { border-color: var(--acento); }
+.hud-icone { min-width: 36px; }
+.hud-icone[aria-pressed='true'] { color: var(--acento); border-color: var(--acento); }
+.hud-icone[aria-pressed='false'] { opacity: 0.6; }
+
+.hud-plano {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 3.2rem;
+  z-index: 200;
+  width: min(330px, 86vw);
+  padding: 0.8rem 0.95rem;
+  background: rgba(8, 8, 9, 0.84);
+  border: 1px solid var(--linha-forte);
+  border-left: 3px solid var(--acento);
+  backdrop-filter: blur(4px);
+}
+.hud-plano p { margin: 0.2rem 0; font-family: var(--texto-livro); font-size: 0.92rem; color: var(--texto-claro); }
+.hud-plano p.vazio { color: var(--texto-suave); font-style: italic; }
+.hud-plano small { display: block; color: var(--texto-suave); font-size: 0.8rem; }
+.hud-plano small.ok { color: var(--ok); margin-top: 0.4rem; }
+.hud-plano small.aviso-plano { color: var(--acento-claro); margin-top: 0.4rem; }
+.hud-plano-botoes { display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; }
+.hud-plano .btn { padding: 0.45rem 1rem; }
+.hud-dicas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 190;
+  padding: 0.55rem 1rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  background: linear-gradient(0deg, rgba(5, 5, 6, 0.8), rgba(5, 5, 6, 0));
+  pointer-events: none;
+}
+
+/* --- Caixa de diálogo sobre a cena --- */
+.dialogo-cena {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  bottom: 2.6rem;
+  z-index: 300;
+  width: min(860px, 94vw);
+  max-height: min(62vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 8, 9, 0.9);
+  border: 1px solid var(--linha-forte);
+  border-top: 2px solid var(--acento);
+  box-shadow: 0 20px 60px -20px #000;
+  backdrop-filter: blur(5px);
+}
+.dialogo-cabeca, .janela-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 1.1rem 0.3rem; }
+.dialogo-cabeca .grupo-rotulo { margin: 0; color: var(--acento); }
+.fechar-camada { cursor: pointer; background: none; border: 1px solid var(--linha); color: var(--texto-suave); font-family: var(--sans); font-size: 0.78rem; padding: 0.15rem 0.5rem; }
+.fechar-camada:hover { color: var(--texto-claro); border-color: var(--texto-suave); }
+.dialogo-corpo { overflow-y: auto; padding: 0.2rem 1.3rem 0.6rem; overscroll-behavior: contain; }
+.dialogo-corpo .texto-narracao { font-size: 1rem; }
+.dialogo-corpo .hq-solto .painel { aspect-ratio: 21 / 9; }
+.dialogo-corpo label { margin-top: 0.6rem; }
+.dialogo-rodape { padding: 0.4rem 1.3rem 0.8rem; }
+.dialogo-rodape:empty { display: none; }
+
+/* --- Janelas (ficha, diário, plano, opções) --- */
+.janela-fundo { position: absolute; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px); padding: 3vh 3vw; }
+.janela {
+  width: min(620px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 11, 0.96);
+  border: 1px solid var(--linha-forte);
+  border-top: 2px solid var(--acento);
+  box-shadow: 0 30px 80px -20px #000;
+}
+.janela-larga .janela { width: min(900px, 96vw); }
+.janela-cabeca h2 { margin: 0; font-size: 1.1rem; }
+.janela-corpo { overflow-y: auto; padding: 0.4rem 1.3rem 1.3rem; overscroll-behavior: contain; }
+.menu-opcoes { display: grid; gap: 0.6rem; margin: 0.6rem 0 1rem; }
+
+/* --- Mapa do Rio --- */
+.mapa { position: absolute; inset: 0; background: #0b1c22; }
+.mapa-svg { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.mapa-agua { font-family: var(--titulo); font-style: italic; font-size: 34px; fill: rgba(200, 220, 228, 0.55); text-anchor: middle; letter-spacing: 0.08em; paint-order: stroke; stroke: rgba(0, 0, 0, 0.5); stroke-width: 4px; }
+.mapa-lugar { cursor: pointer; }
+.mapa-lugar .mapa-ponto { fill: #120c0a; stroke: var(--acento); stroke-width: 3; }
+.mapa-lugar .mapa-brilho { opacity: 0.5; transition: opacity 0.2s; }
+.mapa-lugar .mapa-nome { font-family: var(--sans); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: #efe4cf; paint-order: stroke; stroke: rgba(0, 0, 0, 0.85); stroke-width: 5px; }
+.mapa-lugar .mapa-aqui { font-family: var(--texto-livro); font-style: italic; font-size: 16px; text-anchor: middle; fill: var(--acento-claro); paint-order: stroke; stroke: rgba(0, 0, 0, 0.85); stroke-width: 4px; }
+.mapa-lugar .mapa-voce { fill: none; stroke: var(--acento-claro); stroke-width: 2; stroke-dasharray: 4 4; animation: girar 8s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.mapa-lugar:hover .mapa-brilho, .mapa-lugar.perto .mapa-brilho { opacity: 1; }
+.mapa-lugar:hover .mapa-ponto, .mapa-lugar.perto .mapa-ponto { fill: var(--acento); }
+.mapa-vampiro .cabeca-mapa { fill: #0b0b0d; stroke: var(--cor-cla); stroke-width: 3; }
+.mapa-vampiro .aura-mapa { fill: none; stroke: var(--cor-cla); stroke-width: 1.5; opacity: 0.6; animation: anel 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.mapa-vampiro .sombra { fill: rgba(0, 0, 0, 0.6); }
+.mapa-vampiro.andando .cabeca-mapa { animation: passo 0.4s ease-in-out infinite; }
+
+/* --- Criação: janela flutuante sobre a pintura, não mais uma faixa --- */
+body[data-tela='criacao'] main {
+  margin: 5vh auto 6vh;
+  max-width: 880px;
+  border: 1px solid var(--linha-forte);
+  border-top: 2px solid var(--acento);
+  box-shadow: 0 30px 80px -30px #000;
+}
+@media (max-width: 860px) { body[data-tela='criacao'] main { margin: 2vh 10px 4vh; width: auto; } }
+
+@media (max-width: 700px) {
+  .hud-noite { display: none; }
+  .hud-botoes button { padding: 0.3rem 0.45rem; font-size: 0.85rem; }
+  .hud-botoes kbd { display: none; }
+  .hud-plano { bottom: 0.6rem; right: 50%; transform: translateX(50%); }
+  .hud-dicas { display: none; }
+  .dialogo-cena { bottom: 0.4rem; max-height: 70vh; }
+  .ponto-rotulo { max-width: 130px; font-size: 0.78rem; }
+}
+
 /* --- Aviso flutuante ------------------------------------------------------------------- */
 
 .aviso {
