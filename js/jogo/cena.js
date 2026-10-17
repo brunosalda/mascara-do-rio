@@ -123,6 +123,7 @@ export function montarCena(raiz, {
         ${htmlBoneco(sprite)}
         <svg class="contornos" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
         <svg class="rastro" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polyline points=""/></svg>
+        <canvas class="sombra-caca" aria-hidden="true"></canvas>
         <svg class="campo-presa" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path d=""/></svg>
         <div class="balao-voz" hidden></div>
         <div class="fala-passagem" hidden></div>
@@ -1043,7 +1044,35 @@ export function montarCena(raiz, {
     }
     campoEl.setAttribute('d', `M${c.alvo.x.toFixed(4)},${c.alvo.y.toFixed(4)} L${pts.join(' L')} Z`);
   }
+  // Rodada 40: na caçada pela sombra (vista do alto), um escurecimento suave e sem cor que cai devagar a
+  // partir de cada luz marcada (claro perto da luz, escuro longe), sempre desfocado. Fora da caçada, nada:
+  // a sombra é a da própria pintura. Com Sentidos, um pouco mais forte.
+  const sombraCaca = cena.querySelector('.sombra-caca');
+  let sombraPronta = false;
+  function prepararSombra() {
+    if (sombraPronta || !geo.alto || !sombraCaca) return;
+    sombraPronta = true;
+    const L = 384;
+    const A = Math.round(L / ASPECTO);
+    sombraCaca.width = L; sombraCaca.height = A;
+    const cx = sombraCaca.getContext('2d');
+    cx.fillStyle = 'rgb(4, 5, 9)';
+    cx.fillRect(0, 0, L, A);
+    cx.globalCompositeOperation = 'destination-out';
+    for (const l of geo.luzes) {
+      if (l.raio >= 0.5) continue;
+      const r = l.raio * 1.5 * A;
+      const g = cx.createRadialGradient(l.x * L, l.y * A, 0, l.x * L, l.y * A, r);
+      const f = limitar(l.forca ?? 1, 0.3, 1);
+      g.addColorStop(0, `rgba(0, 0, 0, ${f})`);
+      g.addColorStop(0.45, `rgba(0, 0, 0, ${(f * 0.6).toFixed(2)})`);
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      cx.fillStyle = g;
+      cx.fillRect(l.x * L - r, l.y * A - r, r * 2, r * 2);
+    }
+  }
   function iniciarFurtividade({ alvo, modo = 'sombra', limite = 20, zonas = [], aoFim, aoVisto }) {
+    if (modo === 'sombra') { prepararSombra(); cena.classList.add('caca-sombra'); }
     caca = { alvo, modo, limite, zonas, aoFim, aoVisto, t0: performance.now(), atencao: 0, anel: 0, olhou: false, olhar: alvo.x > 0.5 ? Math.PI : 0, piscar: caca?.piscar };
     cena.classList.add('em-caca');
     // A presa olha para um lado: o rótulo dela aponta para onde ela olha.
@@ -1061,7 +1090,7 @@ export function montarCena(raiz, {
     const c = caca;
     if (!c) return;
     caca = null;
-    cena.classList.remove('em-caca');
+    cena.classList.remove('em-caca', 'caca-sombra');
     boneco.classList.remove('na-sombra', 'manto');
     atencaoEl.hidden = true;
     document.body.classList.remove('furtividade');

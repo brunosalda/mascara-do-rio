@@ -3381,3 +3381,14 @@ body.sem-efeitos .relogio-noite.ultima-hora { animation: none; }
 .form-senha { display: grid; gap: 0.6rem; max-width: 26rem; }
 .form-senha input { width: 100%; padding: 0.5rem; font: inherit; }
 .cartao-senha { margin-top: 0.3rem; }
+
+/* Rodada 40, item 1: a sombra da caçada sem manchas (escurecimento sem cor, desfocado, só na caçada pela
+   sombra) e o leque da presa em vermelho translúcido de borda macia. */
+.sombra-caca { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; opacity: 0; filter: blur(10px); transition: opacity 0.8s; }
+.cena.vista-alto.caca-sombra .sombra-caca { opacity: 0.34; }
+.cena.vista-alto.caca-sombra.sentidos .sombra-caca { opacity: 0.48; }
+.cena.vista-alto .campo-presa { filter: blur(1.6px); }
+.cena.vista-alto .campo-presa path { fill: rgba(200, 30, 45, 0.14); stroke: none; }
+.cena.vista-alto .campo-presa.forte { filter: blur(0.5px); }
+.cena.vista-alto .campo-presa.forte path { fill: rgba(220, 35, 50, 0.24); stroke: rgba(255, 80, 100, 0.35); }
+body.sem-efeitos .sombra-caca { transition: none; }
