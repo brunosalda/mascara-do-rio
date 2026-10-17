@@ -32,7 +32,8 @@ export async function entrarComSenha(email, senha) {
 // criarSenha: o link volta com ?criar-senha=1 e a tela de criar a senha abre sozinha depois de entrar.
 // Entrar colando o link do e-mail (o redirecionamento ainda cai em localhost): aceita o link do e-mail
 // (…/auth/v1/verify?token=…&type=magiclink), o endereço que já abriu errado (…#access_token=…&refresh_token=…)
-// ou o código de 6 números. Nada do link, do token ou do código é guardado nem registrado.
+// ou um código de 6 números (o e-mail de hoje não traz código, só o link). Nada do link, do token ou do
+// código é guardado nem registrado.
 export async function entrarComLinkColado(texto, email = '') {
   const t = String(texto || '').trim();
   if (!t) throw new Error('Cole o link do e-mail no campo.');

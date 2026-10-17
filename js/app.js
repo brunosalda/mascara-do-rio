@@ -95,8 +95,9 @@ export function telaLogin(raiz, { demo = false } = {}) {
             <label data-campo-link="email">E-mail<input type="email" name="email" autocomplete="email" required></label>
             <button class="btn" type="submit">Mandar o link</button>
             <p class="msg-login" role="status" hidden></p>
-            <p class="passo-titulo"><b>2</b> Cole o link do e-mail</p>
-            <p class="nota">No e-mail, <b>não toque no link</b>. Toque e segure, escolha <b>Copiar</b> e cole aqui. Se o link já abriu uma página que não carregou, copie o endereço dessa página e cole aqui.</p>
+            <p class="passo-titulo"><b>2</b> Toque no link do e-mail</p>
+            <p class="nota">Abra o e-mail <b>neste mesmo aparelho</b> e toque no link: ele volta para cá e a tela de criar a senha abre sozinha. O e-mail traz só o link, sem código.</p>
+            <p class="nota">Se o link abrir uma página que não carrega, ou em outro navegador, copie o link (toque e segure, <b>Copiar</b>) e cole aqui:</p>
             <label data-campo-colar>Cole aqui o link do e-mail<textarea name="colado" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label>
             <button class="btn" type="button" data-colar>Entrar com o link</button>
             <p class="msg-login msg-colar" role="status" hidden></p>
