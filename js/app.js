@@ -387,4 +387,25 @@ async function iniciar() {
 
 on(document, 'click', '[data-ir]', (e, el) => { e.preventDefault(); ir(el.dataset.ir); });
 
+// Aviso de versão nova: de tempos em tempos (e ao voltar para a aba), lê a versão do index.html publicado;
+// se mudou, oferece atualizar. O endereço novo (?v=) escapa também do cache do próprio index.html.
+const minhaVersao = document.querySelector('meta[name="versao"]')?.content || '';
+async function checarVersao() {
+  if (!minhaVersao || document.querySelector('.aviso-versao') || /[?&]depurar\b/.test(location.hash)) return;
+  try {
+    const resp = await fetch(`${location.pathname}?checar=${Date.now()}`, { cache: 'no-store' });
+    const nova = (await resp.text()).match(/<meta name="versao" content="(\d+)"/)?.[1];
+    if (!nova || nova === minhaVersao) return;
+    const aviso = document.createElement('button');
+    aviso.type = 'button';
+    aviso.className = 'aviso-versao';
+    aviso.textContent = 'Há uma versão nova. Toque para atualizar.';
+    aviso.onclick = () => { location.href = `${location.pathname}?v=${nova}${location.hash}`; };
+    document.body.appendChild(aviso);
+  } catch { /* sem rede: tenta de novo depois */ }
+}
+setTimeout(checarVersao, 20000);
+setInterval(checarVersao, 5 * 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarVersao(); });
+
 iniciar();

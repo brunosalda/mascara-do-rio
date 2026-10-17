@@ -3522,3 +3522,8 @@ body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pin
 
 /* Rodada 43: a coluna de leitura da narração com no máximo cerca de 70 letras por linha, em todas as caixas. */
 .texto-narracao > p, .texto-narracao > .fala { max-width: 36em; } /* cerca de 67 letras com esta fonte (62ch dava 83) */
+
+/* Aviso de versão nova (toque para atualizar). */
+.aviso-versao { position: fixed; z-index: 1000; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); translate: -50% 0; min-height: 44px; padding: 0.5rem 1.2rem;
+  font: 700 0.95rem var(--sans); letter-spacing: 0.03em; color: #fbeccb; cursor: pointer; border: 2px solid #c9a25a; border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #a8323a, #5a0d14 75%); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7); }
