@@ -25,11 +25,14 @@ const escala = (y) => 0.75 + y * 0.5;
 function htmlBoneco(cla, sprite) {
   if (!sprite?.url) return `<div class="personagem">${silhueta(cla)}</div>`;
   const estilo = `background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}`;
+  // Duas camadas do corpo: a de cima mostra o quadro seguinte e vai aparecendo,
+  // o que transforma 6 quadros numa passada contínua.
   return `
     <div class="personagem com-sprite">
       <span class="sombra-pe"></span>
       <span class="sprite reflexo" style="${estilo}"></span>
-      <span class="sprite corpo-sprite" style="${estilo}"></span>
+      <span class="sprite corpo-sprite camada-a" style="${estilo}"></span>
+      <span class="sprite corpo-sprite camada-b" style="${estilo}"></span>
     </div>`;
 }
 
@@ -43,9 +46,18 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
   const cena = raiz.querySelector('.cena');
   const camadaPontos = cena.querySelector('.cena-pontos');
   const boneco = cena.querySelector('.personagem');
-  const quadrosSprite = [...boneco.querySelectorAll('.sprite')];
+  const camadaA = boneco.querySelector('.camada-a');
+  const camadaB = boneco.querySelector('.camada-b');
+  const reflexo = boneco.querySelector('.reflexo');
   const dica = cena.querySelector('.dica-interagir');
   const fundo = document.getElementById('cenario');
+  boneco.style.setProperty('--altura', `${ALTURA_BONECO * 100}vh`);
+
+  // Tamanho da cena guardado (ler a cada quadro forçaria o navegador a recalcular o layout).
+  let telaL = cena.clientWidth || window.innerWidth;
+  let telaA = cena.clientHeight || window.innerHeight;
+  const medir = () => { telaL = cena.clientWidth || window.innerWidth; telaA = cena.clientHeight || window.innerHeight; };
+  window.addEventListener('resize', medir);
 
   const pos = { ...inicio };
   const vel = { x: 0, y: 0 };
@@ -56,8 +68,7 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
   let perto = null;
   let olhandoEsquerda = false;
   let ultimo = performance.now();
-  let andado = 0;          // distância acumulada, para trocar os quadros
-  let quadroAtual = -1;
+  let fase = sprite?.parado ?? 0; // posição na passada, em quadros (fracionária)
   let proximoPasso = 0;
   let vivo = true;
 
@@ -88,11 +99,20 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
     aoInteragir?.(p);
   }
 
-  function mostrarQuadro(n) {
-    if (!sprite?.url || n === quadroAtual) return;
-    quadroAtual = n;
-    const deslocamento = sprite.quadros > 1 ? (n / (sprite.quadros - 1)) * 100 : 0;
-    for (const el of quadrosSprite) el.style.backgroundPosition = `${deslocamento}% 0`;
+  const posicaoDoQuadro = (n) => `${sprite.quadros > 1 ? (n / (sprite.quadros - 1)) * 100 : 0}% 0`;
+
+  // Mostra a passada na fase f: a camada A no quadro atual, a B no seguinte, aparecendo aos poucos.
+  function mostrarFase(f) {
+    if (!sprite?.url) return;
+    const n = sprite.quadros;
+    const base = Math.floor(f);
+    const a = ((base % n) + n) % n;
+    const b = (a + 1) % n;
+    const t = f - base;
+    camadaA.style.backgroundPosition = posicaoDoQuadro(a);
+    camadaB.style.backgroundPosition = posicaoDoQuadro(b);
+    camadaB.style.opacity = (t * t * (3 - 2 * t)).toFixed(3); // suavizado
+    reflexo.style.backgroundPosition = posicaoDoQuadro(t < 0.5 ? a : b);
   }
 
   function quadro(agora) {
@@ -136,23 +156,27 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
     const andando = rapidez > 0.15;
     if (Math.abs(vel.x) > 0.02) olhandoEsquerda = vel.x < 0;
 
-    // Quadros da caminhada pela distância andada; parado, o quadro de descanso.
+    // Passada: avança pela distância andada, com mistura entre quadros. Ao parar, termina o
+    // passo até o quadro de descanso em vez de pular para ele.
     if (sprite?.url) {
-      if (andando) {
-        andado += Math.hypot(vel.x, vel.y * (CHAO.base - CHAO.topo)) * dt;
-        mostrarQuadro(Math.floor(andado / PIXELS_POR_QUADRO) % sprite.quadros);
+      const n = sprite.quadros;
+      const parado = sprite.parado ?? 0;
+      if (rapidez > 0.05) {
+        fase += (Math.hypot(vel.x, vel.y * (CHAO.base - CHAO.topo)) * dt) / PIXELS_POR_QUADRO;
       } else {
-        mostrarQuadro(sprite.parado ?? 0);
+        const falta = ((parado - fase) % n + n) % n; // quadros até o descanso, sempre para a frente
+        if (falta > 0.02 && falta < n - 0.02) fase += Math.min(falta, dt * 9);
+        else fase = Math.round(fase);
       }
+      mostrarFase(fase);
     }
     if (andando && agora > proximoPasso) { som.passo?.(); proximoPasso = agora + 360; }
 
+    // Posição pela placa de vídeo (translate3d), escala pela profundidade, pés como ponto de apoio.
     const s = escala(pos.y);
     boneco.classList.toggle('andando', andando);
-    boneco.style.left = `${pos.x * 100}%`;
-    boneco.style.top = `${telaY(pos.y) * 100}%`;
+    boneco.style.transform = `translate3d(${(pos.x * telaL).toFixed(1)}px, ${(telaY(pos.y) * telaA).toFixed(1)}px, 0) translate(-50%, -100%) scale(${s.toFixed(3)})`;
     boneco.style.zIndex = String(Math.round(10 + pos.y * 80));
-    boneco.style.setProperty('--altura', `${ALTURA_BONECO * s * 100}vh`);
     boneco.style.setProperty('--virar', olhandoEsquerda ? -1 : 1);
     // Leve inclinação para a frente quando anda.
     boneco.style.setProperty('--inclinar', `${(olhandoEsquerda ? -1 : 1) * rapidez * 2.5}deg`);
@@ -212,6 +236,7 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
 
   function desmontar() {
     vivo = false;
+    window.removeEventListener('resize', medir);
     document.removeEventListener('keydown', aoApertar);
     document.removeEventListener('keyup', aoSoltar);
     window.removeEventListener('blur', aoPerderFoco);
@@ -220,7 +245,7 @@ export function montarCena(raiz, { cla, sprite = null, pontos = [], inicio = { x
 
   lista = pontos;
   desenharPontos();
-  mostrarQuadro(sprite?.parado ?? 0);
+  mostrarFase(fase);
   requestAnimationFrame(quadro);
 
   return {

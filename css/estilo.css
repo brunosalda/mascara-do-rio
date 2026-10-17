@@ -858,7 +858,7 @@ body.sem-efeitos #chuva, body.sem-efeitos #nevoa, body.sem-efeitos #luzes, body.
 
 body[data-tela='cena'] .topo, body[data-tela='cena'] .rodape { display: none; }
 body[data-tela='cena'] main { position: fixed; inset: 0; max-width: none; margin: 0; padding: 0; background: none; border: 0; backdrop-filter: none; }
-body[data-tela='cena'] #cenario { animation: none; transition: transform 0.1s linear, filter 0.15s; }
+body[data-tela='cena'] #cenario { animation: none; transition: filter 0.15s; will-change: transform; } /* a câmera já é suavizada no JS */
 /* Na cena, a pintura aparece inteira: só uma sombra leve no topo e no rodapé, para o HUD ficar legível. */
 body[data-tela='cena'] #cenario::after { background: linear-gradient(180deg, rgba(5, 5, 6, 0.45) 0%, rgba(5, 5, 6, 0) 18%, rgba(5, 5, 6, 0) 75%, rgba(5, 5, 6, 0.4) 100%); }
 body[data-tela='cena'] .tela { position: absolute; inset: 0; animation: entrar 0.6s ease-out both; }
@@ -948,11 +948,15 @@ kbd {
 /* Personagem: a altura vem da profundidade (--altura); --virar = 1 (direita) ou -1 (esquerda). */
 .personagem {
   position: absolute;
-  height: var(--altura, 27vh);
-  width: calc(var(--altura, 27vh) * 0.4);
-  transform: translate(-50%, -100%);
+  left: 0;
+  top: 0;
+  height: var(--altura, 31vh);
+  width: calc(var(--altura, 31vh) * 0.4);
+  transform-origin: 50% 100%;   /* a posição e a escala vêm do JS, por translate3d (placa de vídeo) */
+  will-change: transform;
   pointer-events: none;
 }
+.camada-b { opacity: 0; }
 .personagem .silhueta { transform: scaleX(var(--virar, 1)); filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6)); }
 .personagem.com-sprite { width: calc(var(--altura, 27vh) * var(--proporcao, 0.55)); }
 .sprite {
