@@ -67,7 +67,7 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
   el.innerHTML = `
     <header class="dialogo-cabeca">
       <span class="grupo-rotulo">${rotulo}</span>
-      ${fechavel ? '<button type="button" class="fechar-camada" data-fechar aria-label="Fechar">Esc ✕</button>' : ''}
+      ${fechavel ? '<button type="button" class="fechar-camada" data-fechar aria-label="Fechar"><span class="so-teclado">Esc </span>✕</button>' : ''}
     </header>
     <div class="dialogo-corpo">${html}</div>
     <div class="dialogo-escolhas"></div>
@@ -135,7 +135,7 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
     <section class="janela surgir" role="dialog" aria-label="${titulo}">
       <header class="janela-cabeca">
         <h2>${titulo}</h2>
-        <button type="button" class="fechar-camada" data-fechar aria-label="Fechar">Esc ✕</button>
+        <button type="button" class="fechar-camada" data-fechar aria-label="Fechar"><span class="so-teclado">Esc </span>✕</button>
       </header>
       <div class="janela-corpo"><p class="carregando">Abrindo…</p></div>
     </section>`;

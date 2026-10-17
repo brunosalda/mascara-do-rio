@@ -226,7 +226,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     abrirDialogo(camadas, {
       rotulo: d.rotulo,
       html: `<div class="texto-narracao">${narracao(`[${d.voz}] ${d.texto}`)}</div>`,
-      rodape: '<span class="nota"><kbd>Esc</kbd> fecha · ande pela cena para descobrir mais</span>',
+      rodape: '<span class="nota"><span class="so-teclado"><kbd>Esc</kbd> fecha · </span>ande pela cena para descobrir mais</span>',
       aoFechar: () => {
         try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
         cena?.atualizarPontos(montarPontos());
@@ -250,10 +250,9 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   function htmlHistoria() {
     if (!atual) return '<p>O Narrador ainda está escrevendo o seu prelúdio.</p>';
     if (atual === preludio) {
-      return `<p class="sobretitulo">Prelúdio</p>${narracaoComPaineis(preludio.texto, preludio.paineis, { cenario: imagem, classe: 'privada' })}${escolhas(opcoes)}`;
+      return `${narracaoComPaineis(preludio.texto, preludio.paineis, { cenario: imagem, classe: 'privada' })}${escolhas(opcoes)}`;
     }
-    return `<p class="sobretitulo">Noite ${ultimaNoite.numero}</p>
-      ${ultimaNoite.narracao_publica || ultimaNoite.paineis?.length ? `<h3>Nas ruas do Rio</h3>${narracaoComPaineis(ultimaNoite.narracao_publica, ultimaNoite.paineis, { cenario: imagem })}` : ''}
+    return `${ultimaNoite.narracao_publica || ultimaNoite.paineis?.length ? `<h3>Nas ruas do Rio</h3>${narracaoComPaineis(ultimaNoite.narracao_publica, ultimaNoite.paineis, { cenario: imagem })}` : ''}
       <h3>Só você sabe</h3>${narracaoComPaineis(narrNoite.texto, narrNoite.paineis, { cenario: imagem, classe: 'privada' })}
       ${escolhas(opcoes)}`;
   }
@@ -271,7 +270,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
       html: htmlHistoria(),
       chave: revelar ? atual?.id : null,
       aoAvancar: () => som.toque(),
-      rodape: noite ? '<span class="nota">Escolha uma fala (1 a 4) ou feche e ande pela cena. <kbd>Esc</kbd> fecha.</span>' : '<span class="nota">A próxima noite ainda não abriu. <kbd>Esc</kbd> fecha.</span>',
+      rodape: noite ? '<span class="nota">Escolha uma fala<span class="so-teclado"> (1 a 4)</span> ou feche e ande pela cena.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>' : '<span class="nota">A próxima noite ainda não abriu.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>',
     });
     camada.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-escolha]');
@@ -457,7 +456,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const recado = abrirDialogo(camadas, {
       rotulo: visitado.nome,
       html: `<div class="texto-narracao"><p>Você chega ${esc(visitado.a)}. Ande pela cena para decidir o que fazer aqui esta noite.</p><p class="nota">O que você escolher aqui entra no seu plano da noite.</p></div>`,
-      rodape: '<div class="rodape-recado"><span class="nota"><kbd>Esc</kbd> fecha</span><button type="button" class="btn-texto" data-nao-mostrar>Não mostrar de novo</button></div>',
+      rodape: '<div class="rodape-recado"><span class="nota so-teclado"><kbd>Esc</kbd> fecha</span><button type="button" class="btn-texto" data-nao-mostrar>Não mostrar de novo</button></div>',
     });
     recado.el.querySelector('[data-nao-mostrar]').onclick = () => { recadoDeChegada(false); recado.fechar(); };
   }
@@ -507,7 +506,7 @@ export async function telaEspera(raiz, p, { aoEditar } = {}) {
   const camada = abrirDialogo(camadas, {
     rotulo: 'Ficha enviada',
     fechavel: false,
-    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p class="nota">Enquanto isso, ande pela Lapa com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>.</p></div>
+    html: `<div class="texto-narracao"><p>Sua ficha está com o Narrador. Quando ele revisar, vai encaixar você na cidade e escrever o seu prelúdio, e a primeira noite se abre para você.</p><p class="nota">Enquanto isso, ande pela Lapa<span class="so-teclado"> com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>.</p></div>
       <ol class="escolhas">
         <li><button type="button" data-ver><span class="escolha-num">1.</span> — Ver minha ficha</button></li>
         <li><button type="button" data-editar><span class="escolha-num">2.</span> — Voltar a editar</button></li>

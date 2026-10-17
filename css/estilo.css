@@ -922,6 +922,81 @@ body.clarao .pintura, body.clarao .frente { filter: brightness(1.9) contrast(1.1
   0%, 100% { opacity: 0.18; } 45% { opacity: 0.32; } 47% { opacity: 0.14; } 49% { opacity: 0.3; } 75% { opacity: 0.24; }
 }
 
+/* Néon ou lâmpada que falha por um instante. */
+.brilho-luz.falhando { animation: none; opacity: 0.02; }
+
+/* Passante: a própria folha de caminhada, bem escura e desfocada, atravessando o fundo. */
+.passante {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: var(--altura, 200px);
+  width: calc(var(--altura, 200px) * var(--proporcao, 0.6));
+  background-repeat: no-repeat;
+  background-size: calc(var(--quadros, 8) * 100%) 100%;
+  transform-origin: 50% 100%;
+  filter: brightness(0.12) saturate(0) blur(0.8px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.passante[hidden] { display: none; }
+
+/* Farol: faixa de luz quente que varre a rua de vez em quando. */
+.farol { position: absolute; left: 0; right: 0; z-index: 2; overflow: hidden; pointer-events: none; mix-blend-mode: screen; }
+.farol::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 236, 190, 0.22) 45%, rgba(255, 246, 220, 0.3) 50%, rgba(255, 236, 190, 0.22) 55%, transparent);
+  opacity: 0;
+}
+.farol.varrendo::before { animation: farol 2.6s cubic-bezier(0.4, 0, 0.6, 1); }
+.farol.da-direita.varrendo::before { animation-direction: reverse; }
+@keyframes farol { 0% { left: -40%; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+body.sem-efeitos .farol, body.sem-efeitos .passante { display: none; }
+
+/* Toque (celular, tablet): nada de teclas; a dica é um botão logo abaixo do ponto; setas na borda
+   apontam pontos fora da tela. */
+body.toque kbd, body.toque .so-teclado, body.toque .hud-dicas { display: none !important; }
+body.toque .dica-interagir {
+  bottom: auto;
+  transform: translate(-50%, 0);
+  max-width: min(70vw, 260px);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -8px #000;
+}
+.seta-borda {
+  position: absolute;
+  top: 50%;
+  z-index: 180;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.55rem;
+  background: rgba(8, 8, 9, 0.78);
+  border: 1px solid rgba(226, 112, 62, 0.7);
+  color: var(--acento-claro);
+  font: 700 1.3rem/1 var(--sans);
+  cursor: pointer;
+  animation: chamar-seta 2s ease-in-out infinite;
+}
+.seta-borda b { font-size: 0.8rem; }
+.seta-esq { left: 0; border-left: 0; border-radius: 0 8px 8px 0; }
+.seta-dir { right: 0; border-right: 0; border-radius: 8px 0 0 8px; }
+.seta-borda[hidden] { display: none; }
+@keyframes chamar-seta { 50% { box-shadow: 0 0 14px rgba(226, 112, 62, 0.45); } }
+
 /* --- Pontos: presos ao chão (o pé do marcador fica na âncora), rótulo acima do ícone. --- */
 .cena-pontos { position: absolute; inset: 0; z-index: 3000; pointer-events: none; }
 .ponto {
@@ -1300,7 +1375,7 @@ pre.depuracao-coord { position: absolute; left: 12px; bottom: 44px; z-index: 600
 @media (orientation: landscape) and (min-width: 760px) {
   .dialogo-esquerda, .dialogo-direita {
     width: min(45vw, 620px);
-    max-height: calc(100vh - 7.6rem);
+    max-height: calc(100vh - 8.1rem);
     margin: 0;
   }
   .dialogo-esquerda { left: 2vw; right: auto; }
@@ -1559,3 +1634,25 @@ body[data-tela='criacao'] main {
 }
 .aviso.visivel { transform: translate(-50%, 0); }
 .aviso-erro { border-color: var(--sangue-vivo); }
+
+/* --- Criação por conversa no palco da cena: a pintura inteira e a caixa igual à da conversa. --- */
+.tela-criacao { background: linear-gradient(90deg, rgba(5, 5, 6, 0) 35%, rgba(5, 5, 6, 0.35)); }
+.dialogo-criacao { max-height: calc(100% - 3rem); }
+.dialogo-criacao .dialogo-cabeca { flex-wrap: wrap; }
+.dialogo-criacao .progresso { margin: 0.1rem 1.3rem 0.4rem; }
+.rotulo-consciencia { display: inline-flex; align-items: center; gap: 0.55rem; }
+.rotulo-consciencia .rosto { position: static; width: 1.7rem; height: 1.7rem; font-size: 0.95rem; }
+.dialogo-criacao .lembranca.passada { opacity: 0.55; }
+.dialogo-criacao .resposta { color: var(--acento-claro); font-family: var(--texto-livro); }
+.dialogo-criacao .campos-conversa label { display: block; margin-top: 0.6rem; }
+.dialogo-criacao .campos-conversa input, .dialogo-criacao .campos-conversa textarea {
+  width: 100%; background: rgba(0, 0, 0, 0.35); border: 0; border-bottom: 1px solid var(--linha-forte); padding: 0.45rem 0.2rem; font-family: var(--texto-livro); font-size: 1rem; color: var(--texto-claro);
+}
+.dialogo-criacao .campos-conversa input:focus, .dialogo-criacao .campos-conversa textarea:focus { outline: none; border-bottom-color: var(--acento); }
+.dialogo-largo { left: 0; right: 0; margin-inline: auto; width: min(1100px, 94vw); top: 4vh; bottom: 3vh; max-height: none; }
+.dialogo-largo .sugestoes-cla { gap: 1rem; }
+.dialogo-largo .cartao-cla.grande img { aspect-ratio: 3 / 4; height: auto; max-height: 46vh; object-fit: cover; }
+@media (max-width: 700px) {
+  .dialogo-criacao { max-height: 82vh; }
+  .dialogo-largo { top: 2vh; bottom: 0; width: 100%; max-height: none; }
+}

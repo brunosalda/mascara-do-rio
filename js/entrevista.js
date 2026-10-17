@@ -121,20 +121,38 @@ export async function telaEntrevista(raiz, personagem) {
     const fim = c.tipo === 'fim';
     const ficha = fim ? montarFicha(e) : null;
     const ok = fim && v5.fichaCompleta(ficha);
+    // Mesmo palco da cena do jogo: a pintura em tela cheia, sem cabeçalho nem rodapé de site, e as
+    // lembranças numa caixa igual à da conversa, com a voz de A CONSCIÊNCIA. Na escolha do clã e na
+    // ficha final, a caixa se abre para a tela quase inteira.
+    document.body.dataset.tela = 'cena';
+    const larga = fim || c.tipo === 'cla';
     raiz.innerHTML = `
-      <section class="conversa">
-        <div class="linha-titulo">
-          <p class="sobretitulo">${fim ? 'Sua ficha' : `Lembrança ${Math.min(e.passo + 1, PERGUNTAS)} de ${PERGUNTAS}`}</p>
-          <button type="button" class="btn-texto" data-detalhado>Prefiro a ficha detalhada</button>
-        </div>
-        <div class="progresso" aria-hidden="true"><span style="width:${Math.round((e.passo / PERGUNTAS) * 100)}%"></span></div>
-        <div class="dialogo">
-          ${htmlLog(e)}
-          <div class="lembranca atual" id="cena-atual">${fim ? htmlFim(ficha, ok) : htmlCena(c, e)}</div>
-        </div>
-      </section>`;
+      <div class="tela-jogo tela-criacao">
+        <section class="dialogo-cena dialogo-criacao ${larga ? 'dialogo-largo' : 'dialogo-direita'} conversa">
+          <header class="dialogo-cabeca">
+            <span class="grupo-rotulo rotulo-consciencia voz-alma"><span class="rosto" aria-hidden="true">C</span>${fim ? 'Sua ficha' : `A consciência · lembrança ${Math.min(e.passo + 1, PERGUNTAS)} de ${PERGUNTAS}`}</span>
+            <button type="button" class="btn-texto" data-detalhado>Prefiro a ficha detalhada</button>
+          </header>
+          <div class="progresso" aria-hidden="true"><span style="width:${Math.round((e.passo / PERGUNTAS) * 100)}%"></span></div>
+          <div class="dialogo-corpo">
+            <div class="dialogo">
+              ${htmlLog(e)}
+              <div class="lembranca atual" id="cena-atual">${fim ? htmlFim(ficha, ok) : htmlCena(c, e)}</div>
+            </div>
+          </div>
+        </section>
+      </div>`;
     const atual = raiz.querySelector('#cena-atual');
-    if (e.log.length) atual.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // As escolhas da lembrança atual ficam presas no pé da caixa, como no jogo.
+    const escolhasAtuais = atual.querySelector(':scope > .escolhas');
+    if (escolhasAtuais) {
+      const pe = document.createElement('div');
+      pe.className = 'dialogo-escolhas';
+      pe.appendChild(escolhasAtuais);
+      raiz.querySelector('.dialogo-criacao').appendChild(pe);
+    }
+    const corpo = raiz.querySelector('.dialogo-corpo');
+    if (e.log.length) requestAnimationFrame(() => { corpo.scrollTop = atual.offsetTop - 12; });
     const primeiro = atual.querySelector('[data-campo-conversa]');
     if (primeiro) setTimeout(() => primeiro.focus({ preventScroll: true }), 600);
   }
@@ -193,7 +211,7 @@ export async function telaEntrevista(raiz, personagem) {
     if (!raiz.isConnected) { document.removeEventListener('keydown', teclas); return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
     const n = Number(ev.key);
-    if (n >= 1 && n <= 9) raiz.querySelector(`#cena-atual [data-opcao="${n - 1}"]`)?.click();
+    if (n >= 1 && n <= 9) raiz.querySelector(`[data-opcao="${n - 1}"]`)?.click();
   };
   document.addEventListener('keydown', teclas);
 

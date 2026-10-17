@@ -71,7 +71,9 @@ export function montarCena(raiz, {
     <div class="cena">
       <div class="mundo">
         <div class="pintura" style="background-image:url('${fundoUrl}')"></div>
-        ${geo.luzes.filter((l) => l.raio < 0.5).map((l, i) => `<span class="brilho-luz" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>`).join('')}
+        ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
+        ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
+        ${sprite?.url && geo.vida?.passantes?.length ? `<span class="passante" style="background-image:url('${sprite.url}');--quadros:${sprite.quadros};--proporcao:${sprite.largura / sprite.altura}" hidden></span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
         ${htmlBoneco(cla, sprite)}
         <div class="balao-voz" hidden></div>
@@ -79,6 +81,8 @@ export function montarCena(raiz, {
         ${depurar ? htmlDepuracao(geo) : ''}
       </div>
       <div class="dica-interagir" hidden></div>
+      <button type="button" class="seta-borda seta-esq" hidden aria-label="Pontos à esquerda">‹ <b></b></button>
+      <button type="button" class="seta-borda seta-dir" hidden aria-label="Pontos à direita"><b></b> ›</button>
       ${depurar ? '<pre class="depuracao-coord">Modo de edição: clique na pintura para ver a coordenada.</pre>' : ''}
     </div>`;
   const cena = raiz.querySelector('.cena');
@@ -91,7 +95,14 @@ export function montarCena(raiz, {
   const sombra = boneco.querySelector('.sombra-pe');
   const balao = cena.querySelector('.balao-voz');
   const dica = cena.querySelector('.dica-interagir');
+  const setaEsq = cena.querySelector('.seta-esq');
+  const setaDir = cena.querySelector('.seta-dir');
+  // Toque (celular, tablet): sem teclas nas dicas; a dica vira botão junto do ponto.
+  const toque = window.matchMedia?.('(pointer: coarse)').matches;
+  document.body.classList.toggle('toque', !!toque);
   const painelCoord = cena.querySelector('.depuracao-coord');
+  const farol = cena.querySelector('.farol');
+  const passante = cena.querySelector('.passante');
 
   // --- Tamanho do mundo: a pintura cobre a tela; no celular em pé, ela fica mais larga que a tela
   //     e a câmera acompanha o personagem. Medido só ao mudar o tamanho da janela.
@@ -105,7 +116,7 @@ export function montarCena(raiz, {
     mundo.style.width = `${mw}px`;
     mundo.style.height = `${mh}px`;
     mundo.style.setProperty('--mh', `${mh}px`);
-    boneco.style.setProperty('--altura', `${(ALTURA_REF * mh) / FIGURA}px`);
+    mundo.style.setProperty('--altura', `${(ALTURA_REF * mh) / FIGURA}px`); // personagem e passantes
     cameraPronta = false;
   }
   medir();
@@ -139,6 +150,10 @@ export function montarCena(raiz, {
   let mostrarTudoAte = 0;
   let falaAte = 0;
   let vivo = true;
+  // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
+  const efeitosLigados = () => !document.body.classList.contains('sem-efeitos');
+  const sorteio = (min, max) => min + Math.random() * (max - min);
+  const vida = { proximoPassante: performance.now() + sorteio(3000, 7000), passante: null, proximaFalha: performance.now() + sorteio(2500, 6000), falhando: -1, falhaAte: 0, proximoFarol: performance.now() + sorteio(5000, 10000) };
   const feitosAntes = new Set();
 
   // --- Pontos ----------------------------------------------------------------------------------
@@ -256,7 +271,8 @@ export function montarCena(raiz, {
     const pes = brilhoDaPintura(pos.x, pos.y - 0.01, 0.02);
     const L = tronco == null ? 0.3 : tronco * 0.5 + pes * 0.5;
     let total = 0; let r = 0; let g = 0; let b = 0; let principal = null; let maior = 0;
-    for (const l of geo.luzes) {
+    for (const [n, l] of geo.luzes.entries()) {
+      if (n === vida.falhando) continue; // a luz que falhou agora não ilumina
       const f = Math.max(0, 1 - dist(l.x, l.y, pos.x, ty) / l.raio);
       const i = f * f * l.forca;
       if (i <= 0) continue;
@@ -282,6 +298,61 @@ export function montarCena(raiz, {
     const forca = comLuz ? Math.min(1, maior * 1.6) : 0;
     sombra.style.transform = `translateX(${(-lado * forca * 22).toFixed(1)}%) scaleX(${(1 + forca * 0.5).toFixed(2)})`;
     sombra.style.opacity = (0.8 - forca * 0.2).toFixed(2);
+  }
+
+  // --- Vida dentro da pintura ------------------------------------------------------------------
+  function animarVida(agora, dt) {
+    const ligado = efeitosLigados();
+    // Passante: silhueta escura e desfocada que atravessa o fundo, na escala da perspectiva.
+    if (passante) {
+      const faixas = geo.vida.passantes;
+      if (!vida.passante && ligado && agora > vida.proximoPassante) {
+        const f = faixas[Math.floor(Math.random() * faixas.length)];
+        const ida = Math.random() < 0.5;
+        vida.passante = { f, x: ida ? f.x0 : f.x1, dir: ida ? 1 : -1, fase: 0 };
+        passante.hidden = false;
+      }
+      const p = vida.passante;
+      if (p) {
+        const h = altura(p.f.y);
+        const v = 0.05 * limitar(h / ALTURA_REF, 0.3, 1.2);
+        p.x += p.dir * v * dt;
+        p.fase += (v * mw * dt) / Math.max(1, (h * mh * PASSADA) / sprite.quadros);
+        const q = Math.floor(p.fase) % sprite.quadros;
+        passante.style.backgroundPosition = posicaoDoQuadro(q);
+        passante.style.transform = `translate3d(${(p.x * mw).toFixed(1)}px, ${(p.f.y * mh).toFixed(1)}px, 0) translate(-50%, -100%) scale(${(h / ALTURA_REF).toFixed(3)}) scaleX(${p.dir})`;
+        passante.style.zIndex = String(Math.round(p.f.y * 1000));
+        if (p.x < p.f.x0 - 0.02 || p.x > p.f.x1 + 0.02 || !ligado) {
+          vida.passante = null;
+          passante.hidden = true;
+          vida.proximoPassante = agora + sorteio(10000, 25000);
+        }
+      }
+    }
+    // Néon ou lâmpada que falha: o brilho cai por um instante (e some da luz no personagem).
+    if (vida.falhando >= 0 && agora > vida.falhaAte) {
+      mundo.querySelector(`.brilho-luz[data-luz="${vida.falhando}"]`)?.classList.remove('falhando');
+      vida.falhando = -1;
+      proximaLuz = 0;
+    }
+    if (vida.falhando < 0 && ligado && agora > vida.proximaFalha) {
+      const candidatas = geo.luzes.map((l, i) => (l.falha ? i : -1)).filter((i) => i >= 0);
+      vida.proximaFalha = agora + sorteio(4000, 11000);
+      if (candidatas.length) {
+        vida.falhando = candidatas[Math.floor(Math.random() * candidatas.length)];
+        vida.falhaAte = agora + sorteio(70, 220);
+        mundo.querySelector(`.brilho-luz[data-luz="${vida.falhando}"]`)?.classList.add('falhando');
+        proximaLuz = 0;
+      }
+    }
+    // Farol: uma faixa de luz varre a rua de um lado ao outro.
+    if (farol && ligado && agora > vida.proximoFarol) {
+      vida.proximoFarol = agora + sorteio(18000, 36000);
+      farol.classList.remove('varrendo', 'da-direita');
+      void farol.offsetWidth;
+      farol.classList.toggle('da-direita', Math.random() < 0.5);
+      farol.classList.add('varrendo');
+    }
   }
 
   // --- Folha de caminhada --------------------------------------------------------------------------
@@ -338,15 +409,40 @@ export function montarCena(raiz, {
   }
 
   // Rótulos dos pontos sempre dentro da tela (perto da borda, o rótulo desliza para dentro).
-  function ajustarRotulos() {
+  // Pontos fora da tela (o mundo é mais largo que o celular) ganham uma seta na borda, com o número deles.
+  const foraDaTela = { esq: [], dir: [] };
+  function ajustarRotulos(agora) {
+    foraDaTela.esq = [];
+    foraDaTela.dir = [];
     for (const el of camadaPontos.children) {
       const p = lista.find((x) => x.id === el.dataset.ponto);
       if (!p) continue;
       const sx = cam.x + p.x * mw * cam.z;
       el.classList.toggle('rotulo-dir', sx < 110);
       el.classList.toggle('rotulo-esq', sx > vw - 110);
+      if (p.discreto && !visivel(p, agora)) continue;
+      if (sx < 8) foraDaTela.esq.push(p); else if (sx > vw - 8) foraDaTela.dir.push(p);
+    }
+    for (const [seta, grupo] of [[setaEsq, foraDaTela.esq], [setaDir, foraDaTela.dir]]) {
+      seta.hidden = !grupo.length || conversa;
+      seta.querySelector('b').textContent = grupo.length;
+    }
+    // No toque, a dica fica logo abaixo do ponto mais perto.
+    if (toque && perto) {
+      dica.style.left = `${(cam.x + perto.x * mw * cam.z).toFixed(0)}px`;
+      dica.style.top = `${(cam.y + perto.y * mh * cam.z + 10).toFixed(0)}px`;
     }
   }
+  function irParaFora(grupo) {
+    const p = grupo.reduce((a, b) => (dist(a.x, a.y, pos.x, pos.y) < dist(b.x, b.y, pos.x, pos.y) ? a : b));
+    const [x, y] = maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
+    alvo = { x, y, ponto: p };
+    semProgresso = 0;
+  }
+  for (const [seta, lado] of [[setaEsq, 'esq'], [setaDir, 'dir']]) {
+    seta.addEventListener('click', (ev) => { ev.stopPropagation(); if (foraDaTela[lado].length) irParaFora(foraDaTela[lado]); });
+  }
+  dica.addEventListener('click', (ev) => { ev.stopPropagation(); if (perto) interagir(perto); });
 
   // --- Movimento ---------------------------------------------------------------------------------
   function mover(dx, dy) {
@@ -456,6 +552,7 @@ export function montarCena(raiz, {
     }
 
     if (proximaLuz === 0 || (agora > proximaLuz && (andando || virando))) { iluminar(); proximaLuz = agora + 100; }
+    animarVida(agora, dt);
 
     // Pontos: discretos aparecem de perto; o mais próximo acende. Checagem a cada 120 ms.
     if (agora > proximaChecagem) {
@@ -470,9 +567,9 @@ export function montarCena(raiz, {
         perto = novo;
         for (const el of camadaPontos.children) el.classList.toggle('perto', el.dataset.ponto === perto?.id);
         dica.hidden = !perto;
-        if (perto) dica.innerHTML = `<kbd>E</kbd> ${esc(perto.acao || perto.rotulo)}`;
+        if (perto) dica.innerHTML = toque ? esc(perto.acao || perto.rotulo) : `<kbd>E</kbd> ${esc(perto.acao || perto.rotulo)}`;
       }
-      ajustarRotulos();
+      ajustarRotulos(agora);
       checarComentarios();
     }
     requestAnimationFrame(quadro);
