@@ -1740,7 +1740,8 @@ export function montarCena(raiz, {
     }
     alvoX = limitar(alvoX, vw - W, 0);
     alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H, 0);
-    const k = !cameraPronta || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));
+    // Movimento reduzido (rodada 42): a câmera vai direto, sem deslizar.
+    const k = !cameraPronta || reduzido() || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));
     if (geo.alto && camLivre.suave && Math.abs(alvoX - cam.x) + Math.abs(alvoY - cam.y) < 2) camLivre.suave = false;
     cam.x += (alvoX - cam.x) * k;
     cam.y += (alvoY - cam.y) * k;

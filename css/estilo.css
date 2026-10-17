@@ -3470,3 +3470,29 @@ body:has(.tela-entrada) #cenario, body:has(.tela-criacao) #cenario {
 :is(button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 3px solid #f0d590 !important; outline-offset: 2px !important; box-shadow: 0 0 0 6px rgba(20, 14, 8, 0.85) !important; }
 .cena .ponto:focus-visible { outline-offset: 4px !important; }
+
+/* Rodada 42, item 3: movimento reduzido (cerimônias curtas ou o sistema pedindo menos movimento). As coisas
+   vivas quase param (só a luz fica, sem tremor), o relógio não pulsa, o aceno vira só a cabeça virada,
+   nada pisca. A câmera vai direto (cena.js) e o Beijo dura 1 s. */
+body.cerimonias-curtas .vivo { animation: none !important; }
+body.cerimonias-curtas .vivo-agua, body.cerimonias-curtas .vivo-poca { opacity: 0.3 !important; }
+body.cerimonias-curtas .vivo-neon { opacity: 0.5 !important; }
+body.cerimonias-curtas .vivo-onda, body.cerimonias-curtas .vivo-veiculo, body.cerimonias-curtas .vivo-fumaca, body.cerimonias-curtas .vivo-janela { opacity: 0 !important; }
+body.cerimonias-curtas .vivo-lanterna { transform: rotate(90deg); opacity: 0.5 !important; }
+body.cerimonias-curtas .relogio-noite.ultima-hora { animation: none !important; }
+body.cerimonias-curtas .pessoa.acena .pessoa-figura { animation: none !important; }
+body.cerimonias-curtas .brilho-luz.com-falha, body.cerimonias-curtas .brilho-luz.falhando, body.cerimonias-curtas .brilho-luz.piscando { animation: none !important; }
+body.cerimonias-curtas .faixa-feito { animation: none !important; }
+body.cerimonias-curtas .pessoa-figura, body.cerimonias-curtas .pessoa.pessoa-pintada .pessoa-figura img { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .vivo { animation: none !important; }
+  .vivo-agua, .vivo-poca { opacity: 0.3 !important; }
+  .vivo-neon { opacity: 0.5 !important; }
+  .vivo-onda, .vivo-veiculo, .vivo-fumaca, .vivo-janela { opacity: 0 !important; }
+  .vivo-lanterna { transform: rotate(90deg); opacity: 0.5 !important; }
+  .relogio-noite.ultima-hora { animation: none !important; }
+  .pessoa.acena .pessoa-figura { animation: none !important; }
+  .brilho-luz.com-falha, .brilho-luz.falhando, .brilho-luz.piscando { animation: none !important; }
+  .faixa-feito { animation: none !important; }
+  .pessoa-figura, .pessoa.pessoa-pintada .pessoa-figura img { animation: none !important; }
+}
