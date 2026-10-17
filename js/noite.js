@@ -590,7 +590,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const ordem = abordagensPara(p.ficha?.predador?.id);
     setTimeout(() => cena.perguntarNoBalao({
       voz: 'A FOME', texto: 'Como?', ms: 1e9, perto: { x: pr.x, y: pr.y, raio: 0.4 },
-      aoCancelar: (porque) => { if (porque === 'esc') cena.falar('A FOME', 'Escolha outra, ou volte a ela.', 3000); },
+      aoCancelar: () => cena.falar('A FOME', 'Escolha outra, ou volte a ela.', 3000),
       opcoes: ordem.map((k, i) => `${ABORDAGENS[k].nome}${i === 0 ? ' (o seu jeito)' : ''}`),
       aoEscolher: (i) => iniciarAbordagem(pr, ordem[i]),
     }), pr.vulneravel ? 1700 : 150);
