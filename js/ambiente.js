@@ -316,6 +316,20 @@ export const som = {
     tom(audio, t, 1318.5, { dur: 0.5, volume: 0.009, ataque: 0.06 });
     tom(audio, t + 0.09, 1760, { dur: 0.45, volume: 0.006, ataque: 0.06 });
   },
+  // Coisas da pintura que respondem: um som tonal curto, no lado do estéreo onde acontece.
+  reacao(tipo, pan = 0) {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    if (tipo === 'copo') {
+      tom(audio, t, 2637, { dur: 0.35, volume: 0.012, pan });
+      tom(audio, t + 0.06, 3520, { dur: 0.3, volume: 0.008, pan });
+    } else if (tipo === 'poca') {
+      tom(audio, t, 620, { dur: 0.18, volume: 0.014, ate: 380, pan });
+    } else if (tipo === 'poste') {
+      tom(audio, t, 110, { tipo: 'triangle', dur: 0.12, volume: 0.02, pan });
+      tom(audio, t + 0.16, 110, { tipo: 'triangle', dur: 0.1, volume: 0.016, pan });
+    }
+  },
   // Enviar o plano: a gota que cai (nota que desce), o baque no selo e o eco grave.
   selo() {
     if (!audio || !this.ligado()) return;

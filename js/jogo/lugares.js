@@ -11,6 +11,11 @@
 // luzes:     { x, y, cor, raio, forca, falha } (raio em alturas da pintura; falha = néon ou lâmpada que pisca).
 // vida:      passantes (silhuetas que atravessam o fundo, na altura y, entre x0 e x1) e farois (faixa
 //            de luz que varre o chão entre y0 e y1).
+// Na âncora, opcionais: parada [x, y] (onde o personagem para), lado ('esquerda'/'direita', para
+// onde ele olha), baixo (objeto no chão: ele se abaixa) e contorno (polígono do objeto pintado, que se
+// acende de perto). Sem eles, vale o ponto de chão mais perto e o lado do objeto.
+// reacoes:   coisas da pintura que respondem quando ele passa ou para: { tipo: 'copo'|'poca'|'poste',
+//            x, y, raio, luz } (luz = índice em luzes, para o poste piscar).
 
 export const LUGARES = {
   lapa: {
@@ -22,7 +27,9 @@ export const LUGARES = {
     saida: [0.055, 0.83],
     ancoras: {
       arcos: { x: 0.32, y: 0.68, papel: 'memoria', termos: ['arcos', 'aqueduto', 'bonde', 'bondinho'] },
-      bar: { x: 0.83, y: 0.715, termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
+      bar: { x: 0.83, y: 0.715, parada: [0.795, 0.735], lado: 'direita',
+        contorno: [[0.795, 0.43], [0.93, 0.42], [0.935, 0.70], [0.80, 0.705]],
+        termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
       rua: { x: 0.5, y: 0.82, papel: 'livre', termos: ['rua', 'praca', 'gente', 'multidao', 'policia', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
       fundo: { x: 0.64, y: 0.672, termos: ['seguir', 'centro', 'caminho', 'andar', 'ir ', 'procurar', 'encontrar'] },
       beco: { x: 0.9, y: 0.86, papel: 'escuro', termos: ['beco', 'escondido', 'sombra', 'esconder', 'vigiar', 'observar'] },
@@ -46,6 +53,11 @@ export const LUGARES = {
       { x: 0.03, y: 0.54, cor: '#ff3a2a', raio: 0.16, forca: 0.7 },    // bar da esquerda
     ],
     vida: { passantes: [{ y: 0.645, x0: 0.14, x1: 0.68 }], farois: { y0: 0.66, y1: 0.94 } },
+    reacoes: [
+      { tipo: 'copo', x: 0.79, y: 0.72, raio: 0.055 },   // copos nas mesas da calçada do bar
+      { tipo: 'poca', x: 0.47, y: 0.86, raio: 0.05 },    // poça grande no meio da rua
+      { tipo: 'poste', x: 0.77, y: 0.69, raio: 0.045, luz: 2 },
+    ],
   },
 
   'santa-teresa': {
@@ -416,6 +428,16 @@ export function distribuirAncoras(geo, pedidos) {
     if (resultado.has(p.id)) continue;
     const a = livres.find((x) => !x.papel) || livres[0];
     if (a) resultado.set(p.id, tirar(a));
+  }
+  // Sem âncora sobrando: nunca dois pontos no mesmo lugar. Usa um ponto de chão ao lado de uma âncora,
+  // longe dos que já estão ocupados.
+  const ocupados = [...resultado.values()].map((a) => [a.x, a.y]);
+  const longe = ([x, y]) => ocupados.every(([ox, oy]) => Math.hypot((x - ox) * 1.8, y - oy) > 0.09);
+  for (const p of pedidos) {
+    if (resultado.has(p.id)) continue;
+    const candidatos = Object.values(geo.ancoras).flatMap((a) => [[a.x + 0.1, a.y + 0.03], [a.x - 0.1, a.y + 0.03], [a.x, a.y + 0.08], [a.x + 0.16, a.y], [a.x - 0.16, a.y]]);
+    const c = candidatos.find((q) => dentro(q, geo.chao) && longe(q));
+    if (c) { resultado.set(p.id, { nome: `extra-${p.id}`, x: c[0], y: c[1] }); ocupados.push(c); }
   }
   return resultado;
 }

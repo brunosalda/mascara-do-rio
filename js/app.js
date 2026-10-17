@@ -191,6 +191,12 @@ async function desenhar() {
   // Rotas de demonstração (?depurar): dados fictícios, sem banco e sem mexer na sessão.
   const depurar = /[?&]depurar\b/.test(location.search) || /[?&]depurar\b/.test(location.hash);
   if (rota.startsWith('demo/') && depurar) {
+    // &raf=timer: relógio de teste (requestAnimationFrame trocado por um temporizador), para o painel
+    // escondido do navegador não congelar as animações. Vale para a cena montada a seguir.
+    if (/[?&]raf=timer\b/.test(location.hash) && !window.__rafDeTeste) {
+      window.__rafDeTeste = true;
+      window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16);
+    }
     const { telaDemo } = await import('./demo.js');
     return telaDemo(tela, rota.slice(5));
   }

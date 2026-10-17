@@ -290,14 +290,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     const ancoras = distribuirAncoras(geo, pedidos);
     const pts = [
       { id: 'mapa', tipo: 'saida', icone: '➜', rotulo: emOutroLugar ? 'Voltar ao mapa' : 'Mapa do Rio', acao: 'Abrir o mapa do Rio', x: geo.saida[0], y: geo.saida[1] },
-      ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82 }; }),
+      ...pedidos.map((pd) => { const a = ancoras.get(pd.id); return { ...pd, x: a?.x ?? 0.5, y: a?.y ?? 0.82, parada: a?.parada, lado: a?.lado, baixo: a?.baixo, contorno: a?.contorno }; }),
     ];
     // A caçada é obrigatória: fica sempre à vista; o limite de 5 vale para os outros.
     let vistos = 0;
     pts.forEach((pt) => { if (pt.id === 'cacar' || vistos < MAX_MARCADORES - (pts.some((x) => x.id === 'cacar') ? 1 : 0)) { if (pt.id !== 'cacar') vistos++; } else pt.discreto = true; });
     achados.detalhes.forEach((d) => pts.push({
       id: `detalhe-${d.id}`, tipo: 'detalhe', icone: visto(d.id) ? '·' : '?', rotulo: d.rotulo, acao: `Examinar: ${d.rotulo}`,
-      x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d,
+      x: d.x, y: d.y, discreto: true, visto: visto(d.id), detalhe: d, baixo: /po[cç]a|garrafa|ch[aã]o|bueiro|tampa|bituca|papel|moeda|sapato|caco/i.test(d.rotulo),
     }));
     return pts;
   }
@@ -305,6 +305,22 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // Detalhe examinado: uma fala curta de voz interior, sem mudar regras. Fica marcado no aparelho.
   function abrirDetalhe(pt) {
     const d = pt.detalhe;
+    if (cena?.perguntarNoBalao) {
+      cena.perguntarNoBalao({
+        voz: d.voz, texto: d.rotulo, opcoes: ['Olhar mais de perto', 'Seguir em frente'],
+        aoEscolher: (i) => {
+          if (i !== 0) return;
+          try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
+          registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
+          desenharPlano();
+          const hd = raiz.querySelector('.hud-descobertas');
+          if (hd) { hd.classList.remove('subiu'); void hd.offsetWidth; hd.classList.add('subiu'); }
+          cena.falar(d.voz, d.texto, 7000);
+          cena.atualizarPontos(montarPontos());
+        },
+      });
+      return;
+    }
     // Conta na hora em que o detalhe abre (o contador do HUD pulsa).
     try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
     registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
@@ -371,7 +387,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
 
   function abrirHistoria(revelar, depois) {
     const camada = abrirDialogo(camadas, {
-      aoFechar: depois,
+      // Ao fechar a narração, a cena se apresenta de novo: os nomes de todos os pontos por 3 s.
+      aoFechar: () => { depois?.(); setTimeout(() => cena?.apresentar?.(3000), 200); },
       rotulo: atual === preludio ? 'Prelúdio' : `Noite ${ultimaNoite?.numero}`,
       html: htmlHistoria(),
       chave: revelar ? atual?.id : null,

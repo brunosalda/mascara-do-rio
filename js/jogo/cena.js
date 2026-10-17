@@ -87,7 +87,9 @@ export function montarCena(raiz, {
         ${geo.vida?.passantes?.length ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
         ${htmlBoneco(sprite)}
+        <svg class="contornos" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
         <div class="balao-voz" hidden></div>
+        <div class="fala-passagem" hidden></div>
         <div class="cena-pontos"></div>
         ${depurar ? htmlDepuracao(geo) : ''}
       </div>
@@ -107,6 +109,8 @@ export function montarCena(raiz, {
   const sombra = boneco.querySelector('.sombra-pe');
 
   const balao = cena.querySelector('.balao-voz');
+  const camadaContornos = cena.querySelector('.contornos');
+  const falaPassagem = cena.querySelector('.fala-passagem');
   const dica = cena.querySelector('.dica-interagir');
   const setaEsq = cena.querySelector('.seta-esq');
   const setaDir = cena.querySelector('.seta-dir');
@@ -169,6 +173,8 @@ export function montarCena(raiz, {
   let interagindo = false;
   let mostrarTudoAte = 0;
   let falaAte = 0;
+  let balaoEscolha = null;   // { opcoes, aoEscolher, ate }: pergunta pequena no balão, sem parar de andar
+  let esperaAte = 0;         // antecipação: vira para o destino e só então sai (80 ms)
   let vivo = true;
   // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
   const efeitosLigados = () => !document.body.classList.contains('sem-efeitos');
@@ -188,6 +194,8 @@ export function montarCena(raiz, {
         <span class="ponto-contorno" aria-hidden="true"></span>
         <span class="ponto-rotulo">${/^\d$/.test(p.icone || '') ? `${p.icone} · ` : ''}${esc(p.rotulo)}</span>
       </button>`).join('');
+    camadaContornos.innerHTML = lista.filter((p) => p.contorno?.length).map((p) =>
+      `<polygon data-contorno="${esc(p.id)}" points="${p.contorno.map(([x, y]) => `${x},${y}`).join(' ')}"/>`).join('');
     perto = null;
     proximaChecagem = 0;
   }
@@ -219,17 +227,23 @@ export function montarCena(raiz, {
     if (!p || camadaAberta() || interagindo) return;
     alvo = null;
     interagindo = true;
-    virarPara(p.x < pos.x - 0.005);
-    // O personagem se inclina para o objeto enquanto a conversa estiver aberta.
+    const paraEsquerda = p.lado ? p.lado === 'esquerda' : p.x < pos.x - 0.005;
+    virarPara(paraEsquerda);
+    // O personagem se inclina para o objeto enquanto a conversa estiver aberta; em objeto baixo
+    // (no chão), se abaixa um pouco por 300 ms.
     pontoDaConversa = p;
-    boneco.style.setProperty('--inclinacao', `${p.x < pos.x - 0.005 ? -3.5 : 3.5}deg`);
+    boneco.style.setProperty('--inclinacao', `${paraEsquerda ? -3.5 : 3.5}deg`);
     boneco.classList.add('inclinado');
+    for (const el of camadaContornos.children) el.classList.toggle('aceso', el.dataset.contorno === p.id);
+    if (p.baixo) { boneco.classList.add('abaixado'); setTimeout(() => boneco.classList.remove('abaixado'), 300); }
     const el = camadaPontos.querySelector(`[data-ponto="${CSS.escape(p.id)}"]`);
     if (el) { el.classList.remove('acionado'); void el.offsetWidth; el.classList.add('acionado'); }
     som.anel?.();
     setTimeout(() => {
       interagindo = false;
       if (vivo && !camadaAberta()) aoInteragir?.(p);
+      // Sem caixa de conversa (detalhe em balão): endireita logo, sem esperar.
+      setTimeout(() => { if (!conversa && pontoDaConversa === p) { boneco.classList.remove('inclinado'); pontoDaConversa = null; } }, 600);
     }, reduzido() ? 100 : 150);
   }
 
@@ -240,6 +254,39 @@ export function montarCena(raiz, {
     balao.hidden = false;
     falaAte = performance.now() + ms;
     som.voz?.();
+  }
+
+  // Pergunta pequena no balão junto da cabeça ("1 · Olhar mais de perto · 2 · Seguir em frente"),
+  // respondida com 1 ou 2 (ou clique) sem parar de andar; some em 6 s.
+  function perguntarNoBalao({ voz, texto, opcoes, aoEscolher }) {
+    balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
+    balao.innerHTML = `<b>${esc(voz)}</b> ${esc(texto)}<span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>`;
+    balao.hidden = false;
+    falaAte = performance.now() + 6000;
+    balaoEscolha = { aoEscolher, ate: falaAte };
+    som.voz?.();
+  }
+  function responderBalao(i) {
+    if (!balaoEscolha) return;
+    const { aoEscolher } = balaoEscolha;
+    balaoEscolha = null;
+    falaAte = performance.now();
+    som.toque?.();
+    aoEscolher?.(i);
+  }
+  balao.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-balao]');
+    if (b) { ev.stopPropagation(); responderBalao(Number(b.dataset.balao)); }
+  });
+
+  // Ao entrar (e ao fechar a narração): os nomes de todos os pontos aparecem por um instante, com
+  // faíscas mais fortes, e depois somem devagar.
+  function apresentar(ms = 3000) {
+    mostrarTudoAte = performance.now() + ms;
+    proximaChecagem = 0;
+    cena.classList.add('apresentando');
+    clearTimeout(apresentar.t);
+    apresentar.t = setTimeout(() => cena.classList.remove('apresentando'), ms);
   }
 
   function checarComentarios() {
@@ -340,8 +387,60 @@ export function montarCena(raiz, {
   }
 
   // --- Vida dentro da pintura ------------------------------------------------------------------
+  // Coisas da pintura que respondem (sem efeito na regra): copo que tilinta, poça que ondula, poste
+  // que pisca quando ele para embaixo. Cada uma com um som curto do lado em que acontece.
+  const ultimaReacao = new Map();
+  function checarReacoes(agora) {
+    for (const r of geo.reacoes || []) {
+      if (dist(r.x, r.y, pos.x, pos.y) > r.raio) continue;
+      if (agora - (ultimaReacao.get(r) || 0) < 9000) continue;
+      const parado = Math.hypot(vel.x, vel.y) < 0.01;
+      if (r.tipo === 'poste' && !parado) continue;
+      if (r.tipo !== 'poste' && parado) continue;
+      ultimaReacao.set(r, agora);
+      som.reacao?.(r.tipo, limitar((r.x - 0.5) * 2, -1, 1));
+      if (r.tipo === 'poca' && reflexo) { reflexo.classList.remove('onda'); void reflexo.offsetWidth; reflexo.classList.add('onda'); }
+      if (r.tipo === 'poste') {
+        const luz = mundo.querySelector(`[data-luz="${r.luz}"]`);
+        if (luz) { luz.classList.remove('piscando'); void luz.offsetWidth; luz.classList.add('piscando'); }
+      }
+      if (r.tipo === 'copo') {
+        const el = document.createElement('span');
+        el.className = 'brilho-copo';
+        el.style.left = pct(r.x);
+        el.style.top = pct(r.y - 0.03);
+        mundo.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      }
+    }
+  }
+
+  // Uma fala ouvida de passagem por noite, vinda do vulto ao fundo (nada da crônica).
+  const FALAS_DE_PASSAGEM = [
+    '…o bonde não sobe mais depois da meia-noite…',
+    '…amanhã eu pago, juro…',
+    '…a chuva não para desde terça…',
+    '…ele disse que ia voltar, mas nunca volta…',
+    '…fecha a porta que vai molhar tudo…',
+    '…tu viu o jogo ontem?…',
+  ];
+  const chaveFala = `mascara.falaPassagem.${lugar || 'x'}.${new Date().toDateString()}`;
+  let falouDePassagem = (() => { try { return sessionStorage.getItem(chaveFala) === '1'; } catch { return false; } })();
+  function falarDePassagem(x, y, h) {
+    if (falouDePassagem || conversa) return;
+    falouDePassagem = true;
+    try { sessionStorage.setItem(chaveFala, '1'); } catch { /* sem armazenamento */ }
+    falaPassagem.textContent = FALAS_DE_PASSAGEM[Math.floor(Math.random() * FALAS_DE_PASSAGEM.length)];
+    falaPassagem.style.transform = `translate3d(${(x * mw).toFixed(1)}px, ${((y - h * 0.45) * mh).toFixed(1)}px, 0) translate(-50%, -100%)`;
+    falaPassagem.hidden = false;
+    falaPassagem.classList.remove('sumindo');
+    setTimeout(() => falaPassagem.classList.add('sumindo'), 3200);
+    setTimeout(() => { falaPassagem.hidden = true; }, 3800);
+  }
+
   function animarVida(agora, dt) {
     const ligado = efeitosLigados();
+    if (!semPersonagem) checarReacoes(agora);
     // Passante: silhueta escura e desfocada que atravessa o fundo, na escala da perspectiva.
     if (passante) {
       const faixas = geo.vida.passantes;
@@ -357,6 +456,7 @@ export function montarCena(raiz, {
         const v = 0.05 * limitar(h / ALTURA_REF, 0.3, 1.2);
         p.x += p.dir * v * dt;
         p.fase += dt * 2.2;
+        if (!p.falou && p.x > p.f.x0 + (p.f.x1 - p.f.x0) * 0.4 && p.x < p.f.x0 + (p.f.x1 - p.f.x0) * 0.6) { p.falou = true; if (Math.random() < 0.5) falarDePassagem(p.x, p.f.y, h); }
         // Vulto: no máximo 40% da altura do personagem naquele ponto, com um balanço leve de passo.
         const bal = Math.sin(p.fase * Math.PI * 2) * 0.6;
         passante.style.transform = `translate3d(${(p.x * mw).toFixed(1)}px, ${(p.f.y * mh - Math.abs(bal) * 2).toFixed(1)}px, 0) translate(-50%, -100%) scale(${((h / ALTURA_REF) * 0.4).toFixed(3)}) scaleX(${p.dir}) rotate(${bal.toFixed(2)}deg)`;
@@ -577,7 +677,7 @@ export function montarCena(raiz, {
       const ax = alvo.x - pos.x;
       const ay = alvo.y - pos.y;
       const d = dist(alvo.x, alvo.y, pos.x, pos.y);
-      const chegouPerto = alvo.ponto && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
+      const chegouPerto = alvo.ponto && !alvo.ponto.parada && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
       if (d < 0.008 || chegouPerto || semProgresso > 0.5) {
         const ponto = alvo.ponto;
         const travou = semProgresso > 0.5;
@@ -586,8 +686,10 @@ export function montarCena(raiz, {
         if (ponto && (!travou || chegouPerto || dist(ponto.x, ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 1.6)) interagir(ponto);
       } else {
         const n = Math.hypot(ax * ASPECTO, ay) || 1;
-        dx = (ax * ASPECTO) / n;
-        dy = ay / n;
+        if (agora >= esperaAte) {
+          dx = (ax * ASPECTO) / n;
+          dy = ay / n;
+        }
       }
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
@@ -685,7 +787,7 @@ export function montarCena(raiz, {
     if (!balao.hidden) {
       balao.style.transform = `translate3d(${(pos.x * mw).toFixed(1)}px, ${((pos.y - h) * mh - 10).toFixed(1)}px, 0) translate(-50%, -100%)`;
       balao.classList.toggle('sumindo', agora > falaAte);
-      if (agora > falaAte + 400) balao.hidden = true;
+      if (agora > falaAte + 400) { balao.hidden = true; balaoEscolha = null; }
     }
 
     if (proximaLuz === 0 || (agora > proximaLuz && (andando || virando))) { iluminar(); proximaLuz = agora + 100; }
@@ -703,6 +805,7 @@ export function montarCena(raiz, {
       if (novo !== perto) {
         perto = novo;
         for (const el of camadaPontos.children) el.classList.toggle('perto', el.dataset.ponto === perto?.id);
+        for (const el of camadaContornos.children) el.classList.toggle('aceso', el.dataset.contorno === (pontoDaConversa || perto)?.id);
         dica.hidden = !perto;
         if (perto) dica.innerHTML = toque ? esc(perto.acao || perto.rotulo) : `<kbd>E</kbd> ${esc(perto.acao || perto.rotulo)}`;
       }
@@ -752,6 +855,7 @@ export function montarCena(raiz, {
     if (k === 'shift') { teclas.add('shift'); return; }
     if (TECLAS[k]) { teclas.add(k); ev.preventDefault(); return; }
     if (k === 'tab') { ev.preventDefault(); mostrarTudo(); return; }
+    if (balaoEscolha && (k === '1' || k === '2')) { ev.preventDefault(); responderBalao(Number(k) - 1); return; }
     if (k === 'e' || k === 'enter' || k === ' ') {
       if (perto) { ev.preventDefault(); interagir(perto); }
       return;
@@ -793,15 +897,21 @@ export function montarCena(raiz, {
       const p = lista.find((x) => x.id === botao.dataset.ponto);
       if (!p) return;
       if (p === perto || semPersonagem) { interagir(p); return; }
-      const [x, y] = maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
-      alvo = { x, y, ponto: p };
+      const [x, y] = p.parada && dentro(p.parada, geo.chao) ? p.parada : maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
+      // Longe (mais de 40% da largura da tela): vai correndo. Vira para o destino e sai 80 ms depois.
+      const longe = Math.abs(x - pos.x) * mw * cam.z > vw * 0.4;
+      alvo = { x, y, ponto: p, correr: longe };
+      virarPara(x < pos.x);
+      esperaAte = performance.now() + (reduzido() ? 0 : 80);
       semProgresso = 0;
       return;
     }
     // Clique no chão: anda até lá (fora do chão, até o ponto de chão mais perto).
     if (semPersonagem) return;
     const [x, y] = maisPertoDentro([px, py], geo.chao, ASPECTO);
-    alvo = { x, y };
+    alvo = { x, y, correr: Math.abs(x - pos.x) * mw * cam.z > vw * 0.4 };
+    virarPara(x < pos.x);
+    esperaAte = performance.now() + (reduzido() ? 0 : 80);
     semProgresso = 0;
   });
   cena.addEventListener('dblclick', () => { if (alvo) alvo.correr = true; });
@@ -823,6 +933,7 @@ export function montarCena(raiz, {
         boneco.classList.remove('inclinado');
         pontoDaConversa = null;
         linha.classList.remove('visivel');
+        for (const el of camadaContornos.children) el.classList.remove('aceso');
       }
       conversa = aberta;
       document.body.classList.toggle('em-conversa', aberta);
@@ -844,6 +955,7 @@ export function montarCena(raiz, {
   lista = pontos;
   lista.forEach((p) => { if (p.feito) feitosAntes.add(p.id); });
   desenharPontos();
+  setTimeout(() => { if (vivo && !camadaAberta()) apresentar(3000); }, 500);
   mostrarFase(fase);
   requestAnimationFrame(quadro);
 
@@ -857,6 +969,8 @@ export function montarCena(raiz, {
     },
     posicao: () => ({ ...pos }),
     falar,
+    perguntarNoBalao,
+    apresentar,
     desmontar,
   };
 }
