@@ -14,6 +14,7 @@ import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha } from './jogo/
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas } from './jogo/detalhes.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto } from './jogo/registro.js';
+import { sugestoesDeCacada } from './jogo/cacadas.js';
 
 const MAX_MARCADORES = 5; // à vista ao entrar; o resto aparece de perto ou com Tab
 const comentadosNaSessao = new Set(); // reserva, se o aparelho não guardar nada
@@ -130,6 +131,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
 
   function guardarRascunho() {
     alterado = true;
+    // Quadro recolhido (celular): abre sozinho por 2 s para mostrar o que mudou.
+    if (quadroRecolhido) { abertoAte = Date.now() + 2000; setTimeout(() => desenharPlano(), 2100); }
     try { localStorage.setItem(chavePlano(noite, p), JSON.stringify(plano)); } catch { /* sem armazenamento */ }
     desenharPlano();
     cena?.atualizarPontos(montarPontos());
@@ -145,7 +148,11 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const cacada = !!(plano.cacada?.trim() || plano.nao_cacar);
     return { principal, cacada, curtas, prontas: (principal ? 1 : 0) + (cacada ? 1 : 0) };
   };
-  let quadroRecolhido = (() => { try { return localStorage.getItem('mascara.quadroRecolhido') === '1'; } catch { return false; } })();
+  const celular = window.matchMedia?.('(max-width: 700px)').matches;
+  let quadroRecolhido = (() => {
+    try { const v = localStorage.getItem('mascara.quadroRecolhido'); return v == null ? !!celular : v === '1'; } catch { return !!celular; }
+  })();
+  let abertoAte = 0;
   function desenharPlano() {
     if (!noite) { caixaPlano.hidden = true; return; }
     const enviado = acao && !alterado;
@@ -156,11 +163,12 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const pe = enviado
       ? `<span class="quadro-enviado">Enviado ${esc(dataCurta(acao.atualizado_em))} · pode mudar até ${esc(quandoCurto(noite.fecha_em))}</span>`
       : `<span>${acao ? 'Mudanças não enviadas' : 'Não enviado'} · ${esc(prazoRestante(noite.fecha_em))}</span>`;
-    caixaPlano.className = `hud-plano quadro-noite plano-${estado}${quadroRecolhido ? ' recolhido' : ''}`;
+    const recolhidoAgora = quadroRecolhido && Date.now() > abertoAte;
+    caixaPlano.className = `hud-plano quadro-noite plano-${estado}${recolhidoAgora ? ' recolhido' : ''}`;
     caixaPlano.innerHTML = `
       <button type="button" class="quadro-cabeca" data-hud="recolher" aria-expanded="${!quadroRecolhido}">
         <span class="plano-marca" aria-hidden="true">${enviado ? '✓' : pt.prontas}</span>
-        <span><b>Noite ${noite.numero}</b> · ${enviado ? 'plano enviado' : `${pt.prontas} de 2 obrigatórias prontas`}</span>
+        <span><b>Noite ${noite.numero}</b> · ${enviado ? 'plano enviado' : `${pt.prontas} de 2 <span class="desc-longa">obrigatórias </span>prontas`}<span class="quadro-prazo-curto"> · ${esc(prazoRestante(noite.fecha_em).replace(/ \(.*\)$/, ''))}</span></span>
         <span class="quadro-seta" aria-hidden="true">${quadroRecolhido ? '▸' : '▾'}</span>
       </button>
       <ol class="quadro-linhas">
@@ -172,7 +180,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     const hd = raiz.querySelector('.hud-descobertas');
     if (hd) {
       const d = descobertasDoLugar();
-      hd.textContent = d.total ? ` · descobertas ${d.vistos} de ${d.total}` : '';
+      hd.innerHTML = d.total ? `<span class="desc-longa"> · descobertas ${d.vistos} de ${d.total}</span><span class="desc-curta"> · ${d.vistos}/${d.total}</span>` : '';
     }
   }
 
@@ -256,17 +264,18 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   // Detalhe examinado: uma fala curta de voz interior, sem mudar regras. Fica marcado no aparelho.
   function abrirDetalhe(pt) {
     const d = pt.detalhe;
+    // Conta na hora em que o detalhe abre (o contador do HUD pulsa).
+    try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
+    registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
+    desenharPlano();
+    const hdAgora = raiz.querySelector('.hud-descobertas');
+    if (hdAgora) { hdAgora.classList.remove('subiu'); void hdAgora.offsetWidth; hdAgora.classList.add('subiu'); }
     abrirDialogo(camadas, {
       rotulo: d.rotulo,
       html: `<div class="texto-narracao">${narracao(`[${d.voz}] ${d.texto}`)}</div>`,
       rodape: '<span class="nota"><span class="so-teclado"><kbd>Esc</kbd> fecha · </span>ande pela cena para descobrir mais</span>',
       aoFechar: () => {
-        try { localStorage.setItem(chaveVisto(d.id), '1'); } catch { /* sem armazenamento */ }
-        registrar(noite?.id, 'detalhes', { lugar: lugarId, id: d.id, rotulo: d.rotulo, voz: d.voz, texto: d.texto });
         cena?.atualizarPontos(montarPontos());
-        desenharPlano();
-        const hd = raiz.querySelector('.hud-descobertas');
-        if (hd) { hd.classList.remove('subiu'); void hd.offsetWidth; hd.classList.add('subiu'); }
       },
     });
   }
@@ -319,13 +328,14 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
     camada?.fechar();
   }
 
-  function abrirHistoria(revelar) {
+  function abrirHistoria(revelar, depois) {
     const camada = abrirDialogo(camadas, {
+      aoFechar: depois,
       rotulo: atual === preludio ? 'Prelúdio' : `Noite ${ultimaNoite?.numero}`,
       html: htmlHistoria(),
       chave: revelar ? atual?.id : null,
       aoAvancar: () => som.toque(),
-      rodape: noite ? '<span class="nota">Escolha uma fala<span class="so-teclado"> (1 a 4)</span> ou feche e ande pela cena.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>' : '<span class="nota">A próxima noite ainda não abriu.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>',
+      rodape: noite ? `<span class="nota">Escolha uma fala<span class="so-teclado"> (1 a ${opcoes.length || 1})</span> ou feche e ande pela cena.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>` : '<span class="nota">A próxima noite ainda não abriu.<span class="so-teclado"> <kbd>Esc</kbd> fecha.</span></span>',
     });
     camada.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-escolha]');
@@ -358,23 +368,41 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   function abrirCacada() {
     const pr = v5.predador(p.ficha?.predador?.id);
     const lugarCaca = emOutroLugar ? visitado.em : (localAtual?.em || `em ${lugarNome}`);
+    // Três sugestões do tipo de predador, mais as saídas de sempre: do seu jeito, outra ideia, não caçar.
+    const onde = emOutroLugar ? ` (${visitado.em})` : '';
+    const sugestoes = sugestoesDeCacada(p.ficha?.predador?.id).map((t) => t.replace(/\.$/, '') + onde + '.');
+    const opcoesCaca = [...sugestoes, `Do meu jeito de sempre, ${lugarCaca}.`, 'Escrever outra ideia', 'Não vou caçar esta noite (a Fome sobe)'];
     const camada = abrirDialogo(camadas, {
       rotulo: 'A caçada',
       html: `
         <div class="texto-narracao"><p class="voz voz-besta"><span class="voz-nome">A FOME</span> — ${fome >= 3 ? 'Eu não espero mais. Hoje você bebe.' : 'Hoje eu só ronrono. Mas não fui embora.'}</p></div>
         <p class="nota">${pr ? `Você é ${esc(pr.nome)}: ${esc(pr.desc.toLowerCase())}` : ''}</p>
-        <label>Onde e como você caça esta noite
-          <textarea data-cacada rows="2" maxlength="800" placeholder="Em branco: do seu jeito de sempre, ${esc(lugarCaca)}.">${esc(plano.cacada || '')}</textarea>
+        <label class="caca-livre" hidden>Onde e como você caça esta noite
+          <textarea data-cacada rows="2" maxlength="800">${esc(plano.cacada && !plano.nao_cacar ? plano.cacada : '')}</textarea>
+          <button type="button" class="btn" data-confirmar-livre>Guardar a caçada</button>
         </label>
-        <label class="radio"><input type="checkbox" data-nao-cacar ${plano.nao_cacar ? 'checked' : ''}> Não vou caçar esta noite (a Fome sobe)</label>
-        <ol class="escolhas"><li><button type="button" data-principal><span class="escolha-num">1.</span> — Confirmar a caçada</button></li></ol>`,
+        <ol class="escolhas">${opcoesCaca.map((o, i) => `<li><button type="button" data-caca="${i}"><span class="escolha-num">${i + 1}.</span> — ${esc(o)}</button></li>`).join('')}</ol>`,
     });
-    camada.el.querySelector('[data-principal]').onclick = (ev) => {
-      const t = camada.el.querySelector('[data-cacada]').value.trim();
-      plano.cacada = t || (emOutroLugar ? `Caçar ${visitado.em}` : 'Do meu jeito de sempre');
-      plano.nao_cacar = camada.el.querySelector('[data-nao-cacar]').checked;
-      confirmarEscolha(ev.currentTarget, () => { guardarRascunho(); camada.fechar(); });
+    const guardar = (botao, texto, naoCacar) => {
+      plano.cacada = naoCacar ? '' : texto;
+      plano.nao_cacar = naoCacar;
+      confirmarEscolha(botao, () => { guardarRascunho(); camada.fechar(); });
     };
+    camada.el.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-caca]');
+      if (b) {
+        const i = Number(b.dataset.caca);
+        if (i < sugestoes.length) guardar(b, sugestoes[i], false);
+        else if (i === sugestoes.length) guardar(b, emOutroLugar ? `Caçar do meu jeito de sempre ${visitado.em}` : 'Do meu jeito de sempre', false);
+        else if (i === sugestoes.length + 1) { const l = camada.el.querySelector('.caca-livre'); l.hidden = false; l.querySelector('textarea').focus(); }
+        else guardar(b, '', true);
+        return;
+      }
+      if (ev.target.closest('[data-confirmar-livre]')) {
+        const t = camada.el.querySelector('[data-cacada]').value.trim();
+        if (t) guardar(ev.target, t, false);
+      }
+    });
   }
 
   function abrirEscrita() {
@@ -458,12 +486,18 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
         corpo.innerHTML = `
           <div class="menu-opcoes">
             <button type="button" class="btn-secundario" data-m="novo">Criar outro personagem</button>
+            <button type="button" class="btn-secundario so-celular" data-m="legenda">Como funciona a noite</button>
+            <button type="button" class="btn-secundario so-celular" data-m="efeitos">${efeitos.ligados() ? 'Desligar' : 'Ligar'} chuva e efeitos</button>
+            <button type="button" class="btn-secundario so-celular" data-m="som">${som.ligado() ? 'Desligar' : 'Ligar'} o som</button>
             <button type="button" class="btn-secundario" data-m="sair">Sair da conta</button>
             ${recadoDeChegada() ? '' : '<button type="button" class="btn-secundario" data-m="recado">Voltar a mostrar o recado de chegada</button>'}
           </div>
           <p class="nota">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB. Este site não é oficial nem endossado por ela.</p>`;
         corpo.querySelector('[data-m="novo"]').onclick = () => { camada.fechar(); ir('novo'); };
         corpo.querySelector('[data-m="sair"]').onclick = async () => { camada.fechar(); await banco.sair(); };
+        corpo.querySelector('[data-m="legenda"]').onclick = () => { camada.fechar(); abrirLegenda(); };
+        corpo.querySelector('[data-m="efeitos"]').onclick = () => { camada.fechar(); acao_('efeitos'); };
+        corpo.querySelector('[data-m="som"]').onclick = () => { camada.fechar(); acao_('som'); };
         const religar = corpo.querySelector('[data-m="recado"]');
         if (religar) religar.onclick = () => { recadoDeChegada(true); religar.remove(); };
       },
@@ -530,17 +564,19 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null } = {}) {
   // Primeira entrada de cada noite: a legenda de como a noite funciona (depois, só pelo botão "?").
   let legendaVista = true;
   try { legendaVista = localStorage.getItem(`mascara.legenda.${noite?.id}`) === '1'; } catch { /* sem armazenamento */ }
-  if (noite && !legendaVista) {
-    try { localStorage.setItem(`mascara.legenda.${noite.id}`, '1'); } catch { /* sem armazenamento */ }
+  // Primeiro a história, depois o "como jogar". Só no prelúdio (primeira noite do jogador) a legenda vem antes.
+  const marcarLegenda = () => { try { localStorage.setItem(`mascara.legenda.${noite.id}`, '1'); } catch { /* sem armazenamento */ } };
+  let lido = true;
+  if (!emOutroLugar && atual) { try { lido = localStorage.getItem(`mascara.lido.${atual.id}`) === '1'; } catch { lido = false; } }
+  if (noite && !legendaVista && (lido || atual === preludio)) {
+    marcarLegenda();
     abrirLegenda();
     return;
   }
 
-  // Ao entrar: se há narração nova, ela abre sozinha, revelada aos poucos.
-  if (!emOutroLugar && atual) {
-    let lido = false;
-    try { lido = localStorage.getItem(`mascara.lido.${atual.id}`) === '1'; } catch { /* sem armazenamento */ }
-    if (!lido) abrirHistoria(true);
+  // Ao entrar: se há narração nova, ela abre sozinha, revelada aos poucos (e a legenda vem depois).
+  if (!emOutroLugar && atual && !lido) {
+    abrirHistoria(true, noite && !legendaVista ? () => { marcarLegenda(); setTimeout(abrirLegenda, 250); } : undefined);
   }
   // Recado de chegada só logo depois de viajar pelo mapa (não a cada recarga), e nunca para quem
   // pediu para não ver mais.
@@ -599,7 +635,7 @@ export async function telaMapa(raiz, p) {
   // Quanto já foi descoberto em cada bairro (detalhes examinados neste aparelho).
   const contagem = {};
   for (const l of LOCAIS) {
-    const todos = todasDescobertas(l.id);
+    const todos = descobertas(l.id, noite?.numero || 0).detalhes; // os da noite: o mesmo número da cena
     let vistos = 0;
     try { vistos = todos.filter((d) => localStorage.getItem(`mascara.visto.${l.id}.${d.id}`) === '1').length; } catch { /* sem armazenamento */ }
     contagem[l.id] = { vistos, total: todos.length };

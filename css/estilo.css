@@ -1149,7 +1149,7 @@ body[data-tempo='tempestade'] .pintura, body[data-tempo='tempestade'] .frente { 
 /* Brilho da pintura em volta (--brilho) e contorno na cor da luz principal (--rim-*), do lado dela. */
 .corpo-sprite {
   filter: brightness(var(--brilho, 0.94)) contrast(1.05)
-    drop-shadow(var(--rim-x, 0px) 0 0 var(--rim-cor, transparent))
+    drop-shadow(var(--rim-x, 0px) 0 1.5px var(--rim-cor, transparent))
     drop-shadow(0 0 1px rgba(0, 0, 0, 0.85)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 /* Tinta: a cor da luz do lugar, recortada pela própria figura (máscara = folha de quadros). */
@@ -1790,3 +1790,31 @@ body:has(.tela-entrada) #cenario { animation: camera 36s ease-in-out infinite al
 .mapa-selo rect { fill: rgba(8, 8, 9, 0.85); stroke: var(--acento); stroke-width: 1.5; }
 .mapa-selo text { font-family: var(--sans); font-weight: 700; font-size: 22px; fill: var(--acento-claro); }
 .mapa-visitados { display: block; color: var(--acento-claro) !important; font-weight: 600; }
+
+/* --- Rodada 5: celular com o quadro recolhido e o alto numa linha. --- */
+.desc-curta, .quadro-prazo-curto, .so-celular { display: none; }
+.quadro-noite.recolhido .quadro-prazo-curto { display: inline; }
+.quadro-noite.recolhido .quadro-pe { padding-top: 0.15rem; border-top: 0; }
+.quadro-noite.recolhido .quadro-pe > span { display: none; }
+.quadro-noite.recolhido .quadro-pe:not(:has(button)) { display: none; }
+.seta-borda.urgente { border-color: var(--sangue-vivo); color: #ff8a9a; background: rgba(40, 6, 10, 0.85); animation: chamar-caca 1.6s ease-in-out infinite; }
+@keyframes chamar-caca { 50% { box-shadow: 0 0 16px rgba(216, 33, 61, 0.6); } }
+@media (max-width: 700px) {
+  .so-celular { display: block; }
+  .desc-longa { display: none; }
+  .desc-curta { display: inline; }
+  .hud-botoes { flex-wrap: nowrap; gap: 0.3rem; }
+  .hud-botoes button { min-height: 44px; min-width: 44px; padding: 0 0.55rem; }
+  .hud-botoes [data-hud='efeitos'], .hud-botoes [data-hud='som'], .hud-botoes [data-hud='legenda'] { display: none; }
+  .hud-personagem small { white-space: nowrap; }
+  .quadro-noite { width: 94vw; }
+  .quadro-noite:not(.recolhido) { max-height: 58vh; overflow-y: auto; }
+  .quadro-cabeca { min-height: 44px; }
+}
+@media (max-width: 700px) {
+  .hud-topo { gap: 0.35rem; padding-left: 10px; padding-right: 8px; }
+  .hud-personagem { gap: 0.45rem; min-width: 0; }
+  .hud-personagem img { width: 34px; height: 44px; }
+  .hud-personagem b, .hud-personagem small { max-width: 32vw; }
+  .hud-botoes button { padding: 0 0.42rem; font-size: 0.8rem; }
+}

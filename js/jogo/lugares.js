@@ -25,7 +25,7 @@ export const LUGARES = {
       bar: { x: 0.83, y: 0.715, termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
       rua: { x: 0.5, y: 0.82, papel: 'livre', termos: ['rua', 'praca', 'gente', 'multidao', 'policia', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
       fundo: { x: 0.64, y: 0.672, termos: ['seguir', 'centro', 'caminho', 'andar', 'ir ', 'procurar', 'encontrar'] },
-      beco: { x: 0.95, y: 0.86, papel: 'escuro', termos: ['beco', 'escondido', 'sombra', 'esconder', 'vigiar', 'observar'] },
+      beco: { x: 0.9, y: 0.86, papel: 'escuro', termos: ['beco', 'escondido', 'sombra', 'esconder', 'vigiar', 'observar'] },
       calcada: { x: 0.24, y: 0.76, termos: [] },
     },
     frente: [

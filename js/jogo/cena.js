@@ -294,7 +294,7 @@ export function montarCena(raiz, {
     const comLuz = principal && maior > 0.04;
     const lado = comLuz ? Math.sign(principal.x - pos.x) || 1 : -1;
     const [cr, cg, cb] = rgb(comLuz ? principal.cor : '#9ab6dc');
-    const alfa = comLuz ? Math.min(0.95, 0.4 + maior) : 0.6;
+    const alfa = comLuz ? Math.min(0.5, 0.2 + maior * 0.6) : 0.18; // suave: só do lado da luz; o luar quase some
     boneco.style.setProperty('--rim-x', `${((1.8 / Math.max(0.35, s)) * lado * Math.sign(virar || 1)).toFixed(2)}px`);
     boneco.style.setProperty('--rim-cor', `rgba(${cr}, ${cg}, ${cb}, ${alfa.toFixed(2)})`);
     // Sombra para o lado oposto à luz principal, mais longa quanto mais forte a luz.
@@ -442,7 +442,10 @@ export function montarCena(raiz, {
     }
     for (const [seta, grupo] of [[setaEsq, foraDaTela.esq], [setaDir, foraDaTela.dir]]) {
       seta.hidden = !grupo.length || conversa;
-      seta.querySelector('b').textContent = grupo.length;
+      // A caçada que falta e está fora da tela: seta vermelha, com o nome.
+      const caca = grupo.find((p) => p.tipo === 'cacar' && p.falta);
+      seta.classList.toggle('urgente', !!caca);
+      seta.querySelector('b').textContent = caca ? `Caçada${grupo.length > 1 ? ` +${grupo.length - 1}` : ''}` : grupo.length;
     }
     separarRotulos(agora);
     // No toque, a dica fica logo abaixo do ponto mais perto.

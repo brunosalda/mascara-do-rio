@@ -52,7 +52,7 @@ export function montarMapa(raiz, { cla, atualId = null, localAtual, aoEntrar, ao
                 <text class="mapa-nome" y="${l.id === atual && retrato ? -54 : -20}">${esc(l.nome)}</text>
                 ${l.id === atual ? `<text class="mapa-aqui" y="${retrato ? 66 : 34}">você está aqui</text>` : ''}
                 ${!novo && d?.total ? `<g class="mapa-selo" transform="translate(${l.id === atual && retrato ? 44 : 16} ${l.id === atual && retrato ? -40 : -44})"><rect x="0" y="-17" width="${String(d.vistos).length + String(d.total).length > 2 ? 58 : 48}" height="26" rx="4"/><text x="8" y="2">${d.vistos}/${d.total}</text></g>` : ''}
-                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 90 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `detalhes descobertos: ${d.vistos} de ${d.total}` : ''}</text>
+                <text class="mapa-descobertas" y="${l.id === atual ? (retrato ? 90 : 56) : 34}">${novo ? 'nunca visitado' : d?.total ? `descobertas: ${d.vistos} de ${d.total} esta noite` : ''}</text>
               </g>`;
           }).join('')}
         </g>
