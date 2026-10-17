@@ -355,3 +355,48 @@ export function descobertas(id, noite = 0) {
     comentarios: embaralhar(comentarios, semente + 1).slice(0, 2),
   };
 }
+
+// Detalhes escondidos (rodada 17): só aparecem para quem tem a habilidade no nível pedido. É uma
+// leitura da ficha, sem rolar dados (dados, só o motor). Quem não tem a habilidade não vê nada.
+// Textos só sobre os lugares, sem nada da crônica.
+export const ESCONDIDOS = {
+  lapa: [
+    { id: 'esc-cartaz', x: 0.27, y: 0.7, raio: 0.09, hab: 'investigacao', nivel: 2, voz: 'INVESTIGAÇÃO', texto: 'O cartaz do show na pilastra foi colado por cima de outro, mais novo. Alguém quis esconder a data.' },
+    { id: 'esc-ponto', x: 0.86, y: 0.8, raio: 0.09, hab: 'manha', nivel: 3, voz: 'MANHA', texto: 'O vendedor de bala na esquina não vende bala. Ele conta quem entra e quem sai do bar.' },
+  ],
+  centro: [
+    { id: 'esc-marquise', x: 0.82, y: 0.76, raio: 0.09, hab: 'prontidao', nivel: 2, voz: 'PRONTIDÃO', texto: 'Debaixo da marquise, uma câmera de segurança está virada para a parede. Alguém mexeu nela.' },
+  ],
+  'santa-teresa': [
+    { id: 'esc-simbolo', x: 0.2, y: 0.82, raio: 0.09, hab: 'ocultismo', nivel: 2, voz: 'OCULTISMO', texto: 'Na soleira do casarão, um desenho de giz quase apagado: um círculo com três traços. Proteção, das antigas.' },
+  ],
+  'zona-sul': [
+    { id: 'esc-pegadas', x: 0.52, y: 0.78, raio: 0.09, hab: 'prontidao', nivel: 2, voz: 'PRONTIDÃO', texto: 'Na areia molhada, pegadas descalças vão até a água e não voltam.' },
+  ],
+  barra: [
+    { id: 'esc-carro', x: 0.3, y: 0.8, raio: 0.09, hab: 'investigacao', nivel: 2, voz: 'INVESTIGAÇÃO', texto: 'O carro parado no acostamento está com o motor quente e ninguém dentro.' },
+  ],
+  'zona-norte': [
+    { id: 'esc-recado', x: 0.62, y: 0.7, raio: 0.09, hab: 'manha', nivel: 2, voz: 'MANHA', texto: 'O pichado novo no muro da quadra é recado de quem manda na área: daqui pra frente, só com licença.' },
+  ],
+  morro: [
+    { id: 'esc-olheiro', x: 0.3, y: 0.7, raio: 0.09, hab: 'prontidao', nivel: 2, voz: 'PRONTIDÃO', texto: 'Na laje de cima, uma brasa de cigarro acende e apaga. Tem alguém olhando a escada.' },
+  ],
+  cemiterio: [
+    { id: 'esc-flores', x: 0.48, y: 0.86, raio: 0.09, hab: 'ocultismo', nivel: 2, voz: 'OCULTISMO', texto: 'As flores do túmulo estão frescas, mas viradas de cabeça para baixo. Isso não é homenagem.' },
+  ],
+  porto: [
+    { id: 'esc-container', x: 0.9, y: 0.86, raio: 0.09, hab: 'investigacao', nivel: 2, voz: 'INVESTIGAÇÃO', texto: 'O cadeado do armazém é novo, mas a corrente está cortada por dentro.' },
+  ],
+  baixada: [
+    { id: 'esc-moto', x: 0.45, y: 0.8, raio: 0.09, hab: 'manha', nivel: 2, voz: 'MANHA', texto: 'O motoboy passa duas vezes pela mesma esquina sem entregar nada. Está levando recado.' },
+  ],
+  niteroi: [
+    { id: 'esc-pescador', x: 0.85, y: 0.74, raio: 0.09, hab: 'intuicao', nivel: 2, voz: 'INTUIÇÃO', texto: 'O pescador na mureta não olha para a linha. Olha para a barca que chega.' },
+  ],
+};
+
+// Os escondidos que este personagem percebe, pela habilidade da ficha.
+export function escondidosPara(lugarId, habilidades = {}) {
+  return (ESCONDIDOS[lugarId] || []).filter((e) => (habilidades[e.hab] | 0) >= e.nivel);
+}

@@ -12,7 +12,7 @@ import { montarCena } from './jogo/cena.js';
 import { montarMapa } from './jogo/mapa.js';
 import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
-import { descobertas, todasDescobertas, brasas, fraseDescobertas } from './jogo/detalhes.js';
+import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
 import { registroDaNoite, registrar, prazoRestante, quandoCurto, quandoONarradorVolta } from './jogo/registro.js';
 import { sugestoesDeCacada } from './jogo/cacadas.js';
@@ -612,7 +612,8 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     imagem,
     lugar: lugarId,
     pontos: montarPontos(),
-    comentarios: achados.comentarios,
+    // Comentários do lugar, mais os detalhes escondidos que a ficha deixa perceber (sem dados).
+    comentarios: [...achados.comentarios, ...escondidosPara(lugarId, (() => { try { return v5.calcular(p.ficha || {}).habilidades; } catch { return {}; } })())],
     comentar: podeComentar,
     tempo,
     aoInteragir: (pt) => {

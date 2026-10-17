@@ -893,7 +893,7 @@ kbd {
 .mundo { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
 /* A pintura e os objetos da frente usam a mesma imagem, no mesmo tamanho e com o mesmo filtro,
    para o recorte (clip-path) encaixar sem emenda. */
-.pintura, .frente {
+.pintura, .pintura-fundo, .frente {
   position: absolute;
   inset: 0;
   background-size: 100% 100%;
@@ -902,7 +902,7 @@ kbd {
   filter: saturate(0.92) contrast(1.05);
   transition: filter 0.15s;
 }
-body.clarao .pintura, body.clarao .frente { filter: brightness(1.9) contrast(1.15) saturate(0.7); }
+body.clarao .pintura, body.clarao .pintura-fundo, body.clarao .frente { filter: brightness(1.9) contrast(1.15) saturate(0.7); }
 
 /* Fontes de luz que respiram (postes, néon, vitrines). */
 .brilho-luz {
@@ -1007,9 +1007,9 @@ body.toque .dica-interagir {
   background: radial-gradient(ellipse 60% 30% at 30% 75%, rgba(205, 215, 225, 0.22), transparent 70%), radial-gradient(ellipse 50% 25% at 75% 65%, rgba(205, 215, 225, 0.18), transparent 70%), linear-gradient(180deg, rgba(150, 165, 180, 0.12), rgba(150, 165, 180, 0.2));
   animation: nevoa 50s linear infinite alternate; }
 body[data-tempo='nevoa'] .nevoa-cena { opacity: 1; }
-body[data-tempo='nevoa'] .pintura, body[data-tempo='nevoa'] .frente { filter: saturate(0.75) contrast(0.92) brightness(0.92); }
-body[data-tempo='lua'] .pintura, body[data-tempo='lua'] .frente { filter: saturate(0.95) contrast(1.06) brightness(1.06); }
-body[data-tempo='tempestade'] .pintura, body[data-tempo='tempestade'] .frente { filter: saturate(0.82) contrast(1.08) brightness(0.86); }
+body[data-tempo='nevoa'] .pintura, body[data-tempo='nevoa'] .pintura-fundo, body[data-tempo='nevoa'] .frente { filter: saturate(0.75) contrast(0.92) brightness(0.92); }
+body[data-tempo='lua'] .pintura, body[data-tempo='lua'] .pintura-fundo, body[data-tempo='lua'] .frente { filter: saturate(0.95) contrast(1.06) brightness(1.06); }
+body[data-tempo='tempestade'] .pintura, body[data-tempo='tempestade'] .pintura-fundo, body[data-tempo='tempestade'] .frente { filter: saturate(0.82) contrast(1.08) brightness(0.86); }
 
 /* --- Pontos: presos ao chão (o pé do marcador fica na âncora), rótulo acima do ícone. --- */
 .cena-pontos { position: absolute; inset: 0; z-index: 3000; pointer-events: none; }
@@ -2140,3 +2140,20 @@ body.cerimonias-curtas .personagem .corpo-sprite, body.cerimonias-curtas .person
 /* O nome do ponto fica do mesmo tamanho perto ou longe (o ponto encolhe com a perspectiva; o texto não). */
 .ponto .ponto-rotulo { font-size: calc(1.15rem * var(--escala-texto, 1) / var(--escala, 1)); }
 @media (max-width: 700px) { .ponto .ponto-rotulo { font-size: calc(1rem * var(--escala-texto, 1) / var(--escala, 1)); } }
+
+/* --- Rodada 17 ------------------------------------------------------------------------------------ */
+/* Camada de fundo: o que fica acima do horizonte, recortado da própria pintura (paralaxe leve). */
+.pintura-fundo { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(var(--horizonte) - 6%), transparent var(--horizonte));
+  mask-image: linear-gradient(180deg, #000 calc(var(--horizonte) - 6%), transparent var(--horizonte)); }
+.frente { transition: none; }
+/* Água que ondula e ave que sai voando. */
+.onda-agua { position: absolute; z-index: 2; width: 60px; height: 14px; margin: -7px 0 0 -30px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid rgba(220, 230, 240, 0.5); animation: onda-agua 1.2s ease-out forwards; }
+@keyframes onda-agua { from { transform: scale(0.3); opacity: 0.9; } to { transform: scale(2.2); opacity: 0; } }
+.ave-voa { position: absolute; z-index: 2950; width: 18px; height: 8px; pointer-events: none; animation: ave-voa 1.8s ease-in forwards; }
+.ave-voa::before, .ave-voa::after { content: ''; position: absolute; top: 0; width: 9px; height: 6px; border-top: 2px solid rgba(20, 20, 24, 0.8); border-radius: 50% 50% 0 0; animation: asa 0.25s ease-in-out infinite alternate; }
+.ave-voa::before { left: 0; transform-origin: 100% 100%; }
+.ave-voa::after { right: 0; transform-origin: 0 100%; }
+@keyframes ave-voa { from { transform: translate(0, 0) scale(1); opacity: 0.9; } to { transform: translate(120px, -90px) scale(0.6); opacity: 0; } }
+@keyframes asa { to { transform: rotate(-25deg); } }

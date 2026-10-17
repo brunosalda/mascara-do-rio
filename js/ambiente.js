@@ -317,18 +317,26 @@ export const som = {
     tom(audio, t + 0.09, 1760, { dur: 0.45, volume: 0.006, ataque: 0.06 });
   },
   // Coisas da pintura que respondem: um som tonal curto, no lado do estéreo onde acontece.
-  reacao(tipo, pan = 0) {
+  reacao(nome, pan = 0) {
     if (!audio || !this.ligado()) return;
     const t = audio.ctx.currentTime + 0.01;
-    if (tipo === 'copo') {
-      tom(audio, t, 2637, { dur: 0.35, volume: 0.012, pan });
-      tom(audio, t + 0.06, 3520, { dur: 0.3, volume: 0.008, pan });
-    } else if (tipo === 'poca') {
-      tom(audio, t, 620, { dur: 0.18, volume: 0.014, ate: 380, pan });
-    } else if (tipo === 'poste') {
-      tom(audio, t, 110, { tipo: 'triangle', dur: 0.12, volume: 0.02, pan });
-      tom(audio, t + 0.16, 110, { tipo: 'triangle', dur: 0.1, volume: 0.016, pan });
-    }
+    const SONS = {
+      copo: () => { tom(audio, t, 2637, { dur: 0.35, volume: 0.012, pan }); tom(audio, t + 0.06, 3520, { dur: 0.3, volume: 0.008, pan }); },
+      agua: () => { tom(audio, t, 620, { dur: 0.18, volume: 0.014, ate: 380, pan }); tom(audio, t + 0.12, 520, { dur: 0.15, volume: 0.008, ate: 330, pan }); },
+      zumbido: () => { tom(audio, t, 110, { tipo: 'triangle', dur: 0.12, volume: 0.02, pan }); tom(audio, t + 0.16, 110, { tipo: 'triangle', dur: 0.1, volume: 0.016, pan }); },
+      janela: () => { tom(audio, t, 1200, { dur: 0.05, volume: 0.01, pan }); tom(audio, t + 0.05, 659, { dur: 0.8, volume: 0.01, ataque: 0.1, pan }); },
+      bonde: () => { tom(audio, t, 330, { tipo: 'triangle', dur: 0.9, volume: 0.012, ate: 294, ataque: 0.2, pan }); tom(audio, t + 0.3, 1760, { dur: 0.25, volume: 0.006, pan }); },
+      onda: () => { tom(audio, t, 98, { dur: 2.2, volume: 0.03, ate: 82, ataque: 0.6, pan }); tom(audio, t + 0.3, 147, { dur: 1.6, volume: 0.012, ataque: 0.5, pan }); },
+      gaivota: () => { tom(audio, t, 1480, { dur: 0.45, volume: 0.009, ate: 1100, ataque: 0.04, pan }); tom(audio, t + 0.5, 1320, { dur: 0.5, volume: 0.007, ate: 990, ataque: 0.04, pan }); },
+      surdo: () => { [0, 0.5, 0.75].forEach((dt) => pulso(audio, t + dt, 55, 0.06)); },
+      cachorro: () => { tom(audio, t, 330, { tipo: 'triangle', dur: 0.12, volume: 0.012, ate: 220, pan }); tom(audio, t + 0.25, 311, { tipo: 'triangle', dur: 0.12, volume: 0.01, ate: 208, pan }); },
+      vela: () => { tom(audio, t, 1760, { dur: 0.6, volume: 0.004, ataque: 0.2, pan }); },
+      grilo: () => { for (let i = 0; i < 3; i++) tom(audio, t + i * 0.07, 3600, { dur: 0.03, volume: 0.005, ataque: 0.004, pan }); },
+      sino: () => { for (const [f, v, d] of [[440, 0.025, 3], [880, 0.01, 2.2]]) tom(audio, t, f, { dur: d, volume: v, pan }); },
+      motor: () => { tom(audio, t, 55, { tipo: 'triangle', dur: 1, volume: 0.03, ate: 70, ataque: 0.2, pan }); tom(audio, t, 110, { dur: 0.9, volume: 0.01, ate: 140, ataque: 0.2, pan }); },
+      trem: () => { tom(audio, t, 349, { tipo: 'triangle', dur: 1, volume: 0.012, ataque: 0.1, pan }); tom(audio, t, 440, { tipo: 'triangle', dur: 1, volume: 0.01, ataque: 0.1, pan }); },
+    };
+    SONS[nome]?.();
   },
   // Enviar o plano: a gota que cai (nota que desce), o baque no selo e o eco grave.
   selo() {

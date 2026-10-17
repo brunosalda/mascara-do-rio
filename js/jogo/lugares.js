@@ -14,8 +14,10 @@
 // Na âncora, opcionais: parada [x, y] (onde o personagem para), lado ('esquerda'/'direita', para
 // onde ele olha), baixo (objeto no chão: ele se abaixa) e contorno (polígono do objeto pintado, que se
 // acende de perto). Sem eles, vale o ponto de chão mais perto e o lado do objeto.
-// reacoes:   coisas da pintura que respondem quando ele passa ou para: { tipo: 'copo'|'poca'|'poste',
-//            x, y, raio, luz } (luz = índice em luzes, para o poste piscar).
+// A marcação de cada âncora (contorno, parada, lado, baixo), as reações da pintura, os vultos e as
+// falas de passagem ficam em marcacao.js e entram por cima destes dados ao carregar.
+
+import { MARCACAO } from './marcacao.js';
 
 export const LUGARES = {
   lapa: {
@@ -27,9 +29,7 @@ export const LUGARES = {
     saida: [0.055, 0.83],
     ancoras: {
       arcos: { x: 0.32, y: 0.68, papel: 'memoria', termos: ['arcos', 'aqueduto', 'bonde', 'bondinho'] },
-      bar: { x: 0.83, y: 0.715, parada: [0.795, 0.735], lado: 'direita',
-        contorno: [[0.795, 0.43], [0.93, 0.42], [0.935, 0.70], [0.80, 0.705]],
-        termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
+      bar: { x: 0.83, y: 0.715, termos: ['bar', 'boteco', 'botequim', 'dono', 'balcao', 'bebida', 'cerveja', 'garcom', 'mesa', 'antonio'] },
       rua: { x: 0.5, y: 0.82, papel: 'livre', termos: ['rua', 'praca', 'gente', 'multidao', 'policia', 'carro', 'placa', 'internet', 'celular', 'rastrear', 'pesquisar'] },
       fundo: { x: 0.64, y: 0.672, termos: ['seguir', 'centro', 'caminho', 'andar', 'ir ', 'procurar', 'encontrar'] },
       beco: { x: 0.9, y: 0.86, papel: 'escuro', termos: ['beco', 'escondido', 'sombra', 'esconder', 'vigiar', 'observar'] },
@@ -53,11 +53,6 @@ export const LUGARES = {
       { x: 0.03, y: 0.54, cor: '#ff3a2a', raio: 0.16, forca: 0.7 },    // bar da esquerda
     ],
     vida: { passantes: [{ y: 0.645, x0: 0.14, x1: 0.68 }], farois: { y0: 0.66, y1: 0.94 } },
-    reacoes: [
-      { tipo: 'copo', x: 0.79, y: 0.72, raio: 0.055 },   // copos nas mesas da calçada do bar
-      { tipo: 'poca', x: 0.47, y: 0.86, raio: 0.05 },    // poça grande no meio da rua
-      { tipo: 'poste', x: 0.77, y: 0.69, raio: 0.045, luz: 2 },
-    ],
   },
 
   'santa-teresa': {
@@ -363,6 +358,16 @@ const PADRAO = {
   luzes: [],
   vida: {},
 };
+
+// Junta a marcação (marcacao.js) às âncoras e acrescenta reações, vultos e falas.
+for (const [id, m] of Object.entries(MARCACAO)) {
+  const g = LUGARES[id];
+  if (!g) continue;
+  for (const [nome, extra] of Object.entries(m.ancoras || {})) if (g.ancoras[nome]) Object.assign(g.ancoras[nome], extra);
+  if (m.reacoes) g.reacoes = m.reacoes;
+  if (m.passantes && !g.vida?.passantes) g.vida = { ...(g.vida || {}), passantes: m.passantes };
+  if (m.falas) g.falas = m.falas;
+}
 
 export function geografia(id) {
   return LUGARES[id] || PADRAO;

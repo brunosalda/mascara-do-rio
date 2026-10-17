@@ -81,6 +81,7 @@ export function montarCena(raiz, {
     <div class="cena">
       <div class="mundo">
         <div class="pintura" style="background-image:url('${fundoUrl}')"></div>
+        <div class="pintura-fundo" style="background-image:url('${fundoUrl}');--horizonte:${(geo.horizonte * 100).toFixed(1)}%" aria-hidden="true"></div>
         ${geo.luzes.map((l, i) => (l.raio < 0.5 ? `<span class="brilho-luz${l.falha ? ' com-falha' : ''}" data-luz="${i}" style="left:${pct(l.x)};top:${pct(l.y)};--cor:${l.cor};--raio:${l.raio};animation-delay:${(-i * 1.7).toFixed(1)}s"></span>` : '')).join('')}
         <div class="nevoa-cena" aria-hidden="true"></div>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
@@ -110,6 +111,8 @@ export function montarCena(raiz, {
 
   const balao = cena.querySelector('.balao-voz');
   const camadaContornos = cena.querySelector('.contornos');
+  const camadaFundo = cena.querySelector('.pintura-fundo');
+  const objetosFrente = [...cena.querySelectorAll('.frente')];
   const falaPassagem = cena.querySelector('.fala-passagem');
   const dica = cena.querySelector('.dica-interagir');
   const setaEsq = cena.querySelector('.seta-esq');
@@ -395,28 +398,36 @@ export function montarCena(raiz, {
       if (dist(r.x, r.y, pos.x, pos.y) > r.raio) continue;
       if (agora - (ultimaReacao.get(r) || 0) < 9000) continue;
       const parado = Math.hypot(vel.x, vel.y) < 0.01;
-      if (r.tipo === 'poste' && !parado) continue;
-      if (r.tipo !== 'poste' && parado) continue;
+      if ((r.quando === 'parar') !== parado) continue;
       ultimaReacao.set(r, agora);
-      som.reacao?.(r.tipo, limitar((r.x - 0.5) * 2, -1, 1));
-      if (r.tipo === 'poca' && reflexo) { reflexo.classList.remove('onda'); void reflexo.offsetWidth; reflexo.classList.add('onda'); }
-      if (r.tipo === 'poste') {
+      const ex = r.ex ?? r.x;
+      const ey = r.ey ?? r.y - 0.03;
+      som.reacao?.(r.som, limitar((ex - 0.5) * 2, -1, 1));
+      if (r.efeito === 'onda') {
+        if (reflexo) { reflexo.classList.remove('onda'); void reflexo.offsetWidth; reflexo.classList.add('onda'); }
+        efeitoNoMundo('onda-agua', r.x, r.y, 1200);
+      } else if (r.efeito === 'pisca') {
         const luz = mundo.querySelector(`[data-luz="${r.luz}"]`);
         if (luz) { luz.classList.remove('piscando'); void luz.offsetWidth; luz.classList.add('piscando'); }
-      }
-      if (r.tipo === 'copo') {
-        const el = document.createElement('span');
-        el.className = 'brilho-copo';
-        el.style.left = pct(r.x);
-        el.style.top = pct(r.y - 0.03);
-        mundo.appendChild(el);
-        setTimeout(() => el.remove(), 900);
+      } else if (r.efeito === 'brilho') {
+        efeitoNoMundo('brilho-copo', ex, ey, 900);
+      } else if (r.efeito === 'voa') {
+        efeitoNoMundo('ave-voa', ex, ey, 1800);
       }
     }
   }
 
+  function efeitoNoMundo(classe, x, y, ms) {
+    const el = document.createElement('span');
+    el.className = classe;
+    el.style.left = pct(x);
+    el.style.top = pct(y);
+    mundo.appendChild(el);
+    setTimeout(() => el.remove(), ms);
+  }
+
   // Uma fala ouvida de passagem por noite, vinda do vulto ao fundo (nada da crônica).
-  const FALAS_DE_PASSAGEM = [
+  const FALAS_DE_PASSAGEM = geo.falas || [
     '…o bonde não sobe mais depois da meia-noite…',
     '…amanhã eu pago, juro…',
     '…a chuva não para desde terça…',
@@ -525,12 +536,14 @@ export function montarCena(raiz, {
 
   // --- Câmera --------------------------------------------------------------------------------------
   function atualizarCamera(dt) {
-    const zAlvo = conversa ? ZOOM_CONVERSA : (estreito ? 1 : ZOOM);
+    // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
+    const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
+    const zAlvo = conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
     const h = altura(pos.y);
-    const fx = pos.x * W;
+    const fx = (marcado ? pos.x * 0.6 + marcado.x * 0.4 : pos.x) * W;
     const fy = (pos.y - h * 0.5) * H;
     let alvoX;
     let alvoY;
@@ -559,6 +572,14 @@ export function montarCena(raiz, {
     cam.y += (alvoY - cam.y) * k;
     cameraPronta = true;
     mundo.style.transform = `translate3d(${cam.x.toFixed(1)}px, ${cam.y.toFixed(1)}px, 0) scale(${cam.z.toFixed(4)})`;
+    // Profundidade sem 3D: o que fica acima do horizonte anda 60% do movimento da câmera, e os objetos
+    // da frente andam 115% (no máximo uns 12 px para cada lado).
+    const meio = (vw - W) / 2;
+    const desvio = cam.x - meio;
+    const fundo = limitar(-desvio * 0.4 / cam.z, -12, 12);
+    const frente = limitar(desvio * 0.15 / cam.z, -12, 12);
+    if (camadaFundo) camadaFundo.style.translate = `${fundo.toFixed(1)}px 0`;
+    for (const f of objetosFrente) f.style.translate = `${frente.toFixed(1)}px 0`;
   }
 
   // Rótulos dos pontos sempre dentro da tela (perto da borda, o rótulo desliza para dentro).
