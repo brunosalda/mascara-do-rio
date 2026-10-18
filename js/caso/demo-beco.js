@@ -119,6 +119,7 @@ export const CASO = {
         },
         {
           id: 'camera', rotulo: 'Pedir para ver a câmera do bar', min: 15, escondeSe: ['camera'],
+          pergunta: '**Dona Cida** — A câmera? Pra que você quer ver a câmera do meu bar?',
           abordagens: [
             { rotulo: 'Pedir com jeito, em nome da Xerife', teste: { pool: ['carisma', 'persuasao'], dif: 2 }, social: true, sucesso: 'camera-ok', falha: 'camera-nao' },
             { rotulo: 'Ameaçar: a Xerife pode fechar o bar', teste: { pool: ['manipulacao', 'intimidacao'], dif: 2 }, social: true, sucesso: 'camera-ok', falha: 'camera-brava' },
@@ -128,13 +129,15 @@ export const CASO = {
         },
         {
           id: 'chave', rotulo: 'Pedir a chave do depósito', min: 10, requer: ['deposito-trancado'], escondeSe: ['tem-chave', 'mochila'],
+          pergunta: '**Dona Cida** — A chave do depósito? Isso é coisa minha, meu bem.',
           abordagens: [
             { rotulo: 'Pedir com calma', teste: { pool: ['carisma', 'persuasao'], dif: 2 }, social: true, bloqueadaSe: ['cida-brava'], sucesso: 'chave-ok', falha: 'chave-nao' },
             { rotulo: 'Dar uma ordem com o olhar (Dominação)', poder: 'compelir', sucesso: 'chave-ok' },
           ],
         },
         {
-          id: 'quem-caca', rotulo: 'Perguntar quem mais caça aqui na Lapa', min: 15, requerAlgum: ['cida-viu-chapeu', 'camera', 'ritinha-achada'], escondeSe: ['cida-carnical'],
+          id: 'quem-caca', rotulo: 'Perguntar quem mais caça aqui na Lapa', min: 15,
+          pergunta: '**Dona Cida** — Caça? Que caça? Aqui é um bar.', requerAlgum: ['cida-viu-chapeu', 'camera', 'ritinha-achada'], escondeSe: ['cida-carnical'],
           abordagens: [
             { rotulo: 'Perguntar olhando bem para ela', teste: { pool: ['raciocinio', 'intuicao'], dif: 2 }, sucesso: 'cida-revela', falha: 'cida-desconversa' },
             { rotulo: 'Ler a aura dela (Auspícios)', poder: 'perscrutar-alma', sucesso: 'cida-revela' },
@@ -259,12 +262,14 @@ export const CASO = {
       topicos: [
         {
           id: 'onde', rotulo: 'Perguntar onde ele estava às duas e dez', min: 10,
+          pergunta: '**Tião** — Por que você quer saber, chefia?',
           abordagens: [
             { rotulo: 'Ouvir e reparar se ele mente', teste: { pool: ['raciocinio', 'intuicao'], dif: 2 }, sucesso: 'tiao-mente', falha: 'tiao-gola' },
           ],
         },
         {
           id: 'cheiro', rotulo: 'Chegar perto dele e reparar', min: 10, escondeSe: ['tiao-vampiro'],
+          pergunta: 'O Tião está a um passo de você, de braços cruzados. Ele não olha nos seus olhos.',
           abordagens: [
             { rotulo: 'Reparar na roupa dele', teste: { pool: ['raciocinio', 'prontidao'], dif: 2 }, sucesso: 'gola-sangue', falha: 'tiao-vira' },
             { rotulo: 'Usar os Sentidos Aguçados (Auspícios)', poder: 'sentidos-agucados', sucesso: 'gola-sangue' },
@@ -329,6 +334,7 @@ export const CASO = {
       topicos: [
         {
           id: 'onde', rotulo: 'Perguntar onde ele estava às duas e dez', min: 10,
+          pergunta: '**Breno** — Aqui, fotografando o último bonde. Quer ver as fotos?',
           abordagens: [
             { rotulo: 'Pedir as fotos e conferir os dados delas', teste: { pool: ['inteligencia', 'tecnologia'], dif: 2 }, sucesso: 'fotos-ok', falha: 'fotos-duvida' },
             { rotulo: 'Só olhar as fotos', sucesso: 'fotos-duvida' },
@@ -340,6 +346,7 @@ export const CASO = {
         },
         {
           id: 'mordida', rotulo: 'Perguntar se ele mordeu a Ritinha', min: 10, escondeSe: ['breno-mordeu'],
+          pergunta: '**Breno** — Que pergunta é essa?',
           abordagens: [
             { rotulo: 'Perguntar direto, olhando nos olhos', teste: { pool: ['raciocinio', 'intuicao'], dif: 2 }, sucesso: 'breno-confessa', falha: 'breno-esconde' },
             { rotulo: 'Dar uma ordem com o olhar (Dominação)', poder: 'compelir', sucesso: 'breno-confessa' },
@@ -417,6 +424,7 @@ export const CASO = {
   exames: {
     'beco-chao': {
       min: 10,
+      pergunta: 'O chão do beco está molhado: sacos de lixo, uma poça e uma grade de esgoto. A ambulância já levou a Ritinha, mas alguma coisa ficou.',
       abordagens: [
         { rotulo: 'Procurar marcas no chão', teste: { pool: ['raciocinio', 'investigacao'], dif: 2 }, sucesso: 'pegadas', falha: 'beco-cravo' },
         { rotulo: 'Usar os Sentidos Aguçados (Auspícios)', poder: 'sentidos-agucados', sucesso: 'beco-tudo' },
@@ -436,6 +444,7 @@ export const CASO = {
     deposito: {
       min: 10, marcas: ['deposito-trancado'], escondeSe: ['mochila'],
       texto: 'Uma porta de ferro com um cadeado novo. Na plaquinha: DEPÓSITO, SÓ FUNCIONÁRIOS.',
+      pergunta: 'Como você entra?',
       abordagens: [
         { rotulo: 'Abrir com a chave da Dona Cida', requer: ['tem-chave'], sucesso: 'mochila' },
         { rotulo: 'Abrir o cadeado sem chave', teste: { pool: ['destreza', 'furto'], dif: 2 }, sucesso: 'mochila', falha: 'cadeado' },
@@ -457,6 +466,7 @@ Dentro dela, três bolsas de sangue de hospital, vazias e secas há dias. E um b
     },
     balcao: {
       min: 10,
+      pergunta: 'O notebook está aberto atrás do balcão. A Jaque passa por ali de tempos em tempos.',
       abordagens: [
         { rotulo: 'Ver as imagens sem ninguém notar', teste: { pool: ['destreza', 'furtividade'], dif: 2 }, sucesso: 'camera-ok', falha: 'pego' },
         { rotulo: 'Sumir de vista e ver as imagens (Ofuscação)', poder: 'manto-sombras', sucesso: 'camera-ok' },
@@ -584,10 +594,10 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
     lugar: 'lapa', pessoa: 'tiao',
     // Ele foge pelo largo; depois de tempoSaida segundos, corre para a saída (a rua dos Arcos).
     saida: [0.12, 0.7],
-    tempoSaida: 10,
+    tempoSaida: 11,
     avisoSaida: 'ele corre para a rua dos Arcos',
     cadeiras: 4,
-    velocidade: 0.95,            // em relação à corrida do personagem: quase igual
+    velocidade: 0.98,            // em relação à corrida do personagem: quase igual
     dados: { pool: ['destreza', 'atletismo'], dif: 2 },
     // Depois da perseguição, a conversa com ele muda.
     depois: {

@@ -124,6 +124,8 @@ function escreverPalavras(p) {
 
 // O resultado do teste aparece só depois da dificuldade, com um som (sucesso sobe, falha desce).
 function testeEmDoisTempos(p, imediato) {
+  // No caso (formato v3), o cartão da cerimônia já mostrou o resultado: no texto, ele aparece direto.
+  if (p.closest('.sem-dois-tempos')) return;
   for (const res of p.querySelectorAll('.teste-res')) {
     const palavras = [...p.querySelectorAll('.palavra')];
     const antes = palavras.findIndex((w) => res.contains(w));

@@ -15,6 +15,8 @@ import { narracao, quadrinhos, esc, aviso, grupoVoz } from '../ui.js';
 import { definirTempo, definirSomDoLugar, definirClima, som, efeitos } from '../ambiente.js';
 import { retratoDe } from '../cidade.js';
 import { resumoFicha } from '../ficha.js';
+import { FIGURAS_GENTE } from '../jogo/gente.js';
+import { figuraLeve } from '../jogo/imagens.js';
 
 // A caminhada tirada de vídeo do personagem do Bruno: serve de reserva para quem ainda não tem a sua.
 const CAMINHADA_RESERVA = {
@@ -49,7 +51,10 @@ export async function telaCaso(raiz, estadoApp) {
   const caso = CASO;
   const p = personagemDoCaso(estadoApp);
   const calc = R.numeros(p.ficha);
-  const CHAVE = `mascara.caso.${caso.id}.${p.id}`;
+  // &perfil=<nome> no endereço guarda o progresso à parte (testes de abas diferentes no mesmo navegador
+  // não se atropelam).
+  const perfil = (new URLSearchParams(location.hash.split('?')[1] || '').get('perfil') || '').replace(/[^a-z0-9-]/gi, '');
+  const CHAVE = `mascara.caso.${caso.id}.${p.id}${perfil ? `.${perfil}` : ''}`;
   const vontadeMax = p.estado?.vontade?.max || calc.forcaVontade || 3;
   const vitalidadeMax = p.estado?.vitalidade?.max || calc.vitalidade || 5;
 
@@ -102,6 +107,7 @@ export async function telaCaso(raiz, estadoApp) {
         <div class="barras"></div>
       </aside>
       <section class="painel-baixo" aria-label="Registro do caso">
+        <p class="pergunta-caso"><b>A pergunta</b> ${esc(caso.pergunta)}</p>
         <ol class="registro-noite" aria-live="polite"></ol>
         <div class="painel-pergunta"></div>
       </section>
@@ -172,6 +178,50 @@ export async function telaCaso(raiz, estadoApp) {
     setTimeout(() => el.remove(), 3200);
   }
 
+  // Avisos (pista nova, opção nova na dedução, evento, corrida) esperam a caixa terminar de revelar o
+  // texto: primeiro a narração conta o achado, depois vem o aviso, um por vez.
+  const filaAvisos = [];
+  let revelando = false;
+  let soltando = false;
+  function avisar(classe, rotulo, texto, extra) {
+    filaAvisos.push({ classe, rotulo, texto, extra });
+    setTimeout(soltarAvisos, 0);
+  }
+  function soltarAvisos() {
+    if (revelando || soltando) return;
+    const a = filaAvisos.shift();
+    if (!a) return;
+    soltando = true;
+    faixa(a.classe, a.rotulo, a.texto);
+    a.extra?.();
+    setTimeout(() => { soltando = false; soltarAvisos(); }, 1100);
+  }
+  // A pista nova voa do meio da tela até o botão do Quadro, que pulsa ao recebê-la.
+  function voarPista() {
+    const alvo = [...tela.querySelectorAll('.hud-botoes [data-hud="quadro"]')].find((b) => b.offsetParent);
+    if (!alvo || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rt = tela.getBoundingClientRect();
+    const ra = alvo.getBoundingClientRect();
+    const x0 = rt.width / 2;
+    const y0 = rt.height * 0.32;
+    const el = document.createElement('span');
+    el.className = 'pista-voa';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.left = `${x0}px`;
+    el.style.top = `${y0}px`;
+    tela.appendChild(el);
+    setTimeout(() => {
+      el.style.transform = `translate(${(ra.left - rt.left + ra.width / 2 - x0).toFixed(0)}px, ${(ra.top - rt.top + ra.height / 2 - y0).toFixed(0)}px) scale(0.35) rotate(-14deg)`;
+      el.style.opacity = '0.3';
+    }, 30);
+    setTimeout(() => {
+      el.remove();
+      alvo.classList.remove('recebeu');
+      void alvo.offsetWidth;
+      alvo.classList.add('recebeu');
+    }, 720);
+  }
+
   function desenharHud() {
     const lugar = caso.lugares[st.lugar];
     tela.querySelector('[data-lugar-nome]').textContent = lugar.nome;
@@ -217,6 +267,7 @@ export async function telaCaso(raiz, estadoApp) {
     caixaCaso.className = `hud-plano quadro-noite quadro-caso${st.resolvido ? ' plano-enviado' : ''}`;
     caixaCaso.innerHTML = `
       <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
+      <p class="quadro-pergunta">${esc(caso.pergunta)}</p>
       <ol class="quadro-linhas">
         <li class="${nPistas ? 'ok' : 'falta'}"><button type="button" data-hud="quadro"><span class="quadro-nome">Pistas <small>no quadro</small></span><span class="quadro-valor">${nPistas}${st.novas.length ? ` <small class="selo-nova">+${st.novas.length} nova${st.novas.length > 1 ? 's' : ''}</small>` : ''}</span></button></li>
         <li class="${escolhidas === 3 ? 'ok' : 'opcional'}"><button type="button" data-hud="quadro"><span class="quadro-nome">Dedução</span><span class="quadro-valor">${escolhidas ? `${escolhidas} de 3 escolhidas` : `${comOpcao} de 3 com opções`}</span></button></li>
@@ -243,13 +294,13 @@ export async function telaCaso(raiz, estadoApp) {
       }
       (ev.marcas || []).forEach((m) => { if (!st.achados.includes(m)) st.achados.push(m); });
       anotar(ev.voz, ev.texto);
-      faixa('faixa-evento', ev.voz, ev.texto);
+      avisar('faixa-evento', ev.voz, ev.texto);
     }
     caso.rivais.forEach((rv, i) => {
       if (st.rivais.includes(i) || st.hora < rv.hora) return;
       st.rivais.push(i);
       anotar('CORRIDA', rv.texto);
-      faixa('faixa-corrida', 'Corrida', rv.texto);
+      avisar('faixa-corrida', 'Corrida', rv.texto);
     });
     if (st.hora >= caso.relogio.fim) amanheceuPendente = true;
     salvar();
@@ -274,31 +325,49 @@ export async function telaCaso(raiz, estadoApp) {
       if (caso.pistas[id] && !caso.pistas[id].marca) { if (!st.novas.includes(id)) st.novas.push(id); novas.push(caso.pistas[id].titulo); }
     }
     if (novas.length) {
-      som.reacao?.('pista', 0);
       anotar('PISTA NOVA', novas.join(' · '));
-      faixa('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '));
+      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { som.reacao?.('pista', 0); voarPista(); });
     }
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
-    if (abriu.length) setTimeout(() => faixa('faixa-deducao', 'Dedução', `nova opção em “${abriu.map((l) => l.rotulo.toLowerCase()).join('” e “')}”`), novas.length ? 900 : 0);
+    if (abriu.length) avisar('faixa-deducao', 'Dedução', `nova opção em “${abriu.map((l) => l.rotulo.toLowerCase()).join('” e “')}”`);
     salvar();
     desenharHud();
     atualizarCena();
   }
 
   // --- Caixas de diálogo -------------------------------------------------------------------------
+  const figuraDe = (pid) => { const pe = caso.pessoas[pid]; const f = pe?.figura || FIGURAS_GENTE[pe?.tipo]?.[0]; return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
   let numCaixa = 0;
   // opcoes: [{ html, fn, desligada, classe }]. revelar: fala por fala, com "Continuar".
-  function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar }) {
+  function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
     const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
     const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
+    revelando = !!chave;
     const camada = abrirDialogo(tela, {
       rotulo, chave, fechavel,
-      html: `${html}${texto ? `<div class="texto-narracao">${narracao(texto)}</div>` : ''}${lista}`,
-      aoTerminar: () => { if (chave) try { localStorage.removeItem(`mascara.lido.${chave}`); } catch { /* sem armazenamento */ } },
-      aoFechar: () => { aoFechar?.(); setTimeout(checarAmanhecer, 50); },
+      html: `${html}${texto ? `<div class="texto-narracao sem-dois-tempos">${narracao(texto)}</div>` : ''}${lista}`,
+      aoTerminar: () => {
+        if (chave) try { localStorage.removeItem(`mascara.lido.${chave}`); } catch { /* sem armazenamento */ }
+        revelando = false;
+        setTimeout(soltarAvisos, 250);
+      },
+      aoFechar: () => { revelando = false; setTimeout(soltarAvisos, 150); aoFechar?.(); setTimeout(checarAmanhecer, 50); },
     });
     camada.el.classList.add('dialogo-caso');
+    // Rosto de quem fala: a figura pintada da pessoa, recortada no rosto, no lugar da inicial; na
+    // conversa, o retrato dela também fica à esquerda da caixa.
+    for (const f of camada.el.querySelectorAll('p.fala')) {
+      const nome = f.querySelector('.falante')?.textContent?.trim();
+      const pid = Object.keys(caso.pessoas).find((id) => caso.pessoas[id].nome.toUpperCase() === nome);
+      const src = pid ? figuraDe(pid) : '';
+      const rosto = f.querySelector('.rosto');
+      if (src && rosto) { rosto.classList.add('rosto-pintado'); rosto.innerHTML = `<img src="${esc(src)}" alt="">`; }
+    }
+    if (falante && figuraDe(falante)) {
+      camada.el.classList.add('com-falante');
+      camada.el.style.setProperty('--retrato-falante', `url('${new URL(figuraDe(falante), location.href).href}')`);
+    }
     camada.el.querySelectorAll('[data-escolha]').forEach((b) => {
       const o = opcoes[Number(b.dataset.escolha)];
       b.onclick = () => { if (o.desligada) return; confirmarEscolha(b, () => o.fn(camada)); };
@@ -367,13 +436,13 @@ export async function telaCaso(raiz, estadoApp) {
   const etiqueta = (s) => (s.etiqueta ? ` <small class="etiqueta-teste${s.pode ? '' : ' indisponivel'}${s.sangue ? ' de-sangue' : ''}">${esc(s.etiqueta)}</small>` : '');
 
   // Mostra as abordagens e resolve a escolhida. aoResultado(texto, ok) monta a caixa seguinte.
-  function abordagens({ rotulo, intro = '', lista, resultados = {}, chaveBase, min, aoVoltar, aoResultado }) {
+  function abordagens({ rotulo, intro = '', lista, resultados = {}, chaveBase, min, aoVoltar, aoResultado, falante = null }) {
     const opcoes = lista.map((a, i) => {
       const s = situacao(a, chaveBase, i);
       return { html: `${esc(a.rotulo)}${etiqueta(s)}`, desligada: !s.pode, classe: s.pode ? '' : 'indisponivel', fn: (cam) => { cam.fechar(); tentar(a, i, s); } };
     });
     opcoes.push({ html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); aoVoltar?.(); } });
-    caixa({ rotulo, texto: intro, opcoes });
+    caixa({ rotulo, texto: intro || 'Como você faz?', opcoes, falante });
 
     async function tentar(a, i, s) {
       st.tentados[`${chaveBase}#${i}`] = true;
@@ -449,7 +518,7 @@ export async function telaCaso(raiz, estadoApp) {
       fn: (cam) => { cam.fechar(); escolherTopico(pid, t); },
     }));
     opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() });
-    caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160 });
+    caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160, falante: pid });
   }
 
   function escolherTopico(pid, t) {
@@ -461,7 +530,7 @@ export async function telaCaso(raiz, estadoApp) {
       st.feitos[chave] = 'ok';
       salvar();
       caixa({
-        rotulo: `${caso.pessoas[pid].nome} · ${caso.pessoas[pid].sub}`, texto: t.texto, revelar: true, fechavel: false,
+        rotulo: `${caso.pessoas[pid].nome} · ${caso.pessoas[pid].sub}`, texto: t.texto, revelar: true, fechavel: false, falante: pid,
         opcoes: [{ html: '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); comecarFuga(); } }],
       });
       return;
@@ -477,12 +546,12 @@ export async function telaCaso(raiz, estadoApp) {
     }
     const pe = caso.pessoas[pid];
     abordagens({
-      rotulo: `${pe.nome} · ${t.rotulo}`, lista: t.abordagens, resultados: pe.resultados, chaveBase: chave, min: t.min,
+      rotulo: `${pe.nome} · ${t.rotulo}`, intro: t.pergunta, lista: t.abordagens, resultados: pe.resultados, chaveBase: chave, min: t.min, falante: pid,
       aoVoltar: () => conversar(pid),
       aoResultado: (texto, ok, repetir) => {
         if (repetir) {
           caixa({
-            rotulo: `${pe.nome} · ${pe.sub}`, texto, revelar: true,
+            rotulo: `${pe.nome} · ${pe.sub}`, texto, revelar: true, falante: pid,
             opcoes: [
               { html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } },
               { html: 'Continuar a conversa', fn: (cam) => { cam.fechar(); conversar(pid); } },
@@ -519,7 +588,7 @@ export async function telaCaso(raiz, estadoApp) {
     }
     if (ex.marcas) aplicar({ marcas: ex.marcas });
     abordagens({
-      rotulo: pt.rotulo, intro: ex.texto || '', lista: ex.abordagens, resultados: ex.resultados, chaveBase: chave, min: ex.min,
+      rotulo: pt.rotulo, intro: [ex.texto, ex.pergunta].filter(Boolean).join('\n\n'), lista: ex.abordagens, resultados: ex.resultados, chaveBase: chave, min: ex.min,
       aoVoltar: () => {},
       aoResultado: (texto, ok, repetir) => {
         const opcoes = [];
@@ -585,6 +654,7 @@ export async function telaCaso(raiz, estadoApp) {
       anotar('VOCÊ', `Chega ${l.em.replace(/^em /, 'a ').replace(/^na /, 'à ')}, às ${hora(st.hora)}.`);
       veu.classList.add('saindo');
       setTimeout(() => veu.remove(), 450);
+      setTimeout(olharInicial, 120);
       faixa('faixa-chegada', l.nome, hora(st.hora));
       setTimeout(checarAmanhecer, 600);
     }, 260);
@@ -616,10 +686,47 @@ export async function telaCaso(raiz, estadoApp) {
     if (!cena) return;
     cena.atualizarPontos(pontosDo(st.lugar));
     for (const pid of caso.lugares[st.lugar].pessoas) {
-      const el = cena.pessoa(pid)?.el?.querySelector('.pessoa-nome small');
-      if (el) el.textContent = subDe(pid);
+      const el = cena.pessoa(pid)?.el;
+      if (!el) continue;
+      const small = el.querySelector('.pessoa-nome small');
+      if (small) small.textContent = subDe(pid);
+      // Balão sobre a cabeça de quem tem algo novo a dizer (sempre à vista, sem Tab).
+      const quer = !fuga && temAssuntoNovo(pid);
+      let balao = el.querySelector('.balao-assunto');
+      if (quer && !balao) {
+        balao = document.createElement('span');
+        balao.className = 'balao-assunto';
+        balao.setAttribute('aria-hidden', 'true');
+        balao.innerHTML = '<i></i><i></i><i></i>';
+        el.appendChild(balao);
+      } else if (!quer && balao) balao.remove();
     }
   }
+
+  // A primeira câmera de cada lugar mostra você e a pessoa mais perto que tem assunto novo.
+  function olharInicial() {
+    if (!cena?.olharPara) return;
+    const voce = cena.posicao();
+    const gente = caso.lugares[st.lugar].pessoas.filter((pid) => !st.escondidos.includes(pid)).map((pid) => ({ pid, q: cena.pessoa(pid) })).filter((x) => x.q);
+    if (!gente.length) { cena.centrarCamera(); return; }
+    const comAssunto = gente.filter((x) => temAssuntoNovo(x.pid));
+    const lista = comAssunto.length ? comAssunto : gente;
+    const perto = lista.reduce((m, x) => (Math.abs(x.q.x - voce.x) < Math.abs(m.q.x - voce.x) ? x : m));
+    cena.olharPara((voce.x + perto.q.x) / 2, (voce.y + perto.q.y) / 2);
+  }
+
+  // Rótulos das pessoas (Tab ou mouse por cima) nunca cortam na borda da tela.
+  const prenderRotulos = setInterval(() => {
+    if (!tela.isConnected) { clearInterval(prenderRotulos); return; }
+    const rc = palco.getBoundingClientRect();
+    for (const rot of palco.querySelectorAll('.pessoa-nome')) {
+      rot.style.transform = '';
+      const r = rot.getBoundingClientRect();
+      if (!r.width) continue;
+      const passa = r.right > rc.right - 6 ? rc.right - 6 - r.right : r.left < rc.left + 6 ? rc.left + 6 - r.left : 0;
+      if (passa) rot.style.transform = `translateX(${passa.toFixed(0)}px)`;
+    }
+  }, 350);
 
   function montarLugar() {
     cena?.desmontar();
@@ -653,6 +760,7 @@ export async function telaCaso(raiz, estadoApp) {
       },
     });
     desenharHud();
+    atualizarCena();
   }
 
   // --- Perseguição --------------------------------------------------------------------------------
@@ -660,6 +768,8 @@ export async function telaCaso(raiz, estadoApp) {
     if (fuga || st.lugar !== caso.perseguicao.lugar) return;
     const cfg = caso.perseguicao;
     const poderes = { rapidez: R.temPoder(calc, 'ligeireza') || R.temDisciplina(calc, ['rapidez', 1]), compelir: R.temPoder(calc, 'compelir') };
+    fuga = 'começando';
+    atualizarCena(); // os balões de assunto somem durante a fuga
     fuga = iniciarPerseguicao({
       cena, palco, camadas: tela, cfg, nome: caso.pessoas[cfg.pessoa].nome, poderes,
       aoUsarSangue: (nome) => usarSangue(nome),
@@ -830,19 +940,58 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
   }
 
   // --- Abertura, ajuda, ficha, menu ---------------------------------------------------------------
+  // A tira da abertura, sem pintura nova: a Lapa com a luz da ambulância, o vídeo num celular e a
+  // mensagem da Xerife na tela do seu celular.
+  function tiraAbertura() {
+    const [p1, p2, p3] = caso.abertura.paineis;
+    const balao = (b) => (b ? `<div class="balao balao-0"><b>${esc(String(b.quem).toUpperCase())}</b>${esc(b.texto)}</div>` : '');
+    const legenda = (p) => `<figcaption class="legenda">${esc(p.legenda)}</figcaption>`;
+    return `
+      <div class="hq hq-tira tira-abertura">
+        <figure class="painel painel-sirene">
+          <div class="painel-cenario" style="background-image:url('img/cidade/lapa.jpg');background-position:86% 78%"></div>
+          <span class="sirene" aria-hidden="true"></span>
+          ${legenda(p1)}${balao(p1.baloes?.[0])}
+        </figure>
+        <figure class="painel painel-celular">
+          <div class="painel-cenario fundo-apagado" style="background-image:url('img/cidade/lapa.jpg');background-position:20% 60%"></div>
+          <div class="celular-hq" aria-hidden="true">
+            <div class="tela-hq video-hq">
+              <div class="video-cena" style="background-image:url('img/cidade/alto/lapa.jpg');background-position:94% 82%"></div>
+              <span class="ao-vivo">● gravando</span>
+              <span class="video-maca"></span>
+              <span class="video-curtidas">♥ 3,2 mil · 418 comentários</span>
+            </div>
+          </div>
+          ${legenda(p2)}${balao(p2.baloes?.[0])}
+        </figure>
+        <figure class="painel painel-celular painel-mensagem">
+          <div class="painel-cenario fundo-apagado" style="background-image:url('img/cidade/lapa.jpg');background-position:55% 35%"></div>
+          <div class="celular-hq" aria-hidden="true">
+            <div class="tela-hq mensagem-hq">
+              <span class="msg-de">${esc(p3.baloes?.[0]?.quem || '')}</span>
+              <span class="msg-bolha">${esc(p3.baloes?.[0]?.texto || '')}</span>
+              <span class="msg-hora">22:00 · lida</span>
+            </div>
+          </div>
+          ${legenda(p3)}
+        </figure>
+      </div>`;
+  }
+
   function abertura() {
     caixa({
       rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,
-      html: quadrinhos(caso.abertura.paineis, { cenario: 'img/cidade/lapa.jpg' }).replace('hq hq-3', 'hq hq-tira'),
+      html: tiraAbertura(),
       texto: caso.abertura.texto,
-      opcoes: [{ html: '<b>Começar a investigar</b>', fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); cena?.centrarCamera(); setTimeout(ajuda, 200); } }],
+      opcoes: [{ html: '<b>Começar a investigar</b>', fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); olharInicial(); setTimeout(ajuda, 200); } }],
     });
   }
   function ajuda() {
     caixa({
       rotulo: 'Como jogar o caso',
       html: `<ul class="ajuda-caso">${caso.ajuda.map((t) => `<li>${t}</li>`).join('')}</ul><p class="nota">${esc(caso.pergunta)}</p>`,
-      opcoes: [{ html: 'Entendi', fn: (cam) => { cam.fechar(); cena?.centrarCamera(); } }],
+      opcoes: [{ html: 'Entendi', fn: (cam) => { cam.fechar(); olharInicial(); } }],
     });
   }
   function verFicha() {

@@ -391,6 +391,16 @@ export function montarCena(raiz, {
     if (vx || vy) camLivre.suave = false;
   }
   function centrarCamera() { camLivre.centrar = true; }
+  // Caso (formato v3): leva a câmera livre até um ponto da pintura (x, y de 0 a 1), com deslize.
+  function olharPara(x, y) {
+    const z = geo.alto ? nivelZoom() : cam.z;
+    const W = mw * z;
+    const H = mh * z;
+    camLivre.x = limitar(vw * 0.5 - x * W, vw - W, 0);
+    camLivre.y = limitar(vh * 0.55 - y * H, vh - H, 0);
+    camLivre.suave = true;
+    camLivre.centrar = false;
+  }
   // Setas das bordas: tocar rola a câmera mais de meia tela para aquele lado.
   const bordaMais = {};
   for (const lado of ['esq', 'dir']) {
@@ -2470,6 +2480,7 @@ export function montarCena(raiz, {
     correr: (sim = true) => { correrSempre = sim; },
     // A câmera enquadra o personagem e um ponto (quem foge) juntos, com o zoom um pouco mais aberto.
     focar: (x, y, ms = 300) => { focoEscolha = { x, y, ate: performance.now() + ms }; },
+    olharPara,
     desmontar,
   };
 }
