@@ -1,5 +1,5 @@
 -- Fase 3 (P5/P6): os ganhos da noite, gravados pelo Narrador no fechamento e só lidos pelo site.
--- NÃO APLICADA: espera o OK do Bruno no chat do desenvolvimento.
+-- Aplicada em 18/10/2026, com o "tudo aprovado" do Bruno no chat do desenvolvimento.
 -- Formato (parecer do Narrador, gerencia/pareceres/fase3-narrador.md):
 -- { "xp": 2, "itens": [{ "nome", "tipo", "raridade", "traco", "vantagem" }],
 --   "status": [{ "faccao", "de", "para" }], "refugio": [{ "aspecto", "de", "para", "motivo" }],
