@@ -12,13 +12,14 @@ import { presasDoLugar, ABORDAGENS, abordagensPara, PERGUNTAS_CONVERSA, FRASES_F
 import { PODERES_DA_CENA, TEMPERAMENTOS, temperamentoDe, AVISO_DESPERTAR } from './jogo/disciplinas.js';
 import { TIPOS_GENTE, PISTAS_CONVERSA } from './jogo/gente.js';
 import { PEDIDOS, FALAS_DE_CASA, NIVEIS_NOME_BAIRRO, FEITOS } from './jogo/progressao-textos.js';
+import { ACONTECIMENTOS } from './jogo/acontecimentos.js';
 import { vantagemDosItens } from './jogo/progresso.js';
 import { ir } from './app.js';
 import { montarCena } from './jogo/cena.js';
 import { pinturaLeve } from './jogo/imagens.js';
 import { molduraTela } from './moldura-tela.js';
 import { montarMapa } from './jogo/mapa.js';
-import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar } from './jogo/camadas.js';
+import { abrirDialogo, abrirJanela, fecharTudo, confirmarEscolha, perguntar, camadaAberta } from './jogo/camadas.js';
 import { geografia, distribuirAncoras } from './jogo/lugares.js';
 import { descobertas, todasDescobertas, brasas, fraseDescobertas, escondidosPara, VANTAGENS, VANTAGENS_ESCONDIDOS, DETALHES_SENTIDOS, VANTAGENS_SENTIDOS } from './jogo/detalhes.js';
 import { ligarGlossario } from './glossario.js';
@@ -378,6 +379,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
   // Cada ponto fica numa âncora da pintura: o que aconteceu num lugar de memória, a caçada num canto
   // escuro, as opções da noite no lugar de que falam ("bar" na porta do bar). No máximo 5 à vista ao
   // entrar; os outros e os detalhes para examinar aparecem quando o personagem chega perto (ou com Tab).
+  let acontecimentoAtivo = null; // rodada 44: o ponto temporário "O que foi aquilo?"
   function montarPontos() {
     const pedidos = [];
     if (!emOutroLugar && atual) pedidos.push({ id: 'historia', tipo: 'historia', icone: '❦', rotulo: 'O que aconteceu', acao: 'Relembrar o que aconteceu', papel: 'memoria' });
@@ -421,6 +423,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (ds && meusPoderes.has('sentidos-agucados')) {
       pts.push({ id: `detalhe-${ds.id}`, tipo: 'detalhe', icone: '?', rotulo: ds.rotulo, acao: `Examinar: ${ds.rotulo}`, x: ds.x, y: ds.y, sentidos: true, visto: visto(ds.id), detalhe: ds });
     }
+    if (acontecimentoAtivo) pts.push(acontecimentoAtivo);
     return pts;
   }
 
@@ -1545,6 +1548,80 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     }
   }, 1800);
 
+  // Rodada 44: um acontecimento comum da noite em cada lugar (acontecimentos.js). Sai sozinho depois de 25 a
+  // 45 s de exploração, nunca durante conversa, caçada, pausa ou caixa aberta: som curto, uma luz da pintura
+  // pisca, um balão de longe e um ponto "O que foi aquilo?" por 60 s. Uma vez por lugar por noite.
+  // Na demonstração, &acontecimento=1 faz sair em 3 s.
+  const dadosAcontecimento = geo.alto ? ACONTECIMENTOS[lugarId] : null;
+  const chaveAcontecimento = `mascara.acontecimento.${noite?.id || 'sem-noite'}.${lugarId}`;
+  const forcarAcontecimento = /[?&]acontecimento=1/.test(location.hash);
+  let jaAconteceu = false;
+  try { jaAconteceu = !forcarAcontecimento && localStorage.getItem(chaveAcontecimento) === '1'; } catch { /* sem armazenamento */ }
+  if (dadosAcontecimento && !jaAconteceu) {
+    const espera = forcarAcontecimento ? 3000 : 25000 + Math.random() * 20000;
+    const inicio = Date.now();
+    const tentar = setInterval(() => {
+      if (!palco.isConnected) { clearInterval(tentar); return; }
+      if (Date.now() - inicio < espera) return;
+      const ocupado = camadaAberta() || cena.pausado?.() || cena.emFurtividade?.() || emCaca
+        || raiz.querySelector('.painel-pergunta.com-pergunta, .dialogo-cena, .cartao-passagem, .visao-geral');
+      if (ocupado) return;
+      clearInterval(tentar);
+      dispararAcontecimento();
+    }, 1000);
+  }
+  function dispararAcontecimento() {
+    const d = dadosAcontecimento;
+    try { localStorage.setItem(chaveAcontecimento, '1'); } catch { /* sem armazenamento */ }
+    const fig = (geo.gente || []).find((g) => g.tipo === d.quem) || { x: 0.5, y: 0.75 };
+    const x = Math.min(0.95, Math.max(0.05, fig.x + (fig.x > 0.5 ? -0.04 : 0.04)));
+    const y = Math.min(0.97, fig.y + 0.02);
+    const t = TIPOS_GENTE[d.quem];
+    som.reacao?.(d.som || 'sino', Math.max(-1, Math.min(1, (x - 0.5) * 2)));
+    // A luz mais perto pisca (sem piscar com movimento reduzido).
+    if (!cerimoniasCurtas()) {
+      let melhor = -1; let menor = Infinity;
+      (geo.luzes || []).forEach((l, i) => { if (l.raio < 0.5) { const dd = Math.hypot(l.x - x, l.y - y); if (dd < menor) { menor = dd; melhor = i; } } });
+      const luz = palco.querySelector(`.brilho-luz[data-luz="${melhor}"]`);
+      if (luz) { let n = 0; const piscar = setInterval(() => { luz.classList.remove('piscando'); void luz.offsetWidth; luz.classList.add('piscando'); if (++n >= 3) clearInterval(piscar); }, 700); }
+    }
+    cena.falar((t?.nome || 'Alguém').toUpperCase(), d.balao, 3200);
+    anotar('A CIDADE', `${d.balao}`);
+    acontecimentoAtivo = { id: 'acontecimento', tipo: 'acontecimento', icone: '!', rotulo: 'O que foi aquilo?', acao: 'Ver o que foi aquilo', x, y, dados: d, quem: t };
+    cena.atualizarPontos(montarPontos());
+    setTimeout(() => {
+      if (!acontecimentoAtivo || !palco.isConnected) return;
+      acontecimentoAtivo = null;
+      cena.atualizarPontos(montarPontos());
+    }, 60000);
+  }
+  function abrirAcontecimento(pt) {
+    const d = pt.dados;
+    const voz = (pt.quem?.nome || 'A cidade').toUpperCase();
+    acontecimentoAtivo = null;
+    cena.atualizarPontos(montarPontos());
+    anotar(voz, d.texto);
+    cena.perguntarNoBalao({
+      voz, texto: d.texto, ms: 1e9, perto: { x: pt.x, y: pt.y, raio: 0.3 },
+      opcoes: [`${d.acao} (vira ação curta da noite)`, 'Só olhar', 'Deixar para lá'],
+      aoEscolher: (i) => {
+        if (i === 0) {
+          const texto = `${d.acao} (${lugarNome}).`;
+          if (!plano.curta_1?.trim()) plano.curta_1 = texto;
+          else if (!plano.curta_2?.trim()) plano.curta_2 = texto;
+          else { aviso('As duas ações curtas já estão ocupadas. Troque uma no plano para entrar nessa.'); return; }
+          guardarRascunho();
+          desenharPlano();
+          anotar('VOCÊ', `entra nessa: ${d.acao.replace(/^./, (c) => c.toLowerCase())}.`);
+          aviso('Foi para as ações curtas. O Narrador resolve no fechamento.');
+        } else if (i === 1) {
+          anotar('VOCÊ', d.olhar);
+          cena.falar('VOCÊ', d.olhar, 4200);
+        }
+      },
+    });
+  }
+
   // Celular (ordem de 17/10): o quadro da noite e o registro numa folha que se recolhe embaixo, com alça.
   const painelBaixo = raiz.querySelector('.painel-baixo');
   if (painelBaixo && !painelBaixo.querySelector('.alca-folha')) {
@@ -1616,6 +1693,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
       else if (pt.tipo === 'cacar') abrirCacada();
       else if (pt.tipo === 'escrever') abrirEscrita();
       else if (pt.tipo === 'detalhe') abrirDetalhe(pt);
+      else if (pt.tipo === 'acontecimento') abrirAcontecimento(pt);
       else if (pt.tipo === 'presa' && !pt.alvo) escolherPresa(pt);
       else if (pt.tipo === 'pessoa') falarComPessoa(pt);
       else if (pt.tipo === 'saida') acao_('mapa');
