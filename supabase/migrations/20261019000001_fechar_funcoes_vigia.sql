@@ -1,5 +1,5 @@
 -- Fecha as 3 funções SECURITY DEFINER que o verificador de segurança do Supabase acusa como abertas a
--- quem não fez login. NÃO APLICADA: vai com o OK do Bruno, junto com a etapa B (segunda, 19/10/2026).
+-- quem não fez login. APLICADA em 18/10/2026, junto com a etapa B (passo 1).
 --
 -- Quem chama cada uma hoje:
 --   noite_todos_encerraram  → o site, logado (banco.js, todosEncerraram) e as outras duas funções;
