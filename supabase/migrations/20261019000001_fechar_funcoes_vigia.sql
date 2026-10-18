@@ -6,7 +6,12 @@
 --   vigia_noite_pronta      → o vigia do Narrador (narrador/scripts/vigiar-noite.mjs), com a chave PÚBLICA;
 --   vigia_fechar_noite      → o mesmo vigia, com a chave pública.
 --
--- ATENÇÃO, antes de aplicar: o vigia usa a chave pública (anon). Tirar o acesso de anon das funções do
+-- Atualização (18/10, noite): o Bruno decidiu deixar as noites antigas rodando até a v3 entrar no ar, e a
+-- coordenação conferiu que a tarefa do Windows do vigia NÃO está instalada: hoje nada chama as duas funções
+-- do vigia. Então esta migração pode ser aplicada sem esperar a chave de serviço. Se um dia o Bruno quiser
+-- o vigia, aí entram a chave local e o ajuste no script, como descrito abaixo.
+--
+-- ATENÇÃO (só se o vigia for instalado): o vigia usa a chave pública (anon). Tirar o acesso de anon das funções do
 -- vigia faz ele parar de fechar a noite. Por isso o vigia precisa, ANTES, passar a usar a chave de serviço
 -- (service_role), lida de um arquivo local, por exemplo narrador/segredos.local.md (a pasta narrador fica
 -- fora do repositório, e *.local.* também está no .gitignore). Quem cola a chave nesse arquivo é
