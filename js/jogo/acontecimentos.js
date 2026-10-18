@@ -10,7 +10,7 @@ export const ACONTECIMENTOS = {
     acao: 'Tocar pandeiro na roda de samba da Lapa', olhar: 'Gente de todo canto canta junto; ninguém repara em quem chegou.' },
   centro: { quem: 'musico-de-rua', som: 'sino', balao: 'Alguém viu meu chapéu?',
     texto: 'O vento leva o chapéu de moedas do músico escadaria abaixo. As moedas rolam entre as pedras molhadas e ele corre atrás.',
-    acao: 'Ajudar o músico de rua a juntar as moedas', olhar: 'Uma moeda antiga brilha mais que as outras e some num bueiro.' },
+    acao: 'Ajudar o músico de rua a juntar as moedas', olhar: 'As moedas param numa poça, e o reflexo do Theatro treme em cada uma.' },
   'santa-teresa': { quem: 'motorneiro', som: 'bonde', balao: 'Lá vem ele, fora de hora!',
     texto: 'Um sino toca ladeira acima. O motorneiro aponta: um bonde de manutenção desce vazio, com uma luz só, devagar pelos trilhos.',
     acao: 'Pegar carona no bonde de manutenção', olhar: 'No banco de trás, alguém esqueceu um guarda-chuva preto.' },
@@ -22,7 +22,7 @@ export const ACONTECIMENTOS = {
     acao: 'Descobrir de quem é o carro que pisca o farol', olhar: 'O motorista não sai; só a fumaça do cigarro escapa pela janela.' },
   'zona-norte': { quem: 'feirante', som: 'motor', balao: 'Chegou o caminhão!',
     texto: 'O caminhão da feira chega antes da hora e manobra no viaduto. O feirante grita para descarregar logo, antes que a chuva aperte.',
-    acao: 'Ajudar a descarregar o caminhão da feira', olhar: 'Entre as caixas de fruta, uma vem lacrada com fita vermelha.' },
+    acao: 'Ajudar a descarregar o caminhão da feira', olhar: 'O cheiro de laranja e de chuva toma o viaduto inteiro.' },
   morro: { quem: 'mototaxista', som: 'motor', balao: 'Abre caminho, abre caminho!',
     texto: 'Uma moto sobe a escadaria buzinando, com uma senhora na garupa e uma sacola de remédio. O mototaxista pede para a quadra abrir passagem.',
     acao: 'Abrir caminho para a moto na escadaria', olhar: 'Lá de cima, a cidade inteira acesa parece longe e pequena.' },
@@ -31,7 +31,7 @@ export const ACONTECIMENTOS = {
     acao: 'Ver quem acendeu as velas no túmulo', olhar: 'As velas são novas; a cera ainda escorre, quente.' },
   porto: { quem: 'estivador', som: 'motor', balao: 'Segura essa corda!',
     texto: 'Um contêiner balança no guindaste e o estivador grita para segurarem a corda. O VLT passa devagar, iluminando tudo de branco.',
-    acao: 'Segurar a corda do contêiner com os estivadores', olhar: 'No lado do contêiner, alguém pintou um símbolo pequeno com tinta fresca.' },
+    acao: 'Segurar a corda do contêiner com os estivadores', olhar: 'A luz do VLT passa pelos armazéns e acende, por um segundo, cada grafite da parede.' },
   baixada: { quem: 'churrasqueiro', som: 'copo', balao: 'Saindo um espetinho!',
     texto: 'A brasa do churrasquinho levanta labareda e a fumaça sobe pela esquina. O churrasqueiro abana e oferece: "Primeiro da noite é por conta da casa."',
     acao: 'Aceitar o espetinho e ficar na roda da esquina', olhar: 'Na fumaça, os rostos ficam borrados e todo mundo parece conhecido.' },
@@ -40,7 +40,7 @@ export const ACONTECIMENTOS = {
     acao: 'Ajudar o pescador a puxar a linha', olhar: 'Do outro lado da baía, o Rio pisca como se respirasse.' },
   'aeroporto-rio': { quem: 'viajante', som: 'motor', balao: 'Minha mala! Alguém viu minha mala?',
     texto: 'A viajante procura a mala que sumiu da esteira. O taxista insiste numa corrida "baratinha" e não larga a porta do carro.',
-    acao: 'Ajudar a viajante a achar a mala', olhar: 'Uma mala igual à dela entra rápido num carro sem placa.' },
+    acao: 'Ajudar a viajante a achar a mala', olhar: 'As malas giram na esteira vazia, e ninguém vem buscar nenhuma.' },
 };
 
 // O que cada figura própria diz em "E por aqui, o que tem?": uma frase de cor local que aponta outra pessoa

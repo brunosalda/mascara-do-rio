@@ -317,11 +317,13 @@ export function montarCena(raiz, {
   const painelVisivel = () => !!painel?.parentElement && painel.parentElement.offsetParent !== null;
   function caixaDaPergunta() { return balaoEscolha?.noPainel ? painel : balao; }
   function limparPainel() { if (painel) { painel.innerHTML = ''; painel.classList.remove('com-pergunta'); } }
+  // Rodada 44: uma opção que vira ação curta termina em "§curta" e ganha a etiqueta pequena "ação curta".
+  const rotuloOpcao = (o) => (String(o).endsWith('§curta') ? `${esc(String(o).slice(0, -6).trim())} <small class="etiqueta-curta">ação curta</small>` : esc(o));
   function perguntarNoBalao({ voz, texto, opcoes, aoEscolher, aoExpirar, aoCancelar, perto: pertoDe = null, ms = 6000 }) {
     if (painelVisivel()) {
       const prazoP = ms < 1e8 ? `<span class="balao-prazo" style="animation-duration:${ms}ms"></span>` : '';
       painel.className = `painel-pergunta com-pergunta voz-${grupoVoz(voz)}`;
-      painel.innerHTML = `<p class="painel-quem"><b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span></p><ol class="painel-respostas">${opcoes.map((o, i) => `<li><button type="button" data-balao="${i}"><span class="escolha-num">${i + 1}.</span> ${esc(o)}</button></li>`).join('')}</ol>${prazoP}`;
+      painel.innerHTML = `<p class="painel-quem"><b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span></p><ol class="painel-respostas">${opcoes.map((o, i) => `<li><button type="button" data-balao="${i}"><span class="escolha-num">${i + 1}.</span> ${rotuloOpcao(o)}</button></li>`).join('')}</ol>${prazoP}`;
       falaAte = performance.now() + Math.min(ms, 1e9);
       balao.hidden = true;
       balaoEscolha = { aoEscolher, aoExpirar, aoCancelar, pertoDe, ate: falaAte, desde: performance.now(), noPainel: true };
@@ -331,7 +333,7 @@ export function montarCena(raiz, {
     balao.className = `balao-voz balao-escolha voz-${grupoVoz(voz)}`;
     // Balão com prazo mostra o prazo: uma linha fina que se esvazia embaixo das escolhas.
     const prazo = ms < 1e8 ? `<span class="balao-prazo" style="animation-duration:${ms}ms"></span>` : '';
-    balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${esc(o)}</button>`).join('')}</span>${prazo}`;
+    balao.innerHTML = `<b>${esc(voz)}</b> <span class="balao-texto">${esc(texto)}</span><span class="balao-opcoes">${opcoes.map((o, i) => `<button type="button" data-balao="${i}">${i + 1} · ${rotuloOpcao(o)}</button>`).join('')}</span>${prazo}`;
     balao.hidden = false;
     falaAte = performance.now() + ms;
     // Os primeiros 400 ms não contam: o clique que escolheu a presa (ou um duplo clique) não pode

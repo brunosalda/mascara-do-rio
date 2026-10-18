@@ -876,7 +876,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     if (ativos.includes(pt.tipoGente)) { cena.falar(t.nome.toUpperCase(), 'Você já disse que ia ver isso pra mim.', 3000); return; }
     anotar(t.nome.toUpperCase(), pedido.fala);
     setTimeout(() => cena.perguntarNoBalao({
-      voz: t.nome.toUpperCase(), texto: pedido.fala, opcoes: ['Ajudar (vira ação curta da noite)', 'Agora não'], ms: 1e9, perto: { x: pt.x, y: pt.y, raio: 0.3 },
+      voz: t.nome.toUpperCase(), texto: pedido.fala, opcoes: ['Ajudar §curta', 'Agora não'], ms: 1e9, perto: { x: pt.x, y: pt.y, raio: 0.3 },
       aoEscolher: (i) => {
         if (i !== 0) return;
         if (ativos.length >= 2) { aviso('Já há 2 pedidos nesta noite. Termine um antes de aceitar outro.'); return; }
@@ -1603,7 +1603,7 @@ export async function telaNoite(raiz, p, { lugar = null, abrir = null, fonte = b
     anotar(voz, d.texto);
     cena.perguntarNoBalao({
       voz, texto: d.texto, ms: 1e9, perto: { x: pt.x, y: pt.y, raio: 0.3 },
-      opcoes: [`${d.acao} (vira ação curta da noite)`, 'Só olhar', 'Deixar para lá'],
+      opcoes: [`${d.acao} §curta`, 'Só olhar', 'Deixar para lá'],
       aoEscolher: (i) => {
         if (i === 0) {
           const texto = `${d.acao} (${lugarNome}).`;

@@ -3701,3 +3701,13 @@ body.cerimonias-curtas .ponto[data-ponto="acontecimento"] :is(.ponto-icone, .pon
 @media (prefers-reduced-motion: reduce) { .ponto[data-ponto="acontecimento"] :is(.ponto-icone, .ponto-marca) { animation: none; } }
 /* A pergunta no painel de baixo cobre o registro com fundo opaco (sem o texto de trás aparecendo). */
 .tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta { background: linear-gradient(180deg, rgba(30, 22, 15, 0.99), rgba(18, 13, 9, 0.99)); }
+
+/* Rodada 44: com pergunta aberta, o painel de baixo cresce para cima até caber o texto e todas as opções
+   (no máximo 45% da tela) e volta ao tamanho de antes quando ela fecha. A opção de ação curta leva a
+   etiqueta pequena "ação curta" em bronze no fim da linha. */
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-pergunta.com-pergunta { top: auto; bottom: 12px; max-height: 45vh; height: auto; }
+.etiqueta-curta { display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.45rem; vertical-align: middle; border-radius: 3px;
+  font: 700 0.72rem/1.4 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #1c1208; background: linear-gradient(180deg, #e0bf78, #a8823e); }
+body.celular .etiqueta-curta { font-size: 0.8rem; }
+/* Com pergunta aberta, o registro some por trás dela (não aparece apagado por cima das opções). */
+.tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo:has(.painel-pergunta.com-pergunta) .registro-noite { visibility: hidden; }
