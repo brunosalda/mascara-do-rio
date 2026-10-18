@@ -13,12 +13,15 @@ export function famaDe(xpTotal = 0, idadeNarrador = null) {
   return { nivel, nome, fracao: (xpTotal % 5) / 5 };
 }
 // O que cada nível libera (tabela 5.2).
+// O que cada degrau da idade na noite dá (seção 7 da análise da progressão): um título e pedidos mais
+// difíceis; no 3, também um contato no aeroporto. Os 5 espaços de equipamento ficam abertos desde o
+// começo, e as Folhas do Rio ficaram para depois. (Lista de consulta: nenhuma tela a mostra hoje.)
 export const LIBERA = [
-  [2, 'o terceiro espaço de equipamento e a segunda tarefa da noite'],
-  [3, 'a primeira Folha do Rio e um contato no aeroporto (voo com menos risco)'],
-  [4, 'melhorar o refúgio e o quarto espaço de equipamento'],
-  [5, 'a segunda Folha do Rio e o quinto espaço de equipamento'],
-  [6, 'um título por nível e tarefas mais difíceis nos bairros'],
+  [2, 'um título e pedidos mais difíceis nos bairros'],
+  [3, 'um título, pedidos mais difíceis e um contato no aeroporto (voo com menos risco)'],
+  [4, 'um título e pedidos mais difíceis nos bairros'],
+  [5, 'um título e pedidos mais difíceis nos bairros'],
+  [6, 'um título e os pedidos mais difíceis da cidade'],
 ];
 
 // Equipamento: 5 espaços abertos desde o começo (limitados pelos Recursos); consumíveis numa linha.
