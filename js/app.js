@@ -105,9 +105,6 @@ export function telaLogin(raiz, { demo = false } = {}) {
             <p class="nota">Assim que o link entrar, a tela de criar a senha abre aqui mesmo.</p>
             <button class="btn-texto" type="button" data-voltar-login>Voltar para entrar com senha</button>
           </form>
-          <!-- PROVISÓRIO (vitrine, 17/10/2026): o Bruno olha o jogo enquanto o limite de e-mails do Supabase
-               estoura. Tirar quando o login por e-mail estiver estável (procurar "PROVISÓRIO (vitrine" no código). -->
-          <a class="btn-secundario ver-demo" href="#/demo/cena?vitrine&lugar=lapa-alto">Ver o jogo (demonstração)</a>
           <p class="aviso-legal">Conteúdo de fã não oficial, sem fins comerciais. Vampire: The Masquerade e World of Darkness são marcas registradas da Paradox Interactive AB.</p>
         </div>
       </section>
@@ -314,7 +311,7 @@ async function desenhar() {
 
   // Rotas de demonstração (?depurar): dados fictícios, sem banco e sem mexer na sessão.
   const depurar = /[?&]depurar\b/.test(location.search) || /[?&]depurar\b/.test(location.hash);
-  // PROVISÓRIO (vitrine): ?vitrine abre a demonstração sem o medidor do ?depurar (botão da entrada).
+  // ?vitrine abre a demonstração sem o medidor do ?depurar (só para testes; nada no site leva até ela).
   const vitrine = /[?&]vitrine\b/.test(location.hash);
   if (rota.startsWith('demo/') && (depurar || vitrine)) {
     // &raf=timer: relógio de teste (requestAnimationFrame trocado por um temporizador), para o painel

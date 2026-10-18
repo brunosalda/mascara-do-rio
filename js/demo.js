@@ -203,7 +203,7 @@ function abrirCaixaDemo(raiz, caixa) {
 // Parâmetros da demonstração (depurar, raf, ficha) mantidos ao trocar de tela; troca só o que vier.
 function paramsDemo(muda = {}) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
-  // PROVISÓRIO (vitrine): quem entrou pelo botão da entrada continua sem o medidor do ?depurar.
+  // Quem abriu a demonstração com ?vitrine (testes) continua sem o medidor do ?depurar.
   const marca = params.has('vitrine') ? 'vitrine' : 'depurar';
   params.set(marca, '');
   for (const [k, v] of Object.entries(muda)) params.set(k, v);
