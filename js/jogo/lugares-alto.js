@@ -6,6 +6,18 @@
 const L = (x, y, cor = '#ffc46a', raio = 0.12, forca = 0.8, falha = false) => ({ x, y, cor, raio, forca, falha });
 
 export const ALTOS = {
+  // Caso de demonstração (formato v3): o beco ao lado do Bar da Cida. Perspectiva mais funda que a do
+  // largo: a escala cai rápido do pé da pintura até o barracão do fundo, onde o chão andável termina.
+  'beco-lapa': {
+    portas: ['deposito'],
+    entrada: [0.56, 0.93], saida: [0.5, 0.97],
+    escala: [0.04, 0.3],
+    chao: [[0.25, 0.99], [0.3, 0.9], [0.36, 0.78], [0.41, 0.66], [0.45, 0.56], [0.47, 0.48], [0.49, 0.42], [0.56, 0.42], [0.62, 0.44], [0.61, 0.6], [0.64, 0.7], [0.7, 0.74], [0.74, 0.8], [0.8, 0.84], [0.86, 0.92], [0.88, 0.99]],
+    ancoras: { deposito: [0.6, 0.45], cacamba: [0.7, 0.76], poca: [0.58, 0.8], boca: [0.5, 0.95] },
+    luzes: [L(0.446, 0.23, '#ffb04a', 0.2, 0.9), L(0.05, 0.12, '#ffc46a', 0.16, 0.6), L(0.52, 0.14, '#ff3a3a', 0.07, 0.5), L(0.55, 0.14, '#5aff9a', 0.07, 0.5)],
+    gente: [],
+    pontos: [[0.55, 0.7], [0.5, 0.86], [0.66, 0.9]],
+  },
   lapa: {
     portas: ['bar'],
     escala: [0.25, 0.13],

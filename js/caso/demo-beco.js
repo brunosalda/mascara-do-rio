@@ -54,16 +54,34 @@ export const CASO = {
       tempo: 'garoa',
       pessoas: ['cida', 'jaque', 'ze', 'tiao'],
       pontos: [
-        { id: 'beco-chao', rotulo: 'O chão do beco', x: 0.95, y: 0.86 },
-        { id: 'cacamba', rotulo: 'A caçamba de lixo', x: 0.9, y: 0.93 },
-        { id: 'deposito', rotulo: 'A porta do depósito', x: 0.87, y: 0.745 },
+        { id: 'ir-beco', tipo: 'passagem', destino: 'beco', rotulo: 'Entrar no beco do bar', x: 0.95, y: 0.86 },
         { id: 'balcao', rotulo: 'O notebook do balcão', x: 0.79, y: 0.735, requer: ['camera-negada'], escondeSe: ['camera'] },
         { id: 'cacar', tipo: 'cacar', rotulo: 'Caçar', x: 0.52, y: 0.68 },
       ],
       comentarios: [
-        { id: 'c-beco', x: 0.93, y: 0.85, raio: 0.08, voz: 'A FOME', texto: 'Sangue velho. Fraco, mas ainda está aqui.' },
+        { id: 'c-beco', x: 0.93, y: 0.85, raio: 0.08, voz: 'A FOME', texto: 'Sangue velho, ali no beco. Fraco, mas ainda está lá.' },
         { id: 'c-portao', x: 0.74, y: 0.72, raio: 0.07, voz: 'PRONTIDÃO', texto: 'O segurança segue você com os olhos desde que você chegou.' },
         { id: 'c-arcos', x: 0.45, y: 0.66, raio: 0.08, voz: 'MANHA', texto: 'Tem viatura na esquina. A Lapa está mais quieta do que devia.' },
+      ],
+    },
+    // O beco ao lado do bar: uma parte da Lapa (entrar e sair leva 2 minutos).
+    beco: {
+      nome: 'Beco do Bar da Cida',
+      em: 'no beco do bar',
+      dentro: 'lapa',
+      geo: 'beco-lapa-alto',
+      inicio: [0.56, 0.93],
+      tempo: 'garoa',
+      saida: { rotulo: 'Voltar ao largo da Lapa', destino: 'lapa' },
+      pessoas: [],
+      pontos: [
+        { id: 'beco-chao', rotulo: 'O chão do beco', x: 0.56, y: 0.81 },
+        { id: 'cacamba', rotulo: 'A caçamba de lixo', x: 0.69, y: 0.77 },
+        { id: 'deposito', rotulo: 'A porta do depósito', x: 0.6, y: 0.46 },
+      ],
+      comentarios: [
+        { id: 'c-poca', x: 0.6, y: 0.8, raio: 0.08, voz: 'A FOME', texto: 'Foi aqui. O cheiro dela ainda está na pedra.' },
+        { id: 'c-barracao', x: 0.58, y: 0.5, raio: 0.07, voz: 'PRONTIDÃO', texto: 'Cadeado novo numa porta velha. Alguém guarda coisa aí.' },
       ],
     },
     'santa-teresa': {

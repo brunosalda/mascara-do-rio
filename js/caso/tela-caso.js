@@ -630,13 +630,20 @@ export async function telaCaso(raiz, estadoApp) {
   }
 
   // --- Lugares -----------------------------------------------------------------------------------
+  // Ir de um lugar a uma parte dele (o largo da Lapa e o beco do bar) leva 2 minutos; o resto, a viagem.
+  function custoViagem(de, para) {
+    const a = caso.lugares[de];
+    const b = caso.lugares[para];
+    return a?.dentro === para || b?.dentro === de || (a?.dentro && a.dentro === b?.dentro) ? 2 : caso.custo.viagem;
+  }
+  const destinoEm = (l) => l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ');
   function viajar() {
     const outros = Object.entries(caso.lugares).filter(([id]) => id !== st.lugar);
     caixa({
       rotulo: 'Lugares do caso',
-      texto: `Você está ${caso.lugares[st.lugar].em}. Ir a outro lugar leva ${caso.custo.viagem} minutos.`,
+      texto: `Você está ${caso.lugares[st.lugar].em}. Ir a outro bairro leva ${caso.custo.viagem} minutos.`,
       opcoes: [
-        ...outros.map(([id, l]) => ({ html: `Ir ${l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ')} <small class="etiqueta-tempo">${caso.custo.viagem} min</small>`, fn: (cam) => { cam.fechar(); irPara(id); } })),
+        ...outros.map(([id, l]) => ({ html: `Ir ${destinoEm(l)} <small class="etiqueta-tempo">${custoViagem(st.lugar, id)} min</small>`, fn: (cam) => { cam.fechar(); irPara(id); } })),
         { html: 'Ficar aqui', classe: 'sair', fn: (cam) => cam.fechar() },
       ],
     });
@@ -647,11 +654,12 @@ export async function telaCaso(raiz, estadoApp) {
     veu.className = 'passagem-caso';
     tela.appendChild(veu);
     setTimeout(() => {
+      const custo = custoViagem(st.lugar, id);
       st.lugar = id;
-      passarTempo(caso.custo.viagem);
+      passarTempo(custo);
       montarLugar();
       const l = caso.lugares[id];
-      anotar('VOCÊ', `Chega ${l.em.replace(/^em /, 'a ').replace(/^na /, 'à ')}, às ${hora(st.hora)}.`);
+      anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.`);
       veu.classList.add('saindo');
       setTimeout(() => veu.remove(), 450);
       setTimeout(olharInicial, 120);
@@ -664,8 +672,9 @@ export async function telaCaso(raiz, estadoApp) {
     const lugar = caso.lugares[id];
     const geo = geografia(lugar.geo);
     const s = achados();
-    const pts = [{ id: 'sair', tipo: 'saida', icone: '➜', rotulo: 'Ir para outro lugar', acao: 'Ir para outro lugar do caso', x: geo.saida[0], y: geo.saida[1] }];
+    const pts = [{ id: 'sair', tipo: 'saida', icone: '➜', rotulo: lugar.saida?.rotulo || 'Ir para outro lugar', acao: lugar.saida?.rotulo || 'Ir para outro lugar do caso', destino: lugar.saida?.destino, x: geo.saida[0], y: geo.saida[1] }];
     for (const pt of lugar.pontos) {
+      if (pt.tipo === 'passagem') { pts.push({ id: pt.id, tipo: 'saida', icone: '➜', rotulo: pt.rotulo, acao: pt.rotulo, destino: pt.destino, x: pt.x, y: pt.y }); continue; }
       if (pt.requer && !pt.requer.every((m) => s.has(m))) continue;
       if (pt.escondeSe?.some((m) => s.has(m)) && st.feitos[`x:${pt.id}`] !== 'ok') continue;
       if (pt.tipo === 'cacar') { pts.push({ id: pt.id, tipo: 'cacar', icone: '♦', rotulo: pt.rotulo, acao: 'Caçar e baixar a Fome', x: pt.x, y: pt.y, falta: st.fome >= 4 }); continue; }
@@ -751,6 +760,7 @@ export async function telaCaso(raiz, estadoApp) {
         if (pt.tipo === 'pessoa') conversar(pt.caso?.id || pt.id.replace(/^pessoa-/, ''));
         else if (pt.tipo === 'detalhe') examinar(pt.id);
         else if (pt.tipo === 'cacar') cacar();
+        else if (pt.tipo === 'saida' && pt.destino) irPara(pt.destino);
         else if (pt.tipo === 'saida') viajar();
       },
       aoTecla: (ev) => {
@@ -940,8 +950,8 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
   }
 
   // --- Abertura, ajuda, ficha, menu ---------------------------------------------------------------
-  // A tira da abertura, sem pintura nova: a Lapa com a luz da ambulância, o vídeo num celular e a
-  // mensagem da Xerife na tela do seu celular.
+  // A tira da abertura: três quadros pintados (img/caso/), com legenda e balão por cima. No primeiro, a
+  // luz da sirene pisca de leve; no segundo, o quadro aproxima o celular, para as duas marcas se lerem.
   function tiraAbertura() {
     const [p1, p2, p3] = caso.abertura.paineis;
     const balao = (b) => (b ? `<div class="balao balao-0"><b>${esc(String(b.quem).toUpperCase())}</b>${esc(b.texto)}</div>` : '');
@@ -949,36 +959,20 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     return `
       <div class="hq hq-tira tira-abertura">
         <figure class="painel painel-sirene">
-          <div class="painel-cenario" style="background-image:url('img/cidade/lapa.jpg');background-position:86% 78%"></div>
+          <div class="painel-cenario" style="background-image:url('img/caso/abertura-1.jpg');background-size:cover;background-position:center"></div>
           <span class="sirene" aria-hidden="true"></span>
           ${legenda(p1)}${balao(p1.baloes?.[0])}
         </figure>
-        <figure class="painel painel-celular">
-          <div class="painel-cenario fundo-apagado" style="background-image:url('img/cidade/lapa.jpg');background-position:20% 60%"></div>
-          <div class="celular-hq" aria-hidden="true">
-            <div class="tela-hq video-hq">
-              <div class="video-cena" style="background-image:url('img/cidade/alto/lapa.jpg');background-position:94% 82%"></div>
-              <span class="ao-vivo">● gravando</span>
-              <span class="video-maca"></span>
-              <span class="video-curtidas">♥ 3,2 mil · 418 comentários</span>
-            </div>
-          </div>
-          ${legenda(p2)}${balao(p2.baloes?.[0])}
+        <figure class="painel">
+          <div class="painel-cenario" style="background-image:url('img/caso/abertura-2.jpg');background-size:162% auto;background-position:49% 44%"></div>
+          ${legenda(p2)}${balao(p2.baloes?.[0]).replace('balao balao-0', 'balao balao-0 balao-direita')}
         </figure>
-        <figure class="painel painel-celular painel-mensagem">
-          <div class="painel-cenario fundo-apagado" style="background-image:url('img/cidade/lapa.jpg');background-position:55% 35%"></div>
-          <div class="celular-hq" aria-hidden="true">
-            <div class="tela-hq mensagem-hq">
-              <span class="msg-de">${esc(p3.baloes?.[0]?.quem || '')}</span>
-              <span class="msg-bolha">${esc(p3.baloes?.[0]?.texto || '')}</span>
-              <span class="msg-hora">22:00 · lida</span>
-            </div>
-          </div>
-          ${legenda(p3)}
+        <figure class="painel">
+          <div class="painel-cenario" style="background-image:url('img/caso/abertura-3.jpg');background-size:cover;background-position:center"></div>
+          ${legenda(p3)}${balao(p3.baloes?.[0])}
         </figure>
       </div>`;
   }
-
   function abertura() {
     caixa({
       rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,

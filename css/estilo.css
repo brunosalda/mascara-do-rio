@@ -4004,3 +4004,11 @@ body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .painel-baixo 
 body.celular .tira-abertura .painel { aspect-ratio: 16 / 9; }
 .mensagem-hq { justify-content: flex-start; padding-top: 16%; }
 body.celular:not(.deitado) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) { --folha: 82px; }
+/* Abertura com os quadros pintados: a imagem sem o filtro de recorte, e a sirene só como um brilho por cima. */
+.tira-abertura .painel-cenario { filter: none; }
+.tira-abertura .painel-sirene .sirene { opacity: 0.35; }
+/* O balão de assunto e o nome à vista são parte da pessoa: clicar neles abre a conversa (antes, o clique passava para o chão). */
+.tela-caso .pessoa .balao-assunto { pointer-events: auto; cursor: pointer; }
+.tela-caso .cena.mostrar-tudo .pessoa-nome { pointer-events: auto; cursor: pointer; }
+.tira-abertura .balao.balao-direita { left: auto; right: 8px; bottom: 8px; max-width: 44%; }
+.tira-abertura .balao.balao-direita::after { left: auto; right: 22px; }
