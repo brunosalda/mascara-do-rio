@@ -1,0 +1,906 @@
+// Tela do caso (formato v3, etapa A): um capítulo jogado na hora, sem esperar o Narrador.
+// Abertura em HQ → investigação nos lugares pintados (examinar, conversar, usar o sangue) →
+// perseguição → dedução no quadro de pistas → escolha final e placar.
+// Demonstração: nada vai ao banco. O progresso fica só neste aparelho (localStorage) e pode ser recomeçado.
+import * as v5 from '../motor/v5.js';
+import { CENAS, clasSugeridos, montarFicha } from '../motor/roteiro.js';
+import * as R from './regras.js';
+import { CASO } from './demo-beco.js';
+import { abrirQuadro, palavrasLiberadas } from './quadro.js';
+import { iniciarPerseguicao } from './perseguicao.js';
+import { montarCena } from '../jogo/cena.js';
+import { geografia } from '../jogo/lugares.js';
+import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
+import { narracao, quadrinhos, esc, aviso, grupoVoz } from '../ui.js';
+import { definirTempo, definirSomDoLugar, definirClima, som, efeitos } from '../ambiente.js';
+import { retratoDe } from '../cidade.js';
+import { resumoFicha } from '../ficha.js';
+
+// A caminhada tirada de vídeo do personagem do Bruno: serve de reserva para quem ainda não tem a sua.
+const CAMINHADA_RESERVA = {
+  url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-perfil.png', quadros: 10, largura: 154, altura: 300, parado: 5,
+  frente: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-frente.png', quadros: 10, largura: 112, altura: 300, parado: 4 },
+  costas: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-costas.png', quadros: 10, largura: 110, altura: 300, parado: 1 },
+  respira: { url: 'img/sprites/618b13d8-810e-4540-8a12-3769f07c2eb3-respira.png', quadros: 8, largura: 78, altura: 300 },
+};
+
+// Quem joga: o personagem ativo de quem entrou; sem ele, uma vampira fictícia montada pelo roteiro
+// da criação por conversa (como nas outras demonstrações).
+function personagemDoCaso(estadoApp) {
+  const atual = estadoApp?.atual;
+  if (atual?.status === 'ativo' && atual.ficha?.cla) return { ...atual, sprite: atual.sprite?.url ? atual.sprite : CAMINHADA_RESERVA };
+  const e = { passo: 0, respostas: {}, campos: { nomeEmVida: 'Marina Costa', apelido: 'Nina', touchstone: 'Pedro', aparencia: 'Cabelo raspado, jaqueta de couro.' }, cla: null, log: [] };
+  for (const c of CENAS) {
+    if (c.tipo === 'opcoes') e.respostas[c.id] = 1 % c.opcoes.length;
+    if (c.tipo === 'cla') e.cla = clasSugeridos(e)[0];
+  }
+  const ficha = montarFicha(e);
+  return { id: 'demo-caso', nome: ficha.nome, status: 'ativo', ficha, estado: { fome: 2 }, retrato: null, sprite: CAMINHADA_RESERVA };
+}
+
+const doisDigitos = (n) => String(n).padStart(2, '0');
+// Minutos desde a meia-noite da véspera → "22h", "0h30", "2h05".
+export const hora = (min) => { const h = Math.floor(min / 60) % 24; const m = min % 60; return `${h}h${m ? doisDigitos(m) : ''}`; };
+const duracao = (min) => { const h = Math.floor(min / 60); const m = min % 60; return h ? `${h}h${m ? doisDigitos(m) : ''}` : `${m} min`; };
+
+const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="placa" d="M4 36 L28 60 L4 84 L-20 60 Z"/><path class="placa-dentro" d="M4 47 L17 60 L4 73 L-9 60 Z"/><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
+
+export async function telaCaso(raiz, estadoApp) {
+  const caso = CASO;
+  const p = personagemDoCaso(estadoApp);
+  const calc = R.numeros(p.ficha);
+  const CHAVE = `mascara.caso.${caso.id}.${p.id}`;
+  const vontadeMax = p.estado?.vontade?.max || calc.forcaVontade || 3;
+  const vitalidadeMax = p.estado?.vitalidade?.max || calc.vitalidade || 5;
+
+  const novo = () => ({
+    v: 1, hora: caso.relogio.inicio, noites: 1, lugar: caso.lugarInicial,
+    achados: [], novas: [], feitos: {}, tentados: {}, lidos: {}, comentados: [],
+    fome: Math.max(1, Math.min(4, p.estado?.fome ?? 2)), vontade: vontadeMax,
+    escondidos: [], posPessoas: {}, posicoes: {}, eventos: [], rivais: [], tentativas: [], escolhas: {},
+    resolvido: null, final: null, viuAbertura: false, registro: [],
+  });
+  let st = (() => { try { const s = JSON.parse(localStorage.getItem(CHAVE)); return s?.v === 1 ? s : null; } catch { return null; } })() || novo();
+  const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(st)); } catch { /* sem armazenamento */ } };
+  const achados = () => new Set(st.achados);
+
+  // --- Tela -------------------------------------------------------------------------------------
+  document.body.dataset.tela = 'cena';
+  let paineisOcultos = false;
+  try { paineisOcultos = localStorage.getItem('mascara.paineis') === 'ocultos'; } catch { /* sem armazenamento */ }
+  const retrato = retratoDe(p);
+  raiz.innerHTML = `
+    <div class="tela-jogo bg2 tela-caso${paineisOcultos ? ' paineis-ocultos' : ''}" style="--retrato:url('${esc(new URL(retrato, location.href).href)}')">
+      <div class="palco"></div>
+      <header class="hud-topo">
+        <button type="button" class="hud-personagem" data-hud="ficha" title="Ficha (F)">
+          <img src="${esc(retrato)}" alt="">
+          <span>
+            <b>${esc(p.nome)}</b>
+            <small>${esc(v5.cla(p.ficha?.cla)?.nome || '')} · <span data-lugar-nome></span></small>
+            <span class="gotas" aria-label="Fome"></span>
+          </span>
+        </button>
+        <div class="hud-noite"><b data-hora></b><small>o sol nasce às ${hora(caso.relogio.fim)}</small></div>
+        <nav class="hud-botoes">
+          <button type="button" class="hud-com-icone" data-hud="viajar" title="Lugares do caso (M)" aria-label="Lugares do caso"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">Lugares <kbd>M</kbd></span></button>
+          <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="Quadro de pistas (Q)" aria-label="Quadro de pistas"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">Quadro <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
+          <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
+          <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente" aria-label="Som ambiente"><span class="icone-texto">♪</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="hud-nome">Som</span></button>
+          <button type="button" data-hud="ajuda" class="hud-icone" title="Como jogar" aria-label="Como jogar"><span class="icone-texto">?</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17v.5"/></svg><span class="hud-nome">Ajuda</span></button>
+          <button type="button" data-hud="menu" class="hud-icone" title="Mais opções" aria-label="Mais opções"><span class="icone-texto">⋯</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span class="hud-nome">Mais</span></button>
+        </nav>
+      </header>
+      <div class="moldura" aria-hidden="true">
+        <span class="canto canto-se">${CANTO}</span><span class="canto canto-sd">${CANTO}</span><span class="canto canto-ie">${CANTO}</span><span class="canto canto-id">${CANTO}</span>
+        <span class="pedra-chave"><i></i></span>
+      </div>
+      <div class="relogio-noite" role="img"></div>
+      <aside class="painel-retrato">
+        <button type="button" class="retrato-grande" data-hud="ficha" title="Ficha (F)"><img src="${esc(retrato)}" alt=""><span class="estado-cor" aria-hidden="true"></span></button>
+        <b class="retrato-nome">${esc(p.nome)}</b>
+        <div class="barras"></div>
+      </aside>
+      <section class="painel-baixo" aria-label="Registro do caso">
+        <ol class="registro-noite" aria-live="polite"></ol>
+        <div class="painel-pergunta"></div>
+      </section>
+      <button type="button" class="botao-visao" data-hud="visao" title="Visão geral: a cena inteira (V)" aria-label="Visão geral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4"/><rect x="8" y="9" width="8" height="6" rx="1"/></svg></button>
+      <button type="button" class="botao-centrar" data-hud="centrar" title="Centralizar no personagem (C)" aria-label="Centralizar no personagem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+      <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icone-pausar" d="M8 5v14M16 5v14"/><path class="icone-soltar" d="M8 5l11 7-11 7z"/></svg></button>
+      <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
+      <aside class="hud-plano quadro-noite quadro-caso" aria-live="polite"></aside>
+      <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>E</kbd> examinar ou falar · <kbd>Tab</kbd> mostrar tudo · <kbd>Q</kbd> quadro · <kbd>M</kbd> lugares · <kbd>F</kbd> ficha</footer>
+      <div class="faixa-demo" role="note">Caso de demonstração · inventado, fora da temporada de verdade; nada vai ao banco</div>
+    </div>`;
+  const tela = raiz.querySelector('.tela-jogo');
+  const palco = tela.querySelector('.palco');
+  const listaRegistro = tela.querySelector('.registro-noite');
+  const caixaCaso = tela.querySelector('.hud-plano');
+  let cena = null;
+  let fuga = null;
+
+  // Celular: o quadro do caso e o registro numa folha que se recolhe embaixo, com alça (como na noite).
+  const painelBaixo = tela.querySelector('.painel-baixo');
+  const alca = document.createElement('button');
+  alca.type = 'button';
+  alca.className = 'alca-folha';
+  alca.setAttribute('aria-expanded', 'false');
+  alca.setAttribute('aria-label', 'Abrir o quadro do caso e o registro');
+  alca.innerHTML = '<i aria-hidden="true"></i>';
+  alca.addEventListener('click', () => {
+    const aberta = painelBaixo.classList.toggle('folha-aberta');
+    alca.setAttribute('aria-expanded', String(aberta));
+    alca.setAttribute('aria-label', aberta ? 'Recolher o quadro do caso e o registro' : 'Abrir o quadro do caso e o registro');
+  });
+  painelBaixo.prepend(alca);
+  const ajustarFolha = () => {
+    if (!tela.isConnected) { window.removeEventListener('resize', ajustarFolha); return; }
+    const celular = document.body.classList.contains('celular');
+    if (celular && caixaCaso.parentElement !== painelBaixo) alca.after(caixaCaso);
+    else if (!celular && caixaCaso.parentElement === painelBaixo) tela.appendChild(caixaCaso);
+  };
+  ajustarFolha();
+  window.addEventListener('resize', ajustarFolha);
+
+  // --- Registro, avisos e HUD --------------------------------------------------------------------
+  const classeReg = (voz) => {
+    if (voz === 'PISTA NOVA') return 'voce';
+    if (voz === 'CORRIDA') return 'cacada';
+    const g = grupoVoz(voz);
+    return g === 'besta' ? 'fome' : g === 'alma' ? 'humanidade' : g === 'outra' ? 'voce' : 'habilidade';
+  };
+  const linhaHtml = ({ voz, texto }) => `<li class="reg-${classeReg(voz)}"><b>${esc(voz)}</b> ${esc(texto)}</li>`;
+  function anotar(voz, texto) {
+    const ultima = st.registro.at(-1);
+    if (ultima && ultima.voz === voz && ultima.texto === texto) return;
+    st.registro = [...st.registro, { voz, texto }].slice(-80);
+    listaRegistro.insertAdjacentHTML('beforeend', linhaHtml({ voz, texto }));
+    listaRegistro.scrollTop = listaRegistro.scrollHeight;
+    salvar();
+  }
+  listaRegistro.innerHTML = st.registro.map(linhaHtml).join('');
+
+  function faixa(classe, rotulo, texto) {
+    const el = document.createElement('div');
+    el.className = `faixa-caso ${classe}`;
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<b>${esc(rotulo)}</b> ${esc(texto)}`;
+    tela.querySelectorAll(`.faixa-caso.${classe}`).forEach((x) => x.remove());
+    tela.appendChild(el);
+    setTimeout(() => el.classList.add('saindo'), 2600);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function desenharHud() {
+    const lugar = caso.lugares[st.lugar];
+    tela.querySelector('[data-lugar-nome]').textContent = lugar.nome;
+    tela.querySelector('[data-hora]').textContent = hora(st.hora);
+    tela.querySelector('.gotas').innerHTML = Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < st.fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('');
+    const barra = (classe, nome, sigla, resta, max) => `<span class="barra ${classe}" title="${nome}: ${resta} de ${max}" style="--v:${max ? (resta / max).toFixed(3) : 0}"><i></i><em>${resta}/${max}</em><small>${sigla}</small></span>`;
+    tela.querySelector('.barras').innerHTML = barra('barra-vit', 'Vitalidade', 'V', vitalidadeMax, vitalidadeMax)
+      + barra('barra-von', 'Força de Vontade', 'FV', st.vontade, vontadeMax) + barra('barra-fome', 'Fome', 'F', st.fome, 5);
+    tela.querySelector('.retrato-grande').classList.toggle('faminto', st.fome >= 4);
+    document.body.dataset.fome = String(st.fome);
+    definirClima({ tela: 'jogo', fome: st.fome });
+
+    // Relógio: da lua ao sol, como na noite.
+    const total = caso.relogio.fim - caso.relogio.inicio;
+    const resta = Math.max(0, caso.relogio.fim - st.hora);
+    const f = Math.min(1, Math.max(0, 1 - resta / total));
+    const relogio = tela.querySelector('.relogio-noite');
+    relogio.title = resta ? `faltam ${duracao(resta)} até o sol` : 'o sol chegou';
+    relogio.setAttribute('aria-label', `Relógio da noite: ${relogio.title}`);
+    relogio.classList.toggle('amanhecendo', f > 0.85);
+    relogio.classList.toggle('ultima-hora', resta > 0 && resta <= 60);
+    const amanhecer = resta < 180 ? 1 - resta / 180 : 0;
+    tela.style.setProperty('--amanhecer', amanhecer.toFixed(3));
+    tela.classList.toggle('amanhecer', amanhecer > 0);
+    relogio.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="aro" cx="32" cy="32" r="30"/>
+        <g class="disco" style="transform:rotate(${(-180 * f).toFixed(1)}deg)">
+          <path class="metade-noite" d="M4 32a28 28 0 0 1 56 0z"/><path class="metade-dia" d="M4 32a28 28 0 0 0 56 0z"/>
+          <circle class="lua" cx="32" cy="16" r="7"/><circle class="lua-sombra" cx="35" cy="14" r="6"/>
+          <g class="sol"><circle cx="32" cy="48" r="6"/><path d="M32 38v-2M32 60v-2M22 48h-2M44 48h-2M25 41l-1.5-1.5M40.5 56.5 39 55M25 55l-1.5 1.5M40.5 39.5 39 41"/></g>
+        </g>
+        <path class="horizonte" d="M2 32h60"/><circle class="ponteiro" cx="32" cy="5" r="2.4"/>
+      </svg><small>${hora(st.hora)}</small>`;
+
+    // O quadro do caso, no alto à direita: pistas, lacunas com opção e a corrida.
+    const a = achados();
+    const nPistas = st.achados.filter((id) => caso.pistas[id] && !caso.pistas[id].marca).length;
+    const lib = palavrasLiberadas(caso, a);
+    const comOpcao = caso.lacunas.filter((l) => lib[l.id].length).length;
+    const escolhidas = caso.lacunas.filter((l) => st.escolhas[l.id]).length;
+    const acertos = caso.rivais.filter((rv, i) => rv.acertou && st.rivais.includes(i));
+    const corrida = st.resolvido ? 'você resolveu' : acertos.length ? `${acertos.map((x) => x.acertou.nome).join(' e ')} já ${acertos.length > 1 ? 'resolveram' : 'resolveu'}` : 'ninguém resolveu ainda';
+    caixaCaso.className = `hud-plano quadro-noite quadro-caso${st.resolvido ? ' plano-enviado' : ''}`;
+    caixaCaso.innerHTML = `
+      <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
+      <ol class="quadro-linhas">
+        <li class="${nPistas ? 'ok' : 'falta'}"><button type="button" data-hud="quadro"><span class="quadro-nome">Pistas <small>no quadro</small></span><span class="quadro-valor">${nPistas}${st.novas.length ? ` <small class="selo-nova">+${st.novas.length} nova${st.novas.length > 1 ? 's' : ''}</small>` : ''}</span></button></li>
+        <li class="${escolhidas === 3 ? 'ok' : 'opcional'}"><button type="button" data-hud="quadro"><span class="quadro-nome">Dedução</span><span class="quadro-valor">${escolhidas ? `${escolhidas} de 3 escolhidas` : `${comOpcao} de 3 com opções`}</span></button></li>
+        <li class="${acertos.length && !st.resolvido ? 'falta' : 'opcional'}"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corrida)}</span></button></li>
+      </ol>
+      <div class="quadro-pe"><span>${st.resolvido ? `Resolvido às ${hora(st.resolvido.hora)}` : `Faltam ${duracao(resta)} até o sol`}</span><button type="button" class="btn plano-enviar${escolhidas === 3 && !st.resolvido ? ' destaque' : ''}" data-hud="quadro">Quadro</button></div>`;
+    const contador = tela.querySelector('[data-contador]');
+    contador.hidden = !st.novas.length;
+    contador.textContent = st.novas.length ? `+${st.novas.length}` : '';
+  }
+
+  // --- O tempo anda ------------------------------------------------------------------------------
+  let amanheceuPendente = false;
+  function passarTempo(min) {
+    if (!min || st.resolvido) { desenharHud(); return; }
+    st.hora += min;
+    const a = achados();
+    for (const ev of caso.eventos) {
+      if (st.eventos.includes(ev.id) || st.hora < ev.hora || (ev.seNao || []).some((m) => a.has(m))) continue;
+      st.eventos.push(ev.id);
+      if (ev.esconder && !st.escondidos.includes(ev.esconder)) {
+        st.escondidos.push(ev.esconder);
+        if (caso.pessoas[ev.esconder]?.lugar === st.lugar) cena?.esconderPessoa(ev.esconder);
+      }
+      (ev.marcas || []).forEach((m) => { if (!st.achados.includes(m)) st.achados.push(m); });
+      anotar(ev.voz, ev.texto);
+      faixa('faixa-evento', ev.voz, ev.texto);
+    }
+    caso.rivais.forEach((rv, i) => {
+      if (st.rivais.includes(i) || st.hora < rv.hora) return;
+      st.rivais.push(i);
+      anotar('CORRIDA', rv.texto);
+      faixa('faixa-corrida', 'Corrida', rv.texto);
+    });
+    if (st.hora >= caso.relogio.fim) amanheceuPendente = true;
+    salvar();
+    desenharHud();
+    atualizarCena();
+  }
+  function checarAmanhecer() {
+    if (!amanheceuPendente || camadaAberta() || st.resolvido) return false;
+    amanheceuPendente = false;
+    amanhecer();
+    return true;
+  }
+
+  // Pistas e marcas novas: entram no quadro com aviso, som e linha no registro.
+  function aplicar(r) {
+    if (!r) return;
+    const antes = palavrasLiberadas(caso, achados());
+    const novas = [];
+    for (const id of [...(r.pistas || []), ...(r.marcas || [])]) {
+      if (st.achados.includes(id)) continue;
+      st.achados.push(id);
+      if (caso.pistas[id] && !caso.pistas[id].marca) { if (!st.novas.includes(id)) st.novas.push(id); novas.push(caso.pistas[id].titulo); }
+    }
+    if (novas.length) {
+      som.reacao?.('pista', 0);
+      anotar('PISTA NOVA', novas.join(' · '));
+      faixa('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '));
+    }
+    const depois = palavrasLiberadas(caso, achados());
+    const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
+    if (abriu.length) setTimeout(() => faixa('faixa-deducao', 'Dedução', `nova opção em “${abriu.map((l) => l.rotulo.toLowerCase()).join('” e “')}”`), novas.length ? 900 : 0);
+    salvar();
+    desenharHud();
+    atualizarCena();
+  }
+
+  // --- Caixas de diálogo -------------------------------------------------------------------------
+  let numCaixa = 0;
+  // opcoes: [{ html, fn, desligada, classe }]. revelar: fala por fala, com "Continuar".
+  function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar }) {
+    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
+    const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
+    const camada = abrirDialogo(tela, {
+      rotulo, chave, fechavel,
+      html: `${html}${texto ? `<div class="texto-narracao">${narracao(texto)}</div>` : ''}${lista}`,
+      aoTerminar: () => { if (chave) try { localStorage.removeItem(`mascara.lido.${chave}`); } catch { /* sem armazenamento */ } },
+      aoFechar: () => { aoFechar?.(); setTimeout(checarAmanhecer, 50); },
+    });
+    camada.el.classList.add('dialogo-caso');
+    camada.el.querySelectorAll('[data-escolha]').forEach((b) => {
+      const o = opcoes[Number(b.dataset.escolha)];
+      b.onclick = () => { if (o.desligada) return; confirmarEscolha(b, () => o.fn(camada)); };
+    });
+    return camada;
+  }
+
+  // Cerimônia do teste: a habilidade e a dificuldade, uma pausa, o resultado com cor e som. Um clique pula.
+  function cerimonia(pool, dif, res) {
+    return new Promise((resolver) => {
+      const curto = document.body.classList.contains('cerimonias-curtas') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const ok = R.deuCerto(res);
+      const el = document.createElement('div');
+      el.className = `cerimonia-teste grupo-${grupoVoz(R.vozDoTeste(pool))}`;
+      el.innerHTML = `<span class="ct-voz">${esc(R.vozDoTeste(pool))}</span><span class="ct-dif">${esc(R.DIFICULDADE[dif] || 'Médio')}</span><span class="ct-res ${ok ? 'ct-sucesso' : 'ct-falha'}${/bestial|sangrento/.test(res.resultado) ? ' ct-besta' : ''}">${esc(R.rotuloResultado(res))}</span>`;
+      tela.appendChild(el);
+      let feito = false;
+      const fim = () => { if (feito) return; feito = true; el.remove(); resolver(); };
+      el.addEventListener('click', fim);
+      setTimeout(() => { el.classList.add('revelado'); som.teste?.(ok, !ok); }, curto ? 150 : 650);
+      setTimeout(() => el.classList.add('saindo'), curto ? 500 : 1300);
+      setTimeout(fim, curto ? 700 : 1600);
+    });
+  }
+
+  // Uso do sangue (disciplina): o teste de Despertar do motor pode subir a Fome.
+  function usarSangue(nome) {
+    const d = R.despertar();
+    som.reacao?.('disciplina', 0);
+    if (d.fomeSobe) {
+      st.fome = Math.min(5, st.fome + 1);
+      anotar('A FOME', `${nome} me acordou. Agora tenho mais fome.`);
+    } else anotar('O SANGUE', `${nome} não custou nada desta vez.`);
+    salvar();
+    desenharHud();
+    return d.fomeSobe ? `[A FOME] Usar o sangue me acordou. Agora tenho mais fome.` : '[O SANGUE] O sangue responde sem pedir nada em troca.';
+  }
+
+  // --- Abordagens: testes, poderes e a Besta ----------------------------------------------------
+  // Cada abordagem pode ser tentada uma vez. Falhar deixa as outras abertas; a Força de Vontade
+  // permite tentar de novo na hora.
+  function situacao(a, chaveBase, i) {
+    const s = achados();
+    if (st.tentados[`${chaveBase}#${i}`]) return { pode: false, etiqueta: 'já tentou assim' };
+    if (a.bloqueadaSe?.some((m) => s.has(m))) return { pode: false, etiqueta: 'agora não vai dar' };
+    if (a.requer && !a.requer.every((m) => s.has(m))) return { pode: false, etiqueta: 'falta alguma coisa' };
+    if (a.poder) {
+      const n = R.nomePoder(a.poder);
+      if (!R.temPoder(calc, a.poder)) return { pode: false, etiqueta: `precisa de ${n.poder}`, sangue: true };
+      if (st.fome >= 5) return { pode: false, etiqueta: 'com a Fome no máximo, o sangue não responde' };
+      return { pode: true, etiqueta: `${n.disciplina} · usa o sangue`, sangue: true };
+    }
+    if (a.disciplina) {
+      if (!R.temDisciplina(calc, a.disciplina)) return { pode: false, etiqueta: `precisa de ${R.nomeDisciplina(a.disciplina[0])}`, sangue: true };
+      if (st.fome >= 5) return { pode: false, etiqueta: 'com a Fome no máximo, o sangue não responde' };
+      return { pode: true, etiqueta: `${R.nomeDisciplina(a.disciplina[0])} · usa o sangue`, sangue: true };
+    }
+    if (a.fomeMin) return st.fome >= a.fomeMin ? { pode: true, etiqueta: 'a Besta' } : { pode: false, etiqueta: `só com a Fome em ${a.fomeMin} ou mais` };
+    if (a.teste) {
+      const dif = a.teste.dif + (a.social && st.fome >= 4 ? 1 : 0);
+      const n = R.parada(calc, a.teste.pool);
+      return { pode: true, etiqueta: `${R.vozDoTeste(a.teste.pool)} · ${R.palavraDaChance(R.chance(n, dif))}${a.social && st.fome >= 4 ? ' · a Fome assusta' : ''}`, dif };
+    }
+    return { pode: true, etiqueta: '' };
+  }
+  const etiqueta = (s) => (s.etiqueta ? ` <small class="etiqueta-teste${s.pode ? '' : ' indisponivel'}${s.sangue ? ' de-sangue' : ''}">${esc(s.etiqueta)}</small>` : '');
+
+  // Mostra as abordagens e resolve a escolhida. aoResultado(texto, ok) monta a caixa seguinte.
+  function abordagens({ rotulo, intro = '', lista, resultados = {}, chaveBase, min, aoVoltar, aoResultado }) {
+    const opcoes = lista.map((a, i) => {
+      const s = situacao(a, chaveBase, i);
+      return { html: `${esc(a.rotulo)}${etiqueta(s)}`, desligada: !s.pode, classe: s.pode ? '' : 'indisponivel', fn: (cam) => { cam.fechar(); tentar(a, i, s); } };
+    });
+    opcoes.push({ html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); aoVoltar?.(); } });
+    caixa({ rotulo, texto: intro, opcoes });
+
+    async function tentar(a, i, s) {
+      st.tentados[`${chaveBase}#${i}`] = true;
+      let prefixo = '';
+      let ok = true;
+      let res = null;
+      if (a.teste) {
+        res = R.rolar({ calc, pool: a.teste.pool, dif: s.dif, fome: st.fome });
+        await cerimonia(a.teste.pool, s.dif, res);
+        ok = R.deuCerto(res);
+        prefixo = `${R.cabecaDoTeste(a.teste.pool, s.dif, res)} Você tenta: ${a.rotulo.charAt(0).toLowerCase()}${a.rotulo.slice(1)}.`;
+        if (res.resultado === 'falha-bestial') prefixo += '\n\n[A BESTA] Eu rosno por dentro, e todo mundo em volta sente. Perdemos tempo.';
+        if (res.resultado === 'critico-sangrento') prefixo += '\n\n[A BESTA] Deu certo porque eu ajudei. Lembre-se disso.';
+      } else if (a.poder || a.disciplina) {
+        prefixo = usarSangue(a.poder ? R.nomePoder(a.poder).poder : R.nomeDisciplina(a.disciplina[0]));
+      }
+      const r = resultados[ok ? a.sucesso : a.falha] || null;
+      passarTempo((min || 0) + (res?.resultado === 'falha-bestial' ? 15 : 0));
+      aplicar(r);
+      if (ok) st.feitos[chaveBase] = 'ok';
+      else if (st.feitos[chaveBase] !== 'ok') st.feitos[chaveBase] = 'tentado';
+      const texto = [prefixo, r?.texto].filter(Boolean).join('\n\n');
+      if (ok) st.lidos[chaveBase] = texto;
+      salvar();
+      const repetir = !ok && res && st.vontade > 0 ? async () => {
+        st.vontade -= 1;
+        const nova = R.rerrolar(res);
+        await cerimonia(a.teste.pool, s.dif, nova);
+        const ok2 = R.deuCerto(nova);
+        const r2 = ok2 ? resultados[a.sucesso] : null;
+        aplicar(r2);
+        if (ok2) st.feitos[chaveBase] = 'ok';
+        const besta = nova.resultado === 'critico-sangrento' ? '\n\n[A BESTA] Deu certo porque eu ajudei. Lembre-se disso.' : '';
+        const t2 = `${R.cabecaDoTeste(a.teste.pool, s.dif, nova)} Com Força de Vontade, você insiste.${besta}${r2?.texto ? `\n\n${r2.texto}` : '\n\nNão deu. Melhor tentar de outro jeito.'}`;
+        if (ok2) st.lidos[chaveBase] = t2;
+        salvar();
+        desenharHud();
+        aoResultado(t2, ok2, null);
+      } : null;
+      aoResultado(texto, ok, repetir);
+    }
+  }
+
+  // --- Conversas ---------------------------------------------------------------------------------
+  function topicosDe(pid) {
+    const pe = caso.pessoas[pid];
+    const s = achados();
+    const fugiu = caso.perseguicao.pessoa === pid && s.has('perseguido');
+    if (fugiu) return [];
+    return pe.topicos.filter((t) => {
+      if (t.requer && !t.requer.every((id) => s.has(id))) return false;
+      if (t.requerAlgum && !t.requerAlgum.some((id) => s.has(id))) return false;
+      if (t.requerQuantos && t.requerQuantos.de.filter((id) => s.has(id)).length < t.requerQuantos.n) return false;
+      if (t.poderTopico && !R.temPoder(calc, t.poderTopico)) return false;
+      if (t.escondeSe?.some((id) => s.has(id)) && st.feitos[`${pid}:${t.id}`] !== 'ok') return false;
+      if (t.acao === 'perseguicao' && s.has('chapeu-mostrado')) return false;
+      return true;
+    }).map((t) => ({ ...t, estado: st.feitos[`${pid}:${t.id}`] || 'novo' }));
+  }
+  const temAssuntoNovo = (pid) => topicosDe(pid).some((t) => t.estado === 'novo');
+
+  function conversar(pid, intro = null) {
+    const pe = caso.pessoas[pid];
+    const primeira = !st.achados.includes(`conheceu-${pid}`);
+    if (primeira) aplicar({ marcas: [`conheceu-${pid}`] });
+    cena?.virarPessoaPara(`pessoa-${pid}`);
+    const tops = topicosDe(pid).sort((a, b) => ({ novo: 0, tentado: 1, ok: 2 }[a.estado] - { novo: 0, tentado: 1, ok: 2 }[b.estado]));
+    const depoisDaFuga = caso.perseguicao.pessoa === pid && achados().has('perseguido');
+    const texto = intro ?? (depoisDaFuga ? (caso.perseguicao.depois?.pego || '') : primeira ? pe.saudacao : `**${pe.nome}** — Mais alguma coisa?`);
+    const opcoes = tops.map((t) => ({
+      html: `${esc(t.rotulo)}${t.estado === 'ok' ? ' <small class="etiqueta-feito">✓ já perguntou</small>' : t.estado === 'tentado' ? ' <small class="etiqueta-teste">tentar de outro jeito</small>' : t.min ? ` <small class="etiqueta-tempo">${t.min} min</small>` : ''}`,
+      classe: t.estado === 'ok' ? 'feito' : '',
+      fn: (cam) => { cam.fechar(); escolherTopico(pid, t); },
+    }));
+    opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() });
+    caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160 });
+  }
+
+  function escolherTopico(pid, t) {
+    const chave = `${pid}:${t.id}`;
+    if (t.estado === 'ok' && st.lidos[chave]) { conversar(pid, st.lidos[chave]); return; }
+    if (t.acao === 'perseguicao') {
+      passarTempo(t.min);
+      aplicar({ pistas: t.pistas, marcas: ['chapeu-mostrado'] });
+      st.feitos[chave] = 'ok';
+      salvar();
+      caixa({
+        rotulo: `${caso.pessoas[pid].nome} · ${caso.pessoas[pid].sub}`, texto: t.texto, revelar: true, fechavel: false,
+        opcoes: [{ html: '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); comecarFuga(); } }],
+      });
+      return;
+    }
+    if (!t.abordagens) {
+      passarTempo(t.min);
+      aplicar({ pistas: t.pistas, marcas: t.marcas });
+      st.feitos[chave] = 'ok';
+      st.lidos[chave] = t.texto;
+      salvar();
+      conversar(pid, t.texto);
+      return;
+    }
+    const pe = caso.pessoas[pid];
+    abordagens({
+      rotulo: `${pe.nome} · ${t.rotulo}`, lista: t.abordagens, resultados: pe.resultados, chaveBase: chave, min: t.min,
+      aoVoltar: () => conversar(pid),
+      aoResultado: (texto, ok, repetir) => {
+        if (repetir) {
+          caixa({
+            rotulo: `${pe.nome} · ${pe.sub}`, texto, revelar: true,
+            opcoes: [
+              { html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } },
+              { html: 'Continuar a conversa', fn: (cam) => { cam.fechar(); conversar(pid); } },
+              { html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() },
+            ],
+          });
+        } else conversar(pid, texto);
+      },
+    });
+  }
+
+  // --- Exames ------------------------------------------------------------------------------------
+  function examinar(id) {
+    const ex = caso.exames[id];
+    const pt = caso.lugares[st.lugar].pontos.find((x) => x.id === id);
+    const chave = `x:${id}`;
+    const fechar = { html: 'Voltar à cena', classe: 'sair', fn: (cam) => cam.fechar() };
+    if (st.feitos[chave] === 'ok' && st.lidos[chave]) { caixa({ rotulo: pt.rotulo, texto: st.lidos[chave], opcoes: [fechar] }); return; }
+    const passivo = () => {
+      const pv = ex.passivo;
+      if (!pv || (calc.habilidades?.[pv.hab] || 0) < pv.min) return '';
+      aplicar({ pistas: pv.pistas });
+      return pv.texto;
+    };
+    if (!ex.abordagens) {
+      passarTempo(ex.min);
+      aplicar({ pistas: ex.pistas, marcas: ex.marcas });
+      const texto = [ex.texto, passivo()].filter(Boolean).join('\n\n');
+      st.feitos[chave] = 'ok';
+      st.lidos[chave] = texto;
+      salvar();
+      caixa({ rotulo: pt.rotulo, texto, opcoes: [fechar], revelar: texto.length > 160 });
+      return;
+    }
+    if (ex.marcas) aplicar({ marcas: ex.marcas });
+    abordagens({
+      rotulo: pt.rotulo, intro: ex.texto || '', lista: ex.abordagens, resultados: ex.resultados, chaveBase: chave, min: ex.min,
+      aoVoltar: () => {},
+      aoResultado: (texto, ok, repetir) => {
+        const opcoes = [];
+        if (repetir) opcoes.push({ html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } });
+        if (!ok && ex.abordagens.some((a, i) => situacao(a, chave, i).pode)) opcoes.push({ html: 'Tentar de outro jeito', fn: (cam) => { cam.fechar(); examinar(id); } });
+        opcoes.push(fechar);
+        caixa({ rotulo: pt.rotulo, texto, opcoes, revelar: texto.length > 160 });
+      },
+    });
+  }
+
+  // --- Caçar -------------------------------------------------------------------------------------
+  function cacar() {
+    if (st.fome <= 1) { caixa({ rotulo: 'Caçar', texto: '[A FOME] Agora não. Ainda estou quieta.', opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] }); return; }
+    const lista = caso.cacada.abordagens;
+    const opcoes = lista.map((a) => {
+      const n = R.parada(calc, a.teste.pool);
+      return { html: `${esc(a.rotulo)} <small class="etiqueta-teste">${R.vozDoTeste(a.teste.pool)} · ${R.palavraDaChance(R.chance(n, a.teste.dif))} · ${caso.custo.cacar} min</small>`, fn: async (cam) => {
+        cam.fechar();
+        const res = R.rolar({ calc, pool: a.teste.pool, dif: a.teste.dif, fome: st.fome });
+        await cerimonia(a.teste.pool, a.teste.dif, res);
+        let texto = `${R.cabecaDoTeste(a.teste.pool, a.teste.dif, res)} Você tenta: ${a.rotulo.charAt(0).toLowerCase()}${a.rotulo.slice(1)}.`;
+        let extra = 0;
+        if (R.deuCerto(res)) {
+          st.fome = Math.max(1, st.fome - (res.critico ? 3 : 2));
+          texto += `\n\n${caso.cacada.sucesso}`;
+        } else if (res.resultado === 'falha-bestial') {
+          st.fome = Math.max(1, st.fome - 1);
+          extra = 30;
+          texto += `\n\n${caso.cacada.bestial}`;
+        } else texto += `\n\n${caso.cacada.falha}`;
+        anotar('A FOME', `Depois da caçada: Fome ${st.fome}.`);
+        passarTempo(caso.custo.cacar + extra);
+        caixa({ rotulo: 'Caçar', texto, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+      } };
+    });
+    opcoes.push({ html: 'Voltar', classe: 'sair', fn: (c) => c.fechar() });
+    caixa({ rotulo: 'Caçar', texto: `[A FOME] Usar o sangue me acorda. Quanto mais eu cresço, mais as pessoas sentem medo de você.\n\nCaçar baixa a Fome, mas gasta ${caso.custo.cacar} minutos da noite.`, opcoes });
+  }
+
+  // --- Lugares -----------------------------------------------------------------------------------
+  function viajar() {
+    const outros = Object.entries(caso.lugares).filter(([id]) => id !== st.lugar);
+    caixa({
+      rotulo: 'Lugares do caso',
+      texto: `Você está ${caso.lugares[st.lugar].em}. Ir a outro lugar leva ${caso.custo.viagem} minutos.`,
+      opcoes: [
+        ...outros.map(([id, l]) => ({ html: `Ir ${l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ')} <small class="etiqueta-tempo">${caso.custo.viagem} min</small>`, fn: (cam) => { cam.fechar(); irPara(id); } })),
+        { html: 'Ficar aqui', classe: 'sair', fn: (cam) => cam.fechar() },
+      ],
+    });
+  }
+  function irPara(id) {
+    if (cena) st.posicoes[st.lugar] = [cena.posicao().x, cena.posicao().y];
+    const veu = document.createElement('div');
+    veu.className = 'passagem-caso';
+    tela.appendChild(veu);
+    setTimeout(() => {
+      st.lugar = id;
+      passarTempo(caso.custo.viagem);
+      montarLugar();
+      const l = caso.lugares[id];
+      anotar('VOCÊ', `Chega ${l.em.replace(/^em /, 'a ').replace(/^na /, 'à ')}, às ${hora(st.hora)}.`);
+      veu.classList.add('saindo');
+      setTimeout(() => veu.remove(), 450);
+      faixa('faixa-chegada', l.nome, hora(st.hora));
+      setTimeout(checarAmanhecer, 600);
+    }, 260);
+  }
+
+  function pontosDo(id) {
+    const lugar = caso.lugares[id];
+    const geo = geografia(lugar.geo);
+    const s = achados();
+    const pts = [{ id: 'sair', tipo: 'saida', icone: '➜', rotulo: 'Ir para outro lugar', acao: 'Ir para outro lugar do caso', x: geo.saida[0], y: geo.saida[1] }];
+    for (const pt of lugar.pontos) {
+      if (pt.requer && !pt.requer.every((m) => s.has(m))) continue;
+      if (pt.escondeSe?.some((m) => s.has(m)) && st.feitos[`x:${pt.id}`] !== 'ok') continue;
+      if (pt.tipo === 'cacar') { pts.push({ id: pt.id, tipo: 'cacar', icone: '♦', rotulo: pt.rotulo, acao: 'Caçar e baixar a Fome', x: pt.x, y: pt.y, falta: st.fome >= 4 }); continue; }
+      const feito = st.feitos[`x:${pt.id}`] === 'ok';
+      pts.push({ id: pt.id, tipo: 'detalhe', icone: feito ? '·' : '?', rotulo: pt.rotulo, acao: `Examinar: ${pt.rotulo}`, x: pt.x, y: pt.y, visto: feito, baixo: /chão|caçamba/i.test(pt.rotulo) });
+    }
+    return pts;
+  }
+  function genteDo(id) {
+    return caso.lugares[id].pessoas.filter((pid) => !st.escondidos.includes(pid)).map((pid) => {
+      const pe = caso.pessoas[pid];
+      const pos = st.posPessoas[pid];
+      return { id: pid, tipo: pe.tipo, nome: pe.nome, sub: subDe(pid), figura: pe.figura, x: pos?.[0] ?? pe.x, y: pos?.[1] ?? pe.y, falas: pe.falas };
+    });
+  }
+  const subDe = (pid) => `${caso.pessoas[pid].sub}${temAssuntoNovo(pid) && st.achados.includes(`conheceu-${pid}`) ? ' · assunto novo' : ''}`;
+  function atualizarCena() {
+    if (!cena) return;
+    cena.atualizarPontos(pontosDo(st.lugar));
+    for (const pid of caso.lugares[st.lugar].pessoas) {
+      const el = cena.pessoa(pid)?.el?.querySelector('.pessoa-nome small');
+      if (el) el.textContent = subDe(pid);
+    }
+  }
+
+  function montarLugar() {
+    cena?.desmontar();
+    const lugar = caso.lugares[st.lugar];
+    const geo = geografia(lugar.geo);
+    definirTempo(lugar.tempo);
+    definirSomDoLugar(st.lugar);
+    const fundo = document.getElementById('cenario');
+    if (fundo) { fundo.style.backgroundImage = `url('${geo.imagem}')`; fundo.dataset.url = geo.imagem; }
+    palco.innerHTML = '';
+    cena = montarCena(palco, {
+      cla: p.ficha?.cla, sprite: p.sprite, imagem: geo.imagem, lugar: lugar.geo, inicio: st.posicoes[st.lugar] || lugar.inicio,
+      pontos: pontosDo(st.lugar), gente: genteDo(st.lugar), comentarios: lugar.comentarios,
+      comentar: (c) => { if (st.comentados.includes(c.id)) return false; st.comentados.push(c.id); salvar(); return true; },
+      tempo: lugar.tempo, fome: st.fome, nome: p.nome, painel: tela.querySelector('.painel-pergunta'),
+      aoFalar: (voz, texto) => anotar(voz, texto),
+      aoPausa: (pausado) => tela.querySelector('.botao-pausa')?.setAttribute('aria-pressed', String(!!pausado)),
+      aoInteragir: (pt) => {
+        if (fuga) return; // na perseguição, tocar em quem foge só faz correr atrás dele
+        if (st.resolvido) { telaFinal(); return; }
+        if (checarAmanhecer()) return;
+        if (pt.tipo === 'pessoa') conversar(pt.caso?.id || pt.id.replace(/^pessoa-/, ''));
+        else if (pt.tipo === 'detalhe') examinar(pt.id);
+        else if (pt.tipo === 'cacar') cacar();
+        else if (pt.tipo === 'saida') viajar();
+      },
+      aoTecla: (ev) => {
+        if (fuga) return;
+        const k = ev.key.toLowerCase();
+        if (k === 'q') { ev.preventDefault(); abrirOQuadro(); } else if (k === 'm') { ev.preventDefault(); viajar(); } else if (k === 'f') { ev.preventDefault(); verFicha(); } else if (k === 'h') { ev.preventDefault(); alternarPaineis(); } else if (k === '?') { ev.preventDefault(); ajuda(); }
+      },
+    });
+    desenharHud();
+  }
+
+  // --- Perseguição --------------------------------------------------------------------------------
+  function comecarFuga() {
+    if (fuga || st.lugar !== caso.perseguicao.lugar) return;
+    const cfg = caso.perseguicao;
+    const poderes = { rapidez: R.temPoder(calc, 'ligeireza') || R.temDisciplina(calc, ['rapidez', 1]), compelir: R.temPoder(calc, 'compelir') };
+    fuga = iniciarPerseguicao({
+      cena, palco, camadas: tela, cfg, nome: caso.pessoas[cfg.pessoa].nome, poderes,
+      aoUsarSangue: (nome) => usarSangue(nome),
+      aoGastarVontade: () => {
+        if (st.vontade <= 0) return false;
+        st.vontade -= 1;
+        anotar('FORÇA DE VONTADE', 'Você força o passo.');
+        salvar();
+        desenharHud();
+        return true;
+      },
+      aoFim: async (resultado, pos) => {
+        fuga = null;
+        let final = resultado;
+        let prefixo = '';
+        let min = caso.custo.perseguicao;
+        if (resultado === 'dados') {
+          const res = R.rolar({ calc, pool: cfg.dados.pool, dif: cfg.dados.dif, fome: st.fome });
+          await cerimonia(cfg.dados.pool, cfg.dados.dif, res);
+          final = R.deuCerto(res) ? 'pego' : 'escapou';
+          prefixo = `${R.cabecaDoTeste(cfg.dados.pool, cfg.dados.dif, res)} Você deixa o corpo correr sozinho, pelo instinto.\n\n`;
+          min = caso.custo.dados;
+        }
+        const r = final === 'pego' ? cfg.pego : cfg.escapou;
+        if (final === 'pego') {
+          st.posPessoas[cfg.pessoa] = [pos.x, pos.y];
+        } else {
+          st.escondidos.push(cfg.pessoa);
+          cena?.esconderPessoa(cfg.pessoa);
+        }
+        passarTempo(min);
+        aplicar(r);
+        cena?.centrarCamera();
+        caixa({ rotulo: final === 'pego' ? 'Pego' : 'Ele escapou', texto: `${prefixo}${r.texto}`, revelar: true, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+      },
+    });
+  }
+
+  // --- Quadro e acusação ------------------------------------------------------------------------
+  function abrirOQuadro() {
+    const novas = new Set(st.novas);
+    st.novas = [];
+    salvar();
+    desenharHud();
+    const camada = abrirQuadro(tela, {
+      caso, achados: achados(), novas, escolhas: st.escolhas, erros: st.tentativas.length, custoErro: caso.custo.acusacaoErrada,
+      aoMudar: (e) => { st.escolhas = e; salvar(); desenharHud(); },
+      aoAcusar: acusar,
+    });
+    // Ao fechar o quadro, o sol pode ter chegado (uma acusação errada gasta tempo).
+    const fecharQuadro = camada.fechar;
+    camada.fechar = () => { fecharQuadro(); setTimeout(checarAmanhecer, 50); };
+  }
+  async function acusar(e) {
+    if (st.resolvido) return { certo: true };
+    const linhas = caso.lacunas.map((l) => `<li><b>${esc(l.rotulo)}:</b> ${esc(caso.palavras[l.id].find((w) => w.id === e[l.id])?.texto || '')}</li>`).join('');
+    const r = await perguntar(tela, {
+      rotulo: 'Acusar diante da Xerife',
+      texto: `<p>Você vai dizer à Xerife Iolanda:</p><ul class="lista-acusacao">${linhas}</ul><p class="nota">Se estiver errado, você perde ${duracao(caso.custo.acusacaoErrada)} da noite.</p>`,
+      opcoes: ['Acusar', 'Ainda não'],
+    });
+    if (r !== 0) return null;
+    const certas = caso.lacunas.filter((l) => e[l.id] === caso.resposta[l.id]).length;
+    if (certas === caso.lacunas.length) {
+      st.resolvido = { hora: st.hora, noites: st.noites };
+      salvar();
+      som.acorde?.();
+      setTimeout(fecho, 350);
+      return { certo: true };
+    }
+    st.tentativas.push({ hora: st.hora, certas });
+    passarTempo(caso.custo.acusacaoErrada);
+    som.teste?.(false, true);
+    anotar('XERIFE IOLANDA', 'Não fecha. Volte com provas.');
+    return {
+      certo: false, erros: st.tentativas.length,
+      mensagem: certas === caso.lacunas.length - 1
+        ? `Quase. A Xerife ouve e balança a cabeça: uma das três respostas não fecha. Você perde ${duracao(caso.custo.acusacaoErrada)}.`
+        : `Não fecha. A Xerife cruza os braços e manda você voltar com provas. Você perde ${duracao(caso.custo.acusacaoErrada)}.`,
+    };
+  }
+
+  // --- Fim do capítulo ----------------------------------------------------------------------------
+  function fecho() {
+    fecharTudo();
+    const s = achados();
+    const variante = s.has('tiao-pego') ? 'pego' : s.has('tiao-fugiu') ? 'fugiu' : 'solto';
+    caixa({
+      rotulo: `${caso.titulo} · a verdade`, fechavel: false, revelar: true,
+      html: quadrinhos(caso.fecho.paineis, { cenario: 'img/cidade/lapa.jpg' }).replace('hq hq-1', 'hq hq-tira hq-tira-1'),
+      texto: caso.fecho.texto[variante],
+      opcoes: caso.fecho.escolhas.map((x) => ({ html: esc(x.rotulo), fn: (cam) => { st.final = x.id; salvar(); cam.fechar(); telaFinal(); } })),
+    });
+  }
+
+  function placar() {
+    const fim = caso.relogio.fim;
+    const lista = caso.rivais.filter((rv) => rv.acertou).map((rv) => ({ nome: rv.acertou.nome, hora: rv.acertou.hora, noites: 1 }));
+    lista.push({ nome: p.nome, hora: st.resolvido.hora, noites: st.resolvido.noites, voce: true });
+    lista.sort((a, b) => a.noites - b.noites || a.hora - b.hora);
+    const pos = lista.findIndex((x) => x.voce) + 1;
+    const prestigio = Math.max(0, 10 + ({ 1: 5, 2: 3, 3: 1 }[pos] || 0) + Math.floor(Math.max(0, fim - st.resolvido.hora) / 30) * (st.resolvido.noites === 1 ? 1 : 0) - 2 * st.tentativas.length);
+    return { lista, pos, prestigio };
+  }
+
+  function telaFinal() {
+    fecharTudo();
+    const escolha = caso.fecho.escolhas.find((x) => x.id === st.final);
+    if (!escolha) { fecho(); return; }
+    const { lista, pos, prestigio } = placar();
+    const nPistas = st.achados.filter((id) => caso.pistas[id] && !caso.pistas[id].marca).length;
+    const total = Object.values(caso.pistas).filter((x) => !x.marca).length;
+    const html = `
+      <div class="texto-narracao">${narracao(escolha.texto)}</div>
+      <p class="consequencia"><b>Na semana seguinte:</b> ${esc(escolha.efeito)}</p>
+      <section class="placar" aria-label="Placar do capítulo">
+        <h3>Placar do capítulo</h3>
+        <ol>${lista.map((x, i) => `<li class="${x.voce ? 'voce' : ''}"><span class="placar-pos">${i + 1}º</span><b>${esc(x.nome)}</b><small>${x.noites > 1 ? `${x.noites} noites · ` : ''}${hora(x.hora)}</small></li>`).join('')}</ol>
+        <p class="nota">Corvo e Dandara são rivais fictícios desta demonstração. No jogo de verdade, aqui aparecem os amigos que estão no mesmo capítulo.</p>
+        <dl class="placar-numeros">
+          <div><dt>Sua posição</dt><dd>${pos}º lugar</dd></div>
+          <div><dt>Prestígio</dt><dd>${prestigio} pontos</dd></div>
+          <div><dt>Pistas achadas</dt><dd>${nPistas} de ${total}</dd></div>
+          <div><dt>Acusações erradas</dt><dd>${st.tentativas.length}</dd></div>
+        </dl>
+      </section>`;
+    caixa({
+      rotulo: `${caso.titulo} · fim do capítulo`, html, fechavel: true,
+      opcoes: [
+        { html: 'Ver o quadro de pistas', fn: (cam) => { cam.fechar(); abrirOQuadro(); } },
+        { html: 'Jogar o caso de novo, do zero', fn: (cam) => { cam.fechar(); recomecar(); } },
+        { html: 'Andar pela cena', classe: 'sair', fn: (cam) => cam.fechar() },
+      ],
+    });
+  }
+
+  function amanhecer() {
+    caixa({
+      rotulo: 'O sol vai nascer', fechavel: false,
+      texto: `[A FOME] O céu clareia sobre o Rio. Se eu ficar na rua, o sol me queima.
+
+Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigação continua na noite seguinte, que é o dia seguinte de verdade. A corrida não para: os outros também voltam.`,
+      opcoes: [
+        { html: 'Dormir e continuar na noite seguinte', fn: (cam) => {
+          cam.fechar();
+          st.noites += 1;
+          st.hora = caso.relogio.inicio;
+          const d = R.despertar();
+          if (d.fomeSobe) st.fome = Math.min(5, st.fome + 1);
+          salvar();
+          anotar('A FOME', d.fomeSobe ? `Noite ${st.noites}. Acordar me deu mais fome.` : `Noite ${st.noites}. Acordei quieta.`);
+          desenharHud();
+          faixa('faixa-chegada', `Noite ${st.noites}`, caso.lugares[st.lugar].nome);
+        } },
+        { html: 'Recomeçar o caso do zero', fn: (cam) => { cam.fechar(); recomecar(); } },
+      ],
+    });
+  }
+
+  function recomecar() {
+    try { localStorage.removeItem(CHAVE); } catch { /* sem armazenamento */ }
+    st = novo();
+    salvar();
+    listaRegistro.innerHTML = '';
+    fecharTudo();
+    montarLugar();
+    abertura();
+  }
+
+  // --- Abertura, ajuda, ficha, menu ---------------------------------------------------------------
+  function abertura() {
+    caixa({
+      rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,
+      html: quadrinhos(caso.abertura.paineis, { cenario: 'img/cidade/lapa.jpg' }).replace('hq hq-3', 'hq hq-tira'),
+      texto: caso.abertura.texto,
+      opcoes: [{ html: '<b>Começar a investigar</b>', fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); cena?.centrarCamera(); setTimeout(ajuda, 200); } }],
+    });
+  }
+  function ajuda() {
+    caixa({
+      rotulo: 'Como jogar o caso',
+      html: `<ul class="ajuda-caso">${caso.ajuda.map((t) => `<li>${t}</li>`).join('')}</ul><p class="nota">${esc(caso.pergunta)}</p>`,
+      opcoes: [{ html: 'Entendi', fn: (cam) => { cam.fechar(); cena?.centrarCamera(); } }],
+    });
+  }
+  function verFicha() {
+    abrirJanela(tela, { titulo: p.nome, classe: 'janela-ficha', montar: (corpo) => { corpo.innerHTML = resumoFicha(p.ficha); } });
+  }
+  async function menu() {
+    const r = await perguntar(tela, {
+      rotulo: 'Mais opções',
+      texto: `<p>${esc(caso.rotulo)}: o progresso fica só neste aparelho.</p>`,
+      opcoes: ['Recomeçar o caso do zero', 'Sair do caso', 'Voltar ao caso'],
+    });
+    if (r === 0) {
+      const certeza = await perguntar(tela, { rotulo: 'Recomeçar', texto: '<p>Você perde as pistas e o tempo deste caso e começa às 22h, de novo.</p>', opcoes: ['Recomeçar do zero', 'Não'] });
+      if (certeza === 0) recomecar();
+    }
+    if (r === 1) { cena?.desmontar(); location.hash = '#/noite'; }
+  }
+  function alternarPaineis() {
+    paineisOcultos = !paineisOcultos;
+    tela.classList.toggle('paineis-ocultos', paineisOcultos);
+    try { localStorage.setItem('mascara.paineis', paineisOcultos ? 'ocultos' : 'visiveis'); } catch { /* sem armazenamento */ }
+    window.dispatchEvent(new Event('resize'));
+  }
+  function corrida() {
+    const vistos = caso.rivais.filter((_, i) => st.rivais.includes(i));
+    caixa({
+      rotulo: 'A corrida',
+      texto: `Outros vampiros estão no mesmo caso. Quem acertar a dedução primeiro ganha mais Prestígio e larga na frente no capítulo seguinte.\n\n${vistos.length ? vistos.map((x) => `[CORRIDA] ${x.texto}`).join('\n\n') : 'Ainda não há notícia dos outros.'}`,
+      html: '',
+      opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }],
+    });
+  }
+
+  tela.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-hud]');
+    if (!b || (camadaAberta() && !b.closest('.hud-topo, .painel-retrato'))) return;
+    if (fuga && !['pausa', 'som', 'centrar', 'visao'].includes(b.dataset.hud)) return;
+    if (camadaAberta()) fecharTudo();
+    switch (b.dataset.hud) {
+      case 'quadro': abrirOQuadro(); break;
+      case 'viajar': viajar(); break;
+      case 'ficha': verFicha(); break;
+      case 'ajuda': ajuda(); break;
+      case 'menu': menu(); break;
+      case 'corrida': corrida(); break;
+      case 'paineis': alternarPaineis(); break;
+      case 'visao': cena?.visaoGeral(); break;
+      case 'centrar': cena?.centrarCamera(); break;
+      case 'pausa': cena?.alternarPausa(); break;
+      case 'som': som.alternar(); b.setAttribute('aria-pressed', String(som.ligado())); break;
+      default: break;
+    }
+  });
+  void efeitos;
+
+  montarLugar();
+  if (!st.viuAbertura) abertura();
+  else if (st.resolvido && st.final) telaFinal();
+  else if (st.resolvido) fecho();
+  else if (st.hora >= caso.relogio.fim) amanhecer();
+}

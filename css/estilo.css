@@ -3711,3 +3711,202 @@ body.cerimonias-curtas .ponto[data-ponto="acontecimento"] :is(.ponto-icone, .pon
 body.celular .etiqueta-curta { font-size: 0.8rem; }
 /* Com pergunta aberta, o registro some por trás dela (não aparece apagado por cima das opções). */
 .tela-jogo.bg2:not(.paineis-ocultos) .painel-baixo:has(.painel-pergunta.com-pergunta) .registro-noite { visibility: hidden; }
+
+/* =====================================================================================================
+   Formato v3 (etapa A): o caso de demonstração. Etiquetas das escolhas, cerimônia do teste, faixas de
+   aviso, perseguição, quadro de pistas com a dedução e o placar. Tudo próprio, em CSS.
+   ===================================================================================================== */
+/* Escolhas do caso: o teste e a chance em palavras, o tempo, o que já foi feito e o que não dá. */
+.escolhas-caso small { display: inline-block; margin-left: 0.45rem; padding: 0.05rem 0.45rem; vertical-align: middle; border-radius: 3px;
+  font: 600 0.74rem/1.45 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; }
+.escolhas-caso .etiqueta-teste { color: #e8cf98; background: rgba(201, 162, 90, 0.16); border: 1px solid rgba(201, 162, 90, 0.4); }
+.escolhas-caso .etiqueta-teste.de-sangue { color: #ffb3bc; background: rgba(163, 18, 42, 0.22); border-color: rgba(216, 33, 61, 0.5); }
+.escolhas-caso .etiqueta-teste.indisponivel { color: var(--texto-fraco); background: none; border-color: var(--linha-forte); }
+.escolhas-caso .etiqueta-tempo { color: var(--texto-suave); border: 1px solid var(--linha-forte); }
+.escolhas-caso .etiqueta-feito { color: var(--ok); border: 1px solid rgba(124, 191, 143, 0.4); }
+.escolhas-caso li.feito button { color: var(--texto-suave); }
+.escolhas-caso li.indisponivel button, .escolhas-caso button[disabled] { color: var(--texto-fraco); cursor: not-allowed; }
+.escolhas-caso li.indisponivel button:hover { background: none; padding-left: 0.6rem; }
+.escolhas-caso li.sair button { color: var(--texto-suave); font-family: var(--sans); font-size: 0.95rem; }
+.escolhas-caso li.destaque button { color: #ffcf7a; font-size: 1.15em; }
+body.celular .escolhas-caso small { font-size: 0.8rem; }
+
+/* Cerimônia do teste: a habilidade e a dificuldade, uma pausa, o resultado com cor. Um clique pula. */
+.cerimonia-teste { position: absolute; z-index: 600; left: 50%; top: 38%; translate: -50% -50%; min-width: 15rem; padding: 1rem 1.6rem 1.1rem;
+  display: grid; justify-items: center; gap: 0.25rem; cursor: pointer; text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(74, 58, 44, 0.98), rgba(22, 16, 11, 0.98) 75%);
+  border: 2px solid #c9a25a; box-shadow: 0 0 0 3px #1c150f, 0 0 0 5px #8a6a36, 0 24px 60px -10px #000; animation: ct-entra 0.18s ease-out; }
+.cerimonia-teste .ct-voz { font: 700 1.5rem/1 var(--sans); letter-spacing: 0.12em; color: var(--voz-outra); }
+.cerimonia-teste.grupo-mental .ct-voz { color: var(--voz-mental); }
+.cerimonia-teste.grupo-social .ct-voz { color: var(--voz-social); }
+.cerimonia-teste.grupo-fisico .ct-voz { color: var(--voz-fisico); }
+.cerimonia-teste .ct-dif { font: 600 0.9rem/1 var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: #c9b48a; }
+.cerimonia-teste .ct-res { margin-top: 0.35rem; font: 700 2rem/1 var(--titulo); letter-spacing: 0.04em; opacity: 0; transform: scale(1.5); transition: opacity 0.18s, transform 0.22s cubic-bezier(.2, 1.6, .4, 1); }
+.cerimonia-teste.revelado .ct-res { opacity: 1; transform: none; }
+.cerimonia-teste .ct-sucesso { color: #ffd98a; text-shadow: 0 0 18px rgba(255, 200, 90, 0.55); }
+.cerimonia-teste .ct-falha { color: #b8aea0; }
+.cerimonia-teste .ct-besta { color: #ff4a3d; text-shadow: 0 0 16px rgba(255, 40, 30, 0.7); }
+.cerimonia-teste.revelado:has(.ct-sucesso) { animation: ct-bate 0.35s ease-out; }
+.cerimonia-teste.saindo { opacity: 0; transition: opacity 0.3s; }
+@keyframes ct-entra { from { opacity: 0; translate: -50% -42%; } }
+@keyframes ct-bate { 30% { scale: 1.05; } }
+@media (prefers-reduced-motion: reduce) { .cerimonia-teste, .cerimonia-teste.revelado:has(.ct-sucesso) { animation: none; } .cerimonia-teste .ct-res { transition: none; } }
+
+/* Faixas de aviso no alto: pista nova, opção nova na dedução, a corrida, o mundo que anda, a chegada. */
+.faixa-caso { position: absolute; z-index: 420; top: 3.2rem; left: 50%; translate: -50% 0; max-width: min(36rem, 92vw); padding: 0.5rem 1rem;
+  font: 500 1rem/1.35 var(--sans); color: var(--texto-claro); text-align: center; pointer-events: none;
+  background: linear-gradient(180deg, rgba(46, 36, 28, 0.97), rgba(24, 18, 12, 0.97)); border: 1px solid #c9a25a; box-shadow: 0 10px 30px -10px #000;
+  animation: faixa-desce 0.3s ease-out; transition: opacity 0.5s, translate 0.5s; }
+.faixa-caso b { margin-right: 0.35rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e8cf98; }
+.faixa-caso.faixa-deducao { top: 6.4rem; border-color: var(--voz-mental); }
+.faixa-caso.faixa-deducao b { color: var(--voz-mental); }
+.faixa-caso.faixa-corrida, .faixa-caso.faixa-evento { top: 9.6rem; border-color: var(--sangue-vivo); }
+.faixa-caso.faixa-corrida b, .faixa-caso.faixa-evento b { color: #ff8f9c; }
+.faixa-caso.faixa-chegada { top: 30%; padding: 0.7rem 2rem; font: 600 1.05rem var(--sans); letter-spacing: 0.1em; text-transform: uppercase; }
+.faixa-caso.faixa-chegada b { display: block; margin: 0 0 0.2rem; font: 700 2rem/1 var(--titulo); letter-spacing: 0.04em; text-transform: none; color: var(--texto-claro); }
+.faixa-caso.saindo { opacity: 0; translate: -50% -0.6rem; }
+@keyframes faixa-desce { from { opacity: 0; translate: -50% -0.8rem; } }
+body.celular .faixa-caso { top: 4.2rem; font-size: 15px; }
+body.celular .faixa-caso.faixa-deducao { top: 7.4rem; }
+body.celular .faixa-caso.faixa-corrida, body.celular .faixa-caso.faixa-evento { top: 10.6rem; }
+
+/* Passagem entre lugares: escurece e clareia. */
+.passagem-caso { position: absolute; inset: 0; z-index: 500; background: #050404; animation: passagem-entra 0.25s ease-out; transition: opacity 0.4s; }
+.passagem-caso.saindo { opacity: 0; }
+@keyframes passagem-entra { from { opacity: 0; } }
+
+/* Contador de pistas novas no botão do quadro. */
+.hud-quadro { position: relative; }
+.hud-contador { position: absolute; top: -6px; right: -8px; min-width: 22px; padding: 1px 5px; border-radius: 11px; font: 700 0.75rem/18px var(--sans);
+  color: #fff; background: var(--sangue-vivo); border: 1.5px solid #1c150f; box-shadow: 0 0 8px rgba(216, 33, 61, 0.7); animation: contador-pulsa 1.6s ease-in-out infinite; }
+@keyframes contador-pulsa { 50% { box-shadow: 0 0 2px rgba(216, 33, 61, 0.3); } }
+.selo-nova { display: inline-block; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 3px; font: 700 0.7rem/1.5 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #fff; background: var(--sangue); vertical-align: middle; }
+
+/* --- Perseguição ----------------------------------------------------------------------------------- */
+.perseguicao-hud { position: absolute; z-index: 430; top: 0.9rem; left: 50%; translate: -50% 0; width: min(30rem, 92vw); padding: 0.55rem 0.9rem 0.65rem;
+  display: grid; gap: 0.35rem; justify-items: center; text-align: center;
+  background: linear-gradient(180deg, rgba(40, 10, 14, 0.96), rgba(18, 8, 8, 0.96)); border: 1px solid var(--sangue-vivo); box-shadow: 0 0 0 2px #1c150f, 0 14px 40px -12px #000; }
+.perseguicao-titulo { font: 700 1.25rem/1 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: #ff8f9c; }
+.perseguicao-distancia { width: 100%; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; border: 1px solid rgba(255, 140, 150, 0.3); }
+.perseguicao-distancia i { display: block; height: 100%; transform-origin: left; transform: scaleX(0.4); background: linear-gradient(90deg, #a3122a, #ff5a4a); transition: transform 0.12s linear; }
+.perseguicao-hud[data-nivel='colado'] .perseguicao-distancia i { background: linear-gradient(90deg, #d8213d, #ffd27a); }
+.perseguicao-palavra { font: 600 0.95rem/1.2 var(--sans); letter-spacing: 0.06em; color: var(--texto-claro); }
+.perseguicao-hud[data-nivel='sumindo'] .perseguicao-palavra { color: #ff8f9c; animation: contador-pulsa 0.8s ease-in-out infinite; }
+.perseguicao-botoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 0.6rem; }
+.perseguicao-botoes button { min-height: 40px; }
+.perseguicao-botoes small { margin-left: 0.3rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.8; }
+.perseguicao-botoes kbd { margin-left: 0.35rem; }
+.perseguicao-dica { font: 400 0.85rem/1.3 var(--sans); color: var(--texto-suave); }
+body.toque .perseguicao-dica .so-teclado, body:not(.toque) .perseguicao-dica .so-toque { display: none; }
+.perseguicao-seta { position: absolute; z-index: 425; translate: -50% -50%; padding: 0.2rem 0.55rem; pointer-events: none;
+  font: 700 0.85rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: var(--sangue); border: 1px solid #ff8f9c; }
+.perseguicao-seta[data-lado='esq']::before { content: '\2039\00a0'; }
+.perseguicao-seta[data-lado='dir']::after { content: '\00a0\203a'; }
+.perseguicao-letreiro { position: absolute; z-index: 440; left: 50%; top: 40%; translate: -50% -50%; pointer-events: none;
+  font: 700 clamp(2.4rem, 7vw, 4.6rem)/1 var(--titulo); color: #ff5a4a; text-shadow: 0 0 30px rgba(255, 40, 30, 0.6), 0 4px 0 #1c0507;
+  animation: letreiro-fuga 1.3s ease-out forwards; }
+@keyframes letreiro-fuga { 0% { opacity: 0; scale: 1.4; } 15% { opacity: 1; scale: 1; } 75% { opacity: 1; } 100% { opacity: 0; scale: 0.96; } }
+/* Quem foge balança no passo (a figura parada ganha corrida) e deixa cadeiras caídas para trás. */
+.pessoa.foge .pessoa-figura, .pessoa.foge .pessoa-reflexo { animation: foge-passo 0.32s ease-in-out infinite; }
+@keyframes foge-passo { 0%, 100% { translate: 0 0; rotate: 4deg; } 50% { translate: 0 -5%; rotate: 7deg; } }
+.cadeira-caida { position: absolute; translate: -50% -100%; aspect-ratio: 1.3; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 92%, rgba(0, 0, 0, 0.6) 0 30%, transparent 60%);
+  transition: opacity 1.2s; }
+.cadeira-caida::before { content: ''; position: absolute; inset: 18% 12% 22% 12%; border: 3px solid #6b4a2a; border-radius: 3px; transform: rotate(-24deg) skewX(10deg);
+  background: linear-gradient(180deg, rgba(120, 82, 46, 0.85), rgba(60, 40, 22, 0.85)); box-shadow: 0 2px 0 #1a0f06; }
+.cadeira-caida::after { content: ''; position: absolute; left: 60%; top: 30%; width: 3px; height: 55%; background: #6b4a2a; transform: rotate(38deg); }
+.cadeira-caida.chutada::before { transform: rotate(-60deg) skewX(10deg) translateX(30%); }
+.cadeira-caida.some { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .pessoa.foge .pessoa-figura, .pessoa.foge .pessoa-reflexo { animation: none; } .perseguicao-letreiro { animation-duration: 0.4s; } }
+
+/* --- Quadro de pistas ------------------------------------------------------------------------------ */
+.janela-quadro .janela { width: min(1100px, 97vw); max-height: 94vh; border-top-color: #c9a25a; }
+.janela-quadro .janela-corpo { padding: 0; }
+.deducao { position: sticky; top: 0; z-index: 2; padding: 0.9rem 1.2rem 0.8rem;
+  background: linear-gradient(180deg, rgba(36, 28, 20, 0.99), rgba(20, 15, 10, 0.99)); border-bottom: 2px solid #8a6a36; }
+.deducao-pergunta { margin: 0 0 0.6rem; font: italic 1.02rem/1.45 var(--texto-livro); color: var(--texto-claro); }
+.lacunas { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.lacunas li { position: relative; display: grid; grid-template-columns: 11.5rem 1fr; align-items: center; gap: 0.6rem; }
+.lacuna-rotulo { font: 700 0.85rem/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: #c9a25a; }
+.lacuna { min-height: 44px; padding: 0.45rem 0.8rem; text-align: left; cursor: pointer; font: 1rem/1.35 var(--texto-livro); color: var(--texto-suave);
+  background: rgba(0, 0, 0, 0.35); border: 1.5px dashed rgba(201, 162, 90, 0.55); border-radius: 3px; }
+.lacuna.cheia { color: #ffe2a6; border-style: solid; background: rgba(201, 162, 90, 0.12); }
+.lacuna:hover, .lacuna:focus-visible { border-color: #f0c870; outline: none; }
+.lacuna-opcoes { grid-column: 2; display: grid; gap: 0.25rem; padding: 0.4rem; background: #120d09; border: 1px solid #8a6a36; }
+.lacuna-opcoes button { min-height: 40px; padding: 0.35rem 0.7rem; text-align: left; cursor: pointer; font: 0.98rem/1.35 var(--texto-livro); color: var(--acento); background: none; border: 0; border-left: 2px solid transparent; }
+.lacuna-opcoes button:hover, .lacuna-opcoes button:focus-visible { color: var(--acento-claro); background: rgba(226, 112, 62, 0.08); outline: none; }
+.lacuna-opcoes button.escolhida { color: #ffe2a6; border-left-color: #c9a25a; }
+.lacuna-opcoes .nota { padding: 0.2rem 0.7rem 0; }
+.deducao-pe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 0.7rem; }
+.deducao-pe .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.deducao-msg { margin: 0.6rem 0 0; padding: 0.5rem 0.8rem; font: 500 1rem/1.4 var(--sans); color: #ffd0d5; background: rgba(163, 18, 42, 0.25); border-left: 3px solid var(--sangue-vivo); }
+/* A cortiça: pistas presas em colunas (o crime e cada suspeito). */
+.cortica { padding: 0.8rem 1rem 1.2rem;
+  background-color: #6b4a2c;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255, 220, 160, 0.08) 0 1px, transparent 2px),
+    radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.18) 0 1px, transparent 2px),
+    radial-gradient(ellipse at 50% 0%, rgba(255, 200, 140, 0.12), transparent 70%),
+    linear-gradient(160deg, #7a5532, #5a3c22);
+  background-size: 7px 7px, 9px 9px, auto, auto;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55); }
+.cortica-total { margin: 0 0 0.6rem; font: 600 0.9rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: #f6e6c0; text-shadow: 0 1px 2px #000; }
+.colunas-pistas { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.8rem; align-items: start; }
+.coluna-pistas header { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; margin-bottom: 0.5rem; background: rgba(20, 13, 8, 0.82); border-top: 2px solid #b31525; }
+.coluna-pistas header b { font: 700 0.95rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #f6e6c0; }
+.coluna-pistas header small { margin-left: auto; font: 700 0.85rem var(--sans); color: #e8cf98; }
+.foto-suspeito { flex: none; width: 38px; height: 38px; overflow: hidden; display: grid; place-items: center; background: #1c150f; border: 2px solid #e8dcc0; box-shadow: 0 2px 4px #000; }
+.foto-suspeito img { width: 100%; height: 230%; object-fit: cover; object-position: 50% 0; align-self: start; }
+.foto-crime { color: #ff5a4a; font: 700 1.2rem var(--sans); }
+.coluna-pistas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+.cartao-pista { position: relative; padding: 0.7rem 0.75rem 0.55rem; rotate: var(--giro, 0deg);
+  color: #2a2016; background: linear-gradient(180deg, #f4ead2, #e6d8b6); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55); }
+.cartao-pista .tacha { position: absolute; top: -5px; left: 50%; width: 12px; height: 12px; translate: -50% 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #a0101e 60%, #3a0508); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.6); }
+.cartao-pista b { display: block; margin-bottom: 0.2rem; font: 700 0.95rem/1.25 var(--sans); color: #1c140c; }
+.cartao-pista p { margin: 0; font: 0.88rem/1.4 var(--texto-livro); }
+.cartao-pista .pista-tipo { color: #8a1424; }
+.cartao-pista .pista-fonte { display: block; margin-top: 0.3rem; font: 600 0.74rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: #6b5636; }
+.cartao-pista.nova { box-shadow: 0 0 0 2px #d8213d, 0 3px 10px rgba(0, 0, 0, 0.55); }
+.coluna-pistas .vazio { padding: 0.5rem; font: italic 0.9rem var(--texto-livro); color: rgba(246, 230, 192, 0.6); }
+@media (max-width: 700px) {
+  .lacunas li { grid-template-columns: 1fr; gap: 0.25rem; }
+  .lacuna-opcoes { grid-column: 1; }
+  .deducao { position: static; }
+  .colunas-pistas { grid-template-columns: 1fr; }
+}
+
+/* --- Fim do capítulo: consequência e placar ---------------------------------------------------------- */
+.consequencia { margin: 0.8rem 0; padding: 0.55rem 0.8rem; font: 0.98rem/1.45 var(--texto-livro); color: var(--texto-claro); background: rgba(201, 162, 90, 0.1); border-left: 3px solid #c9a25a; }
+.placar { margin-top: 1rem; }
+.placar h3 { margin: 0 0 0.4rem; font: 700 0.95rem var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: #c9a25a; }
+.placar ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+.placar li { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.35rem 0.6rem; background: rgba(255, 255, 255, 0.04); }
+.placar li.voce { background: rgba(201, 162, 90, 0.16); outline: 1px solid rgba(201, 162, 90, 0.5); }
+.placar-pos { min-width: 2rem; font: 700 1.1rem var(--titulo); color: #e8cf98; }
+.placar li small { margin-left: auto; color: var(--texto-suave); }
+.placar-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.4rem; margin: 0.7rem 0 0; }
+.placar-numeros div { padding: 0.4rem 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--linha-forte); }
+.placar-numeros dt { font: 600 0.75rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); }
+.placar-numeros dd { margin: 0.1rem 0 0; font: 700 1.15rem var(--sans); color: var(--texto-claro); }
+.ajuda-caso { margin: 0.4rem 0 0.6rem; padding-left: 1.2rem; font: 1rem/1.6 var(--texto-livro); }
+.ajuda-caso li + li { margin-top: 0.35rem; }
+.lista-acusacao { margin: 0.4rem 0 0.6rem; padding-left: 1.2rem; }
+.lista-acusacao li + li { margin-top: 0.25rem; }
+/* Abertura e fecho do caso: os quadrinhos numa tira, lado a lado (no celular, um embaixo do outro). */
+.hq.hq-tira { grid-template-columns: repeat(3, 1fr); max-width: 52em; }
+.hq.hq-tira .painel { aspect-ratio: 4 / 3; }
+.hq.hq-tira.hq-tira-1 { grid-template-columns: 1fr; max-width: 36em; }
+.hq.hq-tira.hq-tira-1 .painel { aspect-ratio: 21 / 9; }
+.hq-tira .balao { font-size: 0.82rem; }
+.hq-tira .legenda { font-size: 0.74rem; }
+.dialogo-cena.dialogo-baixo .hq.hq-tira { max-width: 52em; }
+.dialogo-cena.dialogo-baixo:has(.dialogo-escolhas .escolhas:not(.oculto)) .hq-tira .painel { max-height: none; height: auto; aspect-ratio: 4 / 3; }
+body.celular .hq.hq-tira { grid-template-columns: 1fr; }
+body.celular .hq.hq-tira .painel { aspect-ratio: 21 / 9; }
+/* Caso no celular: letras de 14 px ou mais, botões da perseguição de 44 px e o bloco da fuga abaixo dos selos do alto. */
+body.celular .lacuna-rotulo { font-size: 14px; }
+body.celular .cartao-pista p { font-size: 15px; }
+body.celular .perseguicao-hud { top: 5.6rem; }
+body.celular .perseguicao-botoes button { min-height: 44px; }
+body.celular .perseguicao-dica { font-size: 14px; }

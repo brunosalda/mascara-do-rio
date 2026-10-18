@@ -324,6 +324,13 @@ async function desenhar() {
     return telaDemo(tela, rota.slice(5));
   }
 
+  // Caso de demonstração do formato v3 (etapa A): sem banco; funciona com ou sem login. Com login,
+  // usa o personagem ativo; sem login, uma vampira fictícia.
+  if (rota === 'caso') {
+    const { telaCaso } = await import('./caso/tela-caso.js');
+    return telaCaso(tela, estado);
+  }
+
   if (!estado.sessao) return telaLogin(tela);
 
   try {

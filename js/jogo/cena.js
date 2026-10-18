@@ -94,6 +94,8 @@ export function montarCena(raiz, {
   cla, sprite = null, imagem = '', lugar = null, pontos = [], inicio = null,
   aoInteragir, aoTecla, comentarios = [], comentar, tempo = 'garoa',
   nome = '', nevoa = false, nevoaLonge = false, temPedido = null, ajudado = null, fome = 0, rastros = [], recados = [], nitido = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
+  // Caso (formato v3): a gente da área com nome próprio, figura e falas do caso, no lugar da gente do lugar.
+  gente: genteDoCaso = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -221,6 +223,8 @@ export function montarCena(raiz, {
   let caca = null;           // caçada pela sombra ou de frente: { alvo, modo, limite, t0, atencao, zonas, aoFim }
   let focoBeijo = null;      // o Beijo: a câmera fecha no par
   let esperaAte = 0;         // antecipação: vira para o destino e só então sai (80 ms)
+  let ritmo = 1;             // caso (perseguição): multiplica a velocidade (tropeço, arrancada)
+  let correrSempre = false;  // caso (perseguição): corre sem Shift
   let vivo = true;
   // Vida dentro da pintura: passante no fundo, néon que falha, farol que varre a rua.
   const efeitosLigados = () => !document.body.classList.contains('sem-efeitos');
@@ -258,7 +262,15 @@ export function montarCena(raiz, {
       const d = dist(p.x, p.y, pos.x, pos.y);
       if (d < menor) { menor = d; melhor = p; }
     }
-    return menor <= alcanceEm(pos.y) ? melhor : null;
+    // No caso, a gente da área também responde ao E (na noite, só ao clique).
+    if (genteDoCaso) {
+      for (const p of gente) {
+        if (p.escondida || p.fugindo) continue;
+        const d = dist(p.x, p.y, pos.x, pos.y);
+        if (d < menor) { menor = d; melhor = p; }
+      }
+    }
+    return menor <= alcanceEm(pos.y) * (melhor?.tipo === 'pessoa' ? 1.4 : 1) ? melhor : null;
   }
 
   function virarPara(esquerda) {
@@ -590,15 +602,16 @@ export function montarCena(raiz, {
   // --- Gente da área (Fase 2) ---------------------------------------------------------------------
   // Figuras provisórias paradas ou andando devagar. Clicar leva o personagem até a pessoa e abre a
   // conversa (ou, na caçada, a escolha da presa), pelo aoInteragir com tipo 'pessoa'.
-  const gente = (geo.gente || []).map((g, i) => {
+  const gente = (genteDoCaso || geo.gente || []).map((g, i) => {
     const t = TIPOS_GENTE[g.tipo];
+    const nomeP = g.nome || t?.nome || g.tipo;
     const el = document.createElement('button');
     el.type = 'button';
     el.className = `pessoa pessoa-${g.tipo}`;
-    el.setAttribute('aria-label', t?.rotulo || g.tipo);
-    el.title = t?.nome || g.tipo;
+    el.setAttribute('aria-label', g.nome ? `${g.nome}${g.sub ? `, ${g.sub}` : ''}` : (t?.rotulo || g.tipo));
+    el.title = nomeP;
     const figuras = FIGURAS_GENTE[g.tipo];
-    const figura = figuras ? figuras[i % figuras.length] : null;
+    const figura = g.figura || (figuras ? figuras[i % figuras.length] : null);
     // Tab mostra o nome do tipo e o estado em palavras (como as presas).
     const ESTADOS_GENTE = ['distraído', 'com pressa', 'cansado', 'olhando o celular', 'esperando alguém', 'sozinho'];
     const estado = ESTADOS_GENTE[(i * 7 + g.tipo.length) % ESTADOS_GENTE.length];
@@ -607,7 +620,7 @@ export function montarCena(raiz, {
     const src = figura ? figuraLeve(`img/gente/${figura}.png`) : '';
     el.innerHTML = `<span class="pessoa-sombra" aria-hidden="true"></span><span class="pessoa-circulo" aria-hidden="true"></span>${figura
       ? `<span class="pessoa-reflexo" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span><span class="pessoa-figura"><img src="${src}" alt="" draggable="false"><span class="pessoa-tinta" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-preto" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-lado" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span><span class="pessoa-grao" style="-webkit-mask-image:url('${src}');mask-image:url('${src}')"></span></span>`
-      : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(t?.nome || g.tipo)}<small>${temPedido?.(g.tipo) ? 'tem um pedido' : estado}</small></span>`;
+      : figuraGente(g.tipo)}<span class="pessoa-nome">${esc(nomeP)}<small>${esc(g.sub ?? (temPedido?.(g.tipo) ? 'tem um pedido' : estado))}</small></span>`;
     el.style.setProperty('--atraso', `${(-i * 1.37).toFixed(2)}s`);
     if (figura) {
       el.classList.add('pessoa-pintada');
@@ -616,7 +629,7 @@ export function montarCena(raiz, {
       el.style.setProperty('--luz-gente', (0.72 + Math.min(1, luz) * 0.5).toFixed(2));
     }
     mundo.appendChild(el);
-    const p = { id: `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: t?.nome || g.tipo, acao: `Falar com: ${t?.nome || g.tipo}`, anda: figura ? null : g.anda, dir: (i % 2) ? -1 : 1, el, parado: 0 };
+    const p = { id: g.id ? `pessoa-${g.id}` : `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: nomeP, acao: `Falar com: ${nomeP}`, anda: figura ? null : g.anda, dir: g.dir || ((i % 2) ? -1 : 1), el, parado: 0, caso: genteDoCaso ? g : null, falas: g.falas || null };
     return p;
   });
   // Rodada 39: rastros de quem passou por aqui nesta noite (só o nome das ruas e o clã aparente) e
@@ -748,7 +761,7 @@ export function montarCena(raiz, {
     if (agora < proximaVirada || !gente.length || pausado) return;
     proximaVirada = agora + 3000 + Math.random() * 5000;
     const p = gente[Math.floor(Math.random() * gente.length)];
-    if (p.anda || (p.fixa && performance.now() < p.fixa)) return;
+    if (p.anda || p.fugindo || p.escondida || (p.fixa && performance.now() < p.fixa)) return;
     p.el.classList.toggle('vira');
     setTimeout(() => p.el.classList.toggle('vira'), 1400 + Math.random() * 1600);
   }
@@ -763,6 +776,7 @@ export function montarCena(raiz, {
   let ultimaFalaPassagem = 0;
   function notarVampiro(agora) {
     for (const p of gente) {
+      if (p.escondida || p.fugindo) continue;
       const d = dist(p.x, p.y, pos.x, pos.y);
       if (ajudado?.(p.tipoGente) && d < 0.35 && !p.acenouAjuda) {
         p.acenouAjuda = true; virarPessoaPara(p.id);
@@ -780,10 +794,10 @@ export function montarCena(raiz, {
         } else {
           virarPessoaPara(p.id); p.fixa = agora + 1500;
           const t = TIPOS_GENTE[p.tipoGente];
-          const curtas = (t?.falas || []).filter((f) => f.length <= 48);
+          const curtas = (p.falas || t?.falas || []).filter((f) => f.length <= 48);
           if (curtas.length && !jaFalou(p.tipoGente) && agora - ultimaFalaPassagem > 9000 && Math.random() < 0.45) {
             marcarFala(p.tipoGente); ultimaFalaPassagem = agora;
-            falar((t.nome || p.rotulo).toUpperCase(), curtas[Math.floor(Math.random() * curtas.length)], 2800);
+            falar((p.caso?.nome || t?.nome || p.rotulo).toUpperCase(), curtas[Math.floor(Math.random() * curtas.length)], 2800);
           }
         }
       }
@@ -821,7 +835,7 @@ export function montarCena(raiz, {
     // Um arrasto que começou numa pessoa não abre a conversa nem faz o personagem andar.
     if (ignorarClique || camLivre.arrastando) return;
     const p = gente.find((g) => g.el === el);
-    if (!p || camadaAberta() || semPersonagem) return;
+    if (!p || p.escondida || camadaAberta() || semPersonagem) return;
     if (dist(p.x, p.y, pos.x, pos.y) < alcanceEm(pos.y) * 1.4) { interagir(p); return; }
     const k = Math.min(1, 0.05 / Math.max(0.001, dist(p.x, p.y, pos.x, pos.y)));
     const [x, y] = maisPertoDentro([p.x + (pos.x - p.x) * k, p.y + (pos.y - p.y) * k + 0.01], geo.chao, ASPECTO);
@@ -1989,7 +2003,7 @@ export function montarCena(raiz, {
     let dy = 0;
     if (!camadaAberta() && !semPersonagem) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
     if (dx || dy) alvo = null;
-    let correndo = teclas.has('shift');
+    let correndo = teclas.has('shift') || correrSempre;
     if (alvo && !alvo.via) alvo.via = caminho([pos.x, pos.y], [alvo.x, alvo.y]);
     if (alvo?.via?.length && dist(alvo.via[0][0], alvo.via[0][1], pos.x, pos.y) < 0.015) alvo.via.shift();
     if (alvo) {
@@ -2015,7 +2029,7 @@ export function montarCena(raiz, {
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
     const norma = Math.hypot(dx, dy) || 1;
-    const fator = limitar(altura(pos.y) / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1);
+    const fator = limitar(altura(pos.y) / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1) * ritmo;
     const desejadoX = (dx / norma) * VEL_X * fator;
     const desejadoY = (dy / norma) * VEL_Y * fator;
     const k = Math.min(1, dt * ACELERACAO);
@@ -2437,6 +2451,25 @@ export function montarCena(raiz, {
     vistaDoAlto: !!geo.alto,
     depoisDaPausa: (fn) => { if (pausado) aoSoltarPausa.push(fn); else fn(); },
     cancelarFurtividade: () => { if (caca) { caca.aoFim = null; encerrarFurtividade(false); } },
+    // Caso (formato v3): a perseguição move uma pessoa pela pintura e muda o passo do personagem.
+    pessoa: (id) => gente.find((g) => g.id === `pessoa-${id}`) || null,
+    moverPessoa: (id, x, y, dir) => {
+      const p = gente.find((g) => g.id === `pessoa-${id}`);
+      if (!p) return;
+      p.x = x; p.y = y;
+      if (dir) p.dir = dir;
+      posicionarPessoa(p);
+    },
+    esconderPessoa: (id, sim = true) => {
+      const p = gente.find((g) => g.id === `pessoa-${id}`);
+      if (!p) return;
+      p.escondida = sim;
+      p.el.style.display = sim ? 'none' : '';
+    },
+    definirRitmo: (f = 1) => { ritmo = f; },
+    correr: (sim = true) => { correrSempre = sim; },
+    // A câmera enquadra o personagem e um ponto (quem foge) juntos, com o zoom um pouco mais aberto.
+    focar: (x, y, ms = 300) => { focoEscolha = { x, y, ate: performance.now() + ms }; },
     desmontar,
   };
 }

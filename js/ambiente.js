@@ -352,6 +352,11 @@ export const som = {
       disciplina: () => { tom(audio, t, 55, { tipo: 'triangle', dur: 1.4, volume: 0.05, ataque: 0.05 }); tom(audio, t, 82.4, { dur: 1.2, volume: 0.025, ataque: 0.08 }); tom(audio, t + 0.05, 1760, { dur: 0.5, volume: 0.006, pan }); },
       vantagem: () => { tom(audio, t, 987.8, { dur: 0.35, volume: 0.016, pan }); tom(audio, t + 0.09, 1318.5, { dur: 0.6, volume: 0.014, pan }); },
       trem: () => { tom(audio, t, 349, { tipo: 'triangle', dur: 1, volume: 0.012, ataque: 0.1, pan }); tom(audio, t, 440, { tipo: 'triangle', dur: 1, volume: 0.01, ataque: 0.1, pan }); },
+      // Caso (formato v3): a fuga que começa, a cadeira que cai, o agarrão e a pista nova.
+      susto: () => { tom(audio, t, 220, { tipo: 'triangle', dur: 0.5, volume: 0.02, ate: 440, ataque: 0.02, pan }); tom(audio, t + 0.05, 233, { tipo: 'triangle', dur: 0.45, volume: 0.012, ate: 466, pan }); },
+      queda: () => { pulso(audio, t, 90, 0.05); tom(audio, t + 0.02, 220, { tipo: 'triangle', dur: 0.12, volume: 0.015, ate: 140, pan }); tom(audio, t + 0.1, 180, { tipo: 'triangle', dur: 0.1, volume: 0.01, ate: 120, pan }); },
+      impacto: () => { pulso(audio, t, 60, 0.09); tom(audio, t, 120, { tipo: 'triangle', dur: 0.25, volume: 0.03, ate: 60, pan }); },
+      pista: () => { tom(audio, t, 659.3, { dur: 0.25, volume: 0.012, pan }); tom(audio, t + 0.08, 880, { dur: 0.45, volume: 0.012, pan }); },
     };
     SONS[nome]?.();
   },
