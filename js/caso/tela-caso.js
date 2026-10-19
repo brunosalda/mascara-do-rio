@@ -9,6 +9,8 @@ import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
 import { iniciarPerseguicao } from './perseguicao.js';
 import { iniciarInfiltracao } from './infiltracao.js';
+import { abrirConfronto, turnoDoConfronto, escolhasDo, vitalidadeDe, ataqueDe } from './confronto.js';
+import { rolarParada } from '../motor/dados.js';
 import { montarCena } from '../jogo/cena.js';
 import { geografia } from '../jogo/lugares.js';
 import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
@@ -62,7 +64,7 @@ function casoDoBanco(cap) {
     colunas: pub.colunas || [], lacunas: pub.lacunas || [],
     palavras: Object.fromEntries(Object.entries(pub.palavras || {}).map(([l, ws]) => [l, ws.map((w) => ({ ...w, por: [`lib:${l}:${w.id}`] }))])),
     pessoas: Object.fromEntries((pub.colunas || []).filter((c) => c.pessoa).map((c) => [c.pessoa, { nome: c.nome, sub: '', tipo: c.tipo, figura: c.figura }])),
-    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, infiltracao: pub.infiltracao, rivais: [], eventos: [],
+    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, infiltracao: pub.infiltracao, confronto: pub.confronto, rivais: [], eventos: [],
   };
 }
 
@@ -745,10 +747,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       if (!r) return;
       await depoisDaAcao(r);
       const pe = caso.pessoas[pid];
-      if (r.acao === 'perseguicao') {
+      if (r.acao === 'perseguicao' || r.acao === 'confronto') {
+        const confronto = r.acao === 'confronto';
         caixa({
           rotulo: `${pe.nome} · ${pe.sub}`, texto: r.texto, revelar: true, fechavel: false, falante: pid,
-          opcoes: [{ html: '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); comecarFuga(); } }],
+          opcoes: [{ html: confronto ? '<b>Enfrentar!</b>' : '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); if (confronto) comecarConfronto(); else comecarFuga(); } }],
         });
       } else if (r.abordagens) {
         abordagensBanco({ rotulo: `${pe.nome} · ${t.rotulo}`, intro: r.pergunta, lista: r.abordagens, chave, falante: pid, aoVoltar: () => conversar(pid), aoResultado: aoResultadoConversa(pid) });
@@ -756,14 +759,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       return;
     }
     if (t.estado === 'ok' && st.lidos[chave]) { conversar(pid, st.lidos[chave]); return; }
-    if (t.acao === 'perseguicao') {
+    if (t.acao === 'perseguicao' || t.acao === 'confronto') {
       passarTempo(t.min);
       aplicar({ pistas: t.pistas, marcas: ['chapeu-mostrado'] });
       st.feitos[chave] = 'ok';
       salvar();
+      const confronto = t.acao === 'confronto';
       caixa({
         rotulo: `${caso.pessoas[pid].nome} · ${caso.pessoas[pid].sub}`, texto: t.texto, revelar: true, fechavel: false, falante: pid,
-        opcoes: [{ html: '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); comecarFuga(); } }],
+        opcoes: [{ html: confronto ? '<b>Enfrentar!</b>' : '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); if (confronto) comecarConfronto(); else comecarFuga(); } }],
       });
       return;
     }
@@ -1048,6 +1052,86 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           resolver(resultado);
         },
       });
+    });
+  }
+
+  // --- Confronto por turnos (etapa C) --------------------------------------------------------------
+  // Na demonstração, as regras rodam aqui (turnoDoConfronto, com os dados do motor). Na temporada, cada
+  // turno é do banco (caso_confronto): a tela só mostra.
+  async function comecarConfronto() {
+    const cfg = caso.confronto;
+    if (fuga || !cfg || st.lugar !== cfg.lugar) return;
+    const nome = caso.pessoas[cfg.pessoa]?.nome || 'Ele';
+    fuga = 'confronto';
+    atualizarCena();
+    let estado;
+    let jogarTurno;
+    if (banco) {
+      const r = await noBanco(() => F.confronto(caso.id, p.id, 'inicio'));
+      if (!r) { fuga = null; atualizarCena(); return; }
+      estado = r.e;
+      jogarTurno = async (escolha) => {
+        const rt = await F.confronto(caso.id, p.id, escolha).catch((err) => { caixa({ rotulo: 'Não deu', texto: err.message, opcoes: [{ html: 'Voltar', classe: 'sair', fn: (c) => c.fechar() }] }); return null; });
+        if (rt?.estado) sincronizar(rt.estado);
+        desenharHud();
+        if (rt?.e?.fim) banco.fimConfronto = rt;
+        return rt;
+      };
+    } else {
+      const vit = vitalidadeDe(calc);
+      estado = { vitJ: vit, vitJMax: vit, vitT: cfg.oponente.vitalidade, vitTMax: cfg.oponente.vitalidade, turno: 0, hesita: false, fome: st.fome, fim: null };
+      jogarTurno = async (escolha) => {
+        const r = turnoDoConfronto(estado, escolha, {
+          calc, op: cfg.oponente, maxTurnos: cfg.maxTurnos,
+          rolar: (n, fome) => rolarParada({ parada: n, fome, dificuldade: 0 }),
+          despertar: () => R.despertar().fomeSobe,
+        });
+        estado = r.e;
+        st.fome = r.e.fome;
+        salvar();
+        desenharHud();
+        return r;
+      };
+    }
+    abrirConfronto({
+      tela, palco, nome, estado, escolhas: escolhasDo(calc, R.temPoder(calc, 'compelir')), jogarTurno,
+      aoFim: async (fim) => {
+        fuga = null;
+        let final = fim === 'venceu' ? 'pego' : 'escapou';
+        let prefixo = '';
+        if (banco) {
+          // O banco já decidiu (nos turnos ou nos dados): o texto e as pistas vêm da última resposta.
+          const rb = fim === 'dados' ? await noBanco(() => F.confronto(caso.id, p.id, 'dados')) : banco.fimConfronto;
+          banco.fimConfronto = null;
+          if (!rb) { atualizarCena(); return; }
+          if (rb.teste?.res) {
+            await cerimonia(rb.teste.pool, rb.teste.dif, rb.teste.res);
+            prefixo = `${R.cabecaDoTeste(rb.teste.pool, rb.teste.dif, rb.teste.res)} Você deixa o instinto brigar.
+
+`;
+          }
+          if (rb.resultado !== 'pego') cena?.esconderPessoa(cfg.pessoa);
+          await depoisDaAcao(rb);
+          caixa({ rotulo: rb.resultado === 'pego' ? 'Ele se rende' : 'Ele escapou', texto: `${prefixo}${rb.texto || ''}`, revelar: true, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+          return;
+        }
+        let min = caso.custo.perseguicao;
+        if (fim === 'dados') {
+          const pool = ataqueDe(calc);
+          const res = R.rolar({ calc, pool, dif: cfg.dados.dif, fome: st.fome });
+          await cerimonia(pool, cfg.dados.dif, res);
+          final = R.deuCerto(res) ? 'pego' : 'escapou';
+          prefixo = `${R.cabecaDoTeste(pool, cfg.dados.dif, res)} Você deixa o instinto brigar.
+
+`;
+          min = caso.custo.dados;
+        }
+        const r = final === 'pego' ? caso.perseguicao.pego : caso.perseguicao.escapou;
+        if (final !== 'pego') { st.escondidos.push(cfg.pessoa); cena?.esconderPessoa(cfg.pessoa); }
+        passarTempo(min);
+        aplicar(r);
+        caixa({ rotulo: final === 'pego' ? 'Ele se rende' : 'Ele escapou', texto: `${prefixo}${r.texto}`, revelar: true, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+      },
     });
   }
 

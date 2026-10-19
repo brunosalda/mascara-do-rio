@@ -54,6 +54,7 @@ const publico = {
   // geoInteira: o chão em inteiros, o mesmo que a tela e o banco usam para refazer a fuga (etapa C).
   perseguicao: { ...tira(caso.perseguicao, 'pego', 'escapou', 'depois'), marca: 'chapeu-mostrado', geoInteira: geoInteira(geografia(`${caso.perseguicao.lugar}-alto`)) },
   ...(caso.infiltracao ? { infiltracao: { ...caso.infiltracao, geoInteira: geoInteira(geografia(`${caso.infiltracao.lugar}-alto`)) } } : {}),
+  ...(caso.confronto ? { confronto: caso.confronto } : {}),
 };
 const pistasReais = Object.entries(caso.pistas).filter(([, p]) => !p.marca);
 // --publico: só a parte pública, em JSON (para testes da tela com respostas gravadas).

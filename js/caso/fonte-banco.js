@@ -72,6 +72,9 @@ export const insistir = (capitulo, personagem, chave, abordagem) =>
 // ('conseguiu', com o registro do caminho para o banco conferir; 'visto'; 'distraido').
 export const infiltracao = (capitulo, personagem, chave, abordagem, resultado, registro = null) =>
   chamar('caso_infiltracao', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_resultado: resultado, p_registro: registro });
+// Etapa C: o confronto por turnos, todo decidido pelo banco. escolha: 'inicio' (devolve o estado), 'atacar',
+// 'intimidar', 'disciplina:<id>', 'fugir' ou 'dados'. Devolve { e, log } e, no fim, o resultado com o texto.
+export const confronto = (capitulo, personagem, escolha) => chamar('caso_confronto', { ...base(capitulo, personagem), p_escolha: escolha });
 export const cacar = (capitulo, personagem, abordagem) => chamar('caso_cacar', { ...base(capitulo, personagem), p_abordagem: abordagem });
 // O começo da corrida: o banco só aceita "pego" entre 4 e 60 s depois dele (antes ou depois, vale "escapou").
 export const comecoDaPerseguicao = (capitulo, personagem) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: 'inicio' });

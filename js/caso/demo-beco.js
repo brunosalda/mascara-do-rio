@@ -306,12 +306,12 @@ export const CASO = {
 **Tião** — Isso não é meu.`,
         },
         {
-          id: 'acusar', rotulo: 'Dizer que sabe o que ele fez', min: 5, requerQuantos: { n: 2, de: ['camera', 'ze-tiao-sumiu', 'tiao-cravo', 'gola-sangue', 'tiao-vampiro', 'breno-manca', 'pegadas'] }, escondeSe: ['chapeu-mostrado'], acao: 'perseguicao', pistas: ['conheceu-tiao'],
+          id: 'acusar', rotulo: 'Dizer que sabe o que ele fez', min: 5, requerQuantos: { n: 2, de: ['camera', 'ze-tiao-sumiu', 'tiao-cravo', 'gola-sangue', 'tiao-vampiro', 'breno-manca', 'pegadas'] }, escondeSe: ['chapeu-mostrado'], acao: 'confronto', pistas: ['conheceu-tiao'],
           texto: `Você chega bem perto e fala baixo, para só ele ouvir.
 
 **Tião** — Tá maluco? Eu não saí deste portão.
 
-[PRONTIDÃO] A perna esquerda dele já está virada para a rua. Ele vai correr.`,
+[PRONTIDÃO] Os punhos dele se fecham. Ele não vai correr: vai partir para cima de você.`,
         },
       ],
       resultados: {
@@ -619,6 +619,15 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
       { pessoa: 'jaque', rota: [[0.84, 0.73], [0.70, 0.80]], vel: 700, pausa: 40 },
       { pessoa: 'cida', rota: [[0.915, 0.79], [0.89, 0.75]], vel: 400, pausa: 60 },
     ],
+  },
+
+  // Etapa C: o confronto por turnos, quando você diz ao Tião que sabe o que ele fez. Ganhar ou perder leva
+  // aos mesmos desfechos da perseguição (a confissão ou o celular). Paradas dele: ataque (Força + Briga),
+  // defesa (Destreza + Atletismo) e vontade (Autocontrole + Determinação), em dados; Vitalidade 5 (nove noites com fome).
+  confronto: {
+    lugar: 'lapa', pessoa: 'tiao', maxTurnos: 8,
+    oponente: { ataque: 4, defesa: 3, vontade: 3, vitalidade: 5 },
+    dados: { pool: ['forca', 'briga'], dif: 2 },
   },
 
   perseguicao: {
