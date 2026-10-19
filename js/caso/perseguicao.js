@@ -5,67 +5,50 @@
 // Você corre sem segurar Shift. Alcançar = pego. Ele chegar à saída ou sumir longe = escapou.
 // Ajudas: a Arrancada (Rapidez, usa o sangue) ou Forçar o passo (gasta Força de Vontade), e a
 // ordem "Pare!" (Dominação). Quem não quer depender de reflexo toca em "Deixar os dados decidirem".
-import { geografia, dentro } from '../jogo/lugares.js';
+//
+// Etapa C: a fuga é a simulação inteira de simulacao.js, a 20 passos por segundo (a tela desenha entre um
+// passo e outro). A cada passo, a posição do jogador entra no caminho que vai ao banco no fim; o banco
+// refaz a fuga com a mesma semente e confere o resultado.
+import { geografia } from '../jogo/lugares.js';
 import { camadaAberta } from '../jogo/camadas.js';
 import { som } from '../ambiente.js';
 import { esc } from '../ui.js';
+import * as S from './simulacao.js';
 
-// Os mesmos números do motor da cena (cena.js), para a corrida dele valer a do personagem.
-const VEL_X = 0.18;
-const VEL_Y = 0.15;
-const CORRIDA = 1.7;
-const ALTURA_REF = 0.3;
-const PEGA = 0.07;        // distância para alcançar (em alturas da pintura, como a cena mede)
-const LONGE = 0.9;        // a partir daqui ele some de vista
-const TEMPO_LONGE = 4;    // segundos longe até perder
-const TROPECO = 0.035;    // raio de uma cadeira derrubada
-const SUSTO = 400;        // ms em que você fica parado na largada
-const PARADA_CADEIRA = 260; // ms que ele perde para derrubar uma cadeira
-const DIRECOES = 24;      // direções que ele testa para fugir
-const FUGA_ABERTA = 8;    // nos primeiros segundos, ele prefere o lado com mais chão livre (não se encurrala logo)
-
+const TROPECO = 350;      // raio de uma cadeira derrubada (× 10000)
+const LONGE_VISTA = S.C.LONGE;
 const limitar = (v, a, b) => Math.max(a, Math.min(b, v));
 
-export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = {}, aoUsarSangue, aoGastarVontade, aoFim }) {
+// semente: o sorteio da fuga (na temporada, vem do banco). aoFim(resultado, pos, registro): registro traz o
+// caminho do jogador, as arrancadas e a ordem, para o banco conferir.
+export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = {}, semente = 1, aoUsarSangue, aoGastarVontade, aoFim }) {
   const geo = geografia(`${cfg.lugar}-alto`);
-  const aspecto = geo.aspecto || 1344 / 576;
-  const dist = (ax, ay, bx, by) => Math.hypot((ax - bx) * aspecto, ay - by);
-  const altura = (y) => Math.max(0.05, geo.k * (y - geo.horizonte));
+  const g = cfg.geoInteira || S.geoInteira(geo);
   const mundo = palco.querySelector('.mundo');
   const pessoa = cena.pessoa(cfg.pessoa);
   if (!pessoa || !mundo) { aoFim?.('escapou'); return () => {}; }
 
-  let x = pessoa.x;
-  let y = pessoa.y;
-  const livre = ([qx, qy]) => dentro([qx, qy], geo.chao) && !(geo.obstaculos || []).some((o) => dentro([qx, qy], o));
-  // Começa virado para longe de você.
-  let ang = Math.atan2(0, x - cena.posicao().x >= 0 ? 1 : -1);
-  {
-    // O empurrão: ele se solta de você antes de correr (um passo na direção oposta à sua, se houver chão).
-    const voce = cena.posicao();
-    const dx = (x - voce.x) * aspecto;
-    const dy = y - voce.y;
-    const n = Math.hypot(dx, dy) || 1;
-    const passo = [x + (dx / n) * 0.05 / aspecto, y + (dy / n) * 0.02];
-    if (dentro(passo, geo.chao)) { [x, y] = passo; cena.moverPessoa(cfg.pessoa, x, y, dx < 0 ? -1 : 1); }
-  }
-  let proximaDecisao = 0;
-  let proximaCadeira = 0;
-  let avisouSaida = false;
+  const I = (v) => Math.round(v * S.ESCALA);
+  const voce0 = cena.posicao();
+  const caminho = [I(voce0.x), I(voce0.y)];
+  const impulsos = [];
+  let ordemNoPasso = null;
+  let ordemPendente = false;
+  const fuga = S.novaFuga({
+    g, x: I(pessoa.x), y: I(pessoa.y), saida: [I(cfg.saida[0]), I(cfg.saida[1])], tempoSaida: cfg.tempoSaida,
+    velocidade: Math.round((cfg.velocidade ?? 1) * 1000), cadeiras: cfg.cadeiras ?? 4, semente: Math.max(1, semente % 2147483647),
+  }, { x: caminho[0], y: caminho[1] });
+  let antes = { x: fuga.x, y: fuga.y };
+  cena.moverPessoa(cfg.pessoa, fuga.x / S.ESCALA, fuga.y / S.ESCALA, fuga.x < caminho[0] ? -1 : 1);
+
   let mensagemAte = 0;
-  let dribleAte = 0;
-  let proximoDrible = 0;
   let marcaSaida = null;
-  let longe = 0;
-  let impulsoAte = 0;
-  let proximoImpulso = 0;
   let tropecoAte = 0;
   let arrancadaAte = 0;
-  let paradoAte = 0;
   let usouSangue = false;
   let acabou = false;
-  let ultimo = performance.now();
-  const inicio = performance.now() + SUSTO;
+  const comeco = performance.now();
+  const inicio = comeco + S.C.SUSTO * S.PASSO_MS;
   const cadeiras = [];
 
   pessoa.fugindo = true;
@@ -108,7 +91,10 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
   setTimeout(() => letreiro.remove(), 1300);
   som.reacao?.('susto', 0);
 
-  function derrubarCadeira() {
+  const altura = (y) => Math.max(0.05, geo.k * (y - geo.horizonte));
+  function derrubarCadeira([cx, cy]) {
+    const x = cx / S.ESCALA;
+    const y = cy / S.ESCALA;
     const el = document.createElement('span');
     el.className = 'cadeira-caida';
     el.style.left = `${(x * 100).toFixed(2)}%`;
@@ -116,13 +102,13 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
     el.style.height = `${(altura(y) * 55).toFixed(2)}%`;
     el.style.zIndex = String(Math.round(y * 1000) - 1);
     mundo.appendChild(el);
-    cadeiras.push({ x, y, el, ativa: true });
+    cadeiras.push({ x: cx, y: cy, el, ativa: true });
     som.reacao?.('queda', (x - 0.5) * 1.6);
-    paradoAte = performance.now() + PARADA_CADEIRA;
   }
 
   function passo() {
     arrancadaAte = performance.now() + (poderes.rapidez ? 3000 : 2200);
+    impulsos.push(fuga.passo);
     botaoPasso?.setAttribute('disabled', '');
     setTimeout(() => { if (!acabou) botaoPasso?.removeAttribute('disabled'); }, 6000);
   }
@@ -139,10 +125,9 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
       passo();
     }
     if (tipo === 'ordem' && poderes.compelir) {
-      const p = cena.posicao();
-      if (dist(p.x, p.y, x, y) > 0.3) return;
+      if (fuga.distancia > S.C.ORDEM_ALCANCE) return;
       if (!usouSangue) { usouSangue = true; aoUsarSangue?.('Dominação'); }
-      terminar('pego');
+      ordemPendente = true; // vale no próximo passo da simulação
     }
   }
   hud.addEventListener('click', (ev) => { const b = ev.target.closest('[data-fuga]'); if (b) { ev.stopPropagation(); acao(b.dataset.fuga); } });
@@ -157,6 +142,8 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
   const aoDistrair = () => { if (!acabou && (document.hidden || !document.hasFocus())) terminar('distraido'); };
   document.addEventListener('visibilitychange', aoDistrair);
   window.addEventListener('blur', aoDistrair);
+
+  const registro = () => ({ semente, caminho: [...caminho], impulsos: [...impulsos], ordem: ordemNoPasso, passos: fuga.passo });
 
   function terminar(resultado) {
     if (acabou) return;
@@ -173,10 +160,11 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
     marcaSaida?.remove();
     pessoa.el.classList.remove('foge');
     cena.correr(false);
+    const pos = { x: fuga.x / S.ESCALA, y: fuga.y / S.ESCALA };
     if (resultado !== 'pego') {
       pessoa.fugindo = false;
       cena.definirRitmo(1);
-      aoFim?.(resultado, { x, y });
+      aoFim?.(resultado, pos, registro());
       return;
     }
     // O agarrão: meio segundo de câmera lenta, a câmera fecha nos dois e um baque.
@@ -184,93 +172,70 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
     cena.definirRitmo(0);
     const elCena = palco.querySelector('.cena');
     elCena?.classList.add('camera-lenta', 'agarrao');
-    const fechar = setInterval(() => cena.focar(x, y, 300), 60);
+    const fechar = setInterval(() => cena.focar(pos.x, pos.y, 300), 60);
     setTimeout(() => {
       clearInterval(fechar);
       elCena?.classList.remove('camera-lenta', 'agarrao');
       pessoa.fugindo = false;
       cena.definirRitmo(1);
-      aoFim?.(resultado, { x, y });
+      aoFim?.(resultado, pos, registro());
     }, 700);
+  }
+
+  // Um passo da simulação: a posição do jogador entra no caminho, e a fuga anda.
+  function avancar() {
+    // O caminho tem uma posição por passo: no passo 0, a da largada (a mesma que o banco vai usar).
+    let jx = caminho[0];
+    let jy = caminho[1];
+    if (fuga.passo > 0) {
+      const p = cena.posicao();
+      jx = I(p.x);
+      jy = I(p.y);
+      caminho.push(jx, jy);
+    }
+    const ordem = ordemPendente;
+    ordemPendente = false;
+    antes = { x: fuga.x, y: fuga.y };
+    S.passoDaFuga(fuga, jx, jy, { ordem, temOrdem: !!poderes.compelir });
+    if (ordem && fuga.fim === 'pego') ordemNoPasso = fuga.passo - 1;
+    for (const e of fuga.eventos) {
+      if (e === 'cadeira') derrubarCadeira(fuga.cadeiras.at(-1));
+      if (e === 'drible') { palavra.textContent = 'ele dribla você'; mensagemAte = performance.now() + 1200; }
+      if (e === 'saida') {
+        palavra.textContent = cfg.avisoSaida || 'ele corre para a saída';
+        mensagemAte = performance.now() + 1800;
+        marcaSaida = document.createElement('span');
+        marcaSaida.className = 'saida-fuga';
+        marcaSaida.style.left = `${(cfg.saida[0] * 100).toFixed(2)}%`;
+        marcaSaida.style.top = `${(cfg.saida[1] * 100).toFixed(2)}%`;
+        marcaSaida.style.zIndex = String(Math.round(cfg.saida[1] * 1000) - 1);
+        mundo.appendChild(marcaSaida);
+      }
+    }
   }
 
   function quadro(agora) {
     if (acabou) return;
     if (!palco.isConnected) { terminar('escapou'); return; }
-    const dt = Math.min(0.06, (agora - ultimo) / 1000);
-    ultimo = agora;
-    if (cena.pausado() || camadaAberta()) { requestAnimationFrame(quadro); return; }
+    if (camadaAberta()) { requestAnimationFrame(quadro); return; }
     // O seu passo: parado no susto da largada, rápido na arrancada, lento no tropeço.
     cena.definirRitmo(agora < inicio ? 0 : agora < arrancadaAte ? (poderes.rapidez ? 1.6 : 1.4) : agora < tropecoAte ? 0.4 : 1);
 
-    // Ele foge: a cada instante testa as direções e escolhe a que mais o afasta de você, sem sair do chão.
-    // Depois de cfg.tempoSaida segundos, prefere a saída. Acelera quando você encosta.
-    const p = cena.posicao();
-    const d = dist(p.x, p.y, x, y);
-    const t = (agora - inicio) / 1000;
-    const paraSaida = t > cfg.tempoSaida;
-    if (paraSaida && !avisouSaida) {
-      avisouSaida = true;
-      palavra.textContent = cfg.avisoSaida || 'ele corre para a saída';
-      mensagemAte = agora + 1800;
-      marcaSaida = document.createElement('span');
-      marcaSaida.className = 'saida-fuga';
-      marcaSaida.style.left = `${(cfg.saida[0] * 100).toFixed(2)}%`;
-      marcaSaida.style.top = `${(cfg.saida[1] * 100).toFixed(2)}%`;
-      marcaSaida.style.zIndex = String(Math.round(cfg.saida[1] * 1000) - 1);
-      mundo.appendChild(marcaSaida);
-    }
-    if (d < 0.18 && agora > proximoImpulso) { impulsoAte = agora + 900; proximoImpulso = agora + 3000; }
-    const fator = limitar(altura(y) / ALTURA_REF, 0.6, 1.3) * CORRIDA * cfg.velocidade * (agora < dribleAte ? 1.4 : agora < impulsoAte ? 1.1 : 1);
-    if (agora > proximaDecisao && agora > dribleAte) {
-      proximaDecisao = agora + 110;
-      let melhor = null;
-      for (let k = 0; k < DIRECOES; k++) {
-        const th = (k / DIRECOES) * Math.PI * 2;
-        const ux = Math.cos(th);
-        const uy = Math.sin(th);
-        const q = [x + ux * VEL_X * fator * 0.45, y + uy * VEL_Y * fator * 0.45];
-        if (!livre(q)) continue;
-        const q2 = [x + ux * VEL_X * fator * 0.9, y + uy * VEL_Y * fator * 0.9];
-        // Quanto chão livre há nessa direção, até 1,2 s à frente.
-        let espaco = 0;
-        for (const s of [0.3, 0.6, 0.9, 1.2, 1.5]) { if (!livre([x + ux * VEL_X * fator * s, y + uy * VEL_Y * fator * s])) break; espaco = s; }
-        let nota = dist(q[0], q[1], p.x, p.y) + 0.1 * Math.cos(th - ang) - (livre(q2) ? 0 : 0.25) + (t < FUGA_ABERTA ? 0.45 : 0.1) * espaco - (espaco < 0.6 ? 0.2 : 0);
-        if (paraSaida) nota = 0.6 * dist(q[0], q[1], p.x, p.y) - 1.4 * dist(q[0], q[1], cfg.saida[0], cfg.saida[1]) + 0.05 * Math.cos(th - ang);
-        if (!melhor || nota > melhor.nota) melhor = { nota, th, espaco };
-      }
-      if (melhor) ang = melhor.th;
-      // Com você quase encostando, ele tenta escapar pelo lado num arranque curto (no máximo a cada 3,2 s).
-      if (melhor && !paraSaida && d < 0.17 && agora > proximoDrible && agora > inicio + 600) {
-        const deVoce = Math.atan2(y - p.y, (x - p.x) * aspecto);
-        const opcoes = [deVoce + 1.75, deVoce - 1.75].map((th) => {
-          let esp = 0;
-          for (const s2 of [0.2, 0.4, 0.6]) { if (!livre([x + Math.cos(th) * VEL_X * fator * 1.35 * s2, y + Math.sin(th) * VEL_Y * fator * 1.35 * s2])) break; esp = s2; }
-          return { th, esp };
-        }).sort((a, b) => b.esp - a.esp);
-        if (opcoes[0].esp > 0) {
-          ang = opcoes[0].th;
-          dribleAte = agora + 620;
-          proximoDrible = agora + 3200;
-          palavra.textContent = 'ele dribla você';
-          mensagemAte = agora + 1200;
-        }
-      }
-    }
-    if (agora >= paradoAte) {
-      const nx = x + Math.cos(ang) * VEL_X * fator * dt;
-      const ny = y + Math.sin(ang) * VEL_Y * fator * dt;
-      if (livre([nx, ny])) { x = nx; y = ny; } else proximaDecisao = 0;
-      cena.moverPessoa(cfg.pessoa, x, y, Math.cos(ang) < 0 ? -1 : 1);
-      // Com você perto e atrás dele, de tempos em tempos ele derruba uma cadeira.
-      if (agora > inicio && d < 0.35 && agora > proximaCadeira && cadeiras.length < (cfg.cadeiras ?? 4)) { proximaCadeira = agora + 2600 + Math.random() * 1200; derrubarCadeira(); }
-      if (paraSaida && dist(x, y, cfg.saida[0], cfg.saida[1]) < 0.05) { terminar('escapou'); return; }
-    }
+    // Os passos da simulação que já deviam ter acontecido (a 20 por segundo, qualquer que seja a tela).
+    const devido = Math.floor((agora - comeco) / S.PASSO_MS);
+    while (fuga.passo <= devido && !fuga.fim) avancar();
+    if (fuga.fim) { terminar(fuga.fim); return; }
+    // Entre um passo e outro, ele desliza.
+    const k = limitar((agora - comeco - (fuga.passo - 1) * S.PASSO_MS) / S.PASSO_MS, 0, 1);
+    const x = (antes.x + (fuga.x - antes.x) * k) / S.ESCALA;
+    const y = (antes.y + (fuga.y - antes.y) * k) / S.ESCALA;
+    cena.moverPessoa(cfg.pessoa, x, y, S.COS[fuga.dir] < 0 ? -1 : 1);
     cena.focar(x, y, 400);
 
-    // Cadeira no caminho: você tropeça e perde o passo por um instante.
+    // Cadeira no caminho: você tropeça e perde o passo por um instante (só na tela).
+    const p = cena.posicao();
     for (const c of cadeiras) {
-      if (c.ativa && dist(c.x, c.y, p.x, p.y) < TROPECO) {
+      if (c.ativa && S.distancia(I(p.x), I(p.y), c.x, c.y) < TROPECO) {
         c.ativa = false;
         c.el.classList.add('chutada');
         if (agora > arrancadaAte) tropecoAte = agora + 700;
@@ -280,20 +245,16 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
       }
     }
 
-    // Na largada ele empurra você e sai: só dá para pegá-lo depois do primeiro segundo.
-    if (agora > inicio + 600 && d < PEGA) { terminar('pego'); return; }
-    longe = d > LONGE ? longe + dt : 0;
-    if (longe > TEMPO_LONGE) { terminar('escapou'); return; }
-
     // O quanto falta: uma barra que enche quando você chega perto, e uma palavra.
-    const perto = limitar(1 - (d - PEGA) / (LONGE - PEGA), 0, 1);
+    const d = fuga.distancia ?? S.C.LONGE;
+    const perto = limitar(1 - (d - S.C.PEGA) / (LONGE_VISTA - S.C.PEGA), 0, 1);
     barra.style.transform = `scaleX(${perto.toFixed(3)})`;
-    hud.dataset.nivel = d < 0.14 ? 'colado' : d < 0.35 ? 'perto' : d < 0.65 ? 'longe' : 'sumindo';
+    hud.dataset.nivel = d < 1400 ? 'colado' : d < 3500 ? 'perto' : d < 6500 ? 'longe' : 'sumindo';
     if (agora > mensagemAte) {
-      const txt = agora < inicio ? 'ele larga na frente' : d < 0.14 ? 'colado nele' : d < 0.35 ? 'perto' : d < 0.65 ? 'ele ganha distância' : longe > 0 ? 'sumindo de vista' : 'longe';
+      const txt = agora < inicio ? 'ele larga na frente' : d < 1400 ? 'colado nele' : d < 3500 ? 'perto' : d < 6500 ? 'ele ganha distância' : fuga.longe > 0 ? 'sumindo de vista' : 'longe';
       if (palavra.textContent !== txt) palavra.textContent = txt;
     }
-    if (botaoOrdem) botaoOrdem.disabled = d > 0.3;
+    if (botaoOrdem) botaoOrdem.disabled = d > S.C.ORDEM_ALCANCE;
 
     // Seta na borda quando ele está fora da tela.
     const r = pessoa.el.getBoundingClientRect();

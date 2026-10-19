@@ -12,6 +12,8 @@
 import { CASO } from '../js/caso/demo-beco.js';
 import { CENAS, clasSugeridos, montarFicha } from '../js/motor/roteiro.js';
 import * as v5 from '../js/motor/v5.js';
+import { geografia } from '../js/jogo/lugares.js';
+import { geoInteira } from '../js/caso/simulacao.js';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []));
 const temporada = args.temporada || 'teste';
@@ -49,7 +51,8 @@ const publico = {
   lacunas: caso.lacunas,
   palavras: Object.fromEntries(Object.entries(caso.palavras).map(([l, ws]) => [l, ws.map((w) => ({ id: w.id, texto: w.texto }))])),
   cacada: caso.cacada,
-  perseguicao: { ...tira(caso.perseguicao, 'pego', 'escapou', 'depois'), marca: 'chapeu-mostrado' },
+  // geoInteira: o chão em inteiros, o mesmo que a tela e o banco usam para refazer a fuga (etapa C).
+  perseguicao: { ...tira(caso.perseguicao, 'pego', 'escapou', 'depois'), marca: 'chapeu-mostrado', geoInteira: geoInteira(geografia(`${caso.perseguicao.lugar}-alto`)) },
 };
 const pistasReais = Object.entries(caso.pistas).filter(([, p]) => !p.marca);
 // --publico: só a parte pública, em JSON (para testes da tela com respostas gravadas).

@@ -1007,16 +1007,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
 
   // --- Perseguição --------------------------------------------------------------------------------
-  function comecarFuga() {
+  async function comecarFuga() {
     if (fuga || st.lugar !== caso.perseguicao.lugar) return;
     const cfg = caso.perseguicao;
     const poderes = { rapidez: R.temPoder(calc, 'ligeireza') || R.temDisciplina(calc, ['rapidez', 1]), compelir: R.temPoder(calc, 'compelir') };
     fuga = 'começando';
     atualizarCena(); // os balões de assunto somem durante a fuga
-    // Banco: marca o começo da corrida (o "pego" só vale entre 4 e 60 s depois).
-    if (banco) F.comecoDaPerseguicao(caso.id, p.id).catch(() => {});
+    // A semente da fuga: na temporada, sorteada pelo banco (que vai refazer a fuga e conferir o "pego");
+    // na demonstração, sorteada aqui.
+    let semente = crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646 + 1;
+    if (banco) {
+      const r = await noBanco(() => F.comecoDaPerseguicao(caso.id, p.id));
+      if (!r) { fuga = null; atualizarCena(); return; }
+      semente = r.semente;
+    }
     fuga = iniciarPerseguicao({
-      cena, palco, camadas: tela, cfg, nome: caso.pessoas[cfg.pessoa].nome, poderes,
+      cena, palco, camadas: tela, cfg, nome: caso.pessoas[cfg.pessoa].nome, poderes, semente,
       aoUsarSangue: (nome) => usarSangue(nome),
       aoGastarVontade: () => {
         if (st.vontade <= 0) return false;
@@ -1026,7 +1032,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         desenharHud();
         return true;
       },
-      aoFim: async (resultadoFuga, pos) => {
+      aoFim: async (resultadoFuga, pos, registro) => {
         fuga = null;
         // A aba sumiu ou a janela perdeu o foco no meio da corrida: ele escapa.
         const distraido = resultadoFuga === 'distraido';
@@ -1034,7 +1040,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         if (distraido) anotar('PRONTIDÃO', 'Você se distraiu, e ele escapou.');
         if (banco) {
           // ETAPA C: o banco ainda confia no navegador para "pego" ou "escapou"; "dados" é rolado lá.
-          const rb = await noBanco(() => F.fimDaPerseguicao(caso.id, p.id, resultado));
+          // O banco refaz a fuga com o caminho e só aceita o "pego" se a conta dele também der "pego".
+          const rb = await noBanco(() => F.fimDaPerseguicao(caso.id, p.id, resultado, resultado === 'pego' ? registro : null));
           if (!rb) return;
           let prefixoB = distraido ? 'Você se distraiu, e ele escapou.\n\n' : '';
           if (rb.teste?.res) {

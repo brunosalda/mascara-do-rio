@@ -73,7 +73,8 @@ export const cacar = (capitulo, personagem, abordagem) => chamar('caso_cacar', {
 export const comecoDaPerseguicao = (capitulo, personagem) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: 'inicio' });
 // ETAPA C: hoje o banco confia no navegador para 'pego' ou 'escapou' (com a janela de tempo acima);
 // 'dados' é rolado no banco.
-export const fimDaPerseguicao = (capitulo, personagem, resultado) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: resultado });
+// registro: { semente, caminho, impulsos, ordem, passos } (etapa C: o banco refaz a fuga e confere o "pego").
+export const fimDaPerseguicao = (capitulo, personagem, resultado, registro = null) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: resultado, p_registro: registro });
 // Acusa: { certo, quase, erros, minutos } ou { certo, nota, selos, fecho, proximo }.
 export const acusar = (capitulo, personagem, { quem, como, porque }) =>
   chamar('caso_acusar', { ...base(capitulo, personagem), p_quem: quem, p_como: como, p_porque: porque });
