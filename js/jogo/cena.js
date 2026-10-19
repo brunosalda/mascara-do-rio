@@ -998,7 +998,8 @@ export function montarCena(raiz, {
   let pausado = false;
   const aoSoltarPausa = [];
   function pausar(motivo = '') {
-    if (pausado || semPersonagem) return;
+    // Na perseguição do caso (4 a 16 s) não há pausa: o banco só aceita o "pego" até 60 s do começo.
+    if (pausado || semPersonagem || document.body.classList.contains('em-perseguicao')) return;
     pausado = true;
     raiz.closest('.tela-jogo')?.classList.add('pausado');
     document.body.classList.add('cena-pausada');

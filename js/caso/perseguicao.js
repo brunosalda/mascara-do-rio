@@ -153,11 +153,17 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
     if (k === 'g') acao('ordem');
   };
   document.addEventListener('keydown', aoApertar);
+  // Sem pausa na corrida: se a aba some ou a janela perde o foco no meio, ele escapa ('distraido').
+  const aoDistrair = () => { if (!acabou && (document.hidden || !document.hasFocus())) terminar('distraido'); };
+  document.addEventListener('visibilitychange', aoDistrair);
+  window.addEventListener('blur', aoDistrair);
 
   function terminar(resultado) {
     if (acabou) return;
     acabou = true;
     document.removeEventListener('keydown', aoApertar);
+    document.removeEventListener('visibilitychange', aoDistrair);
+    window.removeEventListener('blur', aoDistrair);
     document.body.classList.remove('em-perseguicao');
     hud.remove();
     seta.remove();

@@ -1026,13 +1026,17 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         desenharHud();
         return true;
       },
-      aoFim: async (resultado, pos) => {
+      aoFim: async (resultadoFuga, pos) => {
         fuga = null;
+        // A aba sumiu ou a janela perdeu o foco no meio da corrida: ele escapa.
+        const distraido = resultadoFuga === 'distraido';
+        const resultado = distraido ? 'escapou' : resultadoFuga;
+        if (distraido) anotar('PRONTIDÃO', 'Você se distraiu, e ele escapou.');
         if (banco) {
           // ETAPA C: o banco ainda confia no navegador para "pego" ou "escapou"; "dados" é rolado lá.
           const rb = await noBanco(() => F.fimDaPerseguicao(caso.id, p.id, resultado));
           if (!rb) return;
-          let prefixoB = '';
+          let prefixoB = distraido ? 'Você se distraiu, e ele escapou.\n\n' : '';
           if (rb.teste?.res) {
             await cerimonia(rb.teste.pool, rb.teste.dif, rb.teste.res);
             prefixoB = `${R.cabecaDoTeste(rb.teste.pool, rb.teste.dif, rb.teste.res)} Você deixa o corpo correr sozinho, pelo instinto.\n\n`;
@@ -1045,7 +1049,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           return;
         }
         let final = resultado;
-        let prefixo = '';
+        let prefixo = distraido ? 'Você se distraiu, e ele escapou.\n\n' : '';
         let min = caso.custo.perseguicao;
         if (resultado === 'dados') {
           const res = R.rolar({ calc, pool: cfg.dados.pool, dif: cfg.dados.dif, fome: st.fome });
