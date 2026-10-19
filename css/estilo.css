@@ -4012,3 +4012,7 @@ body.celular:not(.deitado) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) { --fo
 .tela-caso .cena.mostrar-tudo .pessoa-nome { pointer-events: auto; cursor: pointer; }
 .tira-abertura .balao.balao-direita { left: auto; right: 8px; bottom: 8px; max-width: 44%; }
 .tira-abertura .balao.balao-direita::after { left: auto; right: 22px; }
+/* Rodada 46: o nome sempre à vista sobre quem você já conhece; com o balão de assunto, o nome sobe acima dele. */
+.tela-caso .pessoa.conhecida .pessoa-nome { opacity: 1; pointer-events: auto; cursor: pointer; font-size: 0.8rem; }
+.tela-caso .cena:not(.mostrar-tudo) .pessoa.conhecida:not(:hover):has(.balao-assunto) .pessoa-nome { translate: -50% -34px; }
+.tela-caso .pessoa.conhecida:hover .pessoa-nome { font-size: 0.95rem; }

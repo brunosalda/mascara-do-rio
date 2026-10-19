@@ -96,6 +96,10 @@ export function montarCena(raiz, {
   nome = '', nevoa = false, nevoaLonge = false, temPedido = null, ajudado = null, fome = 0, rastros = [], recados = [], nitido = false, painel = null, aoFalar = null, aoMostrarTudo = null, aoPausa = null, aoPresaVai = null, aoPoderAcabou = null,
   // Caso (formato v3): a gente da área com nome próprio, figura e falas do caso, no lugar da gente do lugar.
   gente: genteDoCaso = null,
+  // Rodada 46: no caso, a gente maior e a câmera mais perto. figuras multiplica a altura de todas as figuras
+  // (personagem, gente, pontos, caçada); niveis são os 3 zooms da câmera (começa no do meio), mesmo se a pintura
+  // for pequena.
+  aproximar = null,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -190,7 +194,8 @@ export function montarCena(raiz, {
   medir();
   window.addEventListener('resize', medir);
 
-  const altura = (y) => Math.max(0.05, geo.k * (y - geo.horizonte));
+  const aumento = aproximar?.figuras || 1;
+  const altura = (y) => Math.max(0.05, geo.k * (y - geo.horizonte)) * aumento;
   const escalaPonto = (y) => limitar(altura(y) / ALTURA_REF, 0.7, 1.1).toFixed(3);
 
   let pos = { x: inicio?.[0] ?? geo.entrada[0], y: inicio?.[1] ?? geo.entrada[1] };
@@ -452,6 +457,7 @@ export function montarCena(raiz, {
   // 1,35 vez o tamanho original (o aumento feito no computador não cria detalhe novo).
   camLivre.nivel = 1;
   function niveisZoom() {
+    if (aproximar?.niveis) return aproximar.niveis;
     const zMax = Math.max(1, Math.min(1.6, (1.35 * 1344) / Math.max(1, mw)));
     return [1, (1 + zMax) / 2, zMax];
   }
@@ -2039,7 +2045,8 @@ export function montarCena(raiz, {
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
     const norma = Math.hypot(dx, dy) || 1;
-    const fator = limitar(altura(pos.y) / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1) * ritmo;
+    // A velocidade não cresce com o aumento das figuras do caso (rodada 46), para a perseguição não mudar.
+    const fator = limitar(altura(pos.y) / aumento / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1) * ritmo;
     const desejadoX = (dx / norma) * VEL_X * fator;
     const desejadoY = (dy / norma) * VEL_Y * fator;
     const k = Math.min(1, dt * ACELERACAO);

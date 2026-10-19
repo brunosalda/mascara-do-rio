@@ -699,6 +699,8 @@ export async function telaCaso(raiz, estadoApp) {
       if (!el) continue;
       const small = el.querySelector('.pessoa-nome small');
       if (small) small.textContent = subDe(pid);
+      // Rodada 46: o nome fica sempre à vista sobre quem você já conhece.
+      el.classList.toggle('conhecida', st.achados.includes(`conheceu-${pid}`));
       // Balão sobre a cabeça de quem tem algo novo a dizer (sempre à vista, sem Tab).
       const quer = !fuga && temAssuntoNovo(pid);
       let balao = el.querySelector('.balao-assunto');
@@ -751,6 +753,8 @@ export async function telaCaso(raiz, estadoApp) {
       pontos: pontosDo(st.lugar), gente: genteDo(st.lugar), comentarios: lugar.comentarios,
       comentar: (c) => { if (st.comentados.includes(c.id)) return false; st.comentados.push(c.id); salvar(); return true; },
       tempo: lugar.tempo, fome: st.fome, nome: p.nome, painel: tela.querySelector('.painel-pergunta'),
+      // Rodada 46: a gente do caso maior e a câmera mais perto, menos onde a pintura já é de perto (perto: false).
+      aproximar: lugar.perto === false ? null : { figuras: 1.4, niveis: [1.15, 1.45, 1.75] },
       aoFalar: (voz, texto) => anotar(voz, texto),
       aoPausa: (pausado) => tela.querySelector('.botao-pausa')?.setAttribute('aria-pressed', String(!!pausado)),
       aoInteragir: (pt) => {

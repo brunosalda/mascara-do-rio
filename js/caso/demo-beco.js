@@ -70,6 +70,7 @@ export const CASO = {
       em: 'no beco do bar',
       dentro: 'lapa',
       geo: 'beco-lapa-alto',
+      perto: false, // a pintura do beco já é funda e de perto: sem a câmera mais perto da rodada 46
       inicio: [0.56, 0.93],
       tempo: 'garoa',
       saida: { rotulo: 'Voltar ao largo da Lapa', destino: 'lapa' },
