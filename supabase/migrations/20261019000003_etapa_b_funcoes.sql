@@ -646,7 +646,8 @@ begin
   for v_var in select jsonb_array_elements(coalesce(v_seg.fecho -> 'variantes', '[]'::jsonb)) loop
     if (v_var ->> 'marca') = any (v_pr.marcas) then v_texto := v_seg.fecho -> 'texto' ->> (v_var ->> 'texto'); exit; end if;
   end loop;
-  return jsonb_build_object('certo', true, 'nota', v_nota, 'selos', to_jsonb(v_selos),
+  return jsonb_build_object('certo', true, 'nota', v_nota,
+    'selos', (select to_jsonb(pr.selos) from public.progresso pr where pr.personagem_id = p_personagem and pr.capitulo_id = p_capitulo),  -- já com o "mais rápido"
     'fecho', jsonb_build_object('paineis', v_seg.fecho -> 'paineis', 'texto', v_texto,
       'escolhas', (select coalesce(jsonb_agg(jsonb_build_object('id', e -> 'id', 'rotulo', e -> 'rotulo')), '[]'::jsonb) from jsonb_array_elements(coalesce(v_seg.fecho -> 'escolhas', '[]'::jsonb)) e)),
     'proximo', case when v_prox.id is null then null else jsonb_build_object('id', v_prox.id, 'titulo', v_prox.titulo) end,
