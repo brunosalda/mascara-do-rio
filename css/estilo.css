@@ -4054,6 +4054,14 @@ body.celular:not(.deitado) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) { --fo
 .confronto.rolando .confronto-escolhas { opacity: 0.5; pointer-events: none; }
 .cena.tremor { animation: tremor 0.28s linear; }
 @keyframes tremor { 0%, 100% { translate: 0 0; } 20% { translate: -6px 2px; } 40% { translate: 5px -3px; } 60% { translate: -4px 3px; } 80% { translate: 3px -1px; } }
-body.celular .confronto { top: 6px; max-height: 70%; padding: 10px 12px; }
+body.celular .confronto { top: 84px; max-height: calc(100% - 190px); padding: 10px 12px; }
+/* Durante o confronto, o que fica por cima do painel some (setas das bordas, faixa, ponteiros). */
+body.em-confronto .borda-mais, body.em-confronto .faixa-demo, body.em-confronto .seta-esq, body.em-confronto .seta-dir, body.em-confronto .dica-interagir { visibility: hidden; }
 body.celular .confronto-escolhas { grid-template-columns: 1fr; }
 @media (prefers-reduced-motion: reduce) { .cena.tremor { animation: none; } }
+/* Etapa C no celular: o painel da perseguição e da infiltração fica compacto (sem a dica longa), e as setas
+   das bordas e o aviso de "Examinar" somem durante a cena. */
+body.celular .perseguicao-hud .perseguicao-dica { display: none; }
+body.celular .perseguicao-hud .perseguicao-titulo { font-size: 0.95rem; }
+body.celular .perseguicao-hud { padding: 6px 10px; gap: 4px; }
+body.em-perseguicao .borda-mais, body.em-perseguicao .dica-interagir, body.em-perseguicao .seta-esq, body.em-perseguicao .seta-dir { visibility: hidden; }

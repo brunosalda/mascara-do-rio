@@ -116,8 +116,8 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
       const ve = S.noLeque(v, I(p.x), I(p.y), cfg.raioVisao, cfg.abertura);
       desenharLeque(leques[i], { x: x * S.ESCALA, y: y * S.ESCALA, dir: v.dir }, ve ? 've' : vaiGirar ? 'vai-girar' : '');
     });
-    // A câmera enquadra você e o alvo juntos.
-    cena.focar(cfg.alvo[0], cfg.alvo[1], 400);
+    // A câmera enquadra você e o alvo juntos (no celular, a tela é estreita: ela segue você).
+    if (!document.body.classList.contains('celular')) cena.focar(cfg.alvo[0], cfg.alvo[1], 400);
     const f = sim.noAlvo / cfg.ficar;
     barra.style.transform = `scaleX(${limitar(f, 0, 1).toFixed(3)})`;
     alvoEl.classList.toggle('dentro', sim.noAlvo > 0);
