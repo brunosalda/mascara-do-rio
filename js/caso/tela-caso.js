@@ -62,7 +62,7 @@ function casoDoBanco(cap) {
     colunas: pub.colunas || [], lacunas: pub.lacunas || [],
     palavras: Object.fromEntries(Object.entries(pub.palavras || {}).map(([l, ws]) => [l, ws.map((w) => ({ ...w, por: [`lib:${l}:${w.id}`] }))])),
     pessoas: Object.fromEntries((pub.colunas || []).filter((c) => c.pessoa).map((c) => [c.pessoa, { nome: c.nome, sub: '', tipo: c.tipo, figura: c.figura }])),
-    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, rivais: [], eventos: [],
+    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, infiltracao: pub.infiltracao, rivais: [], eventos: [],
   };
 }
 
@@ -475,6 +475,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
     if (sangue) return { pode: true, etiqueta: `${nomeSangue.disciplina} · usa o sangue`, sangue };
     if (a.besta) return { pode: true, etiqueta: 'a Besta' };
+    if (a.cena) return { pode: true, etiqueta: 'você joga a cena (ou deixa os dados)' };
     if (a.teste) return { pode: true, etiqueta: `${R.vozDoTeste(a.teste.pool)} · ${R.palavraDaChance(R.chance(a.teste.parada ?? 1, a.teste.dif))}${a.teste.fomeAssusta ? ' · a Fome assusta' : ''}` };
     return { pode: true, etiqueta: '' };
   }
@@ -487,6 +488,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     opcoes.push({ html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); aoVoltar?.(); } });
     caixa({ rotulo, texto: intro || 'Como você faz?', opcoes, falante });
     async function tentar(a) {
+      // Etapa C: a abordagem é uma cena de infiltração. O banco sorteia a semente e, no fim, refaz a cena
+      // com o caminho para conferir o "conseguiu". "Deixar os dados decidirem" cai no teste de sempre.
+      if (a.cena === 'infiltracao' && caso.infiltracao) {
+        const ini = await noBanco(() => F.infiltracao(caso.id, p.id, chave, a.i, 'inicio'));
+        if (!ini) return;
+        const fim = await jogarInfiltracao(caso.infiltracao, ini.semente);
+        if (fim !== 'dados') {
+          const rc = await noBanco(() => F.infiltracao(caso.id, p.id, chave, a.i, fim, fim === 'conseguiu' ? banco.ultimaCena : null));
+          if (!rc) return;
+          await depoisDaAcao(rc);
+          const abertura = rc.ok ? '[FURTIVIDADE] Ninguém repara em você atrás do balcão.'
+            : fim === 'distraido' ? 'Você se distraiu, e alguém viu você.' : '[FURTIVIDADE] Ela vira bem na hora e vê você.';
+          aoResultado([abertura, rc.texto].filter(Boolean).join('\n\n'), rc.ok, null);
+          return;
+        }
+      }
       const r = await noBanco(() => F.agir(caso.id, p.id, chave, a.i));
       if (!r) return;
       if (r.teste?.res) await cerimonia(r.teste.pool, r.teste.dif, r.teste.res);

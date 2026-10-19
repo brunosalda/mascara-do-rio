@@ -68,6 +68,10 @@ export const agir = (capitulo, personagem, chave, abordagem = null) =>
 // Força de Vontade: rerrola a última falha da mesma abordagem.
 export const insistir = (capitulo, personagem, chave, abordagem) =>
   chamar('caso_agir', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_usar_vontade: true });
+// Etapa C: a abordagem que é uma cena de infiltração. resultado: 'inicio' (devolve a semente), ou o fim
+// ('conseguiu', com o registro do caminho para o banco conferir; 'visto'; 'distraido').
+export const infiltracao = (capitulo, personagem, chave, abordagem, resultado, registro = null) =>
+  chamar('caso_infiltracao', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_resultado: resultado, p_registro: registro });
 export const cacar = (capitulo, personagem, abordagem) => chamar('caso_cacar', { ...base(capitulo, personagem), p_abordagem: abordagem });
 // O começo da corrida: o banco só aceita "pego" entre 4 e 60 s depois dele (antes ou depois, vale "escapou").
 export const comecoDaPerseguicao = (capitulo, personagem) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: 'inicio' });
