@@ -1013,6 +1013,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const poderes = { rapidez: R.temPoder(calc, 'ligeireza') || R.temDisciplina(calc, ['rapidez', 1]), compelir: R.temPoder(calc, 'compelir') };
     fuga = 'começando';
     atualizarCena(); // os balões de assunto somem durante a fuga
+    // Banco: marca o começo da corrida (o "pego" só vale entre 4 e 60 s depois).
+    if (banco) F.comecoDaPerseguicao(caso.id, p.id).catch(() => {});
     fuga = iniciarPerseguicao({
       cena, palco, camadas: tela, cfg, nome: caso.pessoas[cfg.pessoa].nome, poderes,
       aoUsarSangue: (nome) => usarSangue(nome),

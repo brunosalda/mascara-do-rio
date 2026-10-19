@@ -69,7 +69,10 @@ export const agir = (capitulo, personagem, chave, abordagem = null) =>
 export const insistir = (capitulo, personagem, chave, abordagem) =>
   chamar('caso_agir', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_usar_vontade: true });
 export const cacar = (capitulo, personagem, abordagem) => chamar('caso_cacar', { ...base(capitulo, personagem), p_abordagem: abordagem });
-// ETAPA C: hoje o banco confia no navegador para 'pego' ou 'escapou'; 'dados' é rolado no banco.
+// O começo da corrida: o banco só aceita "pego" entre 4 e 60 s depois dele (antes ou depois, vale "escapou").
+export const comecoDaPerseguicao = (capitulo, personagem) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: 'inicio' });
+// ETAPA C: hoje o banco confia no navegador para 'pego' ou 'escapou' (com a janela de tempo acima);
+// 'dados' é rolado no banco.
 export const fimDaPerseguicao = (capitulo, personagem, resultado) => chamar('caso_perseguicao', { ...base(capitulo, personagem), p_resultado: resultado });
 // Acusa: { certo, quase, erros, minutos } ou { certo, nota, selos, fecho, proximo }.
 export const acusar = (capitulo, personagem, { quem, como, porque }) =>
