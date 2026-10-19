@@ -487,7 +487,8 @@ Dentro dela, três bolsas de sangue de hospital, vazias e secas há dias. E um b
       min: 10,
       pergunta: 'O notebook está aberto atrás do balcão. A Jaque passa por ali de tempos em tempos.',
       abordagens: [
-        { rotulo: 'Ver as imagens sem ninguém notar', teste: { pool: ['destreza', 'furtividade'], dif: 2 }, sucesso: 'camera-ok', falha: 'pego' },
+        // Etapa C: esta abordagem é a cena de infiltração (veja `infiltracao` abaixo); o teste é o dos "dados".
+        { rotulo: 'Ver as imagens sem ninguém notar', cena: 'infiltracao', teste: { pool: ['destreza', 'furtividade'], dif: 2 }, sucesso: 'camera-ok', falha: 'pego' },
         { rotulo: 'Sumir de vista e ver as imagens (Ofuscação)', poder: 'manto-sombras', sucesso: 'camera-ok' },
         { rotulo: 'Passar invisível e ver as imagens (Ofuscação)', poder: 'passagem-invisivel', sucesso: 'camera-ok' },
       ],
@@ -608,6 +609,17 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
     { hora: 28 * 60 + 10, texto: 'Dandara acertou a dedução. Ainda dá para ficar em segundo lugar.', acertou: { nome: 'Dandara', hora: 28 * 60 + 10 } },
     { hora: 28 * 60 + 50, texto: 'Corvo acertou a dedução na segunda tentativa.', acertou: { nome: 'Corvo', hora: 28 * 60 + 50 } },
   ],
+
+  // Etapa C: a infiltração no balcão. Você espera perto dos Arcos e precisa chegar ao notebook e ficar lá
+  // 2,5 s sem cair no leque da Jaque (que anda entre o balcão e as mesas) nem no da Dona Cida (na porta).
+  infiltracao: {
+    lugar: 'lapa', rotulo: 'Chegue ao notebook sem ser visto',
+    inicio: [0.58, 0.70], alvo: [0.79, 0.735], raioAlvo: 2500, ficar: 50, raioVisao: 9000, abertura: 766,
+    vigias: [
+      { pessoa: 'jaque', rota: [[0.84, 0.73], [0.70, 0.80]], vel: 700, pausa: 40 },
+      { pessoa: 'cida', rota: [[0.915, 0.79], [0.89, 0.75]], vel: 400, pausa: 60 },
+    ],
+  },
 
   perseguicao: {
     lugar: 'lapa', pessoa: 'tiao',

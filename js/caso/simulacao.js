@@ -204,3 +204,87 @@ export function passoMaximoDoJogador(g, y, ritmo) {
   const [px, py] = passoDe(g, y, 1000, ritmo);
   return [tr(px * 13, 10) + 30, tr(py * 13, 10) + 30];
 }
+
+// --- Infiltração (etapa C) -----------------------------------------------------------------------------
+// Quem vigia anda por uma rota fixa, para em cada ponto e olha em volta; à frente dele há um leque de visão.
+// O jogador precisa chegar perto do alvo e ficar lá `ficar` passos sem ser visto. Ser visto é um "quase":
+// só conta depois de `graca` passos seguidos dentro de um leque. Tudo em inteiros, como a fuga.
+// A visão mede a distância com y pesando o dobro (o chão visto do alto é achatado): v = (dx × 7, dy × 6).
+export const V = { GRACA: 12, OLHAR_A_CADA: 20, OLHAR_GIRO: 3 };
+const visao = (ax, ay, bx, by) => [(bx - ax) * 7, (by - ay) * 6];
+// A direção (das 24) mais perto do vetor (vx, vy).
+function direcaoDe(vx, vy) {
+  let melhor = 0;
+  let nota = -Infinity;
+  for (let k = 0; k < N_DIR; k++) {
+    const p = vx * COS[k] + vy * SEN[k];
+    if (p > nota) { nota = p; melhor = k; }
+  }
+  return melhor;
+}
+// O jogador está no leque de quem vigia? raio em unidades de visão; abertura = cos da meia-abertura × 1000.
+export function noLeque(v, jx, jy, raio, abertura) {
+  const [vx, vy] = visao(v.x, v.y, jx, jy);
+  const n = raiz(vx * vx + vy * vy);
+  if (n >= raio) return false;
+  if (n === 0) return true;
+  return vx * COS[v.dir] + vy * SEN[v.dir] >= abertura * n;
+}
+
+// cfg: { g, alvo: [x, y], raioAlvo, ficar (passos), raioVisao, abertura, semente,
+//        vigias: [{ pessoa, rota: [[x, y], ...], vel (por segundo), pausa (passos) }] }.
+export function novaInfiltracao(cfg) {
+  return {
+    cfg, passo: 0, semente: cfg.semente, visto: 0, noAlvo: 0, fim: null, eventos: [],
+    vigias: cfg.vigias.map((v) => {
+      const [x, y] = v.rota[0];
+      const [nx, ny] = v.rota[1 % v.rota.length];
+      const [vx, vy] = visao(x, y, nx, ny);
+      return { pessoa: v.pessoa, x, y, alvo: 1 % v.rota.length, dir: direcaoDe(vx, vy), base: direcaoDe(vx, vy), pausaAte: 0, pausaDesde: 0 };
+    }),
+  };
+}
+
+export function passoDaInfiltracao(s, jx, jy) {
+  if (s.fim) return s;
+  const { cfg } = s;
+  const t = s.passo;
+  s.eventos = [];
+  let visto = false;
+  cfg.vigias.forEach((def, i) => {
+    const v = s.vigias[i];
+    if (t < v.pausaAte) {
+      // Parado: olha para um lado, para o outro e de volta (o giro avisa antes, na tela).
+      const fase = tr(t - v.pausaDesde, V.OLHAR_A_CADA) % 4;
+      v.dir = (v.base + [0, V.OLHAR_GIRO, 0, N_DIR - V.OLHAR_GIRO][fase]) % N_DIR;
+    } else {
+      const [wx, wy] = def.rota[v.alvo];
+      const dx = wx - v.x;
+      const dy = wy - v.y;
+      const n = raiz(dx * dx + dy * dy);
+      const passo = tr(def.vel, 20);
+      if (n <= passo) {
+        v.x = wx; v.y = wy;
+        v.alvo = (v.alvo + 1) % def.rota.length;
+        s.semente = sortear(s.semente);
+        v.pausaDesde = t;
+        v.pausaAte = t + def.pausa + (s.semente % 20);
+        v.base = v.dir;
+      } else {
+        v.x += tr(passo * dx, n);
+        v.y += tr(passo * dy, n);
+        const [vx, vy] = visao(0, 0, dx, dy);
+        v.dir = direcaoDe(vx, vy);
+      }
+    }
+    if (noLeque(v, jx, jy, cfg.raioVisao, cfg.abertura)) visto = true;
+  });
+  s.visto = visto ? s.visto + 1 : 0;
+  if (s.visto > V.GRACA) s.fim = 'visto';
+  const [ax, ay] = visao(cfg.alvo[0], cfg.alvo[1], jx, jy);
+  s.noAlvo = raiz(ax * ax + ay * ay) < cfg.raioAlvo ? s.noAlvo + 1 : 0;
+  if (!s.fim && s.noAlvo >= cfg.ficar) s.fim = 'conseguiu';
+  s.passo = t + 1;
+  if (!s.fim && s.passo >= PASSOS_MAX) s.fim = 'visto';
+  return s;
+}

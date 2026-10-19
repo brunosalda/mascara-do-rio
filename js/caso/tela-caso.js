@@ -8,6 +8,7 @@ import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
 import { iniciarPerseguicao } from './perseguicao.js';
+import { iniciarInfiltracao } from './infiltracao.js';
 import { montarCena } from '../jogo/cena.js';
 import { geografia } from '../jogo/lugares.js';
 import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
@@ -594,6 +595,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       return { pode: true, etiqueta: `${R.nomeDisciplina(a.disciplina[0])} · usa o sangue`, sangue: true };
     }
     if (a.fomeMin) return st.fome >= a.fomeMin ? { pode: true, etiqueta: 'a Besta' } : { pode: false, etiqueta: `só com a Fome em ${a.fomeMin} ou mais` };
+    if (a.cena) return { pode: true, etiqueta: 'você joga a cena (ou deixa os dados)', dif: a.teste?.dif ?? 2 };
     if (a.teste) {
       const dif = a.teste.dif + (a.social && st.fome >= 4 ? 1 : 0);
       const n = R.parada(calc, a.teste.pool);
@@ -617,7 +619,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       let prefixo = '';
       let ok = true;
       let res = null;
-      if (a.teste) {
+      // Etapa C: a abordagem é uma cena jogada (infiltração). "Deixar os dados decidirem" cai no teste.
+      const fimDaCena = a.cena === 'infiltracao' && caso.infiltracao ? await jogarInfiltracao(caso.infiltracao) : null;
+      if (fimDaCena && fimDaCena !== 'dados') {
+        ok = fimDaCena === 'conseguiu';
+        prefixo = ok ? '[FURTIVIDADE] Ninguém repara em você atrás do balcão.'
+          : fimDaCena === 'distraido' ? 'Você se distraiu, e alguém viu você.' : '[FURTIVIDADE] Ela vira bem na hora e vê você.';
+      } else if (a.teste) {
         res = R.rolar({ calc, pool: a.teste.pool, dif: s.dif, fome: st.fome });
         await cerimonia(a.teste.pool, s.dif, res);
         ok = R.deuCerto(res);
@@ -1004,6 +1012,26 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     });
     desenharHud();
     atualizarCena();
+  }
+
+  // --- Infiltração (etapa C) ------------------------------------------------------------------------
+  // Devolve 'conseguiu', 'visto', 'dados' ou 'distraido'. Enquanto dura, nada mais na tela responde.
+  function jogarInfiltracao(cfg, semente = crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646 + 1) {
+    return new Promise((resolver) => {
+      if (st.lugar !== cfg.lugar || !cena) { resolver('visto'); return; }
+      fuga = 'infiltracao';
+      atualizarCena();
+      iniciarInfiltracao({
+        cena, palco, camadas: tela, cfg, semente,
+        aoFim: (resultado, registro) => {
+          fuga = null;
+          atualizarCena();
+          if (resultado === 'distraido') anotar('PRONTIDÃO', 'Você se distraiu, e alguém viu você.');
+          banco && (banco.ultimaCena = registro);
+          resolver(resultado);
+        },
+      });
+    });
   }
 
   // --- Perseguição --------------------------------------------------------------------------------

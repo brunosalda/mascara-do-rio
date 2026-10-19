@@ -2427,6 +2427,8 @@ export function montarCena(raiz, {
       desenharPontos(recem);
     },
     posicao: () => ({ ...pos }),
+    // Etapa C: a infiltração começa com o personagem num ponto fixo (fora da vista de quem vigia).
+    teleportar: (x, y) => { pos.x = x; pos.y = y; vel.x = 0; vel.y = 0; alvo = null; centrarCamera(); },
     deixarRecado: (r) => desenharRecado(r),
     falar,
     perguntarNoBalao,
