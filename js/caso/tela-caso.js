@@ -47,14 +47,50 @@ const duracao = (min) => { const h = Math.floor(min / 60); const m = min % 60; r
 
 const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="placa" d="M4 36 L28 60 L4 84 L-20 60 Z"/><path class="placa-dentro" d="M4 47 L17 60 L4 73 L-9 60 Z"/><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
 
-export async function telaCaso(raiz, estadoApp) {
-  const caso = CASO;
-  const p = personagemDoCaso(estadoApp);
+// Etapa B: um capítulo da temporada, jogado pelo banco. Monta, a partir da parte pública do capítulo
+// (caso_abrir), um objeto com a forma do CASO da demonstração, mas sem nada do segredo: as pessoas, os
+// pontos de exame e as pistas entram à medida que o banco os entrega. As palavras da dedução vêm sem o
+// "por"; a palavra liberada pelo banco entra nos achados como a marca 'lib:<lacuna>:<palavra>'.
+function casoDoBanco(cap) {
+  const pub = cap.publico || {};
+  return {
+    id: cap.id, titulo: cap.titulo, rotulo: `Capítulo ${cap.ordem}`, pergunta: cap.pergunta,
+    relogio: cap.relogio, lugarInicial: pub.lugarInicial, custo: cap.custos || {},
+    abertura: pub.abertura, ajuda: pub.ajuda || [],
+    lugares: Object.fromEntries(Object.entries(pub.lugares || {}).map(([id, l]) => [id, { ...l, fixos: l.pontos || [], pontos: l.pontos || [], pessoas: [] }])),
+    colunas: pub.colunas || [], lacunas: pub.lacunas || [],
+    palavras: Object.fromEntries(Object.entries(pub.palavras || {}).map(([l, ws]) => [l, ws.map((w) => ({ ...w, por: [`lib:${l}:${w.id}`] }))])),
+    pessoas: Object.fromEntries((pub.colunas || []).filter((c) => c.pessoa).map((c) => [c.pessoa, { nome: c.nome, sub: '', tipo: c.tipo, figura: c.figura }])),
+    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, rivais: [], eventos: [],
+  };
+}
+
+// opcoes.capitulo: o capítulo da temporada (no banco). Sem ele, a demonstração no navegador, como antes.
+export async function telaCaso(raiz, estadoApp, opcoes = {}) {
+  const F = opcoes.capitulo ? await import('./fonte-banco.js') : null;
+  let banco = null;
+  if (F) {
+    const atual = estadoApp?.atual;
+    if (atual?.status !== 'ativo') {
+      raiz.innerHTML = '<div class="cartao"><p>Para jogar a temporada, seu personagem precisa estar aprovado pelo Narrador.</p><a class="btn" href="#/">Voltar</a></div>';
+      return;
+    }
+    try {
+      const aberto = await F.abrir(opcoes.capitulo, atual.id);
+      banco = { capitulo: aberto.capitulo, estado: aberto.estado, assunto: {}, topicos: {}, fecho: null, final: null, ranking: [], semNumeros: !aberto.ficha_com_numeros };
+    } catch (e) {
+      raiz.innerHTML = `<div class="cartao erro"><p>${esc(e.message)}</p><a class="btn" href="#/temporada">Voltar à temporada</a></div>`;
+      return;
+    }
+  }
+  const caso = banco ? casoDoBanco(banco.capitulo) : CASO;
+  const p = banco ? { ...estadoApp.atual, sprite: estadoApp.atual.sprite?.url ? estadoApp.atual.sprite : CAMINHADA_RESERVA } : personagemDoCaso(estadoApp);
   const calc = R.numeros(p.ficha);
   // &perfil=<nome> no endereço guarda o progresso à parte (testes de abas diferentes no mesmo navegador
   // não se atropelam).
   const perfil = (new URLSearchParams(location.hash.split('?')[1] || '').get('perfil') || '').replace(/[^a-z0-9-]/gi, '');
-  const CHAVE = `mascara.caso.${caso.id}.${p.id}${perfil ? `.${perfil}` : ''}`;
+  // No banco, o aparelho só guarda o que é da tela (registro, posições, escolhas no quadro); o resto vem dele.
+  const CHAVE = banco ? `mascara.temporada.${caso.id}.${p.id}` : `mascara.caso.${caso.id}.${p.id}${perfil ? `.${perfil}` : ''}`;
   const vontadeMax = p.estado?.vontade?.max || calc.forcaVontade || 3;
   const vitalidadeMax = p.estado?.vitalidade?.max || calc.vitalidade || 5;
 
@@ -68,6 +104,25 @@ export async function telaCaso(raiz, estadoApp) {
   let st = (() => { try { const s = JSON.parse(localStorage.getItem(CHAVE)); return s?.v === 1 ? s : null; } catch { return null; } })() || novo();
   const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(st)); } catch { /* sem armazenamento */ } };
   const achados = () => new Set(st.achados);
+
+  let amanheceuPendente = false;
+  // Banco: o estado que conta (relógio, Fome, pistas, palavras liberadas, feitos) vem de cada resposta.
+  function sincronizar(e) {
+    if (!banco || !e) return;
+    banco.estado = e;
+    Object.assign(st, {
+      hora: e.hora, noites: e.noites, lugar: e.lugar, fome: e.fome, vontade: e.vontade,
+      feitos: e.feitos || {}, escondidos: e.escondidos || [], eventos: e.eventos || [], final: e.final,
+    });
+    for (const pi of e.pistas || []) caso.pistas[pi.id] = pi;
+    const lib = Object.entries(e.palavras || {}).flatMap(([l, ids]) => ids.map((id) => `lib:${l}:${id}`));
+    st.achados = [...(e.pistas || []).map((x) => x.id), ...(e.marcas || []), ...lib];
+    st.tentativas = Array.from({ length: e.acusacoes_erradas || 0 }, () => ({}));
+    st.resolvido = e.resolvido_em ? { hora: e.hora, noites: e.noites, nota: e.nota, selos: e.selos || [] } : null;
+    if (e.amanheceu) amanheceuPendente = true;
+    salvar();
+  }
+  sincronizar(banco?.estado);
 
   // --- Tela -------------------------------------------------------------------------------------
   document.body.dataset.tela = 'cena';
@@ -117,7 +172,7 @@ export async function telaCaso(raiz, estadoApp) {
       <button type="button" class="mostrar-paineis" data-hud="paineis" title="Mostrar ou esconder os painéis (H)" aria-label="Painéis"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M8 4v16M3 15h18"/></svg></button>
       <aside class="hud-plano quadro-noite quadro-caso" aria-live="polite"></aside>
       <footer class="hud-dicas"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>E</kbd> examinar ou falar · <kbd>Tab</kbd> mostrar tudo · <kbd>Q</kbd> quadro · <kbd>M</kbd> lugares · <kbd>F</kbd> ficha</footer>
-      <div class="faixa-demo" role="note">Caso de demonstração · inventado, fora da temporada de verdade; nada vai ao banco</div>
+      <div class="faixa-demo" role="note">${banco ? `${esc(caso.rotulo)} · ${esc(caso.titulo)}${banco.capitulo.temporada === 'teste' ? ' · temporada de teste' : ''}` : 'Caso de demonstração · inventado, fora da temporada de verdade; nada vai ao banco'}</div>
     </div>`;
   const tela = raiz.querySelector('.tela-jogo');
   const palco = tela.querySelector('.palco');
@@ -263,7 +318,8 @@ export async function telaCaso(raiz, estadoApp) {
     const comOpcao = caso.lacunas.filter((l) => lib[l.id].length).length;
     const escolhidas = caso.lacunas.filter((l) => st.escolhas[l.id]).length;
     const acertos = caso.rivais.filter((rv, i) => rv.acertou && st.rivais.includes(i));
-    const corrida = st.resolvido ? 'você resolveu' : acertos.length ? `${acertos.map((x) => x.acertou.nome).join(' e ')} já ${acertos.length > 1 ? 'resolveram' : 'resolveu'}` : 'ninguém resolveu ainda';
+    const outros = banco ? banco.ranking.filter((x) => x.resolvido_em && !x.voce).length : 0;
+    const corrida = st.resolvido ? 'você resolveu' : banco ? (outros ? `${outros} já ${outros > 1 ? 'resolveram' : 'resolveu'}` : 'ninguém resolveu ainda') : acertos.length ? `${acertos.map((x) => x.acertou.nome).join(' e ')} já ${acertos.length > 1 ? 'resolveram' : 'resolveu'}` : 'ninguém resolveu ainda';
     caixaCaso.className = `hud-plano quadro-noite quadro-caso${st.resolvido ? ' plano-enviado' : ''}`;
     caixaCaso.innerHTML = `
       <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
@@ -280,8 +336,8 @@ export async function telaCaso(raiz, estadoApp) {
   }
 
   // --- O tempo anda ------------------------------------------------------------------------------
-  let amanheceuPendente = false;
   function passarTempo(min) {
+    if (banco) { desenharHud(); return; } // no banco, quem anda o relógio é a função chamada
     if (!min || st.resolvido) { desenharHud(); return; }
     st.hora += min;
     const a = achados();
@@ -336,8 +392,118 @@ export async function telaCaso(raiz, estadoApp) {
     atualizarCena();
   }
 
+  // --- Banco: chamadas, respostas e textos ----------------------------------------------------------
+  // Chama uma função do banco; o erro vira uma caixa (e "amanheceu" leva ao amanhecer).
+  async function noBanco(fn) {
+    try { return await fn(); } catch (e) {
+      if (e.codigo === 'amanheceu') { amanheceuPendente = true; checarAmanhecer(); return null; }
+      caixa({ rotulo: 'Não deu', texto: e.message || 'Não deu certo.', opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+      return null;
+    }
+  }
+  // A resposta do banco: o estado novo, as pistas novas (com aviso e voo para o Quadro), as palavras que
+  // abriram na dedução e os eventos do relógio.
+  function aplicarBanco(r) {
+    if (!r) return;
+    const antes = palavrasLiberadas(caso, achados());
+    sincronizar(r.estado);
+    const novas = (r.novas || []).map((x) => x.titulo);
+    for (const x of r.novas || []) if (!st.novas.includes(x.id)) st.novas.push(x.id);
+    if (novas.length) {
+      anotar('PISTA NOVA', novas.join(' · '));
+      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { som.reacao?.('pista', 0); voarPista(); });
+    }
+    const depois = palavrasLiberadas(caso, achados());
+    const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
+    if (abriu.length) avisar('faixa-deducao', 'Dedução', `nova opção em “${abriu.map((l) => l.rotulo.toLowerCase()).join('” e “')}”`);
+    for (const ev of r.eventos || []) {
+      if (ev.esconder && caso.pessoas[ev.esconder]?.lugar === st.lugar) cena?.esconderPessoa(ev.esconder);
+      anotar(ev.voz, ev.texto);
+      avisar('faixa-evento', ev.voz, ev.texto);
+    }
+    salvar();
+    desenharHud();
+    atualizarCena();
+  }
+  // Quem está no lugar e os pontos à vista (só os que o jogador já pode ver). Sem mudar de lugar, não custa nada.
+  async function lerLugar(id) {
+    const r = await noBanco(() => F.lugar(caso.id, p.id, id));
+    if (!r) return null;
+    const l = caso.lugares[id];
+    l.pessoas = r.pessoas.map((x) => x.id);
+    for (const x of r.pessoas) {
+      caso.pessoas[x.id] = { ...caso.pessoas[x.id], ...x, lugar: id };
+      banco.assunto[x.id] = x.assunto_novo;
+    }
+    l.pontos = [...l.fixos, ...r.pontos.map((x) => ({ id: x.id, rotulo: x.rotulo, x: x.x, y: x.y }))];
+    return r;
+  }
+  // Depois de cada ação: o estado e o lugar de novo (tópicos e pontos podem ter aberto).
+  async function depoisDaAcao(r) {
+    aplicarBanco(r);
+    await lerLugar(st.lugar);
+    atualizarCena();
+  }
+  const minuscula = (t) => `${String(t || '').charAt(0).toLowerCase()}${String(t || '').slice(1)}`;
+  // O texto de um resultado do banco, como na demonstração: o teste, o sangue e o que aconteceu.
+  function textoDe(r) {
+    const partes = [];
+    if (r.teste?.res) {
+      let cabeca = `${R.cabecaDoTeste(r.teste.pool, r.teste.dif, r.teste.res)} ${r.vontade ? 'Com Força de Vontade, você insiste.' : `Você tenta: ${minuscula(r.abordagem)}.`}`;
+      if (r.teste.res.resultado === 'falha-bestial' && !r.vontade) cabeca += '\n\n[A BESTA] Eu rosno por dentro, e todo mundo em volta sente. Perdemos tempo.';
+      if (r.teste.res.resultado === 'critico-sangrento') cabeca += '\n\n[A BESTA] Deu certo porque eu ajudei. Lembre-se disso.';
+      partes.push(cabeca);
+    } else if (r.sangue) {
+      partes.push(r.sangue.fomeSobe ? '[A FOME] Usar o sangue me acordou. Agora tenho mais fome.' : '[O SANGUE] O sangue responde sem pedir nada em troca.');
+    }
+    if (r.texto) partes.push(r.texto);
+    else if (r.vontade && !r.ok) partes.push('Não deu. Melhor tentar de outro jeito.');
+    return partes.join('\n\n');
+  }
+  // A etiqueta de uma abordagem, pela situação que o banco devolve (a chance sai da parada e da dificuldade).
+  function etiquetaBanco(a) {
+    const sangue = !!(a.poder || a.disciplina);
+    const nomeSangue = a.poder ? R.nomePoder(a.poder) : a.disciplina ? { poder: R.nomeDisciplina(a.disciplina[0]), disciplina: R.nomeDisciplina(a.disciplina[0]) } : null;
+    if (!a.pode) {
+      const motivo = {
+        tentado: 'já tentou assim', bloqueada: 'agora não vai dar', falta: 'falta alguma coisa',
+        'fome-maxima': 'com a Fome no máximo, o sangue não responde', 'fome-baixa': `só com a Fome em ${a.fomeMin} ou mais`,
+        'sem-poder': nomeSangue ? `precisa de ${nomeSangue.poder}` : 'não está ao seu alcance',
+      }[a.motivo] || '';
+      return { pode: false, etiqueta: motivo, sangue };
+    }
+    if (sangue) return { pode: true, etiqueta: `${nomeSangue.disciplina} · usa o sangue`, sangue };
+    if (a.besta) return { pode: true, etiqueta: 'a Besta' };
+    if (a.teste) return { pode: true, etiqueta: `${R.vozDoTeste(a.teste.pool)} · ${R.palavraDaChance(R.chance(a.teste.parada ?? 1, a.teste.dif))}${a.teste.fomeAssusta ? ' · a Fome assusta' : ''}` };
+    return { pode: true, etiqueta: '' };
+  }
+  // As abordagens pelo banco: a mesma caixa da demonstração; o banco rola os dados e decide.
+  function abordagensBanco({ rotulo, intro = '', lista, chave, falante = null, aoVoltar, aoResultado }) {
+    const opcoes = lista.map((a) => {
+      const s = etiquetaBanco(a);
+      return { html: `${esc(a.rotulo)}${etiqueta(s)}`, desligada: !s.pode, classe: s.pode ? '' : 'indisponivel', fn: (cam) => { cam.fechar(); tentar(a); } };
+    });
+    opcoes.push({ html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); aoVoltar?.(); } });
+    caixa({ rotulo, texto: intro || 'Como você faz?', opcoes, falante });
+    async function tentar(a) {
+      const r = await noBanco(() => F.agir(caso.id, p.id, chave, a.i));
+      if (!r) return;
+      if (r.teste?.res) await cerimonia(r.teste.pool, r.teste.dif, r.teste.res);
+      if (r.sangue) som.reacao?.('disciplina', 0);
+      await depoisDaAcao(r);
+      const repetir = r.pode_repetir ? async () => {
+        const r2 = await noBanco(() => F.insistir(caso.id, p.id, chave, a.i));
+        if (!r2) return;
+        await cerimonia(r2.teste.pool, r2.teste.dif, r2.teste.res);
+        await depoisDaAcao(r2);
+        aoResultado(textoDe(r2), r2.ok, null);
+      } : null;
+      aoResultado(textoDe(r), r.ok, repetir);
+    }
+  }
+
   // --- Caixas de diálogo -------------------------------------------------------------------------
-  const figuraDe = (pid) => { const pe = caso.pessoas[pid]; const f = pe?.figura || FIGURAS_GENTE[pe?.tipo]?.[0]; return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
+  const figuraDe =(pid) => { const pe = caso.pessoas[pid]; const f = pe?.figura || FIGURAS_GENTE[pe?.tipo]?.[0]; return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
   let numCaixa = 0;
   // opcoes: [{ html, fn, desligada, classe }]. revelar: fala por fala, com "Continuar".
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
@@ -395,6 +561,8 @@ export async function telaCaso(raiz, estadoApp) {
 
   // Uso do sangue (disciplina): o teste de Despertar do motor pode subir a Fome.
   function usarSangue(nome) {
+    // ETAPA C: no banco, o sangue gasto na cena de ação ainda não sobe a Fome (a cena roda no navegador).
+    if (banco) { som.reacao?.('disciplina', 0); anotar('O SANGUE', `${nome}.`); return '[O SANGUE] O sangue responde.'; }
     const d = R.despertar();
     som.reacao?.('disciplina', 0);
     if (d.fomeSobe) {
@@ -502,16 +670,25 @@ export async function telaCaso(raiz, estadoApp) {
       return true;
     }).map((t) => ({ ...t, estado: st.feitos[`${pid}:${t.id}`] || 'novo' }));
   }
-  const temAssuntoNovo = (pid) => topicosDe(pid).some((t) => t.estado === 'novo');
+  const temAssuntoNovo = (pid) => (banco ? !!banco.assunto[pid] : topicosDe(pid).some((t) => t.estado === 'novo'));
 
-  function conversar(pid, intro = null) {
+  async function conversar(pid, intro = null) {
     const pe = caso.pessoas[pid];
-    const primeira = !st.achados.includes(`conheceu-${pid}`);
+    let textoBanco = null;
+    if (banco) {
+      // O banco dá a saudação (ou "Mais alguma coisa?") e os tópicos já liberados; nada dos bloqueados.
+      const r = await noBanco(() => F.conversa(caso.id, p.id, pid));
+      if (!r) return;
+      banco.topicos[pid] = r.topicos.map((t) => ({ ...t, id: t.chave.slice(pid.length + 1) }));
+      aplicarBanco(r);
+      textoBanco = r.texto;
+    }
+    const primeira = !banco && !st.achados.includes(`conheceu-${pid}`);
     if (primeira) aplicar({ marcas: [`conheceu-${pid}`] });
     cena?.virarPessoaPara(`pessoa-${pid}`);
-    const tops = topicosDe(pid).sort((a, b) => ({ novo: 0, tentado: 1, ok: 2 }[a.estado] - { novo: 0, tentado: 1, ok: 2 }[b.estado]));
+    const tops = (banco ? [...banco.topicos[pid]] : topicosDe(pid)).sort((a, b) => ({ novo: 0, tentado: 1, ok: 2 }[a.estado] - { novo: 0, tentado: 1, ok: 2 }[b.estado]));
     const depoisDaFuga = caso.perseguicao.pessoa === pid && achados().has('perseguido');
-    const texto = intro ?? (depoisDaFuga ? (caso.perseguicao.depois?.pego || '') : primeira ? pe.saudacao : `**${pe.nome}** — Mais alguma coisa?`);
+    const texto = intro ?? (banco ? textoBanco : depoisDaFuga ? (caso.perseguicao.depois?.pego || '') : primeira ? pe.saudacao : `**${pe.nome}** — Mais alguma coisa?`);
     const opcoes = tops.map((t) => ({
       html: `${esc(t.rotulo)}${t.estado === 'ok' ? ' <small class="etiqueta-feito">✓ já perguntou</small>' : t.estado === 'tentado' ? ' <small class="etiqueta-teste">tentar de outro jeito</small>' : t.min ? ` <small class="etiqueta-tempo">${t.min} min</small>` : ''}`,
       classe: t.estado === 'ok' ? 'feito' : '',
@@ -521,8 +698,38 @@ export async function telaCaso(raiz, estadoApp) {
     caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160, falante: pid });
   }
 
-  function escolherTopico(pid, t) {
+  // A caixa depois de uma abordagem na conversa: insistir com Força de Vontade, continuar ou encerrar.
+  const aoResultadoConversa = (pid) => (texto, ok, repetir) => {
+    const pe = caso.pessoas[pid];
+    if (repetir) {
+      caixa({
+        rotulo: `${pe.nome} · ${pe.sub}`, texto, revelar: true, falante: pid,
+        opcoes: [
+          { html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } },
+          { html: 'Continuar a conversa', fn: (cam) => { cam.fechar(); conversar(pid); } },
+          { html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() },
+        ],
+      });
+    } else conversar(pid, texto);
+  };
+
+  async function escolherTopico(pid, t) {
     const chave = `${pid}:${t.id}`;
+    if (banco) {
+      const r = await noBanco(() => F.agir(caso.id, p.id, chave));
+      if (!r) return;
+      await depoisDaAcao(r);
+      const pe = caso.pessoas[pid];
+      if (r.acao === 'perseguicao') {
+        caixa({
+          rotulo: `${pe.nome} · ${pe.sub}`, texto: r.texto, revelar: true, fechavel: false, falante: pid,
+          opcoes: [{ html: '<b>Correr atrás dele!</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); comecarFuga(); } }],
+        });
+      } else if (r.abordagens) {
+        abordagensBanco({ rotulo: `${pe.nome} · ${t.rotulo}`, intro: r.pergunta, lista: r.abordagens, chave, falante: pid, aoVoltar: () => conversar(pid), aoResultado: aoResultadoConversa(pid) });
+      } else conversar(pid, textoDe(r));
+      return;
+    }
     if (t.estado === 'ok' && st.lidos[chave]) { conversar(pid, st.lidos[chave]); return; }
     if (t.acao === 'perseguicao') {
       passarTempo(t.min);
@@ -548,27 +755,33 @@ export async function telaCaso(raiz, estadoApp) {
     abordagens({
       rotulo: `${pe.nome} · ${t.rotulo}`, intro: t.pergunta, lista: t.abordagens, resultados: pe.resultados, chaveBase: chave, min: t.min, falante: pid,
       aoVoltar: () => conversar(pid),
-      aoResultado: (texto, ok, repetir) => {
-        if (repetir) {
-          caixa({
-            rotulo: `${pe.nome} · ${pe.sub}`, texto, revelar: true, falante: pid,
-            opcoes: [
-              { html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } },
-              { html: 'Continuar a conversa', fn: (cam) => { cam.fechar(); conversar(pid); } },
-              { html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() },
-            ],
-          });
-        } else conversar(pid, texto);
-      },
+      aoResultado: aoResultadoConversa(pid),
     });
   }
 
   // --- Exames ------------------------------------------------------------------------------------
-  function examinar(id) {
+  async function examinar(id) {
     const ex = caso.exames[id];
     const pt = caso.lugares[st.lugar].pontos.find((x) => x.id === id);
     const chave = `x:${id}`;
     const fechar = { html: 'Voltar à cena', classe: 'sair', fn: (cam) => cam.fechar() };
+    if (banco) {
+      const r = await noBanco(() => F.agir(caso.id, p.id, chave));
+      if (!r) return;
+      await depoisDaAcao(r);
+      if (!r.abordagens) { const texto = textoDe(r); caixa({ rotulo: pt.rotulo, texto, opcoes: [fechar], revelar: texto.length > 160 }); return; }
+      abordagensBanco({
+        rotulo: pt.rotulo, intro: r.pergunta, lista: r.abordagens, chave, aoVoltar: () => {},
+        aoResultado: (texto, ok, repetir) => {
+          const opcoes = [];
+          if (repetir) opcoes.push({ html: `Tentar de novo <small class="etiqueta-teste">gasta Força de Vontade · resta ${st.vontade}</small>`, fn: (cam) => { cam.fechar(); repetir(); } });
+          if (!ok) opcoes.push({ html: 'Tentar de outro jeito', fn: (cam) => { cam.fechar(); examinar(id); } });
+          opcoes.push(fechar);
+          caixa({ rotulo: pt.rotulo, texto, opcoes, revelar: texto.length > 160 });
+        },
+      });
+      return;
+    }
     if (st.feitos[chave] === 'ok' && st.lidos[chave]) { caixa({ rotulo: pt.rotulo, texto: st.lidos[chave], opcoes: [fechar] }); return; }
     const passivo = () => {
       const pv = ex.passivo;
@@ -604,10 +817,20 @@ export async function telaCaso(raiz, estadoApp) {
   function cacar() {
     if (st.fome <= 1) { caixa({ rotulo: 'Caçar', texto: '[A FOME] Agora não. Ainda estou quieta.', opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] }); return; }
     const lista = caso.cacada.abordagens;
-    const opcoes = lista.map((a) => {
+    const opcoes = lista.map((a, i) => {
       const n = R.parada(calc, a.teste.pool);
       return { html: `${esc(a.rotulo)} <small class="etiqueta-teste">${R.vozDoTeste(a.teste.pool)} · ${R.palavraDaChance(R.chance(n, a.teste.dif))} · ${caso.custo.cacar} min</small>`, fn: async (cam) => {
         cam.fechar();
+        if (banco) {
+          const r = await noBanco(() => F.cacar(caso.id, p.id, i));
+          if (!r) return;
+          if (r.recusado) { aplicarBanco(r); return; }
+          await cerimonia(r.teste.pool, r.teste.dif, r.teste.res);
+          await depoisDaAcao(r);
+          anotar('A FOME', `Depois da caçada: Fome ${st.fome}.`);
+          caixa({ rotulo: 'Caçar', texto: `${R.cabecaDoTeste(r.teste.pool, r.teste.dif, r.teste.res)} Você tenta: ${minuscula(r.abordagem)}.\n\n${r.texto}`, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+          return;
+        }
         const res = R.rolar({ calc, pool: a.teste.pool, dif: a.teste.dif, fome: st.fome });
         await cerimonia(a.teste.pool, a.teste.dif, res);
         let texto = `${R.cabecaDoTeste(a.teste.pool, a.teste.dif, res)} Você tenta: ${a.rotulo.charAt(0).toLowerCase()}${a.rotulo.slice(1)}.`;
@@ -653,10 +876,16 @@ export async function telaCaso(raiz, estadoApp) {
     const veu = document.createElement('div');
     veu.className = 'passagem-caso';
     tela.appendChild(veu);
-    setTimeout(() => {
-      const custo = custoViagem(st.lugar, id);
-      st.lugar = id;
-      passarTempo(custo);
+    setTimeout(async () => {
+      if (banco) {
+        const r = await lerLugar(id);
+        if (!r) { veu.remove(); return; }
+        aplicarBanco(r);
+      } else {
+        const custo = custoViagem(st.lugar, id);
+        st.lugar = id;
+        passarTempo(custo);
+      }
       montarLugar();
       const l = caso.lugares[id];
       anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.`);
@@ -797,6 +1026,22 @@ export async function telaCaso(raiz, estadoApp) {
       },
       aoFim: async (resultado, pos) => {
         fuga = null;
+        if (banco) {
+          // ETAPA C: o banco ainda confia no navegador para "pego" ou "escapou"; "dados" é rolado lá.
+          const rb = await noBanco(() => F.fimDaPerseguicao(caso.id, p.id, resultado));
+          if (!rb) return;
+          let prefixoB = '';
+          if (rb.teste?.res) {
+            await cerimonia(rb.teste.pool, rb.teste.dif, rb.teste.res);
+            prefixoB = `${R.cabecaDoTeste(rb.teste.pool, rb.teste.dif, rb.teste.res)} Você deixa o corpo correr sozinho, pelo instinto.\n\n`;
+          }
+          if (rb.resultado === 'pego') st.posPessoas[cfg.pessoa] = [pos.x, pos.y];
+          else cena?.esconderPessoa(cfg.pessoa);
+          await depoisDaAcao(rb);
+          cena?.centrarCamera();
+          caixa({ rotulo: rb.resultado === 'pego' ? 'Pego' : 'Ele escapou', texto: `${prefixoB}${rb.texto || ''}`, revelar: true, opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+          return;
+        }
         let final = resultado;
         let prefixo = '';
         let min = caso.custo.perseguicao;
@@ -846,6 +1091,27 @@ export async function telaCaso(raiz, estadoApp) {
       opcoes: ['Acusar', 'Ainda não'],
     });
     if (r !== 0) return null;
+    if (banco) {
+      // A resposta nunca vem ao navegador: o banco só diz "certo", "errado" ou "quase".
+      const rb = await noBanco(() => F.acusar(caso.id, p.id, e));
+      if (!rb) return null;
+      aplicarBanco(rb);
+      if (rb.certo) {
+        banco.fecho = rb.fecho || null;
+        banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
+        som.acorde?.();
+        setTimeout(fecho, 350);
+        return { certo: true };
+      }
+      som.teste?.(false, true);
+      anotar('XERIFE IOLANDA', 'Não fecha. Volte com provas.');
+      return {
+        certo: false, erros: rb.erros,
+        mensagem: rb.quase
+          ? `Quase. A Xerife ouve e balança a cabeça: uma das três respostas não fecha. Você perde ${duracao(rb.minutos)}.`
+          : `Não fecha. A Xerife cruza os braços e manda você voltar com provas. Você perde ${duracao(rb.minutos)}.`,
+      };
+    }
     const certas = caso.lacunas.filter((l) => e[l.id] === caso.resposta[l.id]).length;
     if (certas === caso.lacunas.length) {
       st.resolvido = { hora: st.hora, noites: st.noites };
@@ -867,8 +1133,29 @@ export async function telaCaso(raiz, estadoApp) {
   }
 
   // --- Fim do capítulo ----------------------------------------------------------------------------
-  function fecho() {
+  async function fecho() {
     fecharTudo();
+    if (banco) {
+      // O fecho (com a variante pela cena de ação) vem do banco, só depois de acertar.
+      if (!banco.fecho) banco.fecho = await noBanco(() => F.fecho(caso.id, p.id));
+      const f = banco.fecho;
+      if (!f) return;
+      caixa({
+        rotulo: `${caso.titulo} · a verdade`, fechavel: false, revelar: true,
+        html: quadrinhos(f.paineis || [], { cenario: 'img/cidade/lapa.jpg' }).replace('hq hq-1', 'hq hq-tira hq-tira-1'),
+        texto: f.texto || '',
+        opcoes: (f.escolhas || []).map((x) => ({ html: esc(x.rotulo), fn: async (cam) => {
+          const fim = await noBanco(() => F.escolherFinal(caso.id, p.id, x.id));
+          if (!fim) return;
+          banco.final = fim;
+          st.final = fim.id;
+          salvar();
+          cam.fechar();
+          telaFinal();
+        } })),
+      });
+      return;
+    }
     const s = achados();
     const variante = s.has('tiao-pego') ? 'pego' : s.has('tiao-fugiu') ? 'fugiu' : 'solto';
     caixa({
@@ -889,8 +1176,40 @@ export async function telaCaso(raiz, estadoApp) {
     return { lista, pos, prestigio };
   }
 
+  // Banco: a nota de proficiência, os selos e o ranking do capítulo (sem rivais fictícios).
+  const SELOS = { 'sem-erros': 'sem erros', 'sem-dicas': 'sem dicas', detetive: 'detetive', primeiro: 'primeiro a resolver', 'mais-rapido': 'mais rápido do capítulo' };
+  async function telaFinalBanco() {
+    if (!banco.final && st.final) banco.final = await noBanco(() => F.escolherFinal(caso.id, p.id, st.final));
+    if (!banco.final) { fecho(); return; }
+    banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
+    const e = banco.estado;
+    const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
+    const html = `
+      <div class="texto-narracao">${narracao(banco.final.texto || '')}</div>
+      <p class="consequencia"><b>Na semana seguinte:</b> ${esc(banco.final.efeito || '')}</p>
+      <section class="placar" aria-label="Ranking do capítulo">
+        <h3>Ranking do capítulo</h3>
+        <ol>${resolvidos.map((x, i) => `<li class="${x.voce ? 'voce' : ''}"><span class="placar-pos">${i + 1}º</span><b>${esc(x.nome)}</b><small>${x.nota} pontos${x.erros ? ` · ${x.erros} ${x.erros > 1 ? 'erros' : 'erro'}` : ''}</small></li>`).join('')}</ol>
+        <dl class="placar-numeros">
+          <div><dt>Sua nota</dt><dd>${e.nota ?? '—'} de 1000</dd></div>
+          <div><dt>Selos</dt><dd>${(e.selos || []).map((s) => esc(SELOS[s] || s)).join(', ') || 'nenhum'}</dd></div>
+          <div><dt>Pistas achadas</dt><dd>${(e.pistas || []).length}</dd></div>
+          <div><dt>Acusações erradas</dt><dd>${e.acusacoes_erradas}</dd></div>
+        </dl>
+      </section>`;
+    caixa({
+      rotulo: `${caso.titulo} · fim do capítulo`, html, fechavel: true,
+      opcoes: [
+        { html: 'Ver o quadro de pistas', fn: (cam) => { cam.fechar(); abrirOQuadro(); } },
+        { html: 'Voltar à temporada', fn: (cam) => { cam.fechar(); cena?.desmontar(); location.hash = '#/temporada'; } },
+        { html: 'Andar pela cena', classe: 'sair', fn: (cam) => cam.fechar() },
+      ],
+    });
+  }
+
   function telaFinal() {
     fecharTudo();
+    if (banco) { telaFinalBanco(); return; }
     const escolha = caso.fecho.escolhas.find((x) => x.id === st.final);
     if (!escolha) { fecho(); return; }
     const { lista, pos, prestigio } = placar();
@@ -927,8 +1246,18 @@ export async function telaCaso(raiz, estadoApp) {
 
 Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigação continua na noite seguinte, que é o dia seguinte de verdade. A corrida não para: os outros também voltam.`,
       opcoes: [
-        { html: 'Dormir e continuar na noite seguinte', fn: (cam) => {
+        { html: 'Dormir e continuar na noite seguinte', fn: async (cam) => {
           cam.fechar();
+          if (banco) {
+            amanheceuPendente = false;
+            const r = await noBanco(() => F.novaNoite(caso.id, p.id));
+            if (!r) return;
+            aplicarBanco(r);
+            amanheceuPendente = false;
+            anotar('A FOME', r.fomeSobe ? `Noite ${st.noites}. Acordar me deu mais fome.` : `Noite ${st.noites}. Acordei quieta.`);
+            faixa('faixa-chegada', `Noite ${st.noites}`, caso.lugares[st.lugar].nome);
+            return;
+          }
           st.noites += 1;
           st.hora = caso.relogio.inicio;
           const d = R.despertar();
@@ -938,7 +1267,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
           desenharHud();
           faixa('faixa-chegada', `Noite ${st.noites}`, caso.lugares[st.lugar].nome);
         } },
-        { html: 'Recomeçar o caso do zero', fn: (cam) => { cam.fechar(); recomecar(); } },
+        ...(banco ? [] : [{ html: 'Recomeçar o caso do zero', fn: (cam) => { cam.fechar(); recomecar(); } }]),
       ],
     });
   }
@@ -995,7 +1324,28 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
   function verFicha() {
     abrirJanela(tela, { titulo: p.nome, classe: 'janela-ficha', montar: (corpo) => { corpo.innerHTML = resumoFicha(p.ficha); } });
   }
+  // Banco: a dica custa 60 pontos de proficiência, então o jogo pergunta antes e nunca entrega sozinho.
+  async function pedirDica() {
+    const certeza = await perguntar(tela, { rotulo: 'Quer uma dica?', texto: '<p>Uma dica aponta uma pista que você ainda não achou. Ela custa 60 pontos na sua nota do capítulo (um erro de acusação custa 200).</p>', opcoes: ['Quero a dica', 'Não'] });
+    if (certeza !== 0) return;
+    const r = await noBanco(() => F.dica(caso.id, p.id));
+    if (!r) return;
+    aplicarBanco(r);
+    caixa({ rotulo: 'Dica', texto: r.texto ? `[MANHA] ${r.texto}` : 'Não há mais dicas: você já achou tudo o que elas apontam.', opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+  }
   async function menu() {
+    if (banco) {
+      const rb = await perguntar(tela, {
+        rotulo: 'Mais opções',
+        texto: `<p>${esc(caso.rotulo)} da temporada: o progresso fica guardado no servidor.</p>`,
+        opcoes: [...(st.resolvido ? [] : ['Pedir uma dica']), 'Ver o ranking da temporada', 'Sair do caso', 'Voltar ao caso'],
+      });
+      const escolha = [...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
+      if (escolha === 'dica') pedirDica();
+      if (escolha === 'ranking') { cena?.desmontar(); location.hash = '#/temporada'; }
+      if (escolha === 'sair') { cena?.desmontar(); location.hash = '#/temporada'; }
+      return;
+    }
     const r = await perguntar(tela, {
       rotulo: 'Mais opções',
       texto: `<p>${esc(caso.rotulo)}: o progresso fica só neste aparelho.</p>`,
@@ -1014,6 +1364,15 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     window.dispatchEvent(new Event('resize'));
   }
   function corrida() {
+    if (banco) {
+      const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
+      caixa({
+        rotulo: 'A corrida',
+        texto: `Outros vampiros estão no mesmo capítulo. A nota vem do que você faz: errar a acusação pesa mais que demorar.\n\n${resolvidos.length ? resolvidos.map((x) => `[CORRIDA] ${x.voce ? 'Você' : x.nome} resolveu: ${x.nota} pontos.`).join('\n\n') : 'Ninguém resolveu ainda.'}`,
+        opcoes: [{ html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }],
+      });
+      return;
+    }
     const vistos = caso.rivais.filter((_, i) => st.rivais.includes(i));
     caixa({
       rotulo: 'A corrida',
@@ -1045,6 +1404,14 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
   });
   void efeitos;
 
+  if (banco) {
+    await lerLugar(st.lugar);
+    banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => []);
+    // Tempo ativo: um pulso a cada 60 s com a aba visível; para sozinho quando a tela sai.
+    const parar = F.iniciarPulso(caso.id, p.id);
+    const vigiar = setInterval(() => { if (!tela.isConnected) { parar(); clearInterval(vigiar); } }, 5000);
+    if (banco.semNumeros) avisar('faixa-evento', 'Ficha', 'Sua ficha ainda não tem os números do Narrador: os testes não vão rolar até ele ativá-la de novo.');
+  }
   montarLugar();
   if (!st.viuAbertura) abertura();
   else if (st.resolvido && st.final) telaFinal();

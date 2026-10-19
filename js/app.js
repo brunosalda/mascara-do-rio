@@ -334,6 +334,15 @@ async function desenhar() {
   if (!estado.sessao) return telaLogin(tela);
 
   try {
+    // Formato v3, etapa B: a temporada (só com login), jogada pelo banco. A demonstração continua em #/caso.
+    if (rota === 'temporada') {
+      const { telaTemporada } = await import('./caso/tela-temporada.js');
+      return await telaTemporada(tela, estado);
+    }
+    if (rota.startsWith('temporada/')) {
+      const { telaCaso } = await import('./caso/tela-caso.js');
+      return await telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(10)) });
+    }
     // Criação: por conversa (padrão) ou pela ficha detalhada.
     if (rota === 'detalhado') return await telaCriacao(tela, null);
     if (rota === 'novo' || !p) return await telaEntrevista(tela, null);

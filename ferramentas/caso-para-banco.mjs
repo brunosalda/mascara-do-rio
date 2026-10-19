@@ -52,6 +52,8 @@ const publico = {
   perseguicao: { ...tira(caso.perseguicao, 'pego', 'escapou', 'depois'), marca: 'chapeu-mostrado' },
 };
 const pistasReais = Object.entries(caso.pistas).filter(([, p]) => !p.marca);
+// --publico: só a parte pública, em JSON (para testes da tela com respostas gravadas).
+if ('publico' in args || process.argv.includes('--publico')) { process.stdout.write(JSON.stringify(publico)); process.exit(0); }
 
 const sql = [];
 sql.push('begin;');

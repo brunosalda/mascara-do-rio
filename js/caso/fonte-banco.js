@@ -38,8 +38,14 @@ export class ErroDoCaso extends Error {
   }
 }
 
+// Teste (só com ?gravado no endereço): window.__casoGravado(funcao, args) devolve respostas do banco
+// gravadas antes no SQL, para testar a tela sem entrar na conta. Só muda o que esta tela mostra: o banco
+// continua decidindo tudo para quem joga de verdade.
+const gravado = () => typeof location !== 'undefined' && /[?&]gravado\b/.test(location.hash);
+
 async function chamar(funcao, args) {
-  const { data, error } = await sb.rpc(funcao, args);
+  const teste = gravado() && typeof window !== 'undefined' && window.__casoGravado;
+  const { data, error } = teste ? await teste(funcao, args) : await sb.rpc(funcao, args);
   if (error) {
     const codigo = /permission denied/.test(error.message || '') ? 'sem-login' : Object.keys(ERROS).find((c) => error.message?.includes(c));
     throw new ErroDoCaso(codigo, error);
@@ -68,6 +74,8 @@ export const fimDaPerseguicao = (capitulo, personagem, resultado) => chamar('cas
 // Acusa: { certo, quase, erros, minutos } ou { certo, nota, selos, fecho, proximo }.
 export const acusar = (capitulo, personagem, { quem, como, porque }) =>
   chamar('caso_acusar', { ...base(capitulo, personagem), p_quem: quem, p_como: como, p_porque: porque });
+// O fecho do capítulo resolvido (para reabrir depois de recarregar): { paineis, texto, escolhas, nota, selos, final }.
+export const fecho = (capitulo, personagem) => chamar('caso_fecho', base(capitulo, personagem));
 export const escolherFinal = (capitulo, personagem, escolha) => chamar('caso_final', { ...base(capitulo, personagem), p_escolha: escolha });
 // Dica: custa 60 pontos na nota. Pergunte antes ("Quer uma dica?"), nunca entregue sozinho.
 export const dica = (capitulo, personagem) => chamar('caso_dica', base(capitulo, personagem));
