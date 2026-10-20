@@ -16,3 +16,10 @@ desktop.ini
 
 # Dependências
 node_modules/
+
+# Carmen Sandiego na v3: culpados, segredos das fichas e o fim da temporada. O Bruno também joga, e o site é público.
+# O script de carga lê estes arquivos localmente; eles nunca vão para o GitHub.
+js/carmen/dados/capitulos.js
+js/carmen/dados/suspeitos.js
+rastro/js/jogo/dados/capitulos.js
+rastro/js/jogo/dados/suspeitos.js
