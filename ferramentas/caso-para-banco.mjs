@@ -54,7 +54,8 @@ const publico = {
   // geoInteira: o chão em inteiros, o mesmo que a tela e o banco usam para refazer a fuga (etapa C).
   perseguicao: { ...tira(caso.perseguicao, 'pego', 'escapou', 'depois'), marca: 'chapeu-mostrado', geoInteira: geoInteira(geografia(`${caso.perseguicao.lugar}-alto`)) },
   ...(caso.infiltracao ? { infiltracao: { ...caso.infiltracao, geoInteira: geoInteira(geografia(`${caso.infiltracao.lugar}-alto`)) } } : {}),
-  ...(caso.confronto ? { confronto: caso.confronto } : {}),
+  // Os desfechos do confronto vão para o segredo (capitulo_segredo.perseguicao.confronto).
+  ...(caso.confronto ? { confronto: tira(caso.confronto, 'venceu', 'perdeu') } : {}),
 };
 const pistasReais = Object.entries(caso.pistas).filter(([, p]) => !p.marca);
 // --publico: só a parte pública, em JSON (para testes da tela com respostas gravadas).
@@ -70,7 +71,7 @@ sql.push(`insert into public.capitulos (id, temporada_id, ordem, titulo, pergunt
 sql.push(`insert into public.capitulo_segredo (capitulo_id, resposta, eventos, fecho, palavras_por, perseguicao) values (${q(cap)}, ${j(caso.resposta)}, ${j(caso.eventos)},
   ${j({ ...caso.fecho, variantes: [{ marca: 'tiao-pego', texto: 'pego' }, { marca: 'tiao-fugiu', texto: 'fugiu' }], padrao: 'solto' })},
   ${j(Object.fromEntries(Object.entries(caso.palavras).map(([l, ws]) => [l, Object.fromEntries(ws.map((w) => [w.id, w.por]))])))},
-  ${j({ pego: caso.perseguicao.pego, escapou: caso.perseguicao.escapou, depois: caso.perseguicao.depois })});`);
+  ${j({ pego: caso.perseguicao.pego, escapou: caso.perseguicao.escapou, depois: caso.perseguicao.depois, ...(caso.confronto?.venceu ? { confronto: { venceu: caso.confronto.venceu, perdeu: caso.confronto.perdeu } } : {}) })});`);
 for (const [id, pe] of Object.entries(caso.pessoas)) {
   sql.push(`insert into public.cap_pessoas (capitulo_id, id, lugar, dados) values (${q(cap)}, ${q(id)}, ${q(pe.lugar)}, ${j(tira(pe, 'topicos', 'lugar'))});`);
   pe.topicos.forEach((t, i) => {
