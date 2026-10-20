@@ -65,6 +65,7 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     <b class="perseguicao-titulo">${esc(cfg.rotulo || 'Chegue sem que ninguém veja você')}</b>
     <span class="perseguicao-distancia infiltracao-progresso"><i></i></span>
     <span class="perseguicao-palavra">fique fora dos leques</span>
+    <span class="infiltracao-virar">Vire o celular de lado para ver o bar inteiro.</span>
     <span class="perseguicao-botoes"><button type="button" class="btn-texto" data-infiltracao="dados">Deixar os dados decidirem</button></span>
     <span class="perseguicao-dica"><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique. </span><span class="so-toque">Toque para onde ir. </span>O leque amarelo vai girar; o vermelho já viu você. Fique no círculo até a barra encher. Se você sair da janela do jogo, a cena acaba.</span>`;
   camadas.appendChild(hud);

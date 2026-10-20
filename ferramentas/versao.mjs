@@ -4,6 +4,7 @@
 // './banco.js' vira './js/banco.js?v=<versão>', e uma publicação nova chega inteira, sem cache velho.
 // A mesma versão vai no estilo, no script de entrada e na meta "versao" (que o aviso de versão nova lê).
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,11 +13,14 @@ const agora = new Date();
 const doisDigitos = (n) => String(n).padStart(2, '0');
 const versao = `${agora.getFullYear()}${doisDigitos(agora.getMonth() + 1)}${doisDigitos(agora.getDate())}${doisDigitos(agora.getHours())}${doisDigitos(agora.getMinutes())}`;
 
+// Os arquivos que o git ignora (os segredos do Carmen) nunca entram no mapa público do site.
+const ignorados = new Set(execSync('git ls-files --others --ignored --exclude-standard js', { cwd: raiz }).toString().split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean));
+
 function modulos(pasta) {
   return readdirSync(pasta).flatMap((nome) => {
     const caminho = join(pasta, nome);
     if (statSync(caminho).isDirectory()) return modulos(caminho);
-    return nome.endsWith('.js') ? [caminho] : [];
+    return nome.endsWith('.js') && !ignorados.has(relative(raiz, caminho).split(sep).join('/')) ? [caminho] : [];
   });
 }
 

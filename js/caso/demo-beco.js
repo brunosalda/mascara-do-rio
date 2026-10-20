@@ -619,7 +619,7 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
     intro: 'Você se afasta até os Arcos e observa. A Jaque vai e volta entre o balcão e as mesas, e a Dona Cida vigia da porta. Quando as duas olharem para outro lado, é a sua vez.',
     inicio: [0.58, 0.70], alvo: [0.79, 0.735], raioAlvo: 2500, ficar: 50, raioVisao: 9000, abertura: 766,
     vigias: [
-      { pessoa: 'jaque', rota: [[0.84, 0.73], [0.70, 0.80]], vel: 700, pausa: 40 },
+      { pessoa: 'jaque', rota: [[0.84, 0.73], [0.70, 0.80]], vel: 700, pausa: 80 }, // nas mesas, olha para longe do balcão: a janela segura
       { pessoa: 'cida', rota: [[0.915, 0.79], [0.89, 0.75]], vel: 400, pausa: 60 },
     ],
   },
