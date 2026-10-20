@@ -72,6 +72,8 @@ export function iniciarPerseguicao({ cena, palco, camadas, cfg, nome, poderes = 
     </span>
     <span class="perseguicao-dica"><span class="so-teclado">Você corre sozinho: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique. </span><span class="so-toque">Toque para onde correr. </span>Ele é quase tão rápido quanto você: corte caminho nas curvas.</span>`;
   camadas.appendChild(hud);
+  // A dica de controles some depois de 3 s (a avaliação: o painel cobria a cena).
+  setTimeout(() => hud.classList.add('dica-sumiu'), 3000);
   const barra = hud.querySelector('.perseguicao-distancia i');
   const palavra = hud.querySelector('.perseguicao-palavra');
   const botaoOrdem = hud.querySelector('[data-fuga="ordem"]');

@@ -64,6 +64,8 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     <span class="perseguicao-botoes"><button type="button" class="btn-texto" data-infiltracao="dados">Deixar os dados decidirem</button></span>
     <span class="perseguicao-dica"><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique. </span><span class="so-toque">Toque para onde ir. </span>O leque amarelo vai girar; o vermelho já viu você. Fique no círculo até a barra encher. Se você sair da janela do jogo, a cena acaba.</span>`;
   camadas.appendChild(hud);
+  // A dica de controles some depois de 3 s (a avaliação: o painel cobria a cena).
+  setTimeout(() => hud.classList.add('dica-sumiu'), 3000);
   const barra = hud.querySelector('.infiltracao-progresso i');
   const palavra = hud.querySelector('.perseguicao-palavra');
   hud.addEventListener('click', (ev) => { if (ev.target.closest('[data-infiltracao="dados"]')) { ev.stopPropagation(); terminar('dados'); } });
