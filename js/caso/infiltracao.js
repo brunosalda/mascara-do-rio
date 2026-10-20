@@ -27,7 +27,11 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
   const caminho = [I(cfg.inicio[0]), I(cfg.inicio[1])];
   let antes = sim.vigias.map((v) => ({ x: v.x, y: v.y }));
   let acabou = false;
-  const comeco = performance.now();
+  // 1,5 s para observar antes de a cena começar: você fica parado e vê os leques e as rotas (a avaliação).
+  const OBSERVAR = 1500;
+  const comeco = performance.now() + OBSERVAR;
+  cena.definirRitmo(0);
+  let observando = true;
   document.body.classList.add('em-perseguicao', 'em-infiltracao');
 
   // Os leques e o alvo, desenhados sobre a pintura (a mesma técnica do leque da caçada).
@@ -36,7 +40,7 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
   svg.setAttribute('viewBox', '0 0 1 1');
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = `${cfg.vigias.map(() => '<path class="leque-vigia" d=""/>').join('')}<ellipse class="alvo-infiltracao" cx="${cfg.alvo[0]}" cy="${cfg.alvo[1]}" rx="${(cfg.raioAlvo / 7 / S.ESCALA).toFixed(4)}" ry="${(cfg.raioAlvo / 6 / S.ESCALA).toFixed(4)}"/>`;
+  svg.innerHTML = `${cfg.vigias.map((v) => `<polyline class="rota-vigia" points="${[...v.rota, v.rota[0]].map(([x, y]) => `${x},${y}`).join(' ')}"/>`).join('')}${cfg.vigias.map(() => '<path class="leque-vigia" d=""/>').join('')}<ellipse class="alvo-infiltracao" cx="${cfg.alvo[0]}" cy="${cfg.alvo[1]}" rx="${(cfg.raioAlvo / 7 / S.ESCALA).toFixed(4)}" ry="${(cfg.raioAlvo / 6 / S.ESCALA).toFixed(4)}"/>`;
   mundo.appendChild(svg);
   const leques = [...svg.querySelectorAll('.leque-vigia')];
   const alvoEl = svg.querySelector('.alvo-infiltracao');
@@ -80,6 +84,7 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     document.removeEventListener('visibilitychange', aoDistrair);
     window.removeEventListener('blur', aoDistrair);
     document.body.classList.remove('em-perseguicao', 'em-infiltracao');
+    cena.definirRitmo(1);
     hud.remove();
     svg.remove();
     if (resultado === 'visto') som.reacao?.('susto', 0);
@@ -103,6 +108,14 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     if (acabou) return;
     if (!palco.isConnected) { terminar('visto'); return; }
     if (camadaAberta()) { requestAnimationFrame(quadro); return; }
+    if (agora < comeco) {
+      // Observando: os leques no lugar de partida, e a palavra avisando.
+      sim.vigias.forEach((v, i) => desenharLeque(leques[i], v, ''));
+      if (palavra.textContent !== 'observe as vigias') palavra.textContent = 'observe as vigias';
+      requestAnimationFrame(quadro);
+      return;
+    }
+    if (observando) { observando = false; cena.definirRitmo(1); }
     const devido = Math.floor((agora - comeco) / S.PASSO_MS);
     while (sim.passo <= devido && !sim.fim) avancar();
     if (sim.fim) { terminar(sim.fim); return; }
