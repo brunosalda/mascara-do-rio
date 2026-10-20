@@ -58,11 +58,11 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
   hud.className = 'perseguicao-hud infiltracao-hud';
   hud.setAttribute('role', 'status');
   hud.innerHTML = `
-    <b class="perseguicao-titulo">${esc(cfg.rotulo || 'Chegue sem ser visto')}</b>
+    <b class="perseguicao-titulo">${esc(cfg.rotulo || 'Chegue sem que ninguém veja você')}</b>
     <span class="perseguicao-distancia infiltracao-progresso"><i></i></span>
     <span class="perseguicao-palavra">fique fora dos leques</span>
     <span class="perseguicao-botoes"><button type="button" class="btn-texto" data-infiltracao="dados">Deixar os dados decidirem</button></span>
-    <span class="perseguicao-dica"><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique. </span><span class="so-toque">Toque para onde ir. </span>O leque amarelo vai girar; o vermelho já viu você. Fique no círculo até a barra encher.</span>`;
+    <span class="perseguicao-dica"><span class="so-teclado">Ande com <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou clique. </span><span class="so-toque">Toque para onde ir. </span>O leque amarelo vai girar; o vermelho já viu você. Fique no círculo até a barra encher. Se você sair da janela do jogo, a cena acaba.</span>`;
   camadas.appendChild(hud);
   const barra = hud.querySelector('.infiltracao-progresso i');
   const palavra = hud.querySelector('.perseguicao-palavra');
@@ -81,7 +81,7 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     hud.remove();
     svg.remove();
     if (resultado === 'visto') som.reacao?.('susto', 0);
-    aoFim?.(resultado, { semente, caminho: [...caminho], passos: sim.passo });
+    aoFim?.(resultado, { semente, caminho: [...caminho], passos: sim.passo, vigia: sim.quemViu || null });
   }
 
   function avancar() {
@@ -121,7 +121,7 @@ export function iniciarInfiltracao({ cena, palco, camadas, cfg, semente = 1, aoF
     const f = sim.noAlvo / cfg.ficar;
     barra.style.transform = `scaleX(${limitar(f, 0, 1).toFixed(3)})`;
     alvoEl.classList.toggle('dentro', sim.noAlvo > 0);
-    const txt = sim.visto > 0 ? 'cuidado: ela está vendo você' : sim.noAlvo > 0 ? 'fique aí mais um pouco' : 'fique fora dos leques';
+    const txt = sim.visto > 0 ? 'cuidado: estão vendo você' : sim.noAlvo > 0 ? 'fique aí mais um pouco' : 'fique fora dos leques';
     if (palavra.textContent !== txt) palavra.textContent = txt;
     hud.dataset.nivel = sim.visto > 0 ? 'colado' : sim.noAlvo > 0 ? 'perto' : 'longe';
     requestAnimationFrame(quadro);

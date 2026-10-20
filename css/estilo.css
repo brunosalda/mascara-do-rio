@@ -4027,7 +4027,7 @@ body.celular:not(.deitado) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) { --fo
 .infiltracao-hud .infiltracao-progresso i { background: linear-gradient(90deg, #6fd3ff, #c8f1ff); }
 /* Etapa C, confronto por turnos: um painel sobre a cena, com as duas barras de Vitalidade, o registro dos
    golpes (com os dados) e as escolhas. Golpe: a cena treme, e o dano sobe da barra. */
-.confronto { position: absolute; left: 50%; top: 9%; translate: -50% 0; z-index: 60; max-height: 62%; overflow-y: auto; width: min(560px, calc(100% - 32px));
+.confronto { position: absolute; left: 50%; top: auto; bottom: 27%; translate: -50% 0; z-index: 60; max-height: 56%; overflow-y: auto; width: min(560px, calc(100% - 32px));
   background: linear-gradient(#1d1410f2, #120c09f2); border: 1px solid #b08a4a; border-radius: 10px; padding: 14px 16px; color: #f2e6cf;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.75); font-size: 15px; line-height: 1.4; }
 .confronto-cabeca b { display: block; font: 600 1.15rem/1.2 var(--titulo); color: #ffb08a; }
@@ -4054,7 +4054,7 @@ body.celular:not(.deitado) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) { --fo
 .confronto.rolando .confronto-escolhas { opacity: 0.5; pointer-events: none; }
 .cena.tremor { animation: tremor 0.28s linear; }
 @keyframes tremor { 0%, 100% { translate: 0 0; } 20% { translate: -6px 2px; } 40% { translate: 5px -3px; } 60% { translate: -4px 3px; } 80% { translate: 3px -1px; } }
-body.celular .confronto { top: 84px; max-height: calc(100% - 190px); padding: 10px 12px; }
+body.celular .confronto { top: 84px; bottom: auto; max-height: calc(100% - 190px); padding: 10px 12px; }
 /* Durante o confronto, o que fica por cima do painel some (setas das bordas, faixa, ponteiros). */
 body.em-confronto .borda-mais, body.em-confronto .faixa-demo, body.em-confronto .seta-esq, body.em-confronto .seta-dir, body.em-confronto .dica-interagir { visibility: hidden; }
 body.celular .confronto-escolhas { grid-template-columns: 1fr; }
@@ -4065,3 +4065,13 @@ body.celular .perseguicao-hud .perseguicao-dica { display: none; }
 body.celular .perseguicao-hud .perseguicao-titulo { font-size: 0.95rem; }
 body.celular .perseguicao-hud { padding: 6px 10px; gap: 4px; }
 body.em-perseguicao .borda-mais, body.em-perseguicao .dica-interagir, body.em-perseguicao .seta-esq, body.em-perseguicao .seta-dir { visibility: hidden; }
+/* Confronto (revisão de 20/10): rostos ao lado das barras, quem apanha pisca em vermelho, uma troca por linha. */
+.confronto-lado { grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; }
+.confronto-lado > :not(.confronto-rosto) { grid-column: 2; }
+.confronto-rosto { grid-row: 1 / span 3; width: 46px; height: 46px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; border: 2px solid #b08a4a; background: #2a1c15; }
+.confronto-lado.apanhou .confronto-rosto, .confronto-lado.apanhou .vit { animation: apanhou 0.45s ease-out; }
+@keyframes apanhou { 0% { filter: none; } 25% { filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(6); translate: -3px 0; } 60% { translate: 3px 0; } 100% { filter: none; translate: 0 0; } }
+.confronto-log li { display: block; }
+.confronto-log li > span { margin-right: 4px; }
+.confronto-log li > span.de-ele { color: #ffc2b4; }
+.confronto-dano { font-size: 1rem; white-space: nowrap; }

@@ -493,15 +493,16 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       // Etapa C: a abordagem é uma cena de infiltração. O banco sorteia a semente e, no fim, refaz a cena
       // com o caminho para conferir o "conseguiu". "Deixar os dados decidirem" cai no teste de sempre.
       if (a.cena === 'infiltracao' && caso.infiltracao) {
+        await introDaInfiltracao(caso.infiltracao);
         const ini = await noBanco(() => F.infiltracao(caso.id, p.id, chave, a.i, 'inicio'));
         if (!ini) return;
         const fim = await jogarInfiltracao(caso.infiltracao, ini.semente);
         if (fim !== 'dados') {
-          const rc = await noBanco(() => F.infiltracao(caso.id, p.id, chave, a.i, fim, fim === 'conseguiu' ? banco.ultimaCena : null));
+          const rc = await noBanco(() => F.infiltracao(caso.id, p.id, chave, a.i, fim, fim === 'conseguiu' ? banco.ultimaCena : { vigia: banco.ultimaCena?.vigia || null }));
           if (!rc) return;
           await depoisDaAcao(rc);
-          const abertura = rc.ok ? '[FURTIVIDADE] Ninguém repara em você atrás do balcão.'
-            : fim === 'distraido' ? 'Você se distraiu, e alguém viu você.' : '[FURTIVIDADE] Ela vira bem na hora e vê você.';
+          const abertura = rc.ok ? '[FURTIVIDADE] Ninguém repara em você.'
+            : fim === 'distraido' ? 'Você saiu da cena, e nesse momento alguém viu você.' : '';
           aoResultado([abertura, rc.texto].filter(Boolean).join('\n\n'), rc.ok, null);
           return;
         }
@@ -639,11 +640,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       let ok = true;
       let res = null;
       // Etapa C: a abordagem é uma cena jogada (infiltração). "Deixar os dados decidirem" cai no teste.
+      if (a.cena === 'infiltracao' && caso.infiltracao) await introDaInfiltracao(caso.infiltracao);
       const fimDaCena = a.cena === 'infiltracao' && caso.infiltracao ? await jogarInfiltracao(caso.infiltracao) : null;
       if (fimDaCena && fimDaCena !== 'dados') {
         ok = fimDaCena === 'conseguiu';
-        prefixo = ok ? '[FURTIVIDADE] Ninguém repara em você atrás do balcão.'
-          : fimDaCena === 'distraido' ? 'Você se distraiu, e alguém viu você.' : '[FURTIVIDADE] Ela vira bem na hora e vê você.';
+        prefixo = ok ? '[FURTIVIDADE] Ninguém repara em você.'
+          : fimDaCena === 'distraido' ? 'Você saiu da cena, e nesse momento alguém viu você.' : '';
       } else if (a.teste) {
         res = R.rolar({ calc, pool: a.teste.pool, dif: s.dif, fome: st.fome });
         await cerimonia(a.teste.pool, s.dif, res);
@@ -654,7 +656,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       } else if (a.poder || a.disciplina) {
         prefixo = usarSangue(a.poder ? R.nomePoder(a.poder).poder : R.nomeDisciplina(a.disciplina[0]));
       }
-      const r = resultados[ok ? a.sucesso : a.falha] || null;
+      // Na infiltração, a falha pode ter o texto de quem viu (falhaPor: { cida: 'pego-cida' }).
+      const r = resultados[ok ? a.sucesso : ((fimDaCena && a.falhaPor?.[ultimaInfiltracao?.vigia]) || a.falha)] || null;
       passarTempo((min || 0) + (res?.resultado === 'falha-bestial' ? 15 : 0));
       aplicar(r);
       if (ok) st.feitos[chaveBase] = 'ok';
@@ -1036,6 +1039,14 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
 
   // --- Infiltração (etapa C) ------------------------------------------------------------------------
+  let ultimaInfiltracao = null;
+  // A abertura da cena (explica o salto até o ponto de partida e quem vigia).
+  function introDaInfiltracao(cfg) {
+    return new Promise((resolver) => {
+      if (!cfg.intro) { resolver(); return; }
+      caixa({ rotulo: cfg.rotulo || 'Infiltração', texto: cfg.intro, fechavel: false, opcoes: [{ html: '<b>Começar</b>', classe: 'destaque', fn: (cam) => { cam.fechar(); resolver(); } }] });
+    });
+  }
   // Devolve 'conseguiu', 'visto', 'dados' ou 'distraido'. Enquanto dura, nada mais na tela responde.
   function jogarInfiltracao(cfg, semente = crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646 + 1) {
     return new Promise((resolver) => {
@@ -1047,7 +1058,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         aoFim: (resultado, registro) => {
           fuga = null;
           atualizarCena();
-          if (resultado === 'distraido') anotar('PRONTIDÃO', 'Você se distraiu, e alguém viu você.');
+          ultimaInfiltracao = registro;
           banco && (banco.ultimaCena = registro);
           resolver(resultado);
         },
@@ -1093,10 +1104,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         return r;
       };
     }
+    // A câmera chega perto dos dois durante a luta (focar com prazo longo; volta ao normal no fim).
+    const quem = cena?.pessoa(cfg.pessoa);
+    if (quem) cena.focar(quem.x, quem.y, 600000);
     abrirConfronto({
       tela, palco, nome, estado, escolhas: escolhasDo(calc, R.temPoder(calc, 'compelir')), jogarTurno,
+      retratos: { voce: retratoDe(p), ele: figuraDe(cfg.pessoa) },
       aoFim: async (fim) => {
         fuga = null;
+        if (quem) cena.focar(quem.x, quem.y, 0);
         let final = fim === 'venceu' ? 'pego' : 'escapou';
         let prefixo = '';
         if (banco) {
@@ -1126,7 +1142,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
 `;
           min = caso.custo.dados;
         }
-        const r = final === 'pego' ? caso.perseguicao.pego : caso.perseguicao.escapou;
+        // Os desfechos próprios do confronto (a briga foi no largo); a vitória segue com a confissão.
+        const confissao = String(caso.perseguicao.pego.texto).split('\n\n').slice(1).join('\n\n');
+        const textoDoConfronto = final === 'pego' ? (cfg.venceu ? `${cfg.venceu}\n\n${confissao}` : null) : cfg.perdeu;
+        const r0 = final === 'pego' ? caso.perseguicao.pego : caso.perseguicao.escapou;
+        const r = textoDoConfronto ? { ...r0, texto: textoDoConfronto } : r0;
         if (final !== 'pego') { st.escondidos.push(cfg.pessoa); cena?.esconderPessoa(cfg.pessoa); }
         passarTempo(min);
         aplicar(r);

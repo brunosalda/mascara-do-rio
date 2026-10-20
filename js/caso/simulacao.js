@@ -277,7 +277,8 @@ export function passoDaInfiltracao(s, jx, jy) {
         v.dir = direcaoDe(vx, vy);
       }
     }
-    if (noLeque(v, jx, jy, cfg.raioVisao, cfg.abertura)) visto = true;
+    // quemViu só serve para o texto (qual vigia pegou você); não entra na conta que o banco refaz.
+    if (noLeque(v, jx, jy, cfg.raioVisao, cfg.abertura)) { visto = true; s.quemViu = v.pessoa; }
   });
   s.visto = visto ? s.visto + 1 : 0;
   if (s.visto > V.GRACA) s.fim = 'visto';

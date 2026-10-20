@@ -307,7 +307,7 @@ export const CASO = {
         },
         {
           id: 'acusar', rotulo: 'Dizer que sabe o que ele fez', min: 5, requerQuantos: { n: 2, de: ['camera', 'ze-tiao-sumiu', 'tiao-cravo', 'gola-sangue', 'tiao-vampiro', 'breno-manca', 'pegadas'] }, escondeSe: ['chapeu-mostrado'], acao: 'confronto', pistas: ['conheceu-tiao'],
-          texto: `Você chega bem perto e fala baixo, para só ele ouvir.
+          texto: `Você chega bem perto e diz, baixo, que sabe o que ele fez no beco.
 
 **Tião** — Tá maluco? Eu não saí deste portão.
 
@@ -485,10 +485,10 @@ Dentro dela, três bolsas de sangue de hospital, vazias e secas há dias. E um b
     },
     balcao: {
       min: 10,
-      pergunta: 'O notebook está aberto atrás do balcão. A Jaque passa por ali de tempos em tempos.',
+      pergunta: 'O notebook está aberto atrás do balcão. A Jaque passa por ali o tempo todo, e a Dona Cida não sai da porta.',
       abordagens: [
         // Etapa C: esta abordagem é a cena de infiltração (veja `infiltracao` abaixo); o teste é o dos "dados".
-        { rotulo: 'Ver as imagens sem ninguém notar', cena: 'infiltracao', teste: { pool: ['destreza', 'furtividade'], dif: 2 }, sucesso: 'camera-ok', falha: 'pego' },
+        { rotulo: 'Ver as imagens sem ninguém notar', cena: 'infiltracao', teste: { pool: ['destreza', 'furtividade'], dif: 2 }, sucesso: 'camera-ok', falha: 'pego', falhaPor: { cida: 'pego-cida' } },
         { rotulo: 'Sumir de vista e ver as imagens (Ofuscação)', poder: 'manto-sombras', sucesso: 'camera-ok' },
         { rotulo: 'Passar invisível e ver as imagens (Ofuscação)', poder: 'passagem-invisivel', sucesso: 'camera-ok' },
       ],
@@ -501,7 +501,9 @@ Dentro dela, três bolsas de sangue de hospital, vazias e secas há dias. E um b
 
 **2h31**: o homem sai do beco sozinho, sem o chapéu. Ele levanta a gola da camisa e sai da imagem.`,
         },
-        pego: { marcas: ['tiao-desconfia'], texto: '**Jaque** — Ei! Sai daí! Isso é da Cida!\n\n[FURTIVIDADE] Você se afasta do balcão antes que alguém mais veja.' },
+        pego: { marcas: ['tiao-desconfia'], texto: '**Jaque** — Ei! Sai daí! Isso é da Cida!\n\n[PRONTIDÃO] Você se afasta do balcão antes que mais alguém veja.' },
+        // Etapa C: quando quem viu na infiltração foi a Dona Cida.
+        'pego-cida': { marcas: ['tiao-desconfia'], texto: '**Dona Cida** — Atrás do meu balcão, não, meu bem. Sai daí agora.\n\n[PRONTIDÃO] Ela não grita. Mas não tira mais os olhos de você.' },
       },
     },
     casarao: {
@@ -613,7 +615,8 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
   // Etapa C: a infiltração no balcão. Você espera perto dos Arcos e precisa chegar ao notebook e ficar lá
   // 2,5 s sem cair no leque da Jaque (que anda entre o balcão e as mesas) nem no da Dona Cida (na porta).
   infiltracao: {
-    lugar: 'lapa', rotulo: 'Chegue ao notebook sem ser visto',
+    lugar: 'lapa', rotulo: 'Chegue ao notebook sem que ninguém veja você',
+    intro: 'Você se afasta até os Arcos e observa. A Jaque vai e volta entre o balcão e as mesas, e a Dona Cida vigia da porta. Quando as duas olharem para outro lado, é a sua vez.',
     inicio: [0.58, 0.70], alvo: [0.79, 0.735], raioAlvo: 2500, ficar: 50, raioVisao: 9000, abertura: 766,
     vigias: [
       { pessoa: 'jaque', rota: [[0.84, 0.73], [0.70, 0.80]], vel: 700, pausa: 40 },
@@ -626,8 +629,14 @@ Na porta, alguém pichou com tinta vermelha, nova, de hoje: **SANGUE-RALO TAMBÉ
   // defesa (Destreza + Atletismo) e vontade (Autocontrole + Determinação), em dados; Vitalidade 5 (nove noites com fome).
   confronto: {
     lugar: 'lapa', pessoa: 'tiao', maxTurnos: 8,
-    oponente: { ataque: 4, defesa: 3, vontade: 3, vitalidade: 5 },
+    oponente: { ataque: 5, defesa: 3, vontade: 3, vitalidade: 5 },
     dados: { pool: ['forca', 'briga'], dif: 2 },
+    // Os desfechos próprios (a briga foi no largo, sem corrida). A vitória continua com a confissão da
+    // perseguição (os parágrafos depois da abertura de perseguicao.pego), sem duplicar o texto.
+    venceu: 'A briga acaba no meio do largo. O Tião senta no meio-fio, na frente do portão do bar, com as mãos abertas. Ele não tenta mais fugir.',
+    perdeu: `O Tião se solta e some entre os carros, para os lados dos Arcos. No chão do largo, onde vocês brigaram, ficou o celular dele, com a tela trincada.
+
+[TECNOLOGIA] O celular está sem senha. A última mensagem é de um número salvo como "B.": *Se eu te pegar caçando na Lapa de novo, te entrego pra Xerife.*`,
   },
 
   perseguicao: {
