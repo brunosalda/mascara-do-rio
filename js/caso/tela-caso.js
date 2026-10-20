@@ -615,7 +615,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       return { pode: true, etiqueta: `${R.nomeDisciplina(a.disciplina[0])} · usa o sangue`, sangue: true };
     }
     if (a.fomeMin) return st.fome >= a.fomeMin ? { pode: true, etiqueta: 'a Besta' } : { pode: false, etiqueta: `só com a Fome em ${a.fomeMin} ou mais` };
-    if (a.cena) return { pode: true, etiqueta: 'você joga a cena (ou deixa os dados)', dif: a.teste?.dif ?? 2 };
+    if (a.cena) { const resta = 3 - (st.tentativasCena?.[`${chaveBase}#${i}`] || 0); return { pode: true, etiqueta: resta < 3 ? `de novo: mais 15 min · ${resta} ${resta === 1 ? 'tentativa' : 'tentativas'}` : 'você joga a cena (ou deixa os dados)', dif: a.teste?.dif ?? 2 }; }
     if (a.teste) {
       const dif = a.teste.dif + (a.social && st.fome >= 4 ? 1 : 0);
       const n = R.parada(calc, a.teste.pool);
@@ -635,7 +635,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     caixa({ rotulo, texto: intro || 'Como você faz?', opcoes, falante });
 
     async function tentar(a, i, s) {
-      st.tentados[`${chaveBase}#${i}`] = true;
+      // Cena de reflexo (infiltração): até 3 tentativas; cada falha custa 15 min a mais (como no banco).
+      const chaveI = `${chaveBase}#${i}`;
+      if (!a.cena) st.tentados[chaveI] = true;
       let prefixo = '';
       let ok = true;
       let res = null;
@@ -658,7 +660,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       }
       // Na infiltração, a falha pode ter o texto de quem viu (falhaPor: { cida: 'pego-cida' }).
       const r = resultados[ok ? a.sucesso : ((fimDaCena && a.falhaPor?.[ultimaInfiltracao?.vigia]) || a.falha)] || null;
-      passarTempo((min || 0) + (res?.resultado === 'falha-bestial' ? 15 : 0));
+      if (a.cena) {
+        st.tentativasCena = st.tentativasCena || {};
+        if (!ok) st.tentativasCena[chaveI] = (st.tentativasCena[chaveI] || 0) + 1;
+        if (ok || st.tentativasCena[chaveI] >= 3) st.tentados[chaveI] = true;
+      }
+      passarTempo((min || 0) + (res?.resultado === 'falha-bestial' ? 15 : 0) + (a.cena && !ok ? 15 : 0));
       aplicar(r);
       if (ok) st.feitos[chaveBase] = 'ok';
       else if (st.feitos[chaveBase] !== 'ok') st.feitos[chaveBase] = 'tentado';
