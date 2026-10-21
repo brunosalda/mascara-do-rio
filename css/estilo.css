@@ -4091,3 +4091,83 @@ body.em-infiltracao .cena::after { content: ''; position: absolute; inset: 0; z-
 /* Celular em pé: a tela é estreita demais para o bar inteiro; a infiltração sugere virar o celular. */
 .infiltracao-virar { display: none; }
 body.celular:not(.deitado) .infiltracao-virar { display: block; font-weight: 600; color: #ffd27a; }
+/* Formato rota (a fuga pela cidade): o mapa da fuga e o Arquivo da Xerife (js/caso/rota.js). */
+.janela-mapa-rota .janela, .janela-arquivo .janela { width: min(1180px, 96vw); }
+.rota-mapa { border-radius: 10px; overflow: hidden; background: #120c08; }
+.rota-mapa svg { display: block; width: 100%; height: auto; max-height: 64vh; }
+.rota-veu { fill: #0b0705; opacity: 0.45; }
+.rota-sp rect { fill: #1c140c; stroke: #a88a5a; stroke-width: 3; stroke-dasharray: 10 8; opacity: 0.92; }
+.rota-sp text { fill: #e8d7b0; font-size: 32px; font-style: italic; }
+.rota-linha { fill: none; stroke: var(--sangue-vivo); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22 14; filter: drop-shadow(0 0 6px rgba(216, 33, 61, 0.8)); animation: rota-anda 1.6s linear infinite; }
+@keyframes rota-anda { to { stroke-dashoffset: -36; } }
+.rota-lugar { cursor: pointer; outline: none; }
+.rota-aro { fill: none; stroke: #e8d7b0; stroke-width: 4; opacity: 0.7; }
+.rota-miolo { fill: #2a1d12; stroke: #a88a5a; stroke-width: 2; }
+.rota-nome { fill: #f3e6c8; font-size: 38px; font-weight: 700; paint-order: stroke; stroke: #120c08; stroke-width: 9px; }
+.rota-min { fill: #e8c98a; font-size: 32px; paint-order: stroke; stroke: #120c08; stroke-width: 8px; }
+.rota-voce, .rota-visto { fill: #fff4ea; font-size: 30px; text-anchor: middle; }
+.rota-lugar.no-rastro .rota-miolo { fill: var(--sangue); stroke: var(--sangue-vivo); }
+.rota-lugar.atual .rota-aro { stroke: var(--sangue-vivo); stroke-width: 5; opacity: 1; animation: pulso 2.4s ease-in-out infinite; }
+.rota-lugar.sem-ligacao { opacity: 0.45; }
+.rota-lugar.escolhido .rota-aro, .rota-lugar:focus-visible .rota-aro { stroke: #fff4ea; stroke-width: 6; opacity: 1; }
+.rota-lugar:hover .rota-miolo { stroke: #fff4ea; }
+.rota-painel { margin-top: 12px; min-height: 5.5em; }
+.rota-painel b { font-size: 1.1em; }
+.rota-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.rota-lista button { width: 100%; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 10px; border: 1px solid rgba(232, 215, 176, 0.2); border-radius: 8px; background: rgba(42, 29, 18, 0.5); color: inherit; font: inherit; cursor: pointer; }
+.rota-lista button:hover, .rota-lista button:focus-visible { border-color: #e8d7b0; }
+.rota-lista b { font-size: 1em; }
+.rota-lista span { grid-column: 1 / -1; color: var(--texto-suave); font-size: 0.86em; }
+.rota-lista small { grid-row: 1; grid-column: 2; color: #e8c98a; }
+.rota-custo { color: var(--texto-suave); }
+
+.arquivo-ladrao { display: flex; gap: 16px; align-items: center; padding: 12px; border: 1px solid rgba(232, 215, 176, 0.25); border-radius: 10px; background: rgba(42, 29, 18, 0.55); }
+.arquivo-ladrao .retrato-falado { width: 112px; flex: none; }
+.arquivo-pergunta { font-size: 1.2em; font-weight: 700; margin: 0 0 4px; }
+.arquivo-sabidos { margin: 0; padding-left: 1.1em; }
+.arquivo-marcar { margin-top: 12px; display: grid; gap: 8px; }
+.arquivo-categoria { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: start; }
+.arquivo-valores { display: flex; flex-wrap: wrap; gap: 6px; }
+.arquivo-valores .chip { font-size: 0.86em; padding: 4px 9px; }
+.arquivo-valores .chip.marcado { border-color: var(--sangue-vivo); background: rgba(163, 18, 42, 0.5); color: #fff4ea; }
+.arquivo-restam { margin: 12px 0 6px; }
+.arquivo-licenca { font-size: 1.05em; }
+.carimbo { display: inline-block; padding: 2px 10px; border: 3px double var(--sangue-vivo); color: var(--sangue-vivo); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; transform: rotate(-6deg); }
+.arquivo-fichas { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ficha-ciranda { position: relative; padding: 10px; border: 1px solid rgba(232, 215, 176, 0.3); border-radius: 8px; background: #e8d7b0; color: #2a1d12; transition: opacity 0.3s, filter 0.3s; }
+.ficha-ciranda .retrato-falado { width: 100%; max-width: 120px; display: block; margin: 0 auto 6px; }
+.ficha-ciranda b { display: block; font-size: 1.05em; }
+.ficha-ciranda small { color: #5a4630; }
+.ficha-ciranda ul { margin: 6px 0 0; padding-left: 1em; font-size: 0.84em; }
+.ficha-ciranda .carimbo { position: absolute; top: 38%; left: 50%; translate: -50% 0; background: rgba(232, 215, 176, 0.8); }
+.ficha-ciranda.descartada { opacity: 0.45; filter: grayscale(0.8); }
+.ficha-ciranda.com-licenca { box-shadow: 0 0 0 3px var(--sangue-vivo); }
+.retrato-falado .rf-fundo { fill: #d9c194; }
+.arquivo-ladrao .retrato-falado .rf-fundo { fill: #3a2a18; }
+.retrato-falado .rf-busto, .retrato-falado .rf-cabeca { fill: #2a1d12; }
+.arquivo-ladrao .retrato-falado .rf-busto, .arquivo-ladrao .retrato-falado .rf-cabeca { fill: #0b0705; stroke: #a88a5a; stroke-width: 1; }
+.rf-cabelo { fill: #5a4630; }
+.rf-cabelo.branco { fill: #f3efe6; }
+.rf-cabelo.ruivo { fill: #b5431f; }
+.rf-cabelo.trancas { fill: #3a2410; }
+.rf-tranca { stroke: #c9a24a; stroke-width: 3; fill: none; }
+.rf-oculos { fill: none; stroke: #c9a24a; stroke-width: 2; }
+.rf-sinal { fill: none; stroke: #d8213d; stroke-width: 2.2; stroke-linecap: round; }
+.rf-sinal.perola { fill: #fff4ea; stroke: none; }
+.rf-sinal.ouro { fill: #c9a24a; stroke: none; }
+.rf-regua { stroke: #a88a5a; stroke-width: 1.5; fill: none; }
+@media (max-width: 760px) {
+  .arquivo-fichas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arquivo-categoria { grid-template-columns: 1fr; }
+  .arquivo-ladrao .retrato-falado { width: 84px; }
+  .rota-mapa svg { max-height: 52vh; }
+}
+.rota-alvo { fill: transparent; }
+.rota-abas { display: flex; gap: 8px; margin-bottom: 8px; }
+.rota-fundo-sp { fill: #1c140c; }
+.rota-ruas-sp { fill: none; stroke: #5a4630; stroke-width: 10; stroke-linecap: round; opacity: 0.6; }
+.rota-cidade { fill: #e8d7b0; font-size: 64px; font-style: italic; opacity: 0.8; }
+@media (max-width: 760px) {
+  .rota-mapa { overflow-x: auto; overscroll-behavior-x: contain; }
+  .rota-mapa svg { width: 230%; max-height: none; }
+}

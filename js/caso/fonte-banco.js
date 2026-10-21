@@ -28,6 +28,9 @@ const ERROS = {
   'ainda-noite': 'Ainda é noite.',
   'nao-resolvido': 'O capítulo ainda não foi resolvido.',
   'sem-login': 'Entre na sua conta para jogar o capítulo.',
+  'sem-viagem-direta': 'Não há viagem direta daqui. São Paulo só pela ponte aérea, a partir do aeroporto.',
+  'fora-do-esconderijo': 'O ladrão não está aqui.',
+  'ja-resolvido': 'Este capítulo já terminou.',
 };
 
 export class ErroDoCaso extends Error {
@@ -92,6 +95,9 @@ export const escolherFinal = (capitulo, personagem, escolha) => chamar('caso_fin
 export const dica = (capitulo, personagem) => chamar('caso_dica', base(capitulo, personagem));
 export const novaNoite = (capitulo, personagem) => chamar('caso_noite', base(capitulo, personagem));
 export const ranking = (temporada) => chamar('caso_ranking', { p_temporada: temporada });
+// Formato rota: a Licença de Caça (tracos: { categoria: valor } marcados no Arquivo) e o cerco no esconderijo.
+export const licenca = (capitulo, personagem, quem, tracos) => chamar('caso_licenca', { ...base(capitulo, personagem), p_quem: quem, p_tracos: tracos });
+export const cercar = (capitulo, personagem) => chamar('caso_cercar', base(capitulo, personagem));
 export const rankingDoCapitulo = (capitulo) => chamar('caso_ranking_capitulo', { p_capitulo: capitulo });
 
 // Pulso do tempo ativo: a cada 60 s, só com a aba visível. Devolve a função que para o pulso.

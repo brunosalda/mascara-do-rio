@@ -7,6 +7,7 @@ import { CENAS, clasSugeridos, montarFicha } from '../motor/roteiro.js';
 import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
+import { abrirMapaRota, abrirArquivo } from './rota.js';
 import { iniciarPerseguicao } from './perseguicao.js';
 import { iniciarInfiltracao } from './infiltracao.js';
 import { abrirConfronto, turnoDoConfronto, escolhasDo, vitalidadeDe, ataqueDe } from './confronto.js';
@@ -64,7 +65,11 @@ function casoDoBanco(cap) {
     colunas: pub.colunas || [], lacunas: pub.lacunas || [],
     palavras: Object.fromEntries(Object.entries(pub.palavras || {}).map(([l, ws]) => [l, ws.map((w) => ({ ...w, por: [`lib:${l}:${w.id}`] }))])),
     pessoas: Object.fromEntries((pub.colunas || []).filter((c) => c.pessoa).map((c) => [c.pessoa, { nome: c.nome, sub: '', tipo: c.tipo, figura: c.figura }])),
-    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao, infiltracao: pub.infiltracao, confronto: pub.confronto, rivais: [], eventos: [],
+    pistas: {}, exames: {}, cacada: pub.cacada, perseguicao: pub.perseguicao || {}, infiltracao: pub.infiltracao, confronto: pub.confronto, rivais: [], eventos: [],
+    // Formato rota (a fuga pela cidade): o mapa inteiro, a tabela de viagens e o Arquivo público da Ciranda.
+    formato: pub.formato || 'caso', ordem: pub.ordem || Object.keys(pub.lugares || {}), tempos: pub.tempos || [],
+    arquivo: pub.arquivo || null, tamanhoRota: pub.tamanhoRota || 0, reliquia: pub.reliquia || null,
+    mecanicas: pub.mecanicas || {}, novidades: [pub.novidade, ...(pub.extras || [])].filter(Boolean),
   };
 }
 
@@ -87,6 +92,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
   }
   const caso = banco ? casoDoBanco(banco.capitulo) : CASO;
+  const rota = caso.formato === 'rota';
   const p = banco ? { ...estadoApp.atual, sprite: estadoApp.atual.sprite?.url ? estadoApp.atual.sprite : CAMINHADA_RESERVA } : personagemDoCaso(estadoApp);
   const calc = R.numeros(p.ficha);
   // &perfil=<nome> no endereço guarda o progresso à parte (testes de abas diferentes no mesmo navegador
@@ -102,7 +108,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     achados: [], novas: [], feitos: {}, tentados: {}, lidos: {}, comentados: [],
     fome: Math.max(1, Math.min(4, p.estado?.fome ?? 2)), vontade: vontadeMax,
     escondidos: [], posPessoas: {}, posicoes: {}, eventos: [], rivais: [], tentativas: [], escolhas: {},
-    resolvido: null, final: null, viuAbertura: false, registro: [],
+    resolvido: null, final: null, viuAbertura: false, registro: [], visitados: [], marcados: {},
   });
   let st = (() => { try { const s = JSON.parse(localStorage.getItem(CHAVE)); return s?.v === 1 ? s : null; } catch { return null; } })() || novo();
   const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(st)); } catch { /* sem armazenamento */ } };
@@ -333,6 +339,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         <li class="${acertos.length && !st.resolvido ? 'falta' : 'opcional'}"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corrida)}</span></button></li>
       </ol>
       <div class="quadro-pe"><span>${st.resolvido ? `Resolvido às ${hora(st.resolvido.hora)}` : `Faltam ${duracao(resta)} até o sol`}</span><button type="button" class="btn plano-enviar${escolhidas === 3 && !st.resolvido ? ' destaque' : ''}" data-hud="quadro">Quadro</button></div>`;
+    if (rota) {
+      // A fuga: as duas perguntas sempre à vista (o parecer da avaliação), com o que já se tem de cada uma.
+      const e = banco.estado;
+      const destinos = (e.pistas || []).filter((x) => x.tipo === 'destino' && x.sobre == null).length;
+      const nTracos = (e.tracos || []).length;
+      const lic = e.licenca ? caso.arquivo?.suspeitos.find((x) => x.id === e.licenca) : null;
+      caixaCaso.innerHTML = `
+      <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
+      <ol class="quadro-linhas">
+        <li class="${destinos ? 'ok' : 'falta'}"><button type="button" data-hud="viajar"><span class="quadro-nome">Para onde foi?</span><span class="quadro-valor">${destinos ? `${destinos} pista${destinos > 1 ? 's' : ''} de destino` : 'ouça as testemunhas'}</span></button></li>
+        <li class="${lic ? 'ok' : nTracos >= 3 ? 'falta' : 'opcional'}"><button type="button" data-hud="arquivo"><span class="quadro-nome">Quem é?</span><span class="quadro-valor">${lic ? `Licença contra ${esc(lic.apelido || lic.nome)}` : `${Math.min(nTracos, 3)} de 3 traços`}</span></button></li>
+        <li class="opcional"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corridaDaRota())}</span></button></li>
+        <li class="opcional"><button type="button" data-hud="viajar"><span class="quadro-nome">Rastro</span><span class="quadro-valor">${(e.percurso || []).length} de ${caso.tamanhoRota} lugares${e.viagens_erradas ? ` · ${e.viagens_erradas} errad${e.viagens_erradas > 1 ? 'as' : 'a'}` : ''}</span></button></li>
+      </ol>
+      <div class="quadro-pe"><span>${st.resolvido ? `Resolvido às ${hora(st.resolvido.hora)}` : `Faltam ${duracao(resta)} até o sol`}</span><button type="button" class="btn plano-enviar${nTracos >= 3 && !lic && !st.resolvido ? ' destaque' : ''}" data-hud="arquivo">Arquivo</button></div>`;
+    }
     const contador = tela.querySelector('[data-contador]');
     contador.hidden = !st.novas.length;
     contador.textContent = st.novas.length ? `+${st.novas.length}` : '';
@@ -419,6 +441,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
     if (abriu.length) avisar('faixa-deducao', 'Dedução', `nova opção em “${abriu.map((l) => l.rotulo.toLowerCase()).join('” e “')}”`);
+    // Formato rota: as iscas são ensinadas na primeira vez que há pistas de destino para comparar (parecer da avaliação).
+    if (rota && caso.mecanicas.isca && !st.iscaEnsinada && (r.estado?.pistas || []).filter((x) => x.tipo === 'destino').length >= 3) {
+      st.iscaEnsinada = true;
+      const n = caso.novidades.find((x) => x.id === 'isca');
+      setTimeout(() => caixa({ rotulo: n?.titulo || 'As iscas do ladrão', texto: `${n?.texto || ''}\n\n[INTUIÇÃO] Duas pistas falam de um lugar, uma fala de outro. Alguém está mentindo: siga a maioria.`, opcoes: [{ html: 'Entendi', fn: (c) => c.fechar() }] }), 900);
+    }
     for (const ev of r.eventos || []) {
       if (ev.esconder && caso.pessoas[ev.esconder]?.lugar === st.lugar) cena?.esconderPessoa(ev.esconder);
       anotar(ev.voz, ev.texto);
@@ -900,6 +928,14 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
   const destinoEm = (l) => l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ');
   function viajar() {
+    if (rota) {
+      const e = banco.estado;
+      abrirMapaRota(tela, {
+        caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])],
+        restante: Math.max(0, caso.relogio.fim - st.hora), aoViajar: (id) => irPara(id),
+      });
+      return;
+    }
     const outros = Object.entries(caso.lugares).filter(([id]) => id !== st.lugar);
     caixa({
       rotulo: 'Lugares do caso',
@@ -920,6 +956,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const r = await lerLugar(id);
         if (!r) { veu.remove(); return; }
         aplicarBanco(r);
+        if (rota) {
+          st.visitados = [...new Set([...(st.visitados || []), id])];
+          salvar();
+          F.rankingDoCapitulo(caso.id).then((x) => { banco.ranking = x; desenharHud(); }).catch(() => {});
+          setTimeout(() => chegadaDaRota(r.viagem, caso.lugares[id]), 700);
+        }
       } else {
         const custo = custoViagem(st.lugar, id);
         st.lugar = id;
@@ -936,6 +978,67 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }, 260);
   }
 
+  // Formato rota: o que a chegada conta. Viagem errada: ninguém viu. Esconderijo: o ladrão está aqui.
+  function chegadaDaRota(v, l) {
+    if (!v) return;
+    if (v.voo) anotar('VOCÊ', l.cidade === 'sp' ? 'A ponte aérea pousa em São Paulo.' : 'A ponte aérea pousa de volta no Rio.');
+    if (v.tipo === 'errada') {
+      anotar('A FOME', `Nenhum cheiro dele ${l.em}. O rastro não passou por aqui.`);
+      avisar('faixa-evento', 'Lugar errado', `Ninguém ${l.em} viu quem você procura. Volte ao mapa.`);
+    } else if (v.esconderijo) {
+      som.reacao?.('susto', 0);
+      caixa({ rotulo: 'O esconderijo', texto: `${v.avistamento || ''}
+
+[PRONTIDÃO] É aqui. ${banco.estado.licenca ? 'Você tem a Licença de Caça. Cerque.' : 'Sem a Licença de Caça da Xerife, se você cercar agora, a presa foge. Abra o Arquivo.'}`,
+        opcoes: [
+          ...(banco.estado.licenca ? [{ html: 'Cercar agora', fn: (c) => { c.fechar(); cercar(); } }] : [{ html: 'Abrir o Arquivo', fn: (c) => { c.fechar(); abrirOArquivo(); } }]),
+          { html: 'Esperar', classe: 'sair', fn: (c) => c.fechar() },
+        ] });
+    }
+  }
+  // A notícia dos rivais na rota: só o progresso (em que lugar da rota cada um está, pelo número), nunca o lugar.
+  function corridaDaRota() {
+    const outros = (banco?.ranking || []).filter((x) => !x.voce);
+    if (!outros.length) return 'ninguém mais nesta fuga';
+    const preso = outros.find((x) => x.resolvido_em);
+    if (preso) return `${preso.nome} já prendeu o ladrão`;
+    const lider = outros.reduce((m, x) => ((x.passo || 0) > (m.passo || 0) ? x : m));
+    return lider.licenca ? `${lider.nome} já tirou a Licença` : `${lider.nome} já está no ${lider.passo || 1}º lugar`;
+  }
+  const noEsconderijo = () => rota && banco && !st.resolvido && caso.tamanhoRota && banco.estado.rota_passo === caso.tamanhoRota - 1 && (banco.estado.percurso || []).at(-1) === st.lugar;
+  function abrirOArquivo() {
+    const e = banco.estado;
+    abrirArquivo(tela, {
+      caso, conhecidos: e.tracos || [], marcados: st.marcados || {}, presos: e.presos || [], licenca: e.licenca,
+      aoMudar: (m) => { st.marcados = m; salvar(); },
+      aoPedirLicenca: async (quem, tracos) => {
+        const r = await noBanco(() => F.licenca(caso.id, p.id, quem, tracos));
+        if (!r) return null;
+        aplicarBanco(r);
+        if (r.licenca) { som.acorde?.(); anotar('XERIFE IOLANDA', 'Licença de Caça emitida. Traga de volta o que foi levado.'); }
+        return r;
+      },
+    });
+  }
+  async function cercar() {
+    const r = await noBanco(() => F.cercar(caso.id, p.id));
+    if (!r) return;
+    aplicarBanco(r);
+    if (r.preso) {
+      anotar('VOCÊ', r.acao?.ok ? 'Você fecha a saída antes que a presa se mova.' : 'A presa tenta correr, mas a Licença da Xerife já fechou a cidade.');
+      banco.fecho = r.fecho || null;
+      banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
+      som.acorde?.();
+      setTimeout(fecho, 350);
+      return;
+    }
+    som.teste?.(false, true);
+    const texto = r.motivo === 'sem-licenca'
+      ? `Sem a Licença da Xerife, você não tem como segurar a presa. Ela some na noite, e você perde ${duracao(r.minutos)} até achar o rastro de novo. Abra o Arquivo.`
+      : `A Licença era contra a pessoa errada. A Xerife cancela a Licença, e você perde ${duracao(r.minutos)}. Volte ao Arquivo.`;
+    caixa({ rotulo: 'Escapou', texto, opcoes: [{ html: 'Abrir o Arquivo', fn: (c) => { c.fechar(); abrirOArquivo(); } }, { html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+  }
+
   function pontosDo(id) {
     const lugar = caso.lugares[id];
     const geo = geografia(lugar.geo);
@@ -949,6 +1052,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const feito = st.feitos[`x:${pt.id}`] === 'ok';
       pts.push({ id: pt.id, tipo: 'detalhe', icone: feito ? '·' : '?', rotulo: pt.rotulo, acao: `Examinar: ${pt.rotulo}`, x: pt.x, y: pt.y, visto: feito, baixo: /chão|caçamba/i.test(pt.rotulo) });
     }
+    if (noEsconderijo()) pts.push({ id: 'cercar', tipo: 'detalhe', icone: '!', rotulo: 'Cercar a presa', acao: 'Cercar a presa (com a Licença de Caça)', x: geo.entrada?.[0] ?? 0.5, y: Math.max(0.55, (geo.entrada?.[1] ?? 0.85) - 0.12) });
     return pts;
   }
   function genteDo(id) {
@@ -1023,6 +1127,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       tempo: lugar.tempo, fome: st.fome, nome: p.nome, painel: tela.querySelector('.painel-pergunta'),
       // Rodada 46: a gente do caso maior e a câmera mais perto, menos onde a pintura já é de perto (perto: false).
       aproximar: lugar.perto === false ? null : { figuras: 1.4, niveis: [1.15, 1.45, 1.75] },
+      semPassantes: rota,
       aoFalar: (voz, texto) => anotar(voz, texto),
       aoPausa: (pausado) => tela.querySelector('.botao-pausa')?.setAttribute('aria-pressed', String(!!pausado)),
       aoInteragir: (pt) => {
@@ -1030,6 +1135,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         if (st.resolvido) { telaFinal(); return; }
         if (checarAmanhecer()) return;
         if (pt.tipo === 'pessoa') conversar(pt.caso?.id || pt.id.replace(/^pessoa-/, ''));
+        else if (pt.id === 'cercar') cercar();
         else if (pt.tipo === 'detalhe') examinar(pt.id);
         else if (pt.tipo === 'cacar') cacar();
         else if (pt.tipo === 'saida' && pt.destino) irPara(pt.destino);
@@ -1313,7 +1419,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         rotulo: `${caso.titulo} · a verdade`, fechavel: false, revelar: true,
         html: quadrinhos(f.paineis || [], { cenario: 'img/cidade/lapa.jpg' }).replace('hq hq-1', 'hq hq-tira hq-tira-1'),
         texto: f.texto || '',
-        opcoes: (f.escolhas || []).map((x) => ({ html: esc(x.rotulo), fn: async (cam) => {
+        opcoes: rota && !(f.escolhas || []).length ? [{ html: 'Ver o placar do capítulo', fn: (cam) => { cam.fechar(); telaFinalBanco(); } }] : (f.escolhas || []).map((x) => ({ html: esc(x.rotulo), fn: async (cam) => {
           const fim = await noBanco(() => F.escolherFinal(caso.id, p.id, x.id));
           if (!fim) return;
           banco.final = fim;
@@ -1349,13 +1455,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   const SELOS = { 'sem-erros': 'sem erros', 'sem-dicas': 'sem dicas', detetive: 'detetive', primeiro: 'primeiro a resolver', 'mais-rapido': 'mais rápido do capítulo' };
   async function telaFinalBanco() {
     if (!banco.final && st.final) banco.final = await noBanco(() => F.escolherFinal(caso.id, p.id, st.final));
-    if (!banco.final) { fecho(); return; }
+    if (!banco.final && !rota) { fecho(); return; }
     banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
     const e = banco.estado;
     const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
     const html = `
-      <div class="texto-narracao">${narracao(banco.final.texto || '')}</div>
-      <p class="consequencia"><b>Na semana seguinte:</b> ${esc(banco.final.efeito || '')}</p>
+      ${banco.final ? `<div class="texto-narracao">${narracao(banco.final.texto || '')}</div>
+      <p class="consequencia"><b>Na semana seguinte:</b> ${esc(banco.final.efeito || '')}</p>` : ''}
       <section class="placar" aria-label="Ranking do capítulo">
         <h3>Ranking do capítulo</h3>
         <ol>${resolvidos.map((x, i) => `<li class="${x.voce ? 'voce' : ''}"><span class="placar-pos">${i + 1}º</span><b>${esc(x.nome)}</b><small>${x.nota} pontos${x.erros ? ` · ${x.erros} ${x.erros > 1 ? 'erros' : 'erro'}` : ''}</small></li>`).join('')}</ol>
@@ -1363,7 +1469,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           <div><dt>Sua nota</dt><dd>${e.nota ?? '—'} de 1000</dd></div>
           <div><dt>Selos</dt><dd>${(e.selos || []).map((s) => esc(SELOS[s] || s)).join(', ') || 'nenhum'}</dd></div>
           <div><dt>Pistas achadas</dt><dd>${(e.pistas || []).length}</dd></div>
-          <div><dt>Acusações erradas</dt><dd>${e.acusacoes_erradas}</dd></div>
+          <div><dt>${rota ? 'Licenças erradas' : 'Acusações erradas'}</dt><dd>${e.acusacoes_erradas}</dd></div>${rota ? `
+          <div><dt>Viagens erradas</dt><dd>${e.viagens_erradas || 0}</dd></div>` : ''}
         </dl>
       </section>`;
     caixa({
@@ -1478,7 +1585,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
   function abertura() {
     caixa({
       rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,
-      html: tiraAbertura(),
+      html: caso.abertura.paineis ? tiraAbertura() : '',
       texto: caso.abertura.texto,
       opcoes: [{ html: '<b>Começar a investigar</b>', fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); olharInicial(); setTimeout(ajuda, 200); } }],
     });
@@ -1558,6 +1665,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     if (camadaAberta()) fecharTudo();
     switch (b.dataset.hud) {
       case 'quadro': abrirOQuadro(); break;
+      case 'arquivo': abrirOArquivo(); break;
       case 'viajar': viajar(); break;
       case 'ficha': verFicha(); break;
       case 'ajuda': ajuda(); break;

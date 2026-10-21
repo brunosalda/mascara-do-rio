@@ -100,6 +100,8 @@ export function montarCena(raiz, {
   // (personagem, gente, pontos, caçada); niveis são os 3 zooms da câmera (começa no do meio), mesmo se a pintura
   // for pequena.
   aproximar = null,
+  // Formato rota (a fuga pela cidade): sem os vultos que passam ao fundo, para só as testemunhas chamarem a atenção.
+  semPassantes = false,
 } = {}) {
   const geo = geografia(lugar);
   ASPECTO = geo.aspecto || 1344 / 752;
@@ -124,7 +126,7 @@ export function montarCena(raiz, {
         <canvas class="veu-area" aria-hidden="true" hidden></canvas>
         <canvas class="veu-longe" aria-hidden="true" hidden></canvas>
         ${geo.vida?.farois ? `<div class="farol" style="top:${pct(geo.vida.farois.y0)};height:${pct(geo.vida.farois.y1 - geo.vida.farois.y0)}"></div>` : ''}
-        ${geo.vida?.passantes?.length ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
+        ${geo.vida?.passantes?.length && !semPassantes ? `<span class="passante vulto" hidden>${VULTO}</span>` : ''}
         ${geo.frente.map((f) => `<div class="frente" style="background-image:url('${fundoUrl}');clip-path:polygon(${f.poligono.map(([x, y]) => `${pct(x)} ${pct(y)}`).join(',')});z-index:${Math.round(f.base * 1000)}"></div>`).join('')}
         ${htmlBoneco(sprite)}
         <svg class="contornos" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
