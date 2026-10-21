@@ -4171,3 +4171,4 @@ body.celular:not(.deitado) .infiltracao-virar { display: block; font-weight: 600
   .rota-mapa { overflow-x: auto; overscroll-behavior-x: contain; }
   .rota-mapa svg { width: 230%; max-height: none; }
 }
+.rota-marcas { fill: #e8c98a; font-size: 27px; font-style: italic; paint-order: stroke; stroke: #120c08; stroke-width: 7px; }

@@ -55,13 +55,26 @@ const pos = (lugar, k) => {
   return p[k % Math.max(1, p.length)] || [0.5, 0.8];
 };
 
+// O que tem em cada lugar, em 2 ou 3 marcas curtas, para o jogador comparar a pista com o mapa (avaliação, 21/10).
+const MARCAS = {
+  lapa: ['Arcos', 'escadaria de azulejos', 'bares'], centro: ['Theatro Municipal', 'biblioteca', 'praça'],
+  'santa-teresa': ['bonde', 'casarões', 'ladeiras'], 'zona-sul': ['calçadão', 'quiosques', 'praia'],
+  barra: ['lagoa', 'condomínios', 'avenidas'], 'zona-norte': ['viaduto', 'feira', 'quadra'],
+  morro: ['escadaria', 'lajes', 'mototáxi'], cemiterio: ['jazigos', 'capela', 'anjos de mármore'],
+  porto: ['degraus de pedra', 'roda de samba', 'Pequena África'], baixada: ['churrasquinho', 'bar de esquina', 'trem'],
+  niteroi: ['barcas', 'museu em forma de disco'], 'aeroporto-rio': ['ponte aérea', 'táxis', 'baía'],
+  se: ['catedral', 'palmeiras', 'marco da cidade'], 'centro-sp': ['vale', 'passarela de ferro', 'teatro'],
+  paulista: ['museu suspenso', 'parque', 'prédios de vidro'], liberdade: ['portal vermelho', 'lanternas', 'restaurantes'],
+  augusta: ['neon', 'bares', 'loja de discos'],
+};
+
 // --- público
 const lugares = {};
 for (const l of c.publico.lugares) {
   const a = ALTOS[l.id] || {};
   lugares[l.id] = {
     nome: l.nome, em: l.em, a: l.a, de: l.de, cidade: l.cidade, aeroporto: l.aeroporto, geo: `${l.id}-alto`,
-    inicio: a.entrada || [0.45, 0.88], mapa: l.geo, resumo: l.resumo, chegada: l.chegada, pontos: [],
+    inicio: a.entrada || [0.45, 0.88], mapa: l.geo, resumo: l.resumo, marcas: MARCAS[l.id] || [], chegada: l.chegada, pontos: [],
   };
 }
 const publico = {

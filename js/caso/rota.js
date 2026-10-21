@@ -66,6 +66,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             <circle class="rota-alvo" r="60"/><circle class="rota-aro" r="36"/><circle class="rota-miolo" r="28"/>
             ${id === atual ? '<text class="rota-voce" y="10">●</text>' : visitados.includes(id) ? '<text class="rota-visto" y="10">✓</text>' : ''}
             <text class="rota-nome" x="${r.nx}" y="${r.ny}" text-anchor="${r.anc}">${esc(l.nome)}</text>
+            ${cidade === 'sp' && l.marcas?.length ? `<text class="rota-marcas" x="${r.nx}" y="${r.my + 36}" text-anchor="${r.anc}">${esc(l.marcas.join(' · '))}</text>` : ''}
             ${t ? `<text class="rota-min" x="${r.nx}" y="${r.my}" text-anchor="${r.anc}">${t.voo ? '✈ ' : ''}${duracao(t.minutos)}</text>` : ''}
           </g>`;
         }).join('');
@@ -85,12 +86,12 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             </svg>
           </div>
           <div class="rota-painel" aria-live="polite">
-            ${l ? `<b>${esc(l.nome)}</b><p>${esc(l.resumo || '')}</p>
+            ${l ? `<b>${esc(l.nome)}</b>${l.marcas?.length ? ` <small class="rota-custo">${esc(l.marcas.join(' · '))}</small>` : ''}<p>${esc(l.resumo || '')}</p>
               ${t ? `<p class="rota-custo">${t.voo ? `A ponte aérea leva ${duracao(t.minutos)} da noite. Na volta, também.` : `A viagem leva ${duracao(t.minutos)}.`}${falta ? ' O sol nasce antes de você chegar.' : ''}</p>
                 <button type="button" class="btn${t.voo ? ' destaque' : ''}" data-viajar="${esc(escolhido)}">${t.voo ? `Voar ${esc(l.a || `para ${l.nome}`)}` : `Viajar ${esc(l.a || `para ${l.nome}`)}`}</button>`
               : escolhido === atual ? '<p>Você está aqui.</p>' : '<p class="rota-custo">Não há viagem direta daqui. Entre o Rio e São Paulo, só pela ponte aérea, a partir do aeroporto.</p>'}`
             : `<p>Toque num lugar do mapa ou da lista para viajar.${percurso.length > 1 ? ' A linha vermelha é o rastro que você já seguiu.' : ''}</p>
-              <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc(caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? '✈ ' : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
+              <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc((caso.lugares[id].marcas || []).join(' · ') || caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? '✈ ' : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
           </div>`;
         // No celular, o mapa rola de lado: começa centrado onde você está.
         const caixa = corpo.querySelector('.rota-mapa');
@@ -206,7 +207,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], marcados = {}, preso
           const r = await aoPedirLicenca?.(b.dataset.licenca, Object.fromEntries(Object.entries(sel).filter(([, v]) => v)));
           if (r?.licenca) licenca = r.licenca;
           else aviso = r?.motivo === 'poucos-tracos' ? 'A Xerife quer pelo menos 3 traços contados por alguém.'
-            : r?.motivo === 'traco-sem-pista' ? 'A Xerife pergunta: quem te contou isso? Algum traço marcado não veio de pista nenhuma.'
+            : r?.motivo === 'traco-sem-pista' ? 'A Xerife pergunta: quem te contou isso? Nenhuma pista falou ainda de um dos tipos de traço que você marcou.'
               : 'A Xerife não emite a Licença com esses traços.';
           desenhar();
         }
