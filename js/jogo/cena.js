@@ -254,6 +254,7 @@ export function montarCena(raiz, {
     camadaContornos.innerHTML = lista.filter((p) => p.contorno?.length).map((p) =>
       `<polygon data-contorno="${esc(p.id)}" points="${p.contorno.map(([x, y]) => `${x},${y}`).join(' ')}"/>`).join('');
     perto = null;
+    dica.hidden = true; // senão o aviso "E — …" fica preso no último alvo (avaliação da vitrine)
     proximaChecagem = 0;
     prepararBorda?.();
   }
@@ -1952,10 +1953,13 @@ export function montarCena(raiz, {
     }
   }
 
+  // A seta da borda só mostra o ponto: na vista do alto, leva a câmera até ele; na vista de lado, o personagem
+  // anda até perto, sem examinar nem puxar conversa sozinho (avaliação da vitrine).
   function irParaFora(grupo) {
     const p = grupo.reduce((a, b) => (dist(a.x, a.y, pos.x, pos.y) < dist(b.x, b.y, pos.x, pos.y) ? a : b));
+    if (geo.alto) { olharPara(p.x, p.y); return; }
     const [x, y] = maisPertoDentro([p.x, p.y], geo.chao, ASPECTO);
-    alvo = { x, y, ponto: p };
+    alvo = { x, y };
     semProgresso = 0;
   }
   for (const [seta, lado] of [[setaEsq, 'esq'], [setaDir, 'dir']]) {

@@ -159,7 +159,12 @@ function situacao(a, chaveI) {
 const resultadosDe = (ct) => (ct.tipo === 'exame' ? ct.dados.resultados : dados.pessoas.find((p) => p.id === ct.pessoa)?.dados.resultados) || {};
 
 // --- as funções do caso (mesmos nomes e respostas de fonte-banco.js)
+// true quando este abrir começou de novo (&zerar ou &ate): a tela também apaga o que guarda dela
+// (registro, posições), senão o registro velho fica, mesmo sem recarregar a página.
+let recomecado = false;
+export const recomecou = () => { const r = recomecado; recomecado = false; return r; };
 export async function abrir(capitulo) {
+  if (/[?&](zerar\b|ate=)/.test(location.hash)) recomecado = true;
   await carregar(capitulo);
   chave = `mascara.vitrine.${capitulo}`;
   const zerar = /[?&]zerar\b/.test(location.hash);
@@ -383,7 +388,7 @@ export async function cercar() {
     const rol = rolar(parada(acao.pool || ['destreza', 'atletismo']), pr.fome, acao.dif ?? 3);
     pr.acao_vencida = ok(rol);
     const selos = [];
-    if (pr.acusacoes_erradas === 0) selos.push('sem-erros');
+    if (pr.acusacoes_erradas === 0 && !pr.viagens_erradas) selos.push('sem-erros');
     if (pr.dicas_pedidas === 0) selos.push('sem-dicas');
     if (dados.pistas.length && pr.pistas.length >= dados.pistas.length) selos.push('detetive');
     selos.push('primeiro', 'mais-rapido');

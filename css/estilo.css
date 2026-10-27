@@ -4172,3 +4172,12 @@ body.celular:not(.deitado) .infiltracao-virar { display: block; font-weight: 600
   .rota-mapa svg { width: 230%; max-height: none; }
 }
 .rota-marcas { fill: #e8c98a; font-size: 27px; font-style: italic; paint-order: stroke; stroke: #120c08; stroke-width: 7px; }
+/* Carmen, vitrine (defeito 1): no computador, o cabeçalho e o pé do quadro do caso (o Arquivo e o "faltam … até o sol")
+   ficam sempre à vista; se faltar altura, só as linhas rolam. */
+@media (min-width: 761px) {
+  body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .hud-plano.quadro-caso { display: flex; flex-direction: column; overflow: hidden; }
+  body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .quadro-caso .quadro-cabeca,
+  body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .quadro-caso .quadro-pe { flex: none; }
+  body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .quadro-caso .quadro-linhas { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  body:not(.celular) .tela-jogo.bg2.tela-caso:not(.paineis-ocultos) .quadro-caso .quadro-linhas button { padding-block: 0.06rem; }
+}

@@ -116,6 +116,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     escondidos: [], posPessoas: {}, posicoes: {}, eventos: [], rivais: [], tentativas: [], escolhas: {},
     resolvido: null, final: null, viuAbertura: false, registro: [], visitados: [], marcados: {},
   });
+  if (opcoes.vitrine && F.recomecou()) try { localStorage.removeItem(CHAVE); } catch { /* sem armazenamento */ }
   let st = (() => { try { const s = JSON.parse(localStorage.getItem(CHAVE)); return s?.v === 1 ? s : null; } catch { return null; } })() || novo();
   const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(st)); } catch { /* sem armazenamento */ } };
   const achados = () => new Set(st.achados);
@@ -784,6 +785,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     } else conversar(pid, texto);
   };
 
+  // A primeira frase da resposta, sem o nome de quem fala nem as marcações, para caber numa linha do registro.
+  function resumoDaFala(texto) {
+    const limpo = String(texto).replace(/\*\*[^*]+\*\*\s*[—-]\s*/g, '').replace(/\[[^\]]+\]\s*/g, '').replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
+    const frase = (limpo.match(/^.+?[.!?…](?=\s|$)/) || [limpo])[0];
+    return frase.length > 140 ? `${frase.slice(0, 137).trimEnd()}…` : frase;
+  }
   async function escolherTopico(pid, t) {
     const chave = `${pid}:${t.id}`;
     if (banco) {
@@ -799,7 +806,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         });
       } else if (r.abordagens) {
         abordagensBanco({ rotulo: `${pe.nome} · ${t.rotulo}`, intro: r.pergunta, lista: r.abordagens, chave, falante: pid, aoVoltar: () => conversar(pid), aoResultado: aoResultadoConversa(pid) });
-      } else conversar(pid, textoDe(r));
+      } else {
+        // Sem pista nova, a resposta também fica no registro: o jogador sabe que já perguntou e o que ouviu.
+        if (!r.novas?.length && r.texto) anotar('CONVERSA', `${pe.nome}, sobre "${t.rotulo}": ${resumoDaFala(r.texto)}`);
+        conversar(pid, textoDe(r));
+      }
       return;
     }
     if (t.estado === 'ok' && st.lidos[chave]) { conversar(pid, st.lidos[chave]); return; }
@@ -934,6 +945,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
   const destinoEm = (l) => l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ');
   function viajar() {
+    if (rota && st.resolvido) { verORastro(); return; }
     if (rota) {
       const e = banco.estado;
       abrirMapaRota(tela, {
@@ -951,6 +963,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         { html: 'Ficar aqui', classe: 'sair', fn: (cam) => cam.fechar() },
       ],
     });
+  }
+  // No fim do capítulo da fuga: o mapa só com o rastro seguido, sem viagem.
+  function verORastro() {
+    const e = banco.estado;
+    abrirMapaRota(tela, { caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])] });
   }
   function irPara(id) {
     if (cena) st.posicoes[st.lugar] = [cena.posicao().x, cena.posicao().y];
@@ -1350,6 +1367,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
 
   // --- Quadro e acusação ------------------------------------------------------------------------
   function abrirOQuadro() {
+    // Na fuga não há quadro de dedução: o Arquivo faz esse papel; depois de resolvido, o rastro.
+    if (rota) { if (st.resolvido) verORastro(); else abrirOArquivo(); return; }
     const novas = new Set(st.novas);
     st.novas = [];
     salvar();
@@ -1482,7 +1501,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     caixa({
       rotulo: `${caso.titulo} · fim do capítulo`, html, fechavel: true,
       opcoes: [
-        { html: 'Ver o quadro de pistas', fn: (cam) => { cam.fechar(); abrirOQuadro(); } },
+        rota
+          ? { html: 'Ver o rastro', fn: (cam) => { cam.fechar(); verORastro(); } }
+          : { html: 'Ver o quadro de pistas', fn: (cam) => { cam.fechar(); abrirOQuadro(); } },
         { html: 'Voltar à temporada', fn: (cam) => { cam.fechar(); cena?.desmontar(); location.hash = '#/temporada'; } },
         { html: 'Andar pela cena', classe: 'sair', fn: (cam) => cam.fechar() },
       ],

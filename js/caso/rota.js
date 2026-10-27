@@ -43,11 +43,12 @@ function rotulos(lado) {
 
 // O mapa. percurso: os lugares do rastro já seguidos, na ordem. visitados: onde o jogador já esteve.
 // aoViajar(id) só é chamado depois de escolher o lugar e tocar em "Viajar" (no voo, com o aviso das 2 horas).
+// Sem aoViajar (o capítulo já resolvido), o mapa só mostra o rastro: nada de viagem nem de lista.
 export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], restante = null, aoViajar }) {
   const temSP = caso.ordem.some((id) => caso.lugares[id].cidade === 'sp');
   const pos = { rio: POS_RIO, sp: posicoesSP(caso) };
   return abrirJanela(raiz, {
-    titulo: 'Mapa da fuga',
+    titulo: aoViajar ? 'Mapa da fuga' : 'O rastro da fuga',
     classe: 'janela-mapa-rota',
     montar: (corpo, camada) => {
       let escolhido = null;
@@ -87,9 +88,10 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           </div>
           <div class="rota-painel" aria-live="polite">
             ${l ? `<b>${esc(l.nome)}</b>${l.marcas?.length ? ` <small class="rota-custo">${esc(l.marcas.join(' · '))}</small>` : ''}<p>${esc(l.resumo || '')}</p>
-              ${t ? `<p class="rota-custo">${t.voo ? `A ponte aérea leva ${duracao(t.minutos)} da noite. Na volta, também.` : `A viagem leva ${duracao(t.minutos)}.`}${falta ? ' O sol nasce antes de você chegar.' : ''}</p>
+              ${!aoViajar ? (percurso.includes(escolhido) ? '<p>Este lugar está no rastro que você seguiu.</p>' : '') : t ? `<p class="rota-custo">${t.voo ? `A ponte aérea leva ${duracao(t.minutos)} da noite. Na volta, também.` : `A viagem leva ${duracao(t.minutos)}.`}${falta ? ' O sol nasce antes de você chegar.' : ''}</p>
                 <button type="button" class="btn${t.voo ? ' destaque' : ''}" data-viajar="${esc(escolhido)}">${t.voo ? `Voar ${esc(l.a || `para ${l.nome}`)}` : `Viajar ${esc(l.a || `para ${l.nome}`)}`}</button>`
               : escolhido === atual ? '<p>Você está aqui.</p>' : '<p class="rota-custo">Não há viagem direta daqui. Entre o Rio e São Paulo, só pela ponte aérea, a partir do aeroporto.</p>'}`
+            : !aoViajar ? `<p>A linha vermelha é o rastro que você seguiu: ${percurso.length} ${percurso.length > 1 ? 'lugares' : 'lugar'}, do começo ao esconderijo.</p>`
             : `<p>Toque num lugar do mapa ou da lista para viajar.${percurso.length > 1 ? ' A linha vermelha é o rastro que você já seguiu.' : ''}</p>
               <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc((caso.lugares[id].marcas || []).join(' · ') || caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? '✈ ' : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
           </div>`;
