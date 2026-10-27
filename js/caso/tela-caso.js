@@ -75,7 +75,13 @@ function casoDoBanco(cap) {
 
 // opcoes.capitulo: o capítulo da temporada (no banco). Sem ele, a demonstração no navegador, como antes.
 export async function telaCaso(raiz, estadoApp, opcoes = {}) {
-  const F = opcoes.capitulo ? await import('./fonte-banco.js') : null;
+  // opcoes.vitrine: o modo vitrine (só no localhost), com as regras do banco simuladas aqui e a vampira fictícia.
+  const F = opcoes.capitulo ? await import(opcoes.vitrine ? './fonte-vitrine.js' : './fonte-banco.js') : null;
+  if (opcoes.vitrine) {
+    const ficticia = personagemDoCaso(null);
+    estadoApp = { ...estadoApp, atual: ficticia };
+    F.usarNumeros(R.numeros(ficticia.ficha));
+  }
   let banco = null;
   if (F) {
     const atual = estadoApp?.atual;

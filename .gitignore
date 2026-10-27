@@ -23,3 +23,6 @@ js/carmen/dados/capitulos.js
 js/carmen/dados/suspeitos.js
 rastro/js/jogo/dados/capitulos.js
 rastro/js/jogo/dados/suspeitos.js
+
+# Modo vitrine local (sem login, só no localhost): os dados do capítulo de teste, com o segredo dele.
+vitrine/

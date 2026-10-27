@@ -144,6 +144,19 @@ for (const ct of conteudos) ct.ordem = ++ordem;
 if (args.includes('--publico')) { process.stdout.write(JSON.stringify(publico)); process.exit(0); }
 
 const minimas = c.visitas.filter((v) => v.fontes.length).length * 2;
+
+// --vitrine (só com --teste): o capítulo inteiro em JSON, para o modo vitrine local (js/caso/fonte-vitrine.js),
+// que joga sem login no localhost. Grave em vitrine/teste-carmen-<n>.json: a pasta vitrine/ fica fora do git.
+if (args.includes('--vitrine')) {
+  if (!teste) { process.stderr.write('A vitrine só aceita o capítulo de teste (--teste).\n'); process.exit(1); }
+  process.stdout.write(JSON.stringify({
+    capitulo: { id: CAP, temporada: TEMPORADA, ordem: n, titulo: c.publico.titulo, pergunta: 'Para onde foi? Quem é?', relogio: c.publico.relogio,
+      custos: { cacar: 45, dados: 35, semLicenca: 30, acusacaoErrada: 60 }, publico, tempo_referencia_min: 40, pistas_minimas: minimas, formato: 'rota' },
+    segredo: { rota: { lugares: rota, avistamento: c.segredo.avistamento, acao: { pool: ['destreza', 'atletismo'], dif: 3 } }, culpado: c.segredo.culpado, fecho, eventos: [] },
+    pessoas, conteudos, pistas: [...pistas.values()], dicas: [],
+  }));
+  process.exit(0);
+}
 const sql = [];
 sql.push('begin;');
 if (teste) sql.push(`insert into public.temporadas (id, titulo, situacao, visivel_para) values (${q(TEMPORADA)}, 'Temporada de teste da fuga', 'teste', ${arr(VISIVEL).replace('::text[]', '::uuid[]')}) on conflict (id) do nothing;`);

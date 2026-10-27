@@ -331,6 +331,13 @@ async function desenhar() {
     return telaCaso(tela, estado);
   }
 
+  // Modo vitrine do formato rota: o capítulo de teste jogado sem login, com os dados de vitrine/ (fora do
+  // git). Só no servidor local; no site publicado esta rota não existe.
+  if (rota.startsWith('vitrine/') && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+    const { telaCaso } = await import('./caso/tela-caso.js');
+    return telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(8)), vitrine: true });
+  }
+
   if (!estado.sessao) return telaLogin(tela);
 
   try {
