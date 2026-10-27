@@ -176,7 +176,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], marcados = {}, preso
             <div>
               <p class="arquivo-pergunta">Quem é?</p>
               <ul class="arquivo-sabidos">${conhecidos.length ? conhecidos.map((t) => { const [c, v] = t.split('='); return `<li><b>${esc(caso.arquivo.categorias.find((x) => x.id === c)?.nome || c)}:</b> ${esc(nome(c, v))}</li>`; }).join('') : '<li>Ainda nada.</li>'}</ul>
-              <p class="nota">${conhecidos.length} de 3 traços para a Xerife emitir a Licença de Caça.</p>
+              <p class="nota">${conhecidos.length > 3 ? `${conhecidos.length} traços marcados (bastam 3 para a Xerife emitir a Licença de Caça).` : `${conhecidos.length} de 3 traços para a Xerife emitir a Licença de Caça.`}</p>
             </div>
           </section>
           <section class="arquivo-marcar" aria-label="Marcar traços">

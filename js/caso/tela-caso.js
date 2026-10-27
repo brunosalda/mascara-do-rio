@@ -356,7 +356,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
       <ol class="quadro-linhas">
         <li class="${destinos ? 'ok' : 'falta'}"><button type="button" data-hud="viajar"><span class="quadro-nome">Para onde foi?</span><span class="quadro-valor">${destinos ? `${destinos} pista${destinos > 1 ? 's' : ''} de destino` : 'ouça as testemunhas'}</span></button></li>
-        <li class="${lic ? 'ok' : nTracos >= 3 ? 'falta' : 'opcional'}"><button type="button" data-hud="arquivo"><span class="quadro-nome">Quem é?</span><span class="quadro-valor">${lic ? `Licença contra ${esc(lic.apelido || lic.nome)}` : `${Math.min(nTracos, 3)} de 3 traços`}</span></button></li>
+        <li class="${lic ? 'ok' : nTracos >= 3 ? 'falta' : 'opcional'}"><button type="button" data-hud="arquivo"><span class="quadro-nome">Quem é?</span><span class="quadro-valor">${lic ? `Licença contra ${esc(lic.apelido || lic.nome)}` : nTracos > 3 ? `${nTracos} traços (bastam 3)` : `${nTracos} de 3 traços`}</span></button></li>
         <li class="opcional"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corridaDaRota())}</span></button></li>
         <li class="opcional"><button type="button" data-hud="viajar"><span class="quadro-nome">Rastro</span><span class="quadro-valor">${(e.percurso || []).length} de ${caso.tamanhoRota} lugares${e.viagens_erradas ? ` · ${e.viagens_erradas} errad${e.viagens_erradas > 1 ? 'as' : 'a'}` : ''}</span></button></li>
       </ol>
