@@ -174,11 +174,37 @@ export async function abrir(capitulo) {
     salvar();
   }
   if (zerar) history.replaceState(null, '', location.hash.replace(/[?&]zerar\b/, ''));
+  // &ate=<lugar da rota, 1 em diante> ou &ate=esconderijo: começa de novo e já joga até ali (todas as
+  // testemunhas e exames de cada lugar, mais uma viagem errada), para a avaliação abrir direto numa tela.
+  const ate = (location.hash.match(/[?&]ate=([a-z0-9-]+)/) || [])[1];
+  if (ate) {
+    history.replaceState(null, '', location.hash.replace(/[?&]ate=[a-z0-9-]+/, ''));
+    await avancar(ate === 'esconderijo' ? seg().rota.lugares.length - 1 : Number(ate) || 0);
+  }
   const c = cap();
   return copia({
     capitulo: { id: c.id, temporada: c.temporada, ordem: c.ordem, titulo: c.titulo, pergunta: c.pergunta, relogio: c.relogio, custos: c.custos, publico: c.publico, tempo_referencia_min: c.tempo_referencia_min },
     ficha_com_numeros: !!numeros, estado: estado(),
   });
+}
+
+async function avancar(passo) {
+  pr = null;
+  try { localStorage.removeItem(chave); } catch { /* sem armazenamento */ }
+  await abrir(cap().id); // sem &zerar nem &ate: o estado novo
+  const varrer = async () => {
+    const l = await lugar(null, null, pr.lugar);
+    for (const pe of l.pessoas) for (const t of (await conversa(null, null, pe.id)).topicos) await agir(null, null, t.chave);
+    for (const pt of l.pontos) await agir(null, null, pt.chave);
+  };
+  const rota = seg().rota.lugares;
+  await varrer();
+  const errada = (pub().tempos || []).find((t) => t.de === rota[0] && !rota.includes(t.para));
+  if (errada && passo > 0) { await lugar(null, null, errada.para); await lugar(null, null, rota[0]); }
+  for (let i = 1; i <= Math.min(passo, rota.length - 1); i++) {
+    await lugar(null, null, rota[i]);
+    if (i < rota.length - 1) await varrer();
+  }
 }
 
 export async function lugar(capitulo, personagem, id) {
