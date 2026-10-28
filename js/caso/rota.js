@@ -156,12 +156,14 @@ export function retratoFalado(tr = {}, { genero = null } = {}) {
 export function restantesDo(caso, marcados, presos = []) {
   return caso.arquivo.suspeitos.filter((s) => !presos.includes(s.id) && Object.entries(marcados).every(([k, v]) => !v || s.tracos[k] === v));
 }
-export function abrirArquivo(raiz, { caso, conhecidos = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca }) {
+// indiretas: as pistas que só descrevem um traço (a partir do capítulo 2), ainda sem a leitura da Xerife;
+// nCategorias: quantos tipos de traço já têm pista (a conta da Licença); aoPedirLeitura(id) pede a leitura.
+export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhecidos.length, indiretas = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca, aoPedirLeitura }) {
   const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || val;
   return abrirJanela(raiz, {
     titulo: 'Arquivo da Xerife',
     classe: 'janela-arquivo',
-    montar: (corpo) => {
+    montar: (corpo, camada) => {
       const sel = { ...marcados };
       let aviso = '';
       function desenhar() {
@@ -176,9 +178,14 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], marcados = {}, preso
             <div>
               <p class="arquivo-pergunta">Quem é?</p>
               <ul class="arquivo-sabidos">${conhecidos.length ? conhecidos.map((t) => { const [c, v] = t.split('='); return `<li><b>${esc(caso.arquivo.categorias.find((x) => x.id === c)?.nome || c)}:</b> ${esc(nome(c, v))}</li>`; }).join('') : '<li>Ainda nada.</li>'}</ul>
-              <p class="nota">${conhecidos.length > 3 ? `${conhecidos.length} traços marcados (bastam 3 para a Xerife emitir a Licença de Caça).` : `${conhecidos.length} de 3 traços para a Xerife emitir a Licença de Caça.`}</p>
+              <p class="nota">${nCategorias > 3 ? `${nCategorias} tipos de traço com pista (bastam 3 para a Xerife emitir a Licença de Caça).` : `${nCategorias} de 3 tipos de traço com pista para a Xerife emitir a Licença de Caça.`}</p>
             </div>
           </section>
+          ${indiretas.length ? `<section class="arquivo-indiretas" aria-label="Pistas que só descrevem">
+            <p class="nota">Estas testemunhas descreveram um traço sem dizer qual. Compare com as fichas, ou peça à Xerife que leia.</p>
+            <ul>${indiretas.map((x) => `<li><q>${esc(x.texto || x.titulo || '')}</q> <small>${esc(caso.arquivo.categorias.find((c) => c.id === x.categoria)?.nome || '')}</small>
+              <button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button></li>`).join('')}</ul>
+          </section>` : ''}
           <section class="arquivo-marcar" aria-label="Marcar traços">
             ${caso.arquivo.categorias.map((c) => `<div class="arquivo-categoria"><b title="${esc(c.dica || '')}">${esc(c.nome)}</b>
               <span class="arquivo-valores">${c.valores.map((v) => `<button type="button" class="chip${sel[c.id] === v.id ? ' marcado' : ''}" data-cat="${esc(c.id)}" data-val="${esc(v.id)}" aria-pressed="${sel[c.id] === v.id}">${esc(v.nome)}</button>`).join('')}</span></div>`).join('')}
@@ -203,6 +210,8 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], marcados = {}, preso
           desenhar();
           return;
         }
+        const ler = ev.target.closest('[data-ler]');
+        if (ler) { camada.fechar(); aoPedirLeitura?.(ler.dataset.ler); return; }
         const b = ev.target.closest('[data-licenca]');
         if (b) {
           b.disabled = true;

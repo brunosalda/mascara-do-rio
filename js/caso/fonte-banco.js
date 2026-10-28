@@ -31,6 +31,9 @@ const ERROS = {
   'sem-viagem-direta': 'Não há viagem direta daqui. São Paulo só pela ponte aérea, a partir do aeroporto.',
   'fora-do-esconderijo': 'O ladrão não está aqui.',
   'ja-resolvido': 'Este capítulo já terminou.',
+  'sem-pista': 'Você ainda não tem essa pista.',
+  'revanche-usada': 'A revanche deste capítulo já foi usada.',
+  'ainda-e-noite': 'A revanche só vale depois do amanhecer.',
 };
 
 export class ErroDoCaso extends Error {
@@ -97,6 +100,10 @@ export const novaNoite = (capitulo, personagem) => chamar('caso_noite', base(cap
 export const ranking = (temporada) => chamar('caso_ranking', { p_temporada: temporada });
 // Formato rota: a Licença de Caça (tracos: { categoria: valor } marcados no Arquivo) e o cerco no esconderijo.
 export const licenca = (capitulo, personagem, quem, tracos) => chamar('caso_licenca', { ...base(capitulo, personagem), p_quem: quem, p_tracos: tracos });
+// A leitura da Xerife (20 minutos): { texto, traco?, aponta?, minutos, eventos, estado }.
+export const xerife = (capitulo, personagem, pista) => chamar('caso_xerife', { ...base(capitulo, personagem), p_pista: pista });
+// A revanche depois do amanhecer (uma por capítulo): { revanche, estado }.
+export const recomecar = (capitulo, personagem) => chamar('caso_recomecar', base(capitulo, personagem));
 export const cercar = (capitulo, personagem) => chamar('caso_cercar', base(capitulo, personagem));
 export const rankingDoCapitulo = (capitulo) => chamar('caso_ranking_capitulo', { p_capitulo: capitulo });
 

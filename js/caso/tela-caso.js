@@ -350,7 +350,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       // A fuga: as duas perguntas sempre à vista (o parecer da avaliação), com o que já se tem de cada uma.
       const e = banco.estado;
       const destinos = (e.pistas || []).filter((x) => x.tipo === 'destino' && x.sobre == null).length;
-      const nTracos = (e.tracos || []).length;
+      const nTracos = (e.categorias || e.tracos || []).length; // tipos de traço com pista, diretas ou indiretas
       const lic = e.licenca ? caso.arquivo?.suspeitos.find((x) => x.id === e.licenca) : null;
       caixaCaso.innerHTML = `
       <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
@@ -1032,8 +1032,17 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function abrirOArquivo() {
     const e = banco.estado;
     abrirArquivo(tela, {
-      caso, conhecidos: e.tracos || [], marcados: st.marcados || {}, presos: e.presos || [], licenca: e.licenca,
+      caso, conhecidos: e.tracos || [], nCategorias: (e.categorias || e.tracos || []).length, presos: e.presos || [], licenca: e.licenca,
+      indiretas: (e.pistas || []).filter((x) => x.tipo === 'traco' && x.indireta && !x.lida),
+      marcados: st.marcados || {},
       aoMudar: (m) => { st.marcados = m; salvar(); },
+      aoPedirLeitura: async (id) => {
+        const r = await noBanco(() => F.xerife(caso.id, p.id, id));
+        if (!r) return;
+        aplicarBanco(r);
+        if (r.traco) anotar('XERIFE IOLANDA', `A pista quer dizer: ${r.traco.nome}.`);
+        caixa({ rotulo: 'Xerife Iolanda', texto: r.texto, opcoes: [{ html: 'Voltar ao Arquivo', fn: (c) => { c.fechar(); abrirOArquivo(); } }, { html: 'Voltar à cena', classe: 'sair', fn: (c) => c.fechar() }] });
+      },
       aoPedirLicenca: async (quem, tracos) => {
         const r = await noBanco(() => F.licenca(caso.id, p.id, quem, tracos));
         if (!r) return null;
@@ -1543,6 +1552,21 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
 
   function amanhecer() {
+    // A fuga (laco.md, seção 6): o amanhecer encerra a noite, sem prisão. Uma revanche por capítulo, com a mesma
+    // rota e o mesmo culpado, sem selos e fora do ranking; ou a volta à temporada (o capítulo seguinte abre).
+    if (rota) {
+      caixa({
+        rotulo: 'O sol nasceu', fechavel: false,
+        texto: `[A FOME] O céu clareia sobre o Rio. Volto ao refúgio antes que o sol me queime.
+
+Quem levou a relíquia já está dormindo, em algum lugar da cidade. Esta noite acabou sem prisão.`,
+        opcoes: [
+          ...(banco.estado.revanche_possivel ? [{ html: 'Revanche: a mesma noite, do começo <small class="etiqueta-teste">sem selos e fora do ranking</small>', fn: (cam) => { cam.fechar(); revanche(); } }] : []),
+          { html: 'Voltar à temporada', fn: async (cam) => { cam.fechar(); await noBanco(() => F.novaNoite(caso.id, p.id)); cena?.desmontar(); location.hash = '#/temporada'; } },
+        ],
+      });
+      return;
+    }
     caixa({
       rotulo: 'O sol vai nascer', fechavel: false,
       texto: `[A FOME] O céu clareia sobre o Rio. Se eu ficar na rua, o sol me queima.
@@ -1575,6 +1599,21 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     });
   }
 
+  async function revanche() {
+    const r = await noBanco(() => F.recomecar(caso.id, p.id));
+    if (!r) return;
+    amanheceuPendente = false;
+    st = novo();
+    st.viuAbertura = true;
+    listaRegistro.innerHTML = '';
+    aplicarBanco(r);
+    await lerLugar(st.lugar);
+    salvar();
+    fecharTudo();
+    montarLugar();
+    anotar('XERIFE IOLANDA', 'Revanche: a mesma noite, do começo. Desta vez não vale selo nem ranking.');
+    faixa('faixa-chegada', 'Revanche', caso.lugares[st.lugar].nome);
+  }
   function recomecar() {
     try { localStorage.removeItem(CHAVE); } catch { /* sem armazenamento */ }
     st = novo();

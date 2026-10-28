@@ -14,7 +14,8 @@
 //   cap_conteudos: em cada testemunha, o tópico 'viu' (requer a marca 'rota-<lugar>', que o caso_lugar dá
 //     quando o jogador chega ao próximo lugar da rota) e o 'nada' (o "ninguém viu", que some quando o rastro
 //     chega ali). As coisas para examinar seguem a mesma regra, com dois pontos no mesmo lugar.
-//   cap_pistas: as pistas de destino, de traço (sobre = 'categoria=valor') e de história.
+//   cap_pistas: as pistas de destino (aponta = o lugar, que só a Xerife diz), de traço (sobre = 'categoria=valor',
+//     indireta = a testemunha só descreve: o valor não vai à tela antes da leitura da Xerife) e de história.
 import { prepararCapitulo, arquivoDaXerife } from '../js/carmen/gerador.js';
 import { CAPITULO, SUSPEITOS } from '../js/carmen/caso.js';
 import { preencher } from '../js/carmen/textos.js';
@@ -121,7 +122,7 @@ for (const lugar of Object.keys(c.erradas)) {
   const erradas = Object.fromEntries(c.erradas[lugar].fontes.map((f) => [f.id, f]));
   const fontes = viva ? visita.fontes : c.erradas[lugar].fontes;
   if (viva) for (const p of Object.values(visita.pistas)) {
-    pistas.set(p.id, { id: p.id, titulo: p.resumo, texto: p.resumo, fonte: p.fonte, tipo: p.tipo, sobre: p.tipo === 'traco' ? `${p.categoria}=${p.valor}` : null });
+    pistas.set(p.id, { id: p.id, titulo: p.resumo, texto: p.resumo, fonte: p.fonte, tipo: p.tipo, sobre: p.tipo === 'traco' ? `${p.categoria}=${p.valor}` : null, indireta: !!p.indireta, aponta: p.tipo === 'destino' ? p.aponta || null : null });
   }
   fontes.forEach((f, k) => {
     const [x, y] = pos(lugar, k);
@@ -159,7 +160,8 @@ if (args.includes('--vitrine')) {
 }
 const sql = [];
 sql.push('begin;');
-if (teste) sql.push(`insert into public.temporadas (id, titulo, situacao, visivel_para) values (${q(TEMPORADA)}, 'Temporada de teste da fuga', 'teste', ${arr(VISIVEL).replace('::text[]', '::uuid[]')}) on conflict (id) do nothing;`);
+// A temporada 1 entra como 'teste' (só a conta de teste e o Bruno veem); abrir para todos é decisão do Bruno.
+sql.push(`insert into public.temporadas (id, titulo, situacao, visivel_para) values (${q(TEMPORADA)}, ${q(teste ? 'Temporada de teste da fuga' : 'A fuga pela cidade · temporada 1')}, 'teste', ${arr(VISIVEL).replace('::text[]', '::uuid[]')}) on conflict (id) do nothing;`);
 sql.push(`delete from public.progresso where capitulo_id = ${q(CAP)};`);
 for (const t of ['cap_conteudos', 'cap_pessoas', 'cap_pistas', 'capitulo_segredo']) sql.push(`delete from public.${t} where capitulo_id = ${q(CAP)};`);
 sql.push(`delete from public.capitulos where id = ${q(CAP)};`);
@@ -174,7 +176,7 @@ for (let i = 0; i < conteudos.length; i += 40) {
   const bloco = conteudos.slice(i, i + 40).map((ct) => [ct.chave, ct.tipo, ct.pessoa, ct.lugar, ct.requer, ct.dados, ct.ordem]);
   sql.push(`insert into public.cap_conteudos (capitulo_id, chave, tipo, pessoa, lugar, requer, dados, ordem) select ${q(CAP)}, e ->> 0, e ->> 1, e ->> 2, e ->> 3, array(select jsonb_array_elements_text(e -> 4)), e -> 5, (e ->> 6)::int from jsonb_array_elements(${j(bloco)}) e;`);
 }
-sql.push(`insert into public.cap_pistas (capitulo_id, id, titulo, texto, fonte, sobre, tipo) select ${q(CAP)}, e ->> 'id', e ->> 'titulo', e ->> 'texto', e ->> 'fonte', e ->> 'sobre', e ->> 'tipo' from jsonb_array_elements(${j([...pistas.values()])}) e;`);
+sql.push(`insert into public.cap_pistas (capitulo_id, id, titulo, texto, fonte, sobre, tipo, indireta, aponta) select ${q(CAP)}, e ->> 'id', e ->> 'titulo', e ->> 'texto', e ->> 'fonte', e ->> 'sobre', e ->> 'tipo', coalesce((e ->> 'indireta')::boolean, false), e ->> 'aponta' from jsonb_array_elements(${j([...pistas.values()])}) e;`);
 sql.push('commit;');
 process.stdout.write(`${sql.join('\n')}\n`);
 process.stderr.write(`${CAP}: ${teste ? 'teste com culpado e rota diferentes do capítulo verdadeiro, ' : ''}gerador v${c.versaoGerador}, ${rota.length} lugares na rota, ${pessoas.length} pessoas, ${conteudos.length} conteúdos, ${pistas.size} pistas, ${sql.join('\n').length} caracteres\n`);

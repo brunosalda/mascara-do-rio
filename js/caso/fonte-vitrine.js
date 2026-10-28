@@ -73,13 +73,24 @@ function tracos() {
   const t = new Set();
   const ini = pub().tracoInicial;
   if (ini) t.add(`${ini.categoria}=${ini.valor}`);
-  for (const p of dados.pistas) if (p.tipo === 'traco' && p.sobre && pr.pistas.includes(p.id)) t.add(p.sobre);
+  for (const p of dados.pistas) if (p.tipo === 'traco' && p.sobre && pr.pistas.includes(p.id) && (!p.indireta || lidas().includes(p.id))) t.add(p.sobre);
   return [...t];
 }
+// _cap_categorias: os tipos de traço com pista, diretas ou indiretas (a conta da Licença).
+function categorias() {
+  const t = new Set();
+  const ini = pub().tracoInicial;
+  if (ini) t.add(ini.categoria);
+  for (const p of dados.pistas) if (p.tipo === 'traco' && p.sobre && pr.pistas.includes(p.id)) t.add(p.sobre.split('=')[0]);
+  return [...t];
+}
+const lidas = () => pr.xerife_lidas || [];
+// Uma pista como o banco a mostra: a indireta sem o valor até a Xerife ler.
+const pistaPublica = (p) => ({ id: p.id, titulo: p.titulo, texto: p.texto, fonte: p.fonte, sobre: p.indireta && !lidas().includes(p.id) ? null : p.sobre, tipo: p.tipo,
+  indireta: !!p.indireta, categoria: p.tipo === 'traco' && p.sobre ? p.sobre.split('=')[0] : null, lida: lidas().includes(p.id) });
 const amanheceu = () => !pr.resolvido_em && pr.hora >= cap().relogio.fim;
 function estado() {
-  const pistas = pr.pistas.map((id) => dados.pistas.find((p) => p.id === id)).filter(Boolean)
-    .map(({ id, titulo, texto, fonte, sobre, tipo }) => ({ id, titulo, texto, fonte, sobre, tipo }));
+  const pistas = pr.pistas.map((id) => dados.pistas.find((p) => p.id === id)).filter(Boolean).map(pistaPublica);
   return copia({
     lugar: pr.lugar, hora: pr.hora, noites: pr.noites, fome: pr.fome, vontade: pr.vontade,
     pistas, marcas: pr.marcas, palavras: {},
@@ -88,7 +99,8 @@ function estado() {
     resolvido_em: pr.resolvido_em, nota: pr.nota, selos: pr.selos, final: pr.final,
     tempo_ativo_seg: pr.tempo_ativo_seg, acao_vencida: pr.acao_vencida, licenca: pr.licenca,
     viagens_erradas: pr.viagens_erradas, rota_passo: pr.rota_passo,
-    percurso: seg().rota.lugares.slice(0, pr.rota_passo + 1), tracos: tracos(), presos: [],
+    percurso: seg().rota.lugares.slice(0, pr.rota_passo + 1), tracos: tracos(), categorias: categorias(), presos: [],
+    xerife_lidas: lidas(), revanche: !!pr.revanche, revanche_possivel: !pr.revanche && amanheceu(),
     amanheceu: amanheceu(),
   });
 }
@@ -113,7 +125,7 @@ function aplicar(ids) {
   for (const id of ids || []) {
     if (pr.pistas.includes(id) || pr.marcas.includes(id)) continue;
     const p = dados.pistas.find((x) => x.id === id);
-    if (p) { pr.pistas.push(id); novas.push({ id: p.id, titulo: p.titulo, texto: p.texto, fonte: p.fonte, sobre: p.sobre, tipo: p.tipo }); } else pr.marcas.push(id);
+    if (p) { pr.pistas.push(id); const q = pistaPublica(p); delete q.lida; novas.push(q); } else pr.marcas.push(id);
   }
   return novas;
 }
@@ -346,11 +358,10 @@ export async function licenca(capitulo, personagem, quem, marcados) {
   progresso();
   if (pr.resolvido_em) throw erro('ja-resolvido');
   if (amanheceu()) throw erro('amanheceu');
-  const tem = tracos();
+  const cats = categorias();
   const marc = Object.entries(marcados || {}).filter(([, v]) => v !== '').map(([k, v]) => `${k}=${v}`);
-  if (tem.length < 3) return copia({ licenca: null, motivo: 'poucos-tracos', conquistados: tem.length, estado: estado() });
-  const categorias = tem.map((t) => t.split('=')[0]);
-  if (!marc.length || marc.some((m) => !categorias.includes(m.split('=')[0]))) return copia({ licenca: null, motivo: 'traco-sem-pista', estado: estado() });
+  if (cats.length < 3) return copia({ licenca: null, motivo: 'poucos-tracos', conquistados: cats.length, estado: estado() });
+  if (!marc.length || marc.some((m) => !cats.includes(m.split('=')[0]))) return copia({ licenca: null, motivo: 'traco-sem-pista', estado: estado() });
   const rest = (pub().arquivo?.suspeitos || [])
     .filter((s) => !Object.entries(marcados).some(([k, v]) => v !== '' && (s.tracos?.[k] ?? '') !== v)).map((s) => s.id);
   if (rest.length !== 1 || rest[0] !== quem) return copia({ licenca: null, motivo: 'nao-sobra-um', restantes: rest.length, estado: estado() });
@@ -392,6 +403,7 @@ export async function cercar() {
     if (pr.dicas_pedidas === 0) selos.push('sem-dicas');
     if (dados.pistas.length && pr.pistas.length >= dados.pistas.length) selos.push('detetive');
     selos.push('primeiro', 'mais-rapido');
+    if (pr.revanche) selos.length = 0; // a revanche não ganha selo
     Object.assign(pr, { resolvido_em: new Date().toISOString(), nota: nota(), selos });
     const f = seg().fecho;
     return copia({
@@ -426,12 +438,52 @@ export async function dica() {
 export async function novaNoite() {
   progresso();
   if (pr.resolvido_em || pr.hora < cap().relogio.fim) throw erro('ainda-noite');
+  if (cap().formato === 'rota') return copia({ fim: true, proximo: null, estado: estado() }); // o amanhecer encerra a fuga
   pr.noites += 1;
   pr.hora = cap().relogio.inicio;
   const sobe = d10() < 6;
   if (sobe) pr.fome = Math.min(5, pr.fome + 1);
   salvar();
   return copia({ fomeSobe: sobe, estado: estado() });
+}
+
+// caso_xerife: 20 minutos; o traço (a indireta passa a contar) ou o lugar de uma pista de destino.
+export async function xerife(capitulo, personagem, id) {
+  progresso();
+  if (pr.resolvido_em) throw erro('ja-resolvido');
+  if (amanheceu()) throw erro('amanheceu');
+  const p = dados.pistas.find((x) => x.id === id);
+  if (!p || !pr.pistas.includes(id)) throw erro('sem-pista');
+  if (!['traco', 'destino'].includes(p.tipo)) return copia({ texto: '**Xerife Iolanda** — Isso não ajuda a achar quem roubou, mas guarde. Pode ser importante mais tarde.', minutos: 0, eventos: [], estado: estado() });
+  let minutos = 0;
+  let eventos = [];
+  if (!lidas().includes(id)) { pr.xerife_lidas = [...lidas(), id]; minutos = 20; eventos = tempo(20); }
+  salvar();
+  if (p.tipo === 'traco') {
+    const [categoria, valor] = p.sobre.split('=');
+    const nome = pub().arquivo?.nomes?.[categoria]?.[valor] || valor;
+    const texto = p.indireta
+      ? `**Xerife Iolanda** — A testemunha não disse com todas as letras, mas eu conheço a Ciranda. Isso quer dizer: ${nome}. Marque no Arquivo.`
+      : `**Xerife Iolanda** — Isso é um traço de quem roubou: ${nome}. Marque no Arquivo.`;
+    return copia({ texto, traco: { categoria, valor, nome }, minutos, eventos, estado: estado() });
+  }
+  const a = pub().lugares?.[p.aponta]?.a || p.aponta;
+  return copia({ texto: p.aponta ? `**Xerife Iolanda** — Li duas vezes. Isso leva ${a}.` : '**Xerife Iolanda** — Li duas vezes e não tiro nada daqui. Ouça mais gente.', aponta: p.aponta || null, minutos, eventos, estado: estado() });
+}
+
+// caso_recomecar: a revanche, uma vez, depois do amanhecer; o placar fica com a primeira tentativa.
+export async function recomecar() {
+  progresso();
+  if (pr.resolvido_em) throw erro('ja-resolvido');
+  if (pr.revanche) throw erro('revanche-usada');
+  if (!amanheceu()) throw erro('ainda-e-noite');
+  const primeira = { erros: pr.acusacoes_erradas, viagens_erradas: pr.viagens_erradas, passo: pr.rota_passo + 1 };
+  pr = null;
+  try { localStorage.removeItem(chave); } catch { /* sem armazenamento */ }
+  await abrir(cap().id);
+  Object.assign(pr, { revanche: true, primeira });
+  salvar();
+  return copia({ revanche: true, estado: estado() });
 }
 
 // O placar do capítulo: na vitrine, só quem joga neste aparelho.
