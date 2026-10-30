@@ -499,7 +499,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhec
             </div>
           </section>
           ${indiretas.length ? `<section class="arquivo-indiretas" aria-label="Pistas que só descrevem">
-            <p class="nota">Estas testemunhas descreveram um traço sem dizer qual. Compare com as fichas, ou peça à Xerife que leia.</p>
+            <p class="nota">Estas testemunhas descreveram um traço sem dizer qual. Compare com as fichas${indiretas.some((x) => !sabidas.has(x.categoria)) ? ', ou peça à Xerife que leia' : ''}.</p>
             <ul>${indiretas.map((x) => `<li${sabidas.has(x.categoria) ? ' class="ja-sabido"' : ''}><q>${esc(x.texto || x.titulo || '')}</q> <small>${esc(caso.arquivo.categorias.find((c) => c.id === x.categoria)?.nome || '')}</small>
               ${sabidas.has(x.categoria) ? '<small class="nota">Você já sabe este traço.</small>' : `<button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>`}</li>`).join('')}</ul>
           </section>` : ''}
