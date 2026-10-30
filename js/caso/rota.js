@@ -79,7 +79,7 @@ export function relogioArco({ inicio, fim, hora, custo = 0 }) {
       ${arco(inicio, h, 'gasto')}${arco(h, fim, 'resta')}${custo > 0 ? arco(h, Math.min(fim, hora + custo), 'custo') : ''}
       <circle class="ponteiro" cx="${px}" cy="${py}" r="4.5"/>
     </svg>
-    <b>${hhmm(h)}</b><small>${passa ? 'o sol chega antes' : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
+    <b>${hhmm(h)}</b><small${custo > 0 && !passa ? ' class="ao-chegar"' : ''}>${passa ? 'o sol chega antes' : custo > 0 ? `faltam ${duracao(resta - custo)} ao chegar` : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
   </div>`;
 }
 
@@ -257,6 +257,8 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         posicionarRotulos(P, ids);
         // A medida dos rótulos depende da fonte: quando ela termina de chegar, os rótulos são postos de novo.
         document.fonts?.ready.then(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids); });
+        // A fonte pode chegar só depois do primeiro desenho do SVG (o "ready" já tinha resolvido).
+        document.fonts?.addEventListener('loadingdone', () => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids); }, { once: true });
         selecionar(escolhido && P[escolhido] ? escolhido : null);
         // No celular, o mapa rola de lado: a vista começa enquadrando o Centro (7.1).
         const caixa = corpo.querySelector('.rota-mapa');
@@ -264,6 +266,12 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         if (caixa.scrollWidth > caixa.clientWidth && foco) caixa.scrollLeft = ((foco[0] - vb.x) / vb.w) * caixa.scrollWidth - caixa.clientWidth / 2;
         caixa.addEventListener('scroll', () => bordas(P, ids), { passive: true });
         bordas(P, ids);
+        // A janela entra com animação: as medidas só valem depois que ela assenta.
+        for (const ms of [400, 900]) setTimeout(() => { if (corpo.isConnected && pos[cidade] === P) bordas(P, ids); }, ms);
+        // E de novo quando a tela muda de tamanho (girar o celular, abrir o teclado).
+        const vigia = new ResizeObserver(() => { if (corpo.isConnected && pos[cidade] === P) bordas(P, ids); });
+        vigia.observe(caixa);
+        if (caixa.firstElementChild) vigia.observe(caixa.firstElementChild);
       }
 
       // Nenhum rótulo encosta em outro nem passa por cima de um medalhão: cada um tenta o lado preferido (NOME),
@@ -296,12 +304,15 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             if (!melhor || choque < melhor.choque) melhor = { k, dx, dy, c, choque };
             if (!choque) break;
           }
-          g.setAttribute('transform', `translate(${melhor.dx} ${melhor.dy - caixa.y + 3})`);
+          g.dataset.base = `translate(${melhor.dx} ${melhor.dy - caixa.y + 3})`;
+          g.setAttribute('transform', g.dataset.base);
           g.dataset.lado = melhor.k;
           obst.push(melhor.c);
         }
         // Sem medida (a tela ainda não desenhou o texto): tenta de novo no quadro seguinte; até lá, o nome fica embaixo.
         if (faltou && tentativa < 20) requestAnimationFrame(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids, tentativa + 1); });
+        // Os indicadores de borda dependem de onde os nomes ficaram.
+        else if (corpo.querySelector('.mapa-bordas')) bordas(P, ids);
       }
 
       // No celular: os lugares fora da vista viram indicadores na borda ("‹ Barra 25 min"), que levam até eles.
@@ -312,18 +323,62 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         if (caixa.scrollWidth <= caixa.clientWidth + 2) { camadaBordas.innerHTML = ''; return; }
         const kx = caixa.scrollWidth / vb.w;
         const ky = caixa.clientHeight / vb.h;
-        const rPx = R_MED * kx * 0.6;
+        const rPx = R_MED * kx;
+        const W = caixa.clientWidth;
+        // Posições calculadas pela geometria do SVG (a leitura da tela pode vir atrasada num painel em segundo plano).
+        const tela = (x, y) => [(x - vb.x) * kx - caixa.scrollLeft, (y - vb.y) * ky];
+        // Medalhão cortado pela borda também vira indicador: na vista só ficam os inteiros.
+        const visiveis = [];
         const fora = ids.map((id) => {
           const px = (P[id][0] - vb.x) * kx - caixa.scrollLeft;
-          const lado = px < rPx ? 'esq' : px > caixa.clientWidth - rPx ? 'dir' : null;
+          const lado = px < rPx ? 'esq' : px > W - rPx ? 'dir' : null;
+          if (!lado) visiveis.push(id);
           return lado && { id, lado, y: (P[id][1] - vb.y) * ky, t: minutosEntre(caso, atual, id) };
         }).filter(Boolean).sort((a, b) => a.y - b.y);
-        const ocupado = { esq: -99, dir: -99 };
-        camadaBordas.innerHTML = fora.map((f) => {
-          const topo = Math.min(caixa.clientHeight - 32, Math.max(ocupado[f.lado] + 36, f.y - 16, 4));
-          ocupado[f.lado] = topo;
-          return `<button type="button" class="mapa-borda ${f.lado}" data-ir="${esc(f.id)}" style="top:${Math.round(caixa.offsetTop + topo)}px">${f.lado === 'esq' ? '‹ ' : ''}${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}${f.lado === 'dir' ? ' ›' : ''}</button>`;
-        }).join('');
+        // O nome de um medalhão inteiro não sai da vista: se passar da borda, desliza para dentro.
+        // O nome de um lugar que virou indicador sai da vista (ficaria cortado na borda).
+        const livres = [];
+        for (const id of ids) {
+          const g = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`);
+          const rot = g?.querySelector('.rota-rotulo');
+          if (!rot) continue;
+          if (rot.dataset.base) rot.setAttribute('transform', rot.dataset.base);
+          rot.style.visibility = visiveis.includes(id) ? '' : 'hidden';
+          if (!visiveis.includes(id)) continue;
+          const marcas = rot.querySelector('.rota-marcas');
+          if (marcas) marcas.style.display = 'none';
+          const bb = rot.getBBox();
+          if (marcas) marcas.style.display = '';
+          const [tx = 0, ty = 0] = (rot.dataset.base || '').match(/-?[\d.]+/g)?.map(Number) || [];
+          const [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
+          const [lw, lh] = [bb.width * kx, bb.height * ky];
+          const desvio = esq < 6 ? 6 - esq : esq + lw > W - 6 ? W - 6 - (esq + lw) : 0;
+          if (desvio) rot.setAttribute('transform', `${rot.getAttribute('transform')} translate(${desvio / kx} 0)`);
+          const [mx, my] = tela(P[id][0] - R_MED, P[id][1] - R_MED);
+          livres.push({ x: mx, y: my, w: 2 * R_MED * kx, h: 2 * R_MED * ky });
+          livres.push({ x: esq + desvio, y: topo, w: lw, h: lh });
+        }
+        camadaBordas.innerHTML = fora.map((f) => `<button type="button" class="mapa-borda ${f.lado}" data-ir="${esc(f.id)}">${f.lado === 'esq' ? '‹ ' : ''}${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}${f.lado === 'dir' ? ' ›' : ''}</button>`).join('');
+        // Cada indicador fica na altura do lugar, sem cobrir um medalhão nem um nome da vista nem outro indicador.
+        const ALT = 44;
+        const postos = [];
+        [...camadaBordas.children].forEach((b, i) => {
+          const f = fora[i];
+          const w = b.offsetWidth;
+          const x = f.lado === 'esq' ? 6 : W - 6 - w;
+          const max = caixa.clientHeight - ALT - 4;
+          const ideal = Math.min(max, Math.max(4, f.y - ALT / 2));
+          // Outro indicador nunca; medalhão e nome da vista, o mínimo possível; e o mais perto da altura do lugar.
+          const custo = (y) => {
+            const c = { x, y: y - 3, w, h: ALT + 6 };
+            if (postos.some((o) => areaComum(c, o))) return Infinity;
+            return livres.reduce((s, o) => s + areaComum(c, o), 0) * 20 + Math.abs(y - ideal);
+          };
+          let topo = ideal;
+          for (let y = 4; y <= max; y += 4) if (custo(y) < custo(topo)) topo = y;
+          postos.push({ x, y: topo, w, h: ALT });
+          b.style.top = `${Math.round(caixa.offsetTop + topo)}px`;
+        });
       }
 
       function selecionar(id) {
