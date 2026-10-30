@@ -36,7 +36,7 @@ function posicoesSP(caso) {
   return Object.fromEntries(sp.map((id, i) => {
     const fx = lo1 > lo0 ? (geo[i].lon - lo0) / (lo1 - lo0) : 0.5;
     const fy = la1 > la0 ? (la1 - geo[i].lat) / (la1 - la0) : 0.5;
-    return [id, [Math.round(560 + fx * 800), Math.round(200 + fy * 640)]];
+    return [id, [Math.round(360 + fx * 1200), Math.round(160 + fy * 720)]];
   }));
 }
 
@@ -131,7 +131,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             <circle class="rota-aro" r="${R_MED}"/>
           </g>
           ${id === atual ? `<text class="rota-voce-tag" y="${-R_MED - 16}">VOCÊ</text>` : ''}
-          <g class="rota-rotulo">
+          <g class="rota-rotulo" transform="translate(0 ${R_MED + FOLGA + 2})">
             <text class="rota-nome" y="24">${esc(l.nome)}</text>
             ${tempo ? `<g class="rota-pilula"><rect x="${-largura / 2}" y="34" width="${largura}" height="30" rx="15"/><text y="56">${esc(tempo)}</text></g>` : ''}
             ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 92 : 62}">${esc(l.marcas.join(' · '))}</text>` : ''}
@@ -268,7 +268,8 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
 
       // Nenhum rótulo encosta em outro nem passa por cima de um medalhão: cada um tenta o lado preferido (NOME),
       // depois embaixo, à direita, à esquerda e em cima, e fica no primeiro lugar livre (ou no que menos encosta).
-      function posicionarRotulos(P, ids) {
+      function posicionarRotulos(P, ids, tentativa = 0) {
+        let faltou = false;
         const obst = ids.map((id) => {
           const voce = id === atual ? 44 : 0;
           return { x: P[id][0] - R_MED - FOLGA, y: P[id][1] - R_MED - FOLGA - voce, w: 2 * (R_MED + FOLGA), h: 2 * (R_MED + FOLGA) + voce };
@@ -282,7 +283,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           if (marcas) marcas.style.display = 'none';
           const caixa = g.getBBox();
           if (marcas) marcas.style.display = '';
-          if (!caixa.width) continue;
+          if (!caixa.width) { faltou = true; continue; }
           const [w, h] = [caixa.width + 10, caixa.height + 6];
           const [x, y] = P[id];
           const lados = { baixo: [0, R_MED + FOLGA + 2], dir: [R_MED + FOLGA + 8 + w / 2, -h / 2], esq: [-(R_MED + FOLGA + 8 + w / 2), -h / 2], cima: [0, -R_MED - FOLGA - 4 - h - (id === atual ? 44 : 0)] };
@@ -299,6 +300,8 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           g.dataset.lado = melhor.k;
           obst.push(melhor.c);
         }
+        // Sem medida (a tela ainda não desenhou o texto): tenta de novo no quadro seguinte; até lá, o nome fica embaixo.
+        if (faltou && tentativa < 20) requestAnimationFrame(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids, tentativa + 1); });
       }
 
       // No celular: os lugares fora da vista viram indicadores na borda ("‹ Barra 25 min"), que levam até eles.
