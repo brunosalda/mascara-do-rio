@@ -8,6 +8,8 @@ import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
 import { abrirMapaRota, abrirArquivo, relogioArco } from './rota.js';
+import { icone } from './icones.js';
+import { cerimoniasCurtas } from '../leitura.js';
 import { iniciarPerseguicao } from './perseguicao.js';
 import { iniciarInfiltracao } from './infiltracao.js';
 import { abrirConfronto, turnoDoConfronto, escolhasDo, vitalidadeDe, ataqueDe } from './confronto.js';
@@ -162,8 +164,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         </button>
         <div class="hud-noite"><b data-hora></b><small>o sol nasce às ${hora(caso.relogio.fim)}</small></div>
         <nav class="hud-botoes">
-          <button type="button" class="hud-com-icone" data-hud="viajar" title="Lugares do caso (M)" aria-label="Lugares do caso"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">Lugares <kbd>M</kbd></span></button>
-          <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="Quadro de pistas (Q)" aria-label="Quadro de pistas"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">Quadro <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
+          <button type="button" class="hud-com-icone" data-hud="viajar" title="Lugares do caso (M)" aria-label="Lugares do caso"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">${rota ? 'Mapa' : 'Lugares'} <kbd>M</kbd></span></button>
+          ${rota ? `<button type="button" class="hud-com-icone" data-hud="arquivo" title="Arquivo dos suspeitos" aria-label="Arquivo">${icone('arquivo', { classe: 'hud-svg' })}<span class="hud-nome">Arquivo</span></button>` : ''}
+          <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="${rota ? 'Pistas e registro (Q)' : 'Quadro de pistas (Q)'}" aria-label="${rota ? 'Pistas' : 'Quadro de pistas'}"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">${rota ? 'Pistas' : 'Quadro'} <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
           <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente" aria-label="Som ambiente"><span class="icone-texto">♪</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="hud-nome">Som</span></button>
           <button type="button" data-hud="ajuda" class="hud-icone" title="Como jogar" aria-label="Como jogar"><span class="icone-texto">?</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17v.5"/></svg><span class="hud-nome">Ajuda</span></button>
@@ -178,8 +181,10 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       <aside class="painel-retrato">
         <button type="button" class="retrato-grande" data-hud="ficha" title="Ficha (F)"><img src="${esc(retrato)}" alt=""><span class="estado-cor" aria-hidden="true"></span></button>
         <b class="retrato-nome">${esc(p.nome)}</b>
+        ${rota ? '<span class="gotas" aria-label="Fome"></span>' : ''}
         <div class="barras"></div>
       </aside>
+      ${rota ? '<div class="lugar-titulo"><b data-lugar-titulo></b><small data-lugar-marcas></small></div>' : ''}
       <section class="painel-baixo" aria-label="Registro do caso">
         <p class="pergunta-caso"><b>A pergunta</b> ${esc(caso.pergunta)}</p>
         <ol class="registro-noite" aria-live="polite"></ol>
@@ -238,8 +243,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     listaRegistro.insertAdjacentHTML('beforeend', linhaHtml({ voz, texto }));
     listaRegistro.scrollTop = listaRegistro.scrollHeight;
     salvar();
+    // Carmen 2026 (7.2): as últimas linhas aparecem embaixo à esquerda e somem depois de 6 s.
+    if (rota) {
+      tela.classList.remove('registro-quieto');
+      clearTimeout(anotar.quieto);
+      anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), 6000);
+    }
   }
   listaRegistro.innerHTML = st.registro.map(linhaHtml).join('');
+  if (rota) anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), 6000);
 
   function faixa(classe, rotulo, texto) {
     const el = document.createElement('div');
@@ -300,7 +312,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const lugar = caso.lugares[st.lugar];
     tela.querySelector('[data-lugar-nome]').textContent = lugar.nome;
     tela.querySelector('[data-hora]').textContent = hora(st.hora);
-    tela.querySelector('.gotas').innerHTML = Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < st.fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('');
+    const titulo = tela.querySelector('[data-lugar-titulo]');
+    if (titulo) {
+      titulo.textContent = lugar.nome;
+      tela.querySelector('[data-lugar-marcas]').textContent = (lugar.marcas || []).join(' · ');
+    }
+    const gotas = Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < st.fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('');
+    tela.querySelectorAll('.gotas').forEach((g) => { g.innerHTML = gotas; });
     const barra = (classe, nome, sigla, resta, max) => `<span class="barra ${classe}" title="${nome}: ${resta} de ${max}" style="--v:${max ? (resta / max).toFixed(3) : 0}"><i></i><em>${resta}/${max}</em><small>${sigla}</small></span>`;
     tela.querySelector('.barras').innerHTML = barra('barra-vit', 'Vitalidade', 'V', vitalidadeMax, vitalidadeMax)
       + barra('barra-von', 'Força de Vontade', 'FV', st.vontade, vontadeMax) + barra('barra-fome', 'Fome', 'F', st.fome, 5);
@@ -359,6 +377,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const lic = e.licenca ? caso.arquivo?.suspeitos.find((x) => x.id === e.licenca) : null;
       caixaCaso.innerHTML = `
       <div class="quadro-cabeca"><span class="plano-marca" aria-hidden="true">${nPistas}</span><span><b>${esc(caso.titulo)}</b> · noite ${st.noites}</span></div>
+      <p class="quadro-resumo">Onde? <b>${destinos}</b> · Quem? <b>${lic ? 'Licença' : `${Math.min(nTracos, 3)} de 3`}</b></p>
       <ol class="quadro-linhas">
         <li class="${destinos ? 'ok' : 'falta'}"><button type="button" data-hud="viajar"><span class="quadro-nome">Para onde foi?</span><span class="quadro-valor">${destinos ? `${destinos} pista${destinos > 1 ? 's' : ''} de destino` : 'ouça as testemunhas'}</span></button></li>
         <li class="${lic ? 'ok' : nTracos >= 3 ? 'falta' : 'opcional'}"><button type="button" data-hud="arquivo"><span class="quadro-nome">Quem é?</span><span class="quadro-valor">${lic ? `Licença contra ${esc(lic.apelido || lic.nome)}` : nTracos > 3 ? `${nTracos} traços (bastam 3)` : `${nTracos} de 3 traços`}</span></button></li>
@@ -988,11 +1007,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const veu = document.createElement('div');
     veu.className = 'passagem-caso';
     tela.appendChild(veu);
+    let viagem = null;
     setTimeout(async () => {
       if (banco) {
         const r = await lerLugar(id);
         if (!r) { veu.remove(); return; }
         aplicarBanco(r);
+        viagem = r.viagem || null;
         if (rota) {
           st.visitados = [...new Set([...(st.visitados || []), id])];
           salvar();
@@ -1007,12 +1028,53 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       montarLugar();
       const l = caso.lugares[id];
       anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.`);
-      veu.classList.add('saindo');
-      setTimeout(() => veu.remove(), 450);
+      if (rota) {
+        // Carmen 2026 (6.2): a cena nova abre em íris, e o cartão de chegada encolhe até virar o título.
+        veu.remove();
+        if (!cerimoniasCurtas()) {
+          palco.classList.remove('iris');
+          void palco.offsetWidth;
+          palco.classList.add('iris');
+          setTimeout(() => palco.classList.remove('iris'), 700);
+        }
+        cartaoChegada(l, viagem);
+      } else {
+        veu.classList.add('saindo');
+        setTimeout(() => veu.remove(), 450);
+        faixa('faixa-chegada', l.nome, hora(st.hora));
+      }
       setTimeout(olharInicial, 120);
-      faixa('faixa-chegada', l.nome, hora(st.hora));
       setTimeout(checarAmanhecer, 600);
     }, 260);
+  }
+
+  // Carmen 2026 (6.2): o cartão de chegada no alto à esquerda (nome grande, hora e marcas). Na viagem errada,
+  // leva o carimbo NINGUÉM VIU. Depois de 2,2 s, encolhe até o título do lugar. Um clique encurta.
+  function cartaoChegada(l, v) {
+    tela.querySelectorAll('.cartao-chegada').forEach((x) => x.remove());
+    const el = document.createElement('div');
+    el.className = 'cartao-chegada';
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<b>${esc(l.nome)}</b><small>${hora(st.hora)}${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${v?.tipo === 'errada' ? '<span class="carimbo carimbo-p">Ninguém viu</span>' : ''}`;
+    tela.appendChild(el);
+    tela.classList.add('chegando');
+    if (v?.tipo === 'errada') setTimeout(() => som.carmen?.('carimbo'), cerimoniasCurtas() ? 0 : 420);
+    let foi = false;
+    const encolher = () => {
+      if (foi) return;
+      foi = true;
+      const alvo = tela.querySelector('.lugar-titulo b');
+      const a = el.querySelector('b').getBoundingClientRect();
+      const b = alvo?.getBoundingClientRect();
+      if (b?.width && !cerimoniasCurtas()) {
+        el.style.transformOrigin = `${a.left - el.getBoundingClientRect().left}px ${a.top - el.getBoundingClientRect().top}px`;
+        el.style.transform = `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${(b.height / a.height).toFixed(3)})`;
+      }
+      el.classList.add('saindo');
+      setTimeout(() => { el.remove(); tela.classList.remove('chegando'); }, 420);
+    };
+    el.addEventListener('click', encolher);
+    setTimeout(encolher, cerimoniasCurtas() ? 1200 : 2200);
   }
 
   // Formato rota: o que a chegada conta. Viagem errada: ninguém viu. Esconderijo: o ladrão está aqui.
@@ -1121,6 +1183,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       el.classList.toggle('conhecida', st.achados.includes(`conheceu-${pid}`));
       // Balão sobre a cabeça de quem tem algo novo a dizer (sempre à vista, sem Tab).
       const quer = !fuga && temAssuntoNovo(pid);
+      // Carmen 2026 (7.2): no lugar do balão, o rosto da testemunha num círculo; o ponto de sódio marca
+      // assunto novo, e o rosto fica apagado depois da conversa.
+      if (rota) {
+        let rosto = el.querySelector('.rosto-testemunha');
+        const src = figuraDe(pid);
+        if (!rosto && src) {
+          rosto = document.createElement('span');
+          rosto.className = 'rosto-testemunha';
+          rosto.setAttribute('aria-hidden', 'true');
+          rosto.style.setProperty('--rosto', `url('${new URL(src, location.href).href}')`);
+          el.appendChild(rosto);
+        }
+        rosto?.classList.toggle('nova', quer);
+        rosto?.classList.toggle('apagado', !quer && st.achados.includes(`conheceu-${pid}`));
+        if (rosto) { el.querySelector('.balao-assunto')?.remove(); continue; }
+      }
       let balao = el.querySelector('.balao-assunto');
       if (quer && !balao) {
         balao = document.createElement('span');
@@ -1694,9 +1772,13 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       const rb = await perguntar(tela, {
         rotulo: 'Mais opções',
         texto: `<p>${esc(caso.rotulo)} da temporada: o progresso fica guardado no servidor.</p>`,
-        opcoes: [...(st.resolvido ? [] : ['Pedir uma dica']), 'Ver o ranking da temporada', 'Sair do caso', 'Voltar ao caso'],
+        // No Carmen 2026, a ficha, o som e a ajuda moram aqui (a cena só tem Mapa, Arquivo e Pistas).
+        opcoes: [...(rota ? ['Ver a ficha', som.ligado() ? 'Desligar o som' : 'Ligar o som', 'Como jogar'] : []), ...(st.resolvido ? [] : ['Pedir uma dica']), 'Ver o ranking da temporada', 'Sair do caso', 'Voltar ao caso'],
       });
-      const escolha = [...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
+      const escolha = [...(rota ? ['ficha', 'som', 'ajuda'] : []), ...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
+      if (escolha === 'ficha') verFicha();
+      if (escolha === 'som') { som.alternar(); tela.querySelector('[data-hud="som"]')?.setAttribute('aria-pressed', String(som.ligado())); }
+      if (escolha === 'ajuda') ajuda();
       if (escolha === 'dica') pedirDica();
       if (escolha === 'ranking') { cena?.desmontar(); location.hash = voltarPara; }
       if (escolha === 'sair') { cena?.desmontar(); location.hash = voltarPara; }

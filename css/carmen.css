@@ -338,3 +338,164 @@ body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
 .tela-jogo.bg2.tela-caso.carmen .borda-saida:hover { background-color: rgba(200, 214, 240, 0.06); }
 .tela-jogo.bg2.tela-caso.carmen .cena .borda-saida.borda-dir { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 12 H18 V5 L30 16 L18 27 V20 H3 Z' fill='%23c8d6f0' stroke='%23ffffff' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 28 16, pointer; }
 .tela-jogo.bg2.tela-caso.carmen .cena .borda-saida.borda-esq { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M29 12 H14 V5 L2 16 L14 27 V20 H29 Z' fill='none' stroke='%23120c08' stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M29 12 H14 V5 L2 16 L14 27 V20 H29 Z' fill='%23c8d6f0' stroke='%23ffffff' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 4 16, pointer; }
+
+/* ============ Etapa 2: o lugar (direção de arte, 7.2) ============ */
+/* No computador, a pintura vai a tela cheia; a interface flutua por cima, em vidro. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) { --col-e: 0px; --col-d: 0px; --topo: 0px; --baixo: 0px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .moldura {
+  inset: 8px; border: 1px solid var(--c-linha); border-radius: 4px; pointer-events: none;
+  box-shadow: 0 0 0 8px rgba(7, 10, 18, 0.55), inset 0 0 120px 30px rgba(3, 5, 10, 0.7);
+}
+/* O nome do lugar, no alto à esquerda: é o cartão da chegada já encolhido. */
+.tela-jogo.bg2.tela-caso.carmen .lugar-titulo {
+  position: absolute; z-index: 210; top: 22px; left: 26px; display: grid; gap: 4px; pointer-events: none; max-width: 46vw;
+  transition: opacity var(--t-medio) var(--curva-sai);
+}
+.tela-jogo.bg2.tela-caso.carmen .lugar-titulo b { font: 800 40px/0.95 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-texto); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9); }
+.tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font: 600 13px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); text-shadow: 0 1px 6px #000; }
+.tela-jogo.bg2.tela-caso.carmen.chegando .lugar-titulo { opacity: 0; }
+.tela-jogo.bg2.tela-caso.carmen.paineis-ocultos .lugar-titulo { display: none; }
+/* O relógio no alto à direita, e o caso logo abaixo, num painel de vidro com as perguntas. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite { top: 12px; right: 22px; left: auto; bottom: auto; width: 120px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-plano.quadro-caso {
+  top: 118px; right: 18px; bottom: auto; left: auto; width: 300px; max-width: 300px; max-height: none; padding: 10px 12px; overflow: visible;
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-pe { display: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-cabeca { font: 600 12px/1.2 var(--f-ui); color: var(--c-texto-suave); }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-cabeca b { font-size: 13px; color: var(--c-texto); }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-linhas button { min-height: 30px; }
+/* O aviso de demonstração: uma pílula de vidro no alto, ao centro. */
+.tela-jogo.bg2.tela-caso.carmen .faixa-demo {
+  top: 12px; padding: 5px 14px; border-radius: 999px; background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid var(--c-linha); color: var(--c-texto-suave); font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.08em; box-shadow: none;
+}
+/* O personagem: retrato redondo de 56 px no canto de baixo, à esquerda, com as gotas de Fome. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-retrato {
+  top: auto; right: auto; left: 20px; bottom: 20px; width: auto; padding: 0; display: grid; justify-items: center; gap: 6px;
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .retrato-grande { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--c-linha-forte); }
+.tela-jogo.bg2.tela-caso.carmen .painel-retrato :is(.retrato-nome, .barras) { display: none; }
+.tela-jogo.bg2.tela-caso.carmen .painel-retrato .gotas { display: flex; gap: 3px; }
+.tela-jogo.bg2.tela-caso.carmen .painel-retrato .gota { width: 9px; height: 12px; fill: var(--c-noite-0); stroke: rgba(224, 38, 63, 0.7); stroke-width: 1.3; }
+.tela-jogo.bg2.tela-caso.carmen .painel-retrato .gota.cheia { fill: var(--c-rastro); stroke: var(--c-rastro); }
+/* O registro: as três últimas linhas, embaixo à esquerda; somem depois de 6 s (voltam com o mouse). */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo {
+  left: 92px; right: auto; bottom: 18px; top: auto; width: min(520px, 42vw); height: auto; padding: 0; display: block;
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo .pergunta-caso { display: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .registro-noite {
+  max-height: none; height: auto; overflow: hidden; padding: 8px 12px; margin: 0; transition: opacity 600ms var(--curva-sai);
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .registro-noite li:not(:nth-last-child(-n + 3)) { display: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .registro-noite li { font-size: 14px; line-height: 1.35; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen.registro-quieto:not(.paineis-ocultos) .painel-baixo:not(:hover) .registro-noite { opacity: 0; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:has(.painel-pergunta.com-pergunta) .registro-noite { visibility: hidden; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-pergunta.com-pergunta { inset: auto 0 0 0; max-height: 52vh; }
+/* Os botões: três pílulas embaixo à direita (Mapa, Arquivo, Pistas) e o resto no menu "⋯". */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes {
+  top: auto; left: auto; right: 20px; bottom: 20px; width: auto; flex-direction: row; align-items: center; gap: 8px;
+}
+.tela-jogo.bg2.tela-caso.carmen .hud-botoes :is([data-hud="ficha"], [data-hud="som"], [data-hud="ajuda"]) { display: none !important; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button {
+  width: auto; height: 44px; padding: 0 16px 0 12px !important; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button[data-hud="menu"] { width: 44px; padding: 0 !important; justify-content: center; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-svg { width: 20px; height: 20px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-nome {
+  position: static; translate: none; font: 600 15px/1 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto);
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-nome kbd {
+  margin-left: 6px; padding: 2px 5px; border: 1px solid var(--c-linha-forte); border-radius: 4px; font: 600 11px/1 var(--f-ui); color: var(--c-texto-suave); text-shadow: none;
+}
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes [data-hud="menu"] .hud-nome { display: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-contador { top: -6px; right: -4px; }
+/* Os botões redondos da câmera: uma fileira pequena acima das pílulas. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) :is(.botao-visao, .botao-centrar, .botao-pausa, .mostrar-paineis) { top: auto; bottom: 76px; width: 36px; height: 36px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .mostrar-paineis { right: 20px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .botao-pausa { right: 62px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .botao-centrar { right: 104px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .botao-visao { right: 146px; }
+/* A conversa e as perguntas: um cartão embaixo, com margem. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-baixo { left: 16px; right: 16px; bottom: 16px; }
+
+/* A testemunha: no lugar do balão, o rosto num círculo de 40 px; ponto de sódio = assunto novo. */
+.tela-caso.carmen .pessoa .rosto-testemunha {
+  position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 0; z-index: 2; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--rosto) 50% 3% / 250% auto no-repeat, radial-gradient(circle at 50% 35%, #2a3550, #0b101c 75%);
+  border: 2px solid var(--c-texto); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7); pointer-events: auto; cursor: pointer;
+  transition: opacity var(--t-medio), filter var(--t-medio), transform var(--t-rapido) var(--curva-sai);
+}
+.tela-caso.carmen .pessoa .rosto-testemunha.nova::after {
+  content: ""; position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--c-sodio);
+  box-shadow: 0 0 0 2px var(--c-noite-0), 0 0 10px var(--c-sodio);
+}
+.tela-caso.carmen .pessoa .rosto-testemunha.apagado { opacity: 0.6; filter: grayscale(0.6); border-color: var(--c-linha-forte); }
+.tela-caso.carmen .pessoa:hover .rosto-testemunha { transform: scale(1.08); opacity: 1; filter: none; }
+
+/* A chegada: a cena nova abre em íris (600 ms). */
+.tela-jogo.bg2.tela-caso.carmen .palco.iris { animation: carmen-iris 600ms var(--curva-sai) both; }
+@keyframes carmen-iris { from { clip-path: circle(0% at 50% 55%); } to { clip-path: circle(120% at 50% 55%); } }
+/* O cartão de chegada: nome grande, hora e marcas; encolhe até o título. */
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada {
+  position: absolute; z-index: 420; top: 22px; left: 26px; display: grid; gap: 6px; padding: 14px 22px 16px; max-width: min(640px, 80vw);
+  background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--c-linha); border-radius: var(--r-vidro);
+  box-shadow: var(--sombra-vidro); cursor: pointer; animation: carmen-surgir var(--t-lento) var(--curva-sai) both;
+  transition: transform 420ms var(--curva-sai), opacity 300ms ease 120ms, background 300ms, border-color 300ms;
+}
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada b { font: 800 64px/0.9 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-texto); }
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada small { font: 600 15px/1.2 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-sodio); }
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada.saindo { opacity: 0; background: transparent; border-color: transparent; box-shadow: none; }
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada .carimbo { position: absolute; right: -14px; bottom: -16px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada { top: calc(var(--topo) + 10px); left: 12px; right: 12px; max-width: none; padding: 12px 16px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada b { font-size: 44px; }
+
+/* O carimbo (5.3): borda dupla, Big Shoulders, girado −8°, tinta falhada; bate com mola. */
+.carmen .carimbo {
+  display: inline-block; padding: 3px 12px 2px; border: 3px double var(--c-carimbo); border-radius: 4px; rotate: -8deg;
+  color: var(--c-carimbo); font: 800 18px/1 var(--f-titulo); letter-spacing: 0.08em; text-transform: uppercase; background: rgba(7, 10, 18, 0.35);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -12 8.9'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23r)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -12 8.9'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23r)'/%3E%3C/svg%3E");
+  animation: carmen-carimbar 420ms var(--curva-mola) 420ms both;
+}
+.carmen .carimbo.carimbo-g { font-size: 40px; border-width: 5px; padding: 6px 20px 4px; }
+@keyframes carmen-carimbar { 0% { opacity: 0; scale: 2.4; } 43% { opacity: 1; scale: 0.94; } 100% { opacity: 1; scale: 1; } }
+/* A hora em texto do topo antigo sai: o relógio em arco já mostra a hora. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-noite { display: none; }
+/* O caso no alto à direita: o valor de cada pergunta quebra a linha em vez de ser cortado. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-plano.quadro-caso { width: 340px; max-width: 340px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-linhas button { gap: 10px; align-items: baseline; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-nome { flex: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-valor { flex: 1; white-space: normal; overflow: visible; text-align: right; font: 500 14px/1.25 var(--f-ui); }
+.tela-caso.carmen .pessoa .rosto-testemunha.apagado { opacity: 0.78; filter: grayscale(0.5); }
+/* Sobre o vidro escuro, o carimbo usa o vermelho do rastro, mais claro, para ser lido. */
+.carmen .cartao-chegada .carimbo { color: #ff3b55; border-color: #ff3b55; background: rgba(30, 4, 10, 0.6); font-size: 20px; }
+
+/* ============ Etapa 2 no celular (7.2): nome à esquerda, relógio à direita, pílula do caso, barra de 56 px ============ */
+.tela-jogo.bg2.tela-caso.carmen .quadro-resumo { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .faixa-demo { top: calc(var(--topo) + 4px); padding: 3px 10px; font-size: 10px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo { top: calc(var(--topo) + 30px); left: 14px; max-width: calc(100% - 110px); }
+body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo b { font-size: 34px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font-size: 11px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite.com-arco { top: calc(var(--topo) + 26px); right: 8px; left: auto; width: 76px; height: auto; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 0.62; }
+/* O retrato: redondo, 44 px, embaixo à esquerda, acima da pílula do caso, com as gotas de Fome. */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-retrato {
+  top: auto; right: auto; left: 10px; bottom: calc(var(--baixo) + 8px); display: flex; align-items: center; gap: 6px; width: auto;
+}
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .retrato-grande { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--c-linha-forte); }
+/* A pílula do caso, com a folha fechada: "Onde? 2 · Quem? 1 de 3". */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) :is(.quadro-cabeca, .quadro-pe) { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo {
+  display: block; margin: 0; font: 600 14px/1.2 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto-suave);
+}
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo b { color: var(--c-texto); font-weight: 700; }
+/* A barra de baixo: 56 px, com Mapa, Arquivo, Pistas e Mais. */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button { min-height: 56px; }
+/* O aviso de demonstração centrado no alto (o estilo da noite o punha à direita, e no celular em 62 px). */
+.tela-jogo.bg2.tela-caso.carmen .faixa-demo { left: 50%; right: auto; translate: -50% 0; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .faixa-demo { top: calc(var(--topo) + 4px) !important; }
+/* O relógio em arco no celular: o SVG mantém o tamanho do desenho; o zoom o reduz a 72 px. */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite .relogio-arco svg { width: 120px; height: 84px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 0.6; width: 120px; }
+/* O rosto fica acima do nome (o nome ocupa os 30 px de cima da pessoa). */
+.tela-caso.carmen .pessoa .rosto-testemunha { bottom: calc(100% + 34px); }
