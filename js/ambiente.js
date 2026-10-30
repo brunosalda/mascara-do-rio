@@ -240,6 +240,30 @@ function ligarAudio() {
   return true;
 }
 
+// Carmen 2026 (guia visual, seção 6.3): ruído filtrado curto, para cliques, papel, turbina e obturador.
+// A altura varia ±3% a cada toque, para não cansar.
+const variar = (f) => f * (0.97 + Math.random() * 0.06);
+function ruido(a, quando, dur, { freq = 2000, ate = null, q = 1, filtro = 'bandpass', volume = 0.03, ataque = 0.004 } = {}) {
+  const n = Math.max(1, Math.floor(a.ctx.sampleRate * (dur + 0.05)));
+  const buf = a.ctx.createBuffer(1, n, a.ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const fonte = a.ctx.createBufferSource();
+  fonte.buffer = buf;
+  const f = a.ctx.createBiquadFilter();
+  f.type = filtro;
+  f.Q.value = q;
+  f.frequency.setValueAtTime(variar(freq), quando);
+  if (ate) f.frequency.exponentialRampToValueAtTime(ate, quando + dur);
+  const g = a.ctx.createGain();
+  g.gain.setValueAtTime(0.0001, quando);
+  g.gain.exponentialRampToValueAtTime(volume, quando + ataque);
+  g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+  fonte.connect(f).connect(g).connect(a.seco);
+  fonte.start(quando);
+  fonte.stop(quando + dur + 0.05);
+}
+
 export const som = {
   ligado() {
     try { return localStorage.getItem(CHAVE_SOM) === '1'; } catch { return false; }
@@ -289,6 +313,46 @@ export const som = {
   toque() {
     if (!audio || !this.ligado()) return;
     tom(audio, audio.ctx.currentTime + 0.01, 660, { dur: 0.18, volume: 0.025 });
+  },
+  // --- Carmen 2026: os sons de interface, em cerca de metade do volume do ambiente.
+  carmen(nome, dur = 1.2) {
+    if (!audio || !this.ligado()) return;
+    const t = audio.ctx.currentTime + 0.01;
+    const A = audio;
+    switch (nome) {
+      case 'clique': ruido(A, t, 0.03, { freq: 2000, q: 3, volume: 0.035 }); break;
+      case 'painel': ruido(A, t, 0.12, { freq: 600, ate: 3200, q: 0.8, volume: 0.018 }); break;
+      case 'pista':
+        ruido(A, t, 0.18, { freq: 1500, ate: 4000, q: 0.7, volume: 0.012 });
+        tom(A, t + 0.08, variar(1320), { dur: 0.3, volume: 0.016 });
+        break;
+      case 'viagem': tom(A, t, 70, { tipo: 'sawtooth', dur, volume: 0.012, ataque: dur * 0.4 }); break;
+      case 'voo': ruido(A, t, 2.4, { freq: 300, ate: 1200, filtro: 'lowpass', q: 0.5, volume: 0.03, ataque: 0.8 }); break;
+      case 'chegada':
+        tom(A, t, 110, { dur: 0.8, volume: 0.04 });
+        tom(A, t, 220, { dur: 0.6, volume: 0.014 });
+        tom(A, t, 330, { dur: 0.4, volume: 0.006 });
+        break;
+      case 'carimbo':
+        pulso(A, t, 60, 0.12);
+        ruido(A, t, 0.04, { freq: 2500, q: 1.5, volume: 0.04 });
+        break;
+      case 'descartar': ruido(A, t, 0.08, { freq: 3500, q: 1.2, volume: 0.02 }); break;
+      case 'tecla': ruido(A, t, 0.015, { freq: 3000, q: 4, volume: 0.02, ataque: 0.002 }); break;
+      case 'preso':
+        ruido(A, t, 0.03, { freq: 2500, q: 2, volume: 0.05 });
+        ruido(A, t + 0.09, 0.03, { freq: 2200, q: 2, volume: 0.05 });
+        for (const [f, v] of [[261.63, 0.03], [329.63, 0.022], [392, 0.02]]) tom(A, t + 0.2, f, { tipo: 'triangle', dur: 0.9, volume: v, ataque: 0.03 });
+        break;
+      case 'fugiu':
+        tom(A, t, 392, { tipo: 'triangle', dur: 0.35, volume: 0.03 });
+        tom(A, t + 0.3, 293.66, { tipo: 'triangle', dur: 0.4, volume: 0.03 });
+        break;
+      case 'contagem':
+        for (let i = 0; i < 10; i++) tom(A, t + i * (dur / 10), 600 * 2 ** (i / 12), { dur: 0.04, volume: 0.012, ataque: 0.003 });
+        break;
+      default: break;
+    }
   },
   passo() {
     if (!audio || !this.ligado()) return;

@@ -42,6 +42,7 @@ const bloco = `<!-- versao:inicio (gerado por ferramentas/versao.mjs; não edita
 if (/<!-- versao:inicio[\s\S]*?versao:fim -->/.test(html)) html = html.replace(/<!-- versao:inicio[\s\S]*?versao:fim -->/, bloco);
 else html = html.replace('</head>', `  ${bloco}\n</head>`);
 html = html.replace(/css\/estilo\.css\?v=\d+/, `css/estilo.css?v=${versao}`);
+html = html.replace(/css\/carmen\.css\?v=\d+/, `css/carmen.css?v=${versao}`);
 html = html.replace(/<script type="module" src="[^"]*"><\/script>/, `<script type="module" src="./js/app.js?v=${versao}"></script>`);
 writeFileSync(indice, html);
 console.log(`versão ${versao}: ${Object.keys(mapa).length} módulos`);

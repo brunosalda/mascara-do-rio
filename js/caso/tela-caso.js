@@ -146,7 +146,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   try { paineisOcultos = localStorage.getItem('mascara.paineis') === 'ocultos'; } catch { /* sem armazenamento */ }
   const retrato = retratoDe(p);
   raiz.innerHTML = `
-    <div class="tela-jogo bg2 tela-caso${paineisOcultos ? ' paineis-ocultos' : ''}" style="--retrato:url('${esc(new URL(retrato, location.href).href)}')">
+    <div class="tela-jogo bg2 tela-caso${rota ? ' carmen' : ''}${paineisOcultos ? ' paineis-ocultos' : ''}" style="--retrato:url('${esc(new URL(retrato, location.href).href)}')">
       <div class="palco"></div>
       <header class="hud-topo">
         <button type="button" class="hud-personagem" data-hud="ficha" title="Ficha (F)">
@@ -443,7 +443,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     for (const x of r.novas || []) if (!st.novas.includes(x.id)) st.novas.push(x.id);
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
-      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { som.reacao?.('pista', 0); voarPista(); });
+      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(); });
     }
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
@@ -983,7 +983,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           st.visitados = [...new Set([...(st.visitados || []), id])];
           salvar();
           F.rankingDoCapitulo(caso.id).then((x) => { banco.ranking = x; desenharHud(); }).catch(() => {});
-          setTimeout(() => chegadaDaRota(r.viagem, caso.lugares[id]), 700);
+          setTimeout(() => { som.carmen?.('chegada'); chegadaDaRota(r.viagem, caso.lugares[id]); }, 700);
         }
       } else {
         const custo = custoViagem(st.lugar, id);
@@ -1047,7 +1047,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const r = await noBanco(() => F.licenca(caso.id, p.id, quem, tracos));
         if (!r) return null;
         aplicarBanco(r);
-        if (r.licenca) { som.acorde?.(); anotar('XERIFE IOLANDA', 'Licença de Caça emitida. Traga de volta o que foi levado.'); }
+        if (r.licenca) { som.carmen?.('carimbo'); anotar('XERIFE IOLANDA', 'Licença de Caça emitida. Traga de volta o que foi levado.'); }
         return r;
       },
     });
@@ -1060,11 +1060,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       anotar('VOCÊ', r.acao?.ok ? 'Você fecha a saída antes que a presa se mova.' : 'A presa tenta correr, mas a Licença da Xerife já fechou a cidade.');
       banco.fecho = r.fecho || null;
       banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
-      som.acorde?.();
+      som.carmen?.('preso');
       setTimeout(fecho, 350);
       return;
     }
-    som.teste?.(false, true);
+    som.carmen?.('fugiu');
     const texto = r.motivo === 'sem-licenca'
       ? `Sem a Licença da Xerife, você não tem como segurar a presa. Ela some na noite, e você perde ${duracao(r.minutos)} até achar o rastro de novo. Abra o Arquivo.`
       : `A Licença era contra a pessoa errada. A Xerife cancela a Licença, e você perde ${duracao(r.minutos)}. Volte ao Arquivo.`;
@@ -1755,7 +1755,18 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     const vigiar = setInterval(() => { if (!tela.isConnected) { parar(); clearInterval(vigiar); } }, 5000);
     if (banco.semNumeros) avisar('faixa-evento', 'Ficha', 'Sua ficha ainda não tem os números do Narrador: os testes não vão rolar até ele ativá-la de novo.');
   }
+  // Carmen 2026: cada botão responde com um clique seco (guia, 6.3).
+  if (rota) tela.addEventListener('click', (ev) => { if (ev.target.closest('button')) som.carmen?.('clique'); }, true);
   montarLugar();
+  // Vitrine: &tela=mapa|arquivo|rastro|placar abre direto um painel, para a avaliação dar nota sem jogar até lá.
+  const telaPedida = opcoes.vitrine && (location.hash.match(/[?&]tela=([a-z]+)/) || [])[1];
+  if (telaPedida) {
+    history.replaceState(null, '', location.hash.replace(/[?&]tela=[a-z]+/, ''));
+    st.viuAbertura = true;
+    salvar();
+    const abrir = { mapa: viajar, arquivo: abrirOArquivo, rastro: verORastro, placar: telaFinal, amanhecer }[telaPedida];
+    if (abrir) { setTimeout(abrir, 300); return; }
+  }
   if (!st.viuAbertura) abertura();
   else if (st.resolvido && st.final) telaFinal();
   else if (st.resolvido) fecho();

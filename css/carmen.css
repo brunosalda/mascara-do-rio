@@ -1,0 +1,130 @@
+/* Carmen 2026, etapa 0 (gerencia/carmen-2026/direcao-de-arte.md, seções 2, 4 e 6.1): "Dossiê da madrugada".
+   Tudo é de três materiais: a noite (o mundo), o papel (a investigação) e o vidro (a interface).
+   Só vale na tela do formato rota (.tela-caso.carmen); a noite antiga do jogo fica como está. */
+
+.carmen {
+  /* noite */
+  --c-noite-0: #070a12;
+  --c-noite-1: #0d1322;
+  --c-noite-2: #18213a;
+  --c-agua: #0f2238;
+  --c-terra: #1a2131;
+  --c-vidro: rgba(13, 19, 34, 0.78);
+  --c-linha: rgba(200, 214, 240, 0.14);
+  --c-linha-forte: rgba(200, 214, 240, 0.32);
+  --c-texto: #e8e4dc;
+  --c-texto-suave: #9ba5b8;
+  /* luz */
+  --c-sodio: #f2a33a;
+  --c-sodio-fraco: rgba(242, 163, 58, 0.18);
+  --c-rastro: #e0263f;
+  --c-rastro-texto: #ff5c70;
+  --c-rival: #ff4f9a;
+  --c-pista: #6fb7e0;
+  /* papel */
+  --c-papel: #ece4d2;
+  --c-papel-2: #d9cdb3;
+  --c-tinta: #1c1713;
+  --c-tinta-suave: #5c5045;
+  --c-carimbo: #b3162b;
+  /* fontes */
+  --f-titulo: 'Big Shoulders Display', 'Barlow Semi Condensed', sans-serif;
+  --f-ui: 'Barlow Semi Condensed', system-ui, sans-serif;
+  --f-texto: 'Libre Baskerville', Georgia, serif;
+  --f-mao: 'Caveat', cursive;
+  /* forma */
+  --r-vidro: 10px;
+  --r-papel: 4px;
+  --sombra-vidro: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --ruido-papel: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)' opacity='.06'/%3E%3C/svg%3E");
+  /* movimento */
+  --t-rapido: 120ms;
+  --t-medio: 240ms;
+  --t-lento: 600ms;
+  --curva-sai: cubic-bezier(.2, .8, .2, 1);
+  --curva-mola: cubic-bezier(.3, 1.45, .5, 1);
+  --curva-entra: cubic-bezier(.6, 0, .8, .2);
+  /* a cor da hora (laco.md): a borda esquenta da madrugada ao amanhecer */
+  --c-hora: color-mix(in srgb, var(--c-linha-forte), var(--c-sodio) calc(var(--amanhecer, 0) * 100%));
+  color: var(--c-texto);
+  font-family: var(--f-ui);
+}
+
+/* --- A noite: o fundo escuro no lugar da pedra; a moldura de bronze sai, e a borda vira uma linha fina com
+   vinheta (seção 2: decisão do Bruno). */
+.tela-jogo.bg2.tela-caso.carmen { background: var(--c-noite-0); }
+.tela-jogo.bg2.tela-caso.carmen .moldura {
+  border: 1px solid var(--c-hora); box-shadow: inset 0 0 80px 20px rgba(3, 5, 10, 0.75); border-radius: 2px;
+}
+.tela-jogo.bg2.tela-caso.carmen .moldura > :not(.vinheta) { display: none; }
+.tela-jogo.bg2.tela-caso.carmen .painel-baixo::before,
+.tela-jogo.bg2.tela-caso.carmen .painel-baixo::after,
+.tela-jogo.bg2.tela-caso.carmen .painel-retrato::before { display: none; }
+
+/* --- O vidro: os painéis da interface, finos e planos, sem chanfro nem cravo. */
+.tela-jogo.bg2.tela-caso.carmen :is(.hud-plano, .painel-pergunta.com-pergunta, .registro-noite, .dialogo-cena, .hud-topo > *, .janela) {
+  background: var(--c-vidro); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid var(--c-linha); border-radius: var(--r-vidro); box-shadow: var(--sombra-vidro); color: var(--c-texto);
+}
+.tela-jogo.bg2.tela-caso.carmen .painel-baixo { background: transparent; border: 0; box-shadow: none; }
+.carmen .janela, .camada:has(.janela-mapa-rota, .janela-arquivo) .janela { font-family: var(--f-ui); }
+
+/* --- As fontes: títulos em Big Shoulders, interface em Barlow, falas em Libre Baskerville. A Cormorant sai. */
+.tela-jogo.bg2.tela-caso.carmen :is(h1, h2, h3, .janela-titulo, .faixa b, .quadro-cabeca b, [data-hora]) {
+  font-family: var(--f-titulo); font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+}
+.tela-jogo.bg2.tela-caso.carmen :is(.quadro-nome, .registro-noite li b, .painel-quem b, .rotulo, small.etiqueta-tempo) {
+  font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12.5px;
+}
+.tela-jogo.bg2.tela-caso.carmen :is(.texto-narracao, .painel-quem, .dialogo-cena p, .registro-noite) { font-family: var(--f-texto); }
+.tela-jogo.bg2.tela-caso.carmen [data-hora] { font-size: 28px; color: var(--c-sodio); }
+
+/* --- Os botões: pílula de 48 px (52 no celular); vermelho só na ação principal (.destaque). */
+.tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) {
+  min-height: 48px; padding: 0 1.25rem; border-radius: 999px; border: 1px solid var(--c-linha-forte);
+  background: transparent; color: var(--c-texto); font: 600 16px/1 var(--f-ui); letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: transform var(--t-rapido) var(--curva-sai), background var(--t-rapido), border-color var(--t-rapido);
+}
+.tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar):hover { background: var(--c-noite-2); border-color: var(--c-texto-suave); }
+.tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar):active { transform: scale(0.97); }
+.tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar).destaque { background: var(--c-rastro); border-color: var(--c-rastro); color: #fff; }
+.tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar):focus-visible { outline: 2px solid var(--c-sodio); outline-offset: 2px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-height: 52px; }
+.carmen .icone { flex: none; vertical-align: -0.2em; }
+
+/* --- O quadro do caso: vidro, com as cores de sentido (sódio = tempo; vermelho = rastro; azul = pista). */
+.tela-jogo.bg2.tela-caso.carmen .quadro-caso .quadro-linhas .ok .quadro-valor { color: var(--c-texto); }
+.tela-jogo.bg2.tela-caso.carmen .quadro-caso .quadro-linhas .falta .quadro-valor { color: var(--c-sodio); }
+.tela-jogo.bg2.tela-caso.carmen .quadro-caso .quadro-nome { color: var(--c-texto-suave); }
+.tela-jogo.bg2.tela-caso.carmen .quadro-caso .plano-marca { background: var(--c-pista); color: var(--c-noite-0); border: 0; }
+.tela-jogo.bg2.tela-caso.carmen .quadro-pe { border-top-color: var(--c-linha); color: var(--c-texto-suave); }
+
+/* --- Movimento (seção 6.1): nada aparece de estalo. */
+.tela-jogo.bg2.tela-caso.carmen :is(.dialogo-cena, .painel-pergunta.com-pergunta) { animation: carmen-surgir var(--t-medio) var(--curva-sai) both; }
+@keyframes carmen-surgir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+body.cerimonias-curtas .carmen *, .carmen.cerimonias-curtas * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+@media (prefers-reduced-motion: reduce) {
+  .carmen *, .carmen *::before, .carmen *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* Ícones no mapa (no lugar do "●" e do "✓"). */
+.rota-mapa .icone.rota-voce { color: #f2a33a; }
+.rota-mapa .icone.rota-visto { color: #e8e4dc; }
+.rota-lista small .icone { margin-right: 0.25rem; }
+/* Janelas grandes (mapa, Arquivo) cobrem a cena: fundo da noite, opaco, para o mapa não se misturar com a pintura. */
+.tela-jogo.bg2.tela-caso.carmen :is(.janela-mapa-rota, .janela-arquivo), .tela-jogo.bg2.tela-caso.carmen .janela:has(.rota-mapa, .arquivo-fichas) {
+  background: var(--c-noite-1); -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* O título das janelas: sem a placa de bronze; letra grande da noite. */
+.tela-jogo.bg2.tela-caso.carmen .janela h2 {
+  background: none; border: 0; box-shadow: none; clip-path: none; padding: 0; color: var(--c-texto); text-shadow: none;
+  font: 800 40px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase;
+}
+body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
+.tela-jogo.bg2.tela-caso.carmen .janela-cabeca, .tela-jogo.bg2.tela-caso.carmen .janela > header { background: none; border-color: var(--c-linha); }
+.tela-jogo.bg2.tela-caso.carmen .fechar-camada {
+  min-width: 44px; min-height: 44px; border-radius: 999px; border: 1px solid var(--c-linha-forte); background: transparent;
+  color: var(--c-texto); box-shadow: none; font: 600 16px/1 var(--f-ui);
+}
+.tela-jogo.bg2.tela-caso.carmen .fechar-camada:hover { background: var(--c-noite-2); }

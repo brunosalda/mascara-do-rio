@@ -2,6 +2,7 @@
 // do rastro e o Arquivo da Xerife com as fichas da Ciranda e o retrato falado desenhado em código.
 // Só mostra o que o banco já deu: o mapa nunca sabe a rota (só o percurso já seguido), e o Arquivo só tem
 // as fichas públicas. Quem decide a viagem, a Licença e o cerco é o banco (fonte-banco.js).
+import { icone } from './icones.js';
 import { abrirJanela } from '../jogo/camadas.js';
 import { esc } from '../ui.js';
 import { POSICOES } from '../jogo/mapa.js';
@@ -65,7 +66,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           const [x, y] = P[id];
           return `<g class="${classes}" data-lugar="${esc(id)}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${esc(l.nome)}${t ? `, ${duracao(t.minutos)}` : ''}">
             <circle class="rota-alvo" r="60"/><circle class="rota-aro" r="36"/><circle class="rota-miolo" r="28"/>
-            ${id === atual ? '<text class="rota-voce" y="10">●</text>' : visitados.includes(id) ? '<text class="rota-visto" y="10">✓</text>' : ''}
+            ${id === atual ? icone('aqui', { svg: true, classe: 'rota-voce', tam: 34 }) : visitados.includes(id) ? icone('feito', { svg: true, classe: 'rota-visto', tam: 34 }) : ''}
             <text class="rota-nome" x="${r.nx}" y="${r.ny}" text-anchor="${r.anc}">${esc(l.nome)}</text>
             ${cidade === 'sp' && l.marcas?.length ? `<text class="rota-marcas" x="${r.nx}" y="${r.my + 36}" text-anchor="${r.anc}">${esc(l.marcas.join(' · '))}</text>` : ''}
             ${t ? `<text class="rota-min" x="${r.nx}" y="${r.my}" text-anchor="${r.anc}">${t.voo ? '✈ ' : ''}${duracao(t.minutos)}</text>` : ''}
@@ -93,7 +94,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
               : escolhido === atual ? '<p>Você está aqui.</p>' : '<p class="rota-custo">Não há viagem direta daqui. Entre o Rio e São Paulo, só pela ponte aérea, a partir do aeroporto.</p>'}`
             : !aoViajar ? `<p>A linha vermelha é o rastro que você seguiu: ${percurso.length} ${percurso.length > 1 ? 'lugares' : 'lugar'}, do começo ao esconderijo.</p>`
             : `<p>Toque num lugar do mapa ou da lista para viajar.${percurso.length > 1 ? ' A linha vermelha é o rastro que você já seguiu.' : ''}</p>
-              <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc((caso.lugares[id].marcas || []).join(' · ') || caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? '✈ ' : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
+              <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc((caso.lugares[id].marcas || []).join(' · ') || caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? icone('aviao', { tam: 16 }) : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
           </div>`;
         // No celular, o mapa rola de lado: começa centrado onde você está.
         const caixa = corpo.querySelector('.rota-mapa');
@@ -173,7 +174,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhec
         const lic = licenca ? caso.arquivo.suspeitos.find((s) => s.id === licenca) : null;
         const fichas = [...caso.arquivo.suspeitos].sort((a, b) => Number(!vivos.has(a.id)) - Number(!vivos.has(b.id)));
         corpo.innerHTML = `
-          <section class="arquivo-ladrao" aria-label="O que se sabe do ladrão">
+          <section class="arquivo-ladrao" aria-label="O que se sabe de quem fugiu">
             ${retratoFalado(ladrao)}
             <div>
               <p class="arquivo-pergunta">Quem é?</p>

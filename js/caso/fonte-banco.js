@@ -29,7 +29,7 @@ const ERROS = {
   'nao-resolvido': 'O capítulo ainda não foi resolvido.',
   'sem-login': 'Entre na sua conta para jogar o capítulo.',
   'sem-viagem-direta': 'Não há viagem direta daqui. São Paulo só pela ponte aérea, a partir do aeroporto.',
-  'fora-do-esconderijo': 'O ladrão não está aqui.',
+  'fora-do-esconderijo': 'A presa não está aqui.',
   'ja-resolvido': 'Este capítulo já terminou.',
   'sem-pista': 'Você ainda não tem essa pista.',
   'revanche-usada': 'A revanche deste capítulo já foi usada.',
