@@ -7,7 +7,7 @@ import { CENAS, clasSugeridos, montarFicha } from '../motor/roteiro.js';
 import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
-import { abrirMapaRota, abrirArquivo } from './rota.js';
+import { abrirMapaRota, abrirArquivo, relogioArco } from './rota.js';
 import { iniciarPerseguicao } from './perseguicao.js';
 import { iniciarInfiltracao } from './infiltracao.js';
 import { abrirConfronto, turnoDoConfronto, escolhasDo, vitalidadeDe, ataqueDe } from './confronto.js';
@@ -326,6 +326,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         </g>
         <path class="horizonte" d="M2 32h60"/><circle class="ponteiro" cx="32" cy="5" r="2.4"/>
       </svg><small>${hora(st.hora)}</small>`;
+    // Formato rota: o relógio em arco da direção de arte (5.5), no lugar do disco de bronze.
+    if (rota) { relogio.innerHTML = relogioArco({ inicio: caso.relogio.inicio, fim: caso.relogio.fim, hora: st.hora }); relogio.classList.add('com-arco'); }
 
     // O quadro do caso, no alto à direita: pistas, lacunas com opção e a corrida.
     const a = achados();
@@ -441,6 +443,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     sincronizar(r.estado);
     const novas = (r.novas || []).map((x) => x.titulo);
     for (const x of r.novas || []) if (!st.novas.includes(x.id)) st.novas.push(x.id);
+    // Formato rota: onde cada pista de destino foi ouvida, para a coluna "Para onde foi?" do mapa.
+    if (rota) for (const x of r.novas || []) if (x.tipo === 'destino') { st.ouvidas ||= {}; st.ouvidas[x.id] ??= r.estado?.lugar || st.lugar; }
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
       avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(); });
@@ -948,9 +952,16 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     if (rota && st.resolvido) { verORastro(); return; }
     if (rota) {
       const e = banco.estado;
+      // As pistas de destino ouvidas aqui: pelo registro da chegada da pista ou, sem ele (jogo salvo antes), pela
+      // fonte (uma pessoa ou um ponto deste lugar).
+      const ouvidas = st.ouvidas || {};
+      const aqui = caso.lugares[st.lugar];
+      const nomes = [...(aqui.pessoas || []).map((id) => caso.pessoas[id]?.nome), ...(aqui.pontos || []).map((x) => x.rotulo)].filter(Boolean).map((n) => n.toLowerCase());
+      const daqui = (x) => (ouvidas[x.id] ? ouvidas[x.id] === st.lugar : nomes.some((n) => { const f = (x.fonte || '').toLowerCase(); return f && (f === n || f.includes(n) || n.includes(f)); }));
       abrirMapaRota(tela, {
         caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])],
-        restante: Math.max(0, caso.relogio.fim - st.hora), aoViajar: (id) => irPara(id),
+        destinos: (e.pistas || []).filter((x) => x.tipo === 'destino' && daqui(x)),
+        relogio: { inicio: caso.relogio.inicio, fim: caso.relogio.fim, hora: st.hora }, aoViajar: (id) => irPara(id),
       });
       return;
     }

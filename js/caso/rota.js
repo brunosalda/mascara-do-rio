@@ -5,6 +5,8 @@
 import { icone } from './icones.js';
 import { abrirJanela } from '../jogo/camadas.js';
 import { esc } from '../ui.js';
+import { som } from '../ambiente.js';
+import { cerimoniasCurtas } from '../leitura.js';
 import { POSICOES } from '../jogo/mapa.js';
 
 const LARGURA = 1920;
@@ -12,8 +14,8 @@ const ALTURA = 1080;
 // Posições sobre a pintura do Rio (img/mapa-rio.jpg). As do Centro e arredores ficam um pouco afastadas das do
 // mapa da cidade, para os nomes não se encostarem; o aeroporto Santos Dumont fica na beira da baía.
 const POS_RIO = {
-  ...POSICOES, lapa: [1090, 430], centro: [1205, 330], porto: [1130, 215], 'santa-teresa': [925, 390],
-  cemiterio: [1250, 545], 'aeroporto-rio': [1360, 360],
+  ...POSICOES, lapa: [1080, 445], centro: [1215, 325], porto: [1150, 170], 'santa-teresa': [920, 380],
+  cemiterio: [1270, 575], 'aeroporto-rio': [1455, 300],
 };
 // Onde vai o nome de cada lugar: embaixo (padrão), em cima, à esquerda ou à direita do medalhão.
 const NOME = { 'santa-teresa': 'esq', centro: 'dir', porto: 'cima' };
@@ -42,76 +44,381 @@ function rotulos(lado) {
   return { anc: 'middle', nx: 0, ny: 76, my: 110 };
 }
 
-// O mapa. percurso: os lugares do rastro já seguidos, na ordem. visitados: onde o jogador já esteve.
-// aoViajar(id) só é chamado depois de escolher o lugar e tocar em "Viajar" (no voo, com o aviso das 2 horas).
+// --- O relógio da noite (direção de arte, 5.5): um arco de 220° da hora de começo ao sol. O que já passou fica
+// apagado; o que resta, em sódio; a última hora, em vermelho. custo: o trecho que a próxima ação vai gastar.
+const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+export function relogioArco({ inicio, fim, hora, custo = 0 }) {
+  const total = Math.max(1, fim - inicio);
+  const R = 46;
+  const ang = (m) => -110 + 220 * Math.min(1, Math.max(0, (m - inicio) / total));
+  const pt = (a, r = R) => [60 + r * Math.sin((a * Math.PI) / 180), 58 - r * Math.cos((a * Math.PI) / 180)].map((v) => v.toFixed(1));
+  const arco = (m0, m1, classe) => {
+    if (m1 <= m0) return '';
+    const [a0, a1] = [ang(m0), ang(m1)];
+    const [x0, y0] = pt(a0);
+    const [x1, y1] = pt(a1);
+    return `<path class="${classe}" d="M${x0} ${y0} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}"/>`;
+  };
+  let tracos = '';
+  for (let m = Math.ceil(inicio / 30) * 30; m <= fim; m += 30) {
+    const [x0, y0] = pt(ang(m), R + 5);
+    const [x1, y1] = pt(ang(m), R + (m % 60 ? 9 : 13));
+    tracos += `<path class="${m % 60 ? 'meia' : 'cheia'}" d="M${x0} ${y0} L${x1} ${y1}"/>`;
+  }
+  const h = Math.min(fim, hora);
+  const resta = Math.max(0, fim - hora);
+  const ultima = resta > 0 && resta <= 60;
+  const passa = custo > 0 && hora + custo > fim;
+  const [px, py] = pt(ang(h));
+  return `<div class="relogio-arco${ultima ? ' ultima-hora' : ''}${passa ? ' passa' : ''}" role="img" aria-label="São ${hhmm(h)}; ${resta ? `faltam ${duracao(resta)} até o sol` : 'o sol chegou'}">
+    <svg viewBox="0 0 120 84" aria-hidden="true">
+      <g class="tracos">${tracos}</g>
+      ${arco(inicio, h, 'gasto')}${arco(h, fim, 'resta')}${custo > 0 ? arco(h, Math.min(fim, hora + custo), 'custo') : ''}
+      <circle class="ponteiro" cx="${px}" cy="${py}" r="4.5"/>
+    </svg>
+    <b>${hhmm(h)}</b><small>${passa ? 'o sol chega antes' : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
+  </div>`;
+}
+
+// --- O mapa da fuga (direção de arte, 7.1): tela cheia, os medalhões com a pintura de cada lugar, a coluna
+// "Para onde foi?" com as pistas de destino ouvidas aqui e a lista dos lugares; a viagem é animada.
+// percurso: os lugares do rastro já seguidos, na ordem. visitados: onde o jogador já esteve, na ordem da visita.
+// destinos: as pistas de destino ouvidas no lugar atual ({ titulo, fonte }). relogio: { inicio, fim, hora }.
+// aoViajar(id) só é chamado depois de escolher o lugar, tocar em "Viajar" e ver a viagem.
 // Sem aoViajar (o capítulo já resolvido), o mapa só mostra o rastro: nada de viagem nem de lista.
-export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], restante = null, aoViajar }) {
+const R_MED = 62;
+const FOLGA = 8;
+const areaComum = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+const meioDe = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+const veiculo = (de, para, t) => (t?.voo ? 'aviao' : [de, para].includes('niteroi') ? 'barca' : 'carro');
+
+export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], relogio = null, restante = null, aoViajar }) {
+  const voos = caso.tempos.filter((t) => t.voo);
   const temSP = caso.ordem.some((id) => caso.lugares[id].cidade === 'sp');
   const pos = { rio: POS_RIO, sp: posicoesSP(caso) };
+  const restanteAgora = relogio ? Math.max(0, relogio.fim - relogio.hora) : restante;
   return abrirJanela(raiz, {
     titulo: aoViajar ? 'Mapa da fuga' : 'O rastro da fuga',
-    classe: 'janela-mapa-rota',
+    classe: 'janela-mapa-rota mapa-tela-cheia',
     montar: (corpo, camada) => {
       let escolhido = null;
+      let viajando = false;
       let cidade = caso.lugares[atual]?.cidade === 'sp' ? 'sp' : 'rio';
+      let vb = null;
+
+      const relogioHtml = (custo = 0) => (relogio ? relogioArco({ ...relogio, custo }) : '');
+      function medalhao(id, P) {
+        const l = caso.lugares[id];
+        const t = minutosEntre(caso, atual, id);
+        const errado = visitados.includes(id) && !percurso.includes(id);
+        const classes = ['rota-lugar', id === atual ? 'atual' : '', percurso.includes(id) ? 'no-rastro' : '', errado ? 'errado' : '',
+          visitados.includes(id) || percurso.includes(id) || id === atual ? 'visitado' : 'novo', !t && id !== atual ? 'sem-ligacao' : ''].filter(Boolean).join(' ');
+        const [x, y] = P[id];
+        const tempo = t ? `${t.voo ? 'VOO ' : ''}${duracao(t.minutos).toUpperCase()}` : '';
+        const largura = tempo.length * 12 + 26;
+        // O aeroporto é de onde saem os voos para a outra cidade (mais de um destino).
+        const aeroporto = /aeroporto/.test(id) || voos.filter((v) => v.de === id).length > 1;
+        return `<g class="${classes}" data-lugar="${esc(id)}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${esc(l.nome)}${t ? `, ${duracao(t.minutos)}` : ''}${id === atual ? ', você está aqui' : ''}">
+          <g class="rota-corpo">
+            <circle class="rota-alvo" r="${R_MED + 18}"/>
+            ${id === atual ? `<circle class="rota-onda" r="${R_MED}"/>` : ''}
+            <circle class="rota-miolo" r="${R_MED}"/>
+            <image class="rota-pintura-lugar" href="img/cidade/alto/${esc(id)}.webp" x="${-R_MED}" y="${-R_MED}" width="${R_MED * 2}" height="${R_MED * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#rota-recorte)"/>
+            ${aeroporto ? `<circle class="rota-selo-aviao" r="26"/>${icone('aviao', { svg: true, tam: 30, classe: 'rota-aviao' })}` : ''}
+            <circle class="rota-aro" r="${R_MED}"/>
+          </g>
+          ${id === atual ? `<text class="rota-voce-tag" y="${-R_MED - 16}">VOCÊ</text>` : ''}
+          <g class="rota-rotulo">
+            <text class="rota-nome" y="24">${esc(l.nome)}</text>
+            ${tempo ? `<g class="rota-pilula"><rect x="${-largura / 2}" y="34" width="${largura}" height="30" rx="15"/><text y="56">${esc(tempo)}</text></g>` : ''}
+            ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 92 : 62}">${esc(l.marcas.join(' · '))}</text>` : ''}
+          </g>
+        </g>`;
+      }
+
+      // As linhas: só o rastro (vermelho, com seta no meio de cada trecho), as viagens erradas (cinza tracejado) e a
+      // viagem proposta (sódio pontilhado). Dentro da cidade, todos os lugares se ligam: não se desenha cada ligação.
+      function linhas(P) {
+        const rastro = percurso.slice(1).map((id, i) => {
+          const a = P[percurso[i]];
+          const b = P[id];
+          if (!a || !b) return '';
+          return `<path class="rota-rastro" d="M${a} L${meioDe(a, b)} L${b}" marker-mid="url(#rota-seta)"/>`;
+        }).join('');
+        const erradas = visitados.filter((id) => !percurso.includes(id)).map((id) => {
+          const antes = visitados.slice(0, visitados.indexOf(id)).reverse().find((x) => P[x]) || percurso[0];
+          return P[antes] && P[id] ? `<path class="rota-errada" d="M${P[antes]} L${P[id]}"/>` : '';
+        }).join('');
+        return rastro + erradas;
+      }
+
+      // A ponte aérea sai pela borda do mapa: "São Paulo ›" no Rio, "‹ Rio" em São Paulo.
+      function ponteAerea(P) {
+        if (!temSP) return '';
+        const v = voos.find((x) => x.de === atual && !P[x.para]) || voos.find((x) => P[x.de] && !P[x.para]);
+        if (!v) return '';
+        const [x, y] = P[v.de];
+        const direita = cidade === 'rio';
+        const bx = direita ? vb.x + vb.w - 24 : vb.x + 24;
+        const by = direita ? vb.y + 70 : vb.y + vb.h * 0.55;
+        return `<path class="rota-ponte" d="M${x} ${y} Q${(x + bx) / 2} ${by - 40} ${bx} ${by + 14}"/>
+          <g class="rota-outra-cidade" data-cidade="${direita ? 'sp' : 'rio'}" role="button" tabindex="0" aria-label="Ver o mapa ${direita ? 'de São Paulo' : 'do Rio'}" transform="translate(${bx} ${by})">
+            <text text-anchor="${direita ? 'end' : 'start'}">${direita ? 'São Paulo ›' : '‹ Rio'}</text>
+          </g>`;
+      }
+
+      // O mapa enquadra só a área dos lugares (com folga para os rótulos e a ponte aérea).
+      function enquadrar(P, ids) {
+        const xs = ids.map((id) => P[id][0]);
+        const ys = ids.map((id) => P[id][1]);
+        const extraD = temSP && cidade === 'rio' ? 120 : 0;
+        const extraE = temSP && cidade === 'sp' ? 120 : 0;
+        const x = Math.min(...xs) - 210 - extraE;
+        const y = Math.min(...ys) - 160;
+        const caixa = { x, y, w: Math.max(...xs) + 210 + extraD - x, h: Math.max(...ys) + 180 - y };
+        // No computador, o enquadramento acompanha o formato da área do mapa, sem faixas vazias; no Rio, sem
+        // passar da pintura (as posições dos lugares são sobre ela).
+        const estreito = corpo.clientWidth <= 760;
+        const [larg, alt] = [corpo.clientWidth - 360, corpo.clientHeight];
+        if (estreito || larg < 200 || alt < 200) return caixa;
+        const r = larg / alt;
+        const limite = cidade === 'rio' ? { w: LARGURA, h: ALTURA } : { w: Infinity, h: Infinity };
+        if (caixa.w / caixa.h > r) {
+          const h = Math.max(caixa.h, Math.min(caixa.w / r, limite.h));
+          const y0 = caixa.y + caixa.h / 2 - h / 2;
+          caixa.y = cidade === 'rio' && h <= ALTURA ? Math.min(Math.max(0, y0), ALTURA - h) : y0;
+          caixa.h = h;
+        } else {
+          const w = Math.max(caixa.w, Math.min(caixa.h * r, limite.w));
+          const x0 = caixa.x + caixa.w / 2 - w / 2;
+          caixa.x = cidade === 'rio' && w <= LARGURA ? Math.min(Math.max(0, x0), LARGURA - w) : x0;
+          caixa.w = w;
+        }
+        return caixa;
+      }
+
       function desenhar() {
         const P = pos[cidade];
         const ids = caso.ordem.filter((id) => caso.lugares[id].cidade === cidade && P[id]);
-        const linha = percurso.filter((id) => P[id]).map((id) => P[id].join(',')).join(' ');
-        const medalhoes = ids.map((id) => {
-          const l = caso.lugares[id];
-          const t = minutosEntre(caso, atual, id);
-          const r = rotulos(NOME[id]);
-          const classes = ['rota-lugar', id === atual ? 'atual' : '', percurso.includes(id) ? 'no-rastro' : '', visitados.includes(id) ? 'visitado' : '', !t && id !== atual ? 'sem-ligacao' : '', id === escolhido ? 'escolhido' : ''].filter(Boolean).join(' ');
-          const [x, y] = P[id];
-          return `<g class="${classes}" data-lugar="${esc(id)}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${esc(l.nome)}${t ? `, ${duracao(t.minutos)}` : ''}">
-            <circle class="rota-alvo" r="60"/><circle class="rota-aro" r="36"/><circle class="rota-miolo" r="28"/>
-            ${id === atual ? icone('aqui', { svg: true, classe: 'rota-voce', tam: 34 }) : visitados.includes(id) ? icone('feito', { svg: true, classe: 'rota-visto', tam: 34 }) : ''}
-            <text class="rota-nome" x="${r.nx}" y="${r.ny}" text-anchor="${r.anc}">${esc(l.nome)}</text>
-            ${cidade === 'sp' && l.marcas?.length ? `<text class="rota-marcas" x="${r.nx}" y="${r.my + 36}" text-anchor="${r.anc}">${esc(l.marcas.join(' · '))}</text>` : ''}
-            ${t ? `<text class="rota-min" x="${r.nx}" y="${r.my}" text-anchor="${r.anc}">${t.voo ? '✈ ' : ''}${duracao(t.minutos)}</text>` : ''}
-          </g>`;
-        }).join('');
-        const l = escolhido ? caso.lugares[escolhido] : null;
-        const t = escolhido ? minutosEntre(caso, atual, escolhido) : null;
-        const falta = restante != null && t && t.minutos >= restante;
+        vb = enquadrar(P, ids);
         const fundo = cidade === 'rio'
-          ? `<image href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice" opacity="0.55"/><rect class="rota-veu" width="${LARGURA}" height="${ALTURA}"/>`
-          : `<rect class="rota-fundo-sp" width="${LARGURA}" height="${ALTURA}"/><path class="rota-ruas-sp" d="M300 900 L700 520 L1100 420 L1560 180 M520 260 L860 520 L1200 860 M200 520 H1700 M960 120 V1000"/><text class="rota-cidade" x="80" y="110">São Paulo</text>`;
+          ? `<image class="rota-pintura" href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice"/><rect class="rota-agua" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>
+            <rect class="rota-borda-pintura" x="-600" y="-600" width="${LARGURA + 1200}" height="600"/><rect class="rota-borda-pintura" x="-600" y="${ALTURA}" width="${LARGURA + 1200}" height="600"/>
+            <rect x="-600" y="0" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-cima)"/><rect x="-600" y="${ALTURA - 120}" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-baixo)"/>`
+          : `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/><path class="rota-tiete" d="M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}"/><text class="rota-agua-nome" x="${vb.x + vb.w * 0.62}" y="${vb.y + 40}">rio Tietê</text>`;
+        const lista = ids.filter((id) => id !== atual)
+          .map((id) => ({ id, t: minutosEntre(caso, atual, id) }))
+          .sort((a, b) => (a.t ? a.t.minutos : 1e4) - (b.t ? b.t.minutos : 1e4));
         corpo.innerHTML = `
-          ${temSP ? `<div class="rota-abas" role="tablist">${[['rio', 'Rio de Janeiro'], ['sp', 'São Paulo']].map(([k, n]) => `<button type="button" role="tab" class="chip${cidade === k ? ' marcado' : ''}" aria-selected="${cidade === k}" data-cidade="${k}">${n}</button>`).join('')}</div>` : ''}
-          <div class="rota-mapa">
-            <svg viewBox="0 0 ${LARGURA} ${ALTURA}" preserveAspectRatio="xMidYMid meet" aria-label="Mapa de ${cidade === 'sp' ? 'São Paulo' : 'Rio de Janeiro'}">
-              ${fundo}
-              ${linha ? `<polyline class="rota-linha" points="${linha}"/>` : ''}
-              ${medalhoes}
-            </svg>
-          </div>
-          <div class="rota-painel" aria-live="polite">
-            ${l ? `<b>${esc(l.nome)}</b>${l.marcas?.length ? ` <small class="rota-custo">${esc(l.marcas.join(' · '))}</small>` : ''}<p>${esc(l.resumo || '')}</p>
-              ${!aoViajar ? (percurso.includes(escolhido) ? '<p>Este lugar está no rastro que você seguiu.</p>' : '') : t ? `<p class="rota-custo">${t.voo ? `A ponte aérea leva ${duracao(t.minutos)} da noite. Na volta, também.` : `A viagem leva ${duracao(t.minutos)}.`}${falta ? ' O sol nasce antes de você chegar.' : ''}</p>
-                <button type="button" class="btn${t.voo ? ' destaque' : ''}" data-viajar="${esc(escolhido)}">${t.voo ? `Voar ${esc(l.a || `para ${l.nome}`)}` : `Viajar ${esc(l.a || `para ${l.nome}`)}`}</button>`
-              : escolhido === atual ? '<p>Você está aqui.</p>' : '<p class="rota-custo">Não há viagem direta daqui. Entre o Rio e São Paulo, só pela ponte aérea, a partir do aeroporto.</p>'}`
-            : !aoViajar ? `<p>A linha vermelha é o rastro que você seguiu: ${percurso.length} ${percurso.length > 1 ? 'lugares' : 'lugar'}, do começo ao esconderijo.</p>`
-            : `<p>Toque num lugar do mapa ou da lista para viajar.${percurso.length > 1 ? ' A linha vermelha é o rastro que você já seguiu.' : ''}</p>
-              <ul class="rota-lista">${ids.filter((id) => id !== atual).map((id) => { const t = minutosEntre(caso, atual, id); return `<li><button type="button" data-lugar="${esc(id)}"><b>${esc(caso.lugares[id].nome)}</b><span>${esc((caso.lugares[id].marcas || []).join(' · ') || caso.lugares[id].resumo || '')}</span><small>${t ? `${t.voo ? icone('aviao', { tam: 16 }) : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small></button></li>`; }).join('')}</ul>`}
+          <div class="mapa-tela">
+            <div class="mapa-area">
+              <div class="mapa-barra">
+                ${temSP ? `<div class="rota-abas" role="tablist">${[['rio', 'Rio'], ['sp', 'São Paulo']].map(([k, n]) => `<button type="button" role="tab" class="chip${cidade === k ? ' marcado' : ''}" aria-selected="${cidade === k}" data-cidade="${k}">${n}</button>`).join('')}</div>` : '<span></span>'}
+                <div class="mapa-relogio">${relogioHtml()}</div>
+              </div>
+              <div class="rota-mapa">
+                <svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" style="aspect-ratio:${vb.w} / ${vb.h}" preserveAspectRatio="xMidYMid meet" aria-label="Mapa de ${cidade === 'sp' ? 'São Paulo' : 'Rio de Janeiro'}">
+                  <defs>
+                    <clipPath id="rota-recorte"><circle r="${R_MED}"/></clipPath>
+                    <linearGradient id="rota-esfuma-cima" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1322"/><stop offset="1" stop-color="#0d1322" stop-opacity="0"/></linearGradient>
+                    <linearGradient id="rota-esfuma-baixo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1322" stop-opacity="0"/><stop offset="1" stop-color="#0d1322"/></linearGradient>
+                    <marker id="rota-seta" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M1 1 L9 5 L1 9z"/></marker>
+                  </defs>
+                  ${fundo}
+                  <g class="rota-linhas">${linhas(P)}</g>
+                  <g class="rota-proposta-g"></g>
+                  ${ponteAerea(P)}
+                  ${ids.map((id) => medalhao(id, P)).join('')}
+                  <g class="rota-viagem-g"></g>
+                </svg>
+              </div>
+              <div class="mapa-bordas"></div>
+              <ul class="mapa-legenda" aria-hidden="true">
+                <li><i class="leg-voce"></i>você</li><li><i class="leg-rastro"></i>rastro</li><li><i class="leg-errada"></i>viagem errada</li>${aoViajar ? '<li><i class="leg-proposta"></i>viagem escolhida</li>' : ''}
+              </ul>
+            </div>
+            <aside class="mapa-coluna">
+              ${aoViajar ? `<section class="mapa-pistas">
+                <h3>Para onde foi?${destinos.length ? ` <small>${destinos.length}</small>` : ''}</h3>
+                ${destinos.length ? destinos.map((d) => `<blockquote class="mapa-pista"><p>${esc(d.titulo)}</p>${d.fonte ? `<cite>${esc(d.fonte)}</cite>` : ''}</blockquote>`).join('')
+                  : '<p class="mapa-vazio">Ninguém daqui disse ainda para onde a fuga seguiu. Converse com as testemunhas antes de viajar.</p>'}
+              </section>
+              <section class="mapa-lugares">
+                <h3>Lugares</h3>
+                <ul class="rota-lista">${lista.map(({ id, t }) => `<li><button type="button" data-lugar="${esc(id)}" aria-pressed="false"><b>${esc(caso.lugares[id].nome)}</b><small>${t ? `${t.voo ? icone('aviao', { tam: 16 }) : ''}${duracao(t.minutos)}` : 'só pela ponte aérea'}</small>${caso.lugares[id].marcas?.length ? `<span>${esc(caso.lugares[id].marcas.join(' · '))}</span>` : ''}</button></li>`).join('')}</ul>
+              </section>` : `<section class="mapa-pistas"><h3>O rastro</h3><p>A linha vermelha é o rastro que você seguiu: ${percurso.length} ${percurso.length > 1 ? 'lugares' : 'lugar'}, do começo ao esconderijo.</p></section>`}
+              <div class="mapa-acao" aria-live="polite"></div>
+            </aside>
           </div>`;
-        // No celular, o mapa rola de lado: começa centrado onde você está.
+        posicionarRotulos(P, ids);
+        // A medida dos rótulos depende da fonte: quando ela termina de chegar, os rótulos são postos de novo.
+        document.fonts?.ready.then(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids); });
+        selecionar(escolhido && P[escolhido] ? escolhido : null);
+        // No celular, o mapa rola de lado: a vista começa enquadrando o Centro (7.1).
         const caixa = corpo.querySelector('.rota-mapa');
-        const aqui = P[atual];
-        if (caixa.scrollWidth > caixa.clientWidth && aqui) caixa.scrollLeft = (aqui[0] / LARGURA) * caixa.scrollWidth - caixa.clientWidth / 2;
+        const foco = (caixa.scrollWidth > caixa.clientWidth && P.centro) || P[atual];
+        if (caixa.scrollWidth > caixa.clientWidth && foco) caixa.scrollLeft = ((foco[0] - vb.x) / vb.w) * caixa.scrollWidth - caixa.clientWidth / 2;
+        caixa.addEventListener('scroll', () => bordas(P, ids), { passive: true });
+        bordas(P, ids);
       }
-      corpo.addEventListener('click', (ev) => {
+
+      // Nenhum rótulo encosta em outro nem passa por cima de um medalhão: cada um tenta o lado preferido (NOME),
+      // depois embaixo, à direita, à esquerda e em cima, e fica no primeiro lugar livre (ou no que menos encosta).
+      function posicionarRotulos(P, ids) {
+        const obst = ids.map((id) => {
+          const voce = id === atual ? 44 : 0;
+          return { x: P[id][0] - R_MED - FOLGA, y: P[id][1] - R_MED - FOLGA - voce, w: 2 * (R_MED + FOLGA), h: 2 * (R_MED + FOLGA) + voce };
+        });
+        const ordem = [atual, ...ids.filter((id) => id !== atual)].filter((id) => P[id]);
+        for (const id of ordem) {
+          const g = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"] .rota-rotulo`);
+          if (!g?.getBBox) continue;
+          // As marcas só aparecem no mouse, no foco e no escolhido: não contam para a vaga do rótulo.
+          const marcas = g.querySelector('.rota-marcas');
+          if (marcas) marcas.style.display = 'none';
+          const caixa = g.getBBox();
+          if (marcas) marcas.style.display = '';
+          if (!caixa.width) continue;
+          const [w, h] = [caixa.width + 10, caixa.height + 6];
+          const [x, y] = P[id];
+          const lados = { baixo: [0, R_MED + FOLGA + 2], dir: [R_MED + FOLGA + 8 + w / 2, -h / 2], esq: [-(R_MED + FOLGA + 8 + w / 2), -h / 2], cima: [0, -R_MED - FOLGA - 4 - h - (id === atual ? 44 : 0)] };
+          const pref = lados[NOME[id]] ? NOME[id] : 'baixo';
+          let melhor = null;
+          for (const k of [pref, ...['baixo', 'dir', 'esq', 'cima'].filter((x_) => x_ !== pref)]) {
+            const [dx, dy] = lados[k];
+            const c = { x: x + dx - w / 2, y: y + dy, w, h };
+            const choque = obst.reduce((s, o) => s + areaComum(c, o), 0);
+            if (!melhor || choque < melhor.choque) melhor = { k, dx, dy, c, choque };
+            if (!choque) break;
+          }
+          g.setAttribute('transform', `translate(${melhor.dx} ${melhor.dy - caixa.y + 3})`);
+          g.dataset.lado = melhor.k;
+          obst.push(melhor.c);
+        }
+      }
+
+      // No celular: os lugares fora da vista viram indicadores na borda ("‹ Barra 25 min"), que levam até eles.
+      function bordas(P, ids) {
+        const caixa = corpo.querySelector('.rota-mapa');
+        const camadaBordas = corpo.querySelector('.mapa-bordas');
+        if (!caixa || !camadaBordas) return;
+        if (caixa.scrollWidth <= caixa.clientWidth + 2) { camadaBordas.innerHTML = ''; return; }
+        const kx = caixa.scrollWidth / vb.w;
+        const ky = caixa.clientHeight / vb.h;
+        const rPx = R_MED * kx * 0.6;
+        const fora = ids.map((id) => {
+          const px = (P[id][0] - vb.x) * kx - caixa.scrollLeft;
+          const lado = px < rPx ? 'esq' : px > caixa.clientWidth - rPx ? 'dir' : null;
+          return lado && { id, lado, y: (P[id][1] - vb.y) * ky, t: minutosEntre(caso, atual, id) };
+        }).filter(Boolean).sort((a, b) => a.y - b.y);
+        const ocupado = { esq: -99, dir: -99 };
+        camadaBordas.innerHTML = fora.map((f) => {
+          const topo = Math.min(caixa.clientHeight - 32, Math.max(ocupado[f.lado] + 36, f.y - 16, 4));
+          ocupado[f.lado] = topo;
+          return `<button type="button" class="mapa-borda ${f.lado}" data-ir="${esc(f.id)}" style="top:${Math.round(caixa.offsetTop + topo)}px">${f.lado === 'esq' ? '‹ ' : ''}${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}${f.lado === 'dir' ? ' ›' : ''}</button>`;
+        }).join('');
+      }
+
+      function selecionar(id) {
+        escolhido = id;
+        const P = pos[cidade];
+        corpo.querySelectorAll('.rota-lugar').forEach((g) => g.classList.toggle('escolhido', g.dataset.lugar === id));
+        corpo.querySelectorAll('.rota-lista [data-lugar]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lugar === id)));
+        const t = id ? minutosEntre(caso, atual, id) : null;
+        const prop = corpo.querySelector('.rota-proposta-g');
+        if (prop) prop.innerHTML = aoViajar && id && t && P[atual] && P[id] ? `<path class="rota-proposta" d="M${P[atual]} L${P[id]}"/>` : '';
+        const rel = corpo.querySelector('.mapa-relogio');
+        if (rel) rel.innerHTML = relogioHtml(aoViajar && t ? t.minutos : 0);
+        const acao = corpo.querySelector('.mapa-acao');
+        if (!acao) return;
+        const l = id ? caso.lugares[id] : null;
+        if (!l) { acao.innerHTML = aoViajar ? '<p class="mapa-dica">Escolha um lugar no mapa ou na lista.</p>' : ''; return; }
+        const falta = restanteAgora != null && t && t.minutos >= restanteAgora;
+        acao.innerHTML = `<article class="mapa-cartao">
+            <img src="img/cidade/alto/${esc(id)}.webp" alt="" loading="lazy">
+            <div class="mapa-cartao-nome"><b>${esc(l.nome)}</b>${t ? `<span class="mapa-tempo">${duracao(t.minutos)}</span>` : ''}</div>
+            ${l.marcas?.length ? `<small>${esc(l.marcas.join(' · '))}</small>` : ''}
+            ${!aoViajar ? `<p>${percurso.includes(id) ? 'Este lugar está no rastro que você seguiu.' : esc(l.resumo || '')}</p>`
+              : id === atual ? '<p>Você está aqui.</p>'
+              : t ? `${t.voo ? `<p class="rota-custo">A ponte aérea leva ${duracao(t.minutos)} da noite. Na volta, também.</p>` : ''}${falta ? '<p class="mapa-alerta">O sol nasce antes de você chegar.</p>' : ''}
+                <button type="button" class="btn destaque" data-viajar="${esc(id)}">${icone(veiculo(atual, id, t), { tam: 20 })}${t.voo ? `Voar ${esc(l.a || `para ${l.nome}`)}` : `Viajar ${esc(l.a || `para ${l.nome}`)}`}</button>`
+              : '<p class="rota-custo">Não há viagem direta daqui. Entre o Rio e São Paulo, só pela ponte aérea, a partir do aeroporto.</p>'}
+          </article>`;
+      }
+
+      // A viagem (6.2): a linha se desenha do lugar atual ao destino, o veículo anda por ela e o relógio gasta o
+      // tempo no mesmo ritmo. 10 min = 0,9 s; 25 min = 1,6 s; voo = 2,4 s, num arco que sai pela borda.
+      function animarViagem(id) {
+        const P = pos[cidade];
+        const t = minutosEntre(caso, atual, id);
+        if (!t || cerimoniasCurtas() || !P[atual]) return Promise.resolve();
+        const dur = t.voo ? 2400 : Math.round(Math.min(2000, 500 + t.minutos * 44));
+        const [x0, y0] = P[atual];
+        const [x1, y1] = P[id] || [vb.x + vb.w + 140, y0 - 80];
+        const curva = t.voo ? `M${x0} ${y0} Q${(x0 + x1) / 2} ${Math.min(y0, y1) - 220} ${x1} ${y1}` : `M${x0} ${y0} L${x1} ${y1}`;
+        const g = corpo.querySelector('.rota-viagem-g');
+        corpo.querySelector('.rota-proposta-g').innerHTML = '';
+        g.innerHTML = `<path class="rota-viagem" d="${curva}"/><g class="rota-veiculo"><circle r="30"/>${icone(veiculo(atual, id, t), { svg: true, tam: 36 })}</g>`;
+        const linha = g.querySelector('.rota-viagem');
+        const carro = g.querySelector('.rota-veiculo');
+        const total = linha.getTotalLength();
+        linha.style.strokeDasharray = `${total}`;
+        som.carmen?.(t.voo ? 'voo' : 'viagem', dur / 1000);
+        const rel = corpo.querySelector('.mapa-relogio');
+        return new Promise((pronto) => {
+          const t0 = performance.now();
+          let ultimoMin = -1;
+          function quadro(agora) {
+            const f = Math.min(1, (agora - t0) / dur);
+            const e = f < 0.5 ? 2 * f * f : 1 - (-2 * f + 2) ** 2 / 2;
+            linha.style.strokeDashoffset = `${total * (1 - e)}`;
+            const p = linha.getPointAtLength(total * e);
+            const p2 = linha.getPointAtLength(Math.min(total, total * e + 2));
+            const giro = (Math.atan2(p2.y - p.y, p2.x - p.x) * 180) / Math.PI;
+            carro.setAttribute('transform', `translate(${p.x} ${p.y})${t.voo ? ` rotate(${(giro + 90).toFixed(1)})` : ''}`);
+            const min = Math.round(t.minutos * e);
+            if (relogio && rel && min !== ultimoMin) { ultimoMin = min; rel.innerHTML = relogioArco({ ...relogio, hora: relogio.hora + min }); }
+            if (f < 1) requestAnimationFrame(quadro);
+            else setTimeout(pronto, 180);
+          }
+          requestAnimationFrame(quadro);
+        });
+      }
+
+      corpo.addEventListener('click', async (ev) => {
+        if (viajando) return;
         const b = ev.target.closest('[data-viajar]');
-        if (b) { const id = b.dataset.viajar; camada.fechar(); aoViajar?.(id); return; }
+        if (b) {
+          const id = b.dataset.viajar;
+          viajando = true;
+          corpo.classList.add('viajando');
+          await animarViagem(id);
+          camada.fechar();
+          aoViajar?.(id);
+          return;
+        }
+        const ir = ev.target.closest('[data-ir]');
+        if (ir) {
+          const caixa = corpo.querySelector('.rota-mapa');
+          const P = pos[cidade];
+          caixa.scrollTo({ left: ((P[ir.dataset.ir][0] - vb.x) / vb.w) * caixa.scrollWidth - caixa.clientWidth / 2, behavior: cerimoniasCurtas() ? 'auto' : 'smooth' });
+          selecionar(ir.dataset.ir);
+          return;
+        }
         const c = ev.target.closest('[data-cidade]');
         if (c) { cidade = c.dataset.cidade; escolhido = null; desenhar(); return; }
         const g = ev.target.closest('[data-lugar]');
-        if (g) { escolhido = g.dataset.lugar; desenhar(); corpo.querySelector('.rota-painel')?.scrollIntoView?.({ block: 'nearest' }); }
+        if (g) {
+          selecionar(g.dataset.lugar);
+          if (g.closest('.rota-lista')) corpo.querySelector('.mapa-acao')?.scrollIntoView?.({ block: 'nearest' });
+        }
       });
       corpo.addEventListener('keydown', (ev) => {
-        const g = ev.target.closest?.('[data-lugar]');
-        if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); escolhido = g.dataset.lugar; desenhar(); corpo.querySelector('[data-viajar]')?.focus(); }
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const c = ev.target.closest?.('g[data-cidade]');
+        if (c) { ev.preventDefault(); cidade = c.dataset.cidade; escolhido = null; desenhar(); return; }
+        const g = ev.target.closest?.('g[data-lugar]');
+        if (g) { ev.preventDefault(); selecionar(g.dataset.lugar); corpo.querySelector('[data-viajar]')?.focus(); }
       });
       desenhar();
     },

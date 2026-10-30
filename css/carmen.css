@@ -128,3 +128,157 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
   color: var(--c-texto); box-shadow: none; font: 600 16px/1 var(--f-ui);
 }
 .tela-jogo.bg2.tela-caso.carmen .fechar-camada:hover { background: var(--c-noite-2); }
+
+/* ============ Etapa 1: o mapa da fuga em tela cheia (direção de arte, 7.1) ============ */
+.carmen .janela-fundo.mapa-tela-cheia { display: flex; padding: 0; background: var(--c-noite-0); backdrop-filter: none; }
+.carmen .mapa-tela-cheia .janela {
+  flex: 1; align-self: stretch; width: 100% !important; max-width: none !important; height: auto !important; max-height: none !important; min-height: 0; margin: 0;
+  border-radius: 0; border: 0; display: flex; flex-direction: column; background: var(--c-noite-0);
+}
+.carmen .mapa-tela-cheia .janela-cabeca { flex: none; padding: 10px 16px 6px 20px; }
+.carmen .mapa-tela-cheia .janela-corpo { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
+.mapa-tela { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
+.mapa-area { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--c-noite-1); }
+.mapa-barra { position: absolute; z-index: 2; top: 8px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+.mapa-barra > * { pointer-events: auto; }
+.carmen .rota-abas { display: inline-flex; gap: 0; margin: 0; padding: 3px; border-radius: 999px; background: var(--c-vidro); border: 1px solid var(--c-linha); }
+.carmen .rota-abas .chip { min-height: 40px; padding: 0 1rem; border: 0; border-radius: 999px; background: transparent; color: var(--c-texto-suave); font: 600 14px/1 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; }
+.carmen .rota-abas .chip.marcado { background: var(--c-noite-2); color: var(--c-texto); }
+.carmen .rota-mapa { flex: 1; min-height: 0; border-radius: 0; background: var(--c-noite-1); overflow: hidden; }
+.carmen .rota-mapa svg { display: block; width: 100%; height: 100%; max-height: none; overflow: visible; isolation: isolate; }
+.rota-borda-pintura { fill: #0d1322; }
+
+/* O fundo: a pintura do Rio vira textura escura e azulada. */
+.rota-pintura { filter: grayscale(1) brightness(0.38) contrast(1.1); }
+.rota-agua { fill: #0f2238; mix-blend-mode: color; opacity: 0.9; pointer-events: none; }
+.carmen .rota-fundo-sp { fill: #0d1526; }
+.rota-tiete { fill: none; stroke: #6fb7e0; stroke-width: 10; stroke-linecap: round; opacity: 0.35; }
+.rota-agua-nome { fill: #6fb7e0; opacity: 0.55; font: italic 600 26px var(--f-ui); }
+
+/* As linhas. */
+.rota-rastro { fill: none; stroke: #e0263f; stroke-width: 6px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(224, 38, 63, 0.6)); }
+#rota-seta path { fill: #e0263f; }
+.rota-errada { fill: none; stroke: #9ba5b8; stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 8 7; opacity: 0.7; }
+.rota-proposta { fill: none; stroke: #f2a33a; stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 2 9; stroke-linecap: round; animation: rota-proposta 0.9s linear infinite; }
+@keyframes rota-proposta { to { stroke-dashoffset: -22; } }
+.rota-ponte { fill: none; stroke: #f2a33a; stroke-width: 2px; vector-effect: non-scaling-stroke; stroke-dasharray: 3 8; opacity: 0.6; }
+.rota-outra-cidade { cursor: pointer; outline: none; }
+.rota-outra-cidade text { fill: #f2a33a; font: 700 30px var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; paint-order: stroke; stroke: #070a12; stroke-width: 8px; }
+.rota-outra-cidade:hover text, .rota-outra-cidade:focus-visible text { fill: #fff; }
+.rota-viagem { fill: none; stroke: #f2a33a; stroke-width: 5px; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.rota-veiculo circle { fill: #070a12; stroke: #f2a33a; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.rota-veiculo .icone { color: #f2a33a; }
+
+/* Os medalhões (5.1). O corpo escala por dentro, para não brigar com a posição. */
+.carmen .rota-lugar { cursor: pointer; outline: none; }
+.carmen .rota-corpo { transition: transform 120ms var(--curva-sai); }
+.carmen .rota-lugar:hover .rota-corpo, .carmen .rota-lugar:focus-visible .rota-corpo { transform: scale(1.08); }
+.carmen .rota-lugar.escolhido .rota-corpo { transform: scale(1.15); }
+.carmen .rota-alvo { fill: transparent; }
+.carmen .rota-miolo { fill: #18213a; stroke: none; }
+.carmen .rota-aro { fill: none; stroke: rgba(232, 228, 220, 0.55); stroke-width: 3px; vector-effect: non-scaling-stroke; opacity: 1; animation: none; }
+.rota-pintura-lugar { filter: brightness(0.55); transition: filter 240ms; }
+.rota-lugar.visitado .rota-pintura-lugar, .rota-lugar:hover .rota-pintura-lugar, .rota-lugar.escolhido .rota-pintura-lugar { filter: none; }
+.rota-lugar.errado .rota-pintura-lugar { filter: grayscale(1) brightness(0.6); }
+.carmen .rota-lugar.no-rastro .rota-aro { stroke: #e0263f; }
+.carmen .rota-lugar.atual .rota-aro { stroke: #e0263f; stroke-width: 4px; }
+.carmen .rota-lugar.escolhido .rota-aro, .carmen .rota-lugar:focus-visible .rota-aro { stroke: #fff; stroke-width: 4px; }
+.carmen .rota-lugar.sem-ligacao { opacity: 0.35; }
+.rota-onda { fill: none; stroke: #e0263f; stroke-width: 3px; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; animation: rota-onda 2.4s var(--curva-sai) infinite; }
+@keyframes rota-onda { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
+.rota-voce-tag { fill: #fff; font: 800 24px var(--f-titulo); letter-spacing: 0.12em; text-anchor: middle; paint-order: stroke; stroke: #e0263f; stroke-width: 10px; stroke-linejoin: round; }
+.rota-selo-aviao { fill: rgba(7, 10, 18, 0.8); }
+.rota-aviao { color: #f2a33a; }
+.carmen .rota-nome { fill: #e8e4dc; font: 600 27px var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 8px; stroke-linejoin: round; }
+.rota-pilula rect { fill: rgba(7, 10, 18, 0.85); stroke: rgba(242, 163, 58, 0.45); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.rota-pilula text { fill: #f2a33a; font: 700 20px var(--f-ui); letter-spacing: 0.06em; text-anchor: middle; }
+.carmen .rota-marcas { fill: #9ba5b8; font: italic 500 21px var(--f-ui); text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 7px; opacity: 0; transition: opacity 120ms; }
+.rota-lugar:hover .rota-marcas, .rota-lugar:focus-visible .rota-marcas, .rota-lugar.escolhido .rota-marcas { opacity: 1; }
+.viajando .rota-lugar, .viajando .rota-lista button { pointer-events: none; }
+
+/* A legenda e os indicadores de borda. */
+.mapa-legenda { position: absolute; left: 14px; bottom: 10px; z-index: 2; display: flex; gap: 14px; margin: 0; padding: 6px 12px; list-style: none; border-radius: 999px; background: var(--c-vidro); border: 1px solid var(--c-linha); color: var(--c-texto-suave); font: 500 12.5px var(--f-ui); }
+.mapa-legenda li { display: flex; align-items: center; gap: 6px; }
+.mapa-legenda i { display: inline-block; width: 18px; height: 0; border-top: 3px solid; }
+.mapa-legenda .leg-voce { width: 10px; height: 10px; border: 2px solid #e0263f; border-radius: 50%; }
+.mapa-legenda .leg-rastro { border-color: #e0263f; }
+.mapa-legenda .leg-errada { border-top: 3px dashed #9ba5b8; }
+.mapa-legenda .leg-proposta { border-top: 3px dotted #f2a33a; }
+.mapa-bordas { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.mapa-borda {
+  position: absolute; pointer-events: auto; min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--c-linha-forte);
+  background: var(--c-vidro); color: var(--c-texto); font: 600 12.5px/1 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+.mapa-borda.esq { left: 6px; }
+.mapa-borda.dir { right: 6px; }
+.mapa-borda small { color: #f2a33a; margin-left: 4px; }
+
+/* O relógio em arco (5.5). */
+.relogio-arco { position: relative; width: 120px; display: grid; justify-items: center; color: var(--c-texto); }
+.relogio-arco svg { width: 120px; height: 84px; overflow: visible; }
+.relogio-arco .tracos path { stroke: rgba(200, 214, 240, 0.32); stroke-width: 1.4; stroke-linecap: round; }
+.relogio-arco .tracos .cheia { stroke-width: 2; stroke: rgba(200, 214, 240, 0.5); }
+.relogio-arco .gasto, .relogio-arco .resta, .relogio-arco .custo { fill: none; stroke-width: 5; stroke-linecap: round; }
+.relogio-arco .gasto { stroke: rgba(200, 214, 240, 0.22); }
+.relogio-arco .resta { stroke: #f2a33a; }
+.relogio-arco .custo { stroke: #fff4d6; stroke-dasharray: 3 3; animation: relogio-custo 0.9s ease-in-out infinite alternate; }
+.relogio-arco.passa .custo { stroke: #e0263f; }
+@keyframes relogio-custo { from { opacity: 1; } to { opacity: 0.35; } }
+.relogio-arco.ultima-hora .resta { stroke: #e0263f; animation: relogio-pulso 1.6s ease-in-out infinite; }
+@keyframes relogio-pulso { 50% { opacity: 0.45; } }
+.relogio-arco .ponteiro { fill: #fff; stroke: #070a12; stroke-width: 2; }
+.relogio-arco b { position: absolute; top: 30px; left: 0; right: 0; text-align: center; font: 800 28px/1 var(--f-titulo); letter-spacing: 0.02em; }
+.relogio-arco small { position: absolute; top: 60px; left: 0; right: 0; text-align: center; font: 500 12px/1 var(--f-ui); color: var(--c-texto-suave); }
+.relogio-arco.passa small, .relogio-arco.ultima-hora small { color: #ff5c70; }
+.mapa-relogio .relogio-arco { padding: 6px 10px 4px; border-radius: 14px; background: var(--c-vidro); border: 1px solid var(--c-linha); box-sizing: content-box; }
+/* No HUD da cena: o arco no lugar do disco de bronze. */
+.tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco { gap: 0; }
+.tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { transform: scale(0.72); transform-origin: center bottom; }
+
+/* A coluna "Para onde foi?". */
+.mapa-coluna { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--c-linha); background: var(--c-noite-0); padding: 14px 16px 0; }
+.mapa-coluna h3 { margin: 6px 0 10px; font: 800 22px/1 var(--f-titulo); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto); }
+.mapa-coluna h3 small { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; border-radius: 999px; background: var(--c-pista); color: var(--c-noite-0); font: 700 13px var(--f-ui); vertical-align: 3px; }
+.mapa-pista { margin: 0 0 8px; padding: 10px 12px; border-radius: var(--r-papel); background: var(--c-papel) var(--ruido-papel); color: var(--c-tinta); border-left: 4px solid var(--c-pista); }
+.mapa-pista p { margin: 0; font: 15px/1.4 var(--f-texto); }
+.mapa-pista cite { display: block; margin-top: 4px; font: 600 11.5px var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-tinta-suave); font-style: normal; }
+.mapa-vazio, .mapa-dica { margin: 0 0 8px; color: var(--c-texto-suave); font: 14px/1.45 var(--f-ui); }
+.mapa-lugares { margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--c-linha); }
+.carmen .rota-lista { display: block; margin: 0; }
+.carmen .rota-lista li + li { border-top: 1px solid var(--c-linha); }
+.carmen .rota-lista button {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; min-height: 48px; padding: 8px 6px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--c-texto); text-align: left; cursor: pointer;
+}
+.carmen .rota-lista button:hover, .carmen .rota-lista button:focus-visible { background: var(--c-noite-2); outline: none; }
+.carmen .rota-lista button[aria-pressed='true'] { background: var(--c-noite-2); box-shadow: inset 3px 0 0 #f2a33a; }
+.carmen .rota-lista b { font: 600 15px var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; }
+.carmen .rota-lista small { grid-row: 1; grid-column: 2; display: inline-flex; align-items: center; gap: 4px; color: #f2a33a; font: 700 13px var(--f-ui); text-transform: uppercase; }
+.carmen .rota-lista span { grid-column: 1 / -1; color: var(--c-texto-suave); font: italic 13px var(--f-ui); }
+.mapa-acao { position: sticky; bottom: 0; margin: 12px -16px 0; padding: 12px 16px 16px; background: linear-gradient(to bottom, transparent, var(--c-noite-0) 14px); }
+.mapa-cartao { display: grid; gap: 8px; padding: 10px; border-radius: var(--r-vidro); background: var(--c-noite-1); border: 1px solid var(--c-linha); animation: carmen-surgir var(--t-medio) var(--curva-sai) both; }
+.mapa-cartao img { width: 100%; aspect-ratio: 21 / 9; object-fit: cover; border-radius: 6px; display: block; }
+.mapa-cartao-nome { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mapa-cartao-nome b { font: 800 24px/1 var(--f-titulo); text-transform: uppercase; letter-spacing: 0.02em; }
+.mapa-tempo { color: #f2a33a; font: 700 14px var(--f-ui); text-transform: uppercase; }
+.mapa-cartao small { color: var(--c-texto-suave); font: italic 13px var(--f-ui); }
+.mapa-cartao p { margin: 0; font: 14px/1.4 var(--f-ui); color: var(--c-texto-suave); }
+.mapa-cartao .mapa-alerta { color: #ff5c70; font-weight: 600; }
+.carmen .mapa-cartao .btn { width: 100%; justify-content: center; }
+
+/* No celular (7.1): o mapa em 55% da altura, arrasta de lado; a folha "Para onde foi?" embaixo, o botão preso. */
+@media (max-width: 760px) {
+  .mapa-tela { grid-template-columns: 1fr; grid-template-rows: 55% 45%; }
+  .carmen .rota-mapa { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .carmen .rota-mapa svg { width: auto; height: 100%; }
+  .mapa-coluna { border-left: 0; border-top: 1px solid var(--c-linha); border-radius: 16px 16px 0 0; padding: 6px 16px 0; }
+  .mapa-coluna::before { content: ''; display: block; flex: none; width: 40px; height: 4px; margin: 2px auto 6px; border-radius: 2px; background: var(--c-linha-forte); }
+  .mapa-legenda { display: none; }
+  .carmen .mapa-tela-cheia .janela-cabeca { padding: 6px 8px 4px 14px; }
+  .mapa-barra { position: static; padding: 4px 10px 2px; align-items: center; }
+  .mapa-relogio .relogio-arco { zoom: 0.62; }
+  .mapa-cartao img { display: none; }
+}
+
+body.celular .carmen .mapa-tela-cheia .janela { padding: 0; border: 0; }
+body.celular .carmen .mapa-tela-cheia .janela-corpo { padding: 0; overflow: hidden; }
