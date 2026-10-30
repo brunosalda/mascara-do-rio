@@ -282,3 +282,33 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
 
 body.celular .carmen .mapa-tela-cheia .janela { padding: 0; border: 0; }
 body.celular .carmen .mapa-tela-cheia .janela-corpo { padding: 0; overflow: hidden; }
+
+/* ============ Correções da nota da etapa 0 (avaliacoes/carmen-2026-telas.md) ============ */
+/* Sem bronze: os botões da coluna, a moldura do retrato e a barra/folha do celular viram linha fina. */
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button {
+  border: 1px solid var(--c-linha-forte); border-radius: 10px; background: var(--c-vidro); box-shadow: none; color: var(--c-texto);
+}
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button:hover,
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes button:focus-visible { border-color: var(--c-texto-suave); background: var(--c-noite-2); }
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-nome kbd { color: var(--c-texto-suave); text-shadow: none; }
+.tela-jogo.bg2.tela-caso.carmen .retrato-grande { border: 1px solid var(--c-linha-forte); outline: 0; border-radius: 10px; overflow: hidden; box-shadow: var(--sombra-vidro); }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes { background: var(--c-noite-0); border-top: 1px solid var(--c-linha); box-shadow: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo { background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--c-linha); }
+/* O título das caixas: sem a placa dourada; Barlow em caixa alta, cor de sódio. */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena .dialogo-cabeca .grupo-rotulo {
+  display: inline; padding: 0; background: none; border: 0; clip-path: none; text-shadow: none;
+  font: 600 12.5px/1.2 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-sodio);
+}
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena :is(.escolhas button, .texto-narracao) { font-family: var(--f-texto); }
+/* A Cormorant sai dos nomes da cena. */
+.tela-jogo.bg2.tela-caso.carmen .pessoa-nome { font: 600 15px/1.2 var(--f-ui); letter-spacing: 0.02em; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0, 0, 0, 0.85); }
+.tela-jogo.bg2.tela-caso.carmen :is(.ponto-rotulo, .borda-destino) { font: 500 14px/1.2 var(--f-ui); letter-spacing: 0.02em; }
+/* O quadro do caso no computador: linhas de 22 px, para caber sem rolagem. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-linhas button { min-height: 22px; padding-block: 0; align-content: center; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro-caso .quadro-linhas li + li button { margin-top: 0; }
+/* No celular, com a folha fechada: o botão do Arquivo na mesma linha do título, acima da barra de botões. */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-caso { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-cabeca { flex: 1; min-width: 0; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-pe { border: 0; padding: 0; margin: 0; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-pe > span { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .plano-enviar { min-height: 44px; }

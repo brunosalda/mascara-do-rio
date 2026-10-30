@@ -359,7 +359,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       <ol class="quadro-linhas">
         <li class="${destinos ? 'ok' : 'falta'}"><button type="button" data-hud="viajar"><span class="quadro-nome">Para onde foi?</span><span class="quadro-valor">${destinos ? `${destinos} pista${destinos > 1 ? 's' : ''} de destino` : 'ouça as testemunhas'}</span></button></li>
         <li class="${lic ? 'ok' : nTracos >= 3 ? 'falta' : 'opcional'}"><button type="button" data-hud="arquivo"><span class="quadro-nome">Quem é?</span><span class="quadro-valor">${lic ? `Licença contra ${esc(lic.apelido || lic.nome)}` : nTracos > 3 ? `${nTracos} traços (bastam 3)` : `${nTracos} de 3 traços`}</span></button></li>
-        <li class="opcional"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corridaDaRota())}</span></button></li>
+        ${(banco?.ranking || []).some((x) => !x.voce) ? `<li class="opcional"><button type="button" data-hud="corrida"><span class="quadro-nome">Corrida</span><span class="quadro-valor">${esc(corridaDaRota())}</span></button></li>` : ''}
         <li class="opcional"><button type="button" data-hud="viajar"><span class="quadro-nome">Rastro</span><span class="quadro-valor">${(e.percurso || []).length} de ${caso.tamanhoRota} lugares${e.viagens_erradas ? ` · ${e.viagens_erradas} errad${e.viagens_erradas > 1 ? 'as' : 'a'}` : ''}</span></button></li>
       </ol>
       <div class="quadro-pe"><span>${st.resolvido ? `Resolvido às ${hora(st.resolvido.hora)}` : `Faltam ${duracao(resta)} até o sol`}</span><button type="button" class="btn plano-enviar${nTracos >= 3 && !lic && !st.resolvido ? ' destaque' : ''}" data-hud="arquivo">Arquivo</button></div>`;
@@ -1035,7 +1035,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const outros = (banco?.ranking || []).filter((x) => !x.voce);
     if (!outros.length) return 'ninguém mais nesta fuga';
     const preso = outros.find((x) => x.resolvido_em);
-    if (preso) return `${preso.nome} já prendeu o ladrão`;
+    if (preso) return `${preso.nome} já fez a prisão`;
     const lider = outros.reduce((m, x) => ((x.passo || 0) > (m.passo || 0) ? x : m));
     return lider.licenca ? `${lider.nome} já tirou a Licença` : `${lider.nome} já está no ${lider.passo || 1}º lugar`;
   }

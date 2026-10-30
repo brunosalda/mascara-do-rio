@@ -11,6 +11,9 @@ import { POSICOES } from '../jogo/mapa.js';
 
 const LARGURA = 1920;
 const ALTURA = 1080;
+// O mapa pintado de São Paulo (direção de arte, seção 8) ainda não existe: quando chegar em img/, ponha o caminho
+// aqui e ele entra com o mesmo tratamento do Rio. Até lá, o fundo plano com o rio Tietê.
+const MAPA_SP = null;
 // Posições sobre a pintura do Rio (img/mapa-rio.jpg). As do Centro e arredores ficam um pouco afastadas das do
 // mapa da cidade, para os nomes não se encostarem; o aeroporto Santos Dumont fica na beira da baía.
 const POS_RIO = {
@@ -205,6 +208,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           ? `<image class="rota-pintura" href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice"/><rect class="rota-agua" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>
             <rect class="rota-borda-pintura" x="-600" y="-600" width="${LARGURA + 1200}" height="600"/><rect class="rota-borda-pintura" x="-600" y="${ALTURA}" width="${LARGURA + 1200}" height="600"/>
             <rect x="-600" y="0" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-cima)"/><rect x="-600" y="${ALTURA - 120}" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-baixo)"/>`
+          : MAPA_SP ? `<image class="rota-pintura" href="${MAPA_SP}" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" preserveAspectRatio="xMidYMid slice"/><rect class="rota-agua" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>`
           : `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/><path class="rota-tiete" d="M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}"/><text class="rota-agua-nome" x="${vb.x + vb.w * 0.62}" y="${vb.y + 40}">rio Tietê</text>`;
         const lista = ids.filter((id) => id !== atual)
           .map((id) => ({ id, t: minutosEntre(caso, atual, id) }))
