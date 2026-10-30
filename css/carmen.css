@@ -312,3 +312,5 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-pe { border: 0; padding: 0; margin: 0; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-pe > span { display: none; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .plano-enviar { min-height: 44px; }
+.arquivo-indiretas li.ja-sabido { opacity: 0.55; }
+.arquivo-indiretas li.ja-sabido .nota { margin-left: 0.4rem; font-style: italic; }

@@ -471,6 +471,8 @@ export function restantesDo(caso, marcados, presos = []) {
 // indiretas: as pistas que só descrevem um traço (a partir do capítulo 2), ainda sem a leitura da Xerife;
 // nCategorias: quantos tipos de traço já têm pista (a conta da Licença); aoPedirLeitura(id) pede a leitura.
 export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhecidos.length, indiretas = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca, aoPedirLeitura }) {
+  // Os tipos de traço cujo valor já se sabe: a indireta deles não precisa mais de leitura.
+  const sabidas = new Set(conhecidos.map((t) => t.split('=')[0]));
   const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || val;
   return abrirJanela(raiz, {
     titulo: 'Arquivo da Xerife',
@@ -495,8 +497,8 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhec
           </section>
           ${indiretas.length ? `<section class="arquivo-indiretas" aria-label="Pistas que só descrevem">
             <p class="nota">Estas testemunhas descreveram um traço sem dizer qual. Compare com as fichas, ou peça à Xerife que leia.</p>
-            <ul>${indiretas.map((x) => `<li><q>${esc(x.texto || x.titulo || '')}</q> <small>${esc(caso.arquivo.categorias.find((c) => c.id === x.categoria)?.nome || '')}</small>
-              <button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button></li>`).join('')}</ul>
+            <ul>${indiretas.map((x) => `<li${sabidas.has(x.categoria) ? ' class="ja-sabido"' : ''}><q>${esc(x.texto || x.titulo || '')}</q> <small>${esc(caso.arquivo.categorias.find((c) => c.id === x.categoria)?.nome || '')}</small>
+              ${sabidas.has(x.categoria) ? '<small class="nota">Você já sabe este traço.</small>' : `<button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>`}</li>`).join('')}</ul>
           </section>` : ''}
           <section class="arquivo-marcar" aria-label="Marcar traços">
             ${caso.arquivo.categorias.map((c) => `<div class="arquivo-categoria"><b title="${esc(c.dica || '')}">${esc(c.nome)}</b>

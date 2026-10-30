@@ -77,6 +77,9 @@ function casoDoBanco(cap) {
 export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // opcoes.vitrine: o modo vitrine (só no localhost), com as regras do banco simuladas aqui e a vampira fictícia.
   const F = opcoes.capitulo ? await import(opcoes.vitrine ? './fonte-vitrine.js' : './fonte-banco.js') : null;
+  // Na vitrine não há temporada nem login: voltar é recomeçar o capítulo de teste.
+  const voltarPara = opcoes.vitrine ? `#/vitrine/${encodeURIComponent(opcoes.capitulo)}?zerar` : '#/temporada';
+  const textoVoltar = opcoes.vitrine ? 'Recomeçar a vitrine' : 'Voltar à temporada';
   if (opcoes.vitrine) {
     const ficticia = personagemDoCaso(null);
     estadoApp = { ...estadoApp, atual: ficticia };
@@ -1524,7 +1527,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         rota
           ? { html: 'Ver o rastro', fn: (cam) => { cam.fechar(); verORastro(); } }
           : { html: 'Ver o quadro de pistas', fn: (cam) => { cam.fechar(); abrirOQuadro(); } },
-        { html: 'Voltar à temporada', fn: (cam) => { cam.fechar(); cena?.desmontar(); location.hash = '#/temporada'; } },
+        { html: textoVoltar, fn: (cam) => { cam.fechar(); cena?.desmontar(); location.hash = voltarPara; } },
         { html: 'Andar pela cena', classe: 'sair', fn: (cam) => cam.fechar() },
       ],
     });
@@ -1573,7 +1576,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
 Quem levou a relíquia já está dormindo, em algum lugar da cidade. Esta noite acabou sem prisão.`,
         opcoes: [
           ...(banco.estado.revanche_possivel ? [{ html: 'Revanche: a mesma noite, do começo <small class="etiqueta-teste">sem selos e fora do ranking</small>', fn: (cam) => { cam.fechar(); revanche(); } }] : []),
-          { html: 'Voltar à temporada', fn: async (cam) => { cam.fechar(); await noBanco(() => F.novaNoite(caso.id, p.id)); cena?.desmontar(); location.hash = '#/temporada'; } },
+          { html: textoVoltar, fn: async (cam) => { cam.fechar(); await noBanco(() => F.novaNoite(caso.id, p.id)); cena?.desmontar(); location.hash = voltarPara; } },
         ],
       });
       return;
@@ -1695,8 +1698,8 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       });
       const escolha = [...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
       if (escolha === 'dica') pedirDica();
-      if (escolha === 'ranking') { cena?.desmontar(); location.hash = '#/temporada'; }
-      if (escolha === 'sair') { cena?.desmontar(); location.hash = '#/temporada'; }
+      if (escolha === 'ranking') { cena?.desmontar(); location.hash = voltarPara; }
+      if (escolha === 'sair') { cena?.desmontar(); location.hash = voltarPara; }
       return;
     }
     const r = await perguntar(tela, {
