@@ -2085,31 +2085,35 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       tela.classList.remove('abrindo-capitulo');
       setTimeout(() => cartao.remove(), 300);
       if (som.ligado()) som.trovao?.(0.4);
+      // Com os quadros do Narrador (3, curtos, com imagem), a abertura é uma tira de HQ no lugar do texto longo.
+      const paineis = Array.isArray(caso.abertura.paineis) && caso.abertura.paineis.length ? caso.abertura.paineis : null;
       const cam = caixa({
-        rotulo: `${caso.rotulo} · ${caso.titulo}`, fechavel: false, texto: caso.abertura.texto,
+        rotulo: `${caso.rotulo} · ${caso.titulo}`, fechavel: false,
+        ...(paineis ? { html: quadrinhos(paineis).replace('class="hq ', 'class="hq hq-tira tira-rota ').replaceAll(' loading="lazy"', '') } : { texto: caso.abertura.texto }),
         opcoes: [{ html: '<b>Começar a investigar</b>', fn: (c) => {
           st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
           dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`);
         } }],
       });
       cam.el.classList.add('abertura-rota');
-      // Quem liga é a Xerife: o mesmo cartão de foto da conversa (sem retrato pintado, a silhueta).
+      // Quem liga é a Xerife: o mesmo cartão de foto da conversa (sem retrato pintado, a silhueta). Na tira, os quadros
+      // já mostram a cena, e o cartão fica de fora.
+      if (paineis) cam.el.classList.add('com-tira');
       const foto = document.createElement('figure');
       foto.className = 'cartao-testemunha sem-figura';
       foto.setAttribute('aria-hidden', 'true');
       foto.innerHTML = '<span class="ct-foto"></span><figcaption>Iolanda</figcaption><small>Xerife</small>';
-      cam.el.prepend(foto);
-      cam.el.classList.add('com-cartao');
+      if (!paineis) { cam.el.prepend(foto); cam.el.classList.add('com-cartao'); }
       // A leitura começa do alto, não do botão (este quadro vem depois do que a camada pediu, que rola até o fim).
       const corpo = cam.el.querySelector('.dialogo-corpo');
       requestAnimationFrame(() => { if (corpo) corpo.scrollTop = 0; });
       if (cerimoniasCurtas()) return;
-      const falas = [...cam.el.querySelectorAll('.texto-narracao > *')];
+      const falas = [...cam.el.querySelectorAll('.texto-narracao > *, .tira-rota > .painel')];
       falas.forEach((f, i) => f.style.setProperty('--i', i));
       cam.el.classList.add('entrando');
       const tudo = () => cam.el.classList.remove('entrando');
       setTimeout(tudo, falas.length * 300 + 400);
-      cam.el.querySelector('.texto-narracao')?.addEventListener('click', tudo, { once: true });
+      cam.el.querySelector('.texto-narracao, .tira-rota')?.addEventListener('click', tudo, { once: true });
     };
     cartao.addEventListener('click', seguir);
     setTimeout(seguir, cerimoniasCurtas() ? 600 : 1500);

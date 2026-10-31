@@ -20,6 +20,19 @@ import { prepararCapitulo, arquivoDaXerife } from '../js/carmen/gerador.js';
 import { CAPITULO, SUSPEITOS } from '../js/carmen/caso.js';
 import { preencher } from '../js/carmen/textos.js';
 import { ALTOS } from '../js/jogo/lugares-alto.js';
+import { readFileSync } from 'node:fs';
+
+// Os 3 quadros da abertura (Narrador, narrador/carmen/quadros-t1.json, fora do repositório e secreto: o arquivo
+// também tem os fechos). Só a abertura do capítulo vai para o público, com o campo imagem inteiro; as imagens
+// dela ficam em img/carmen/. Sem o arquivo ou sem quadros, a abertura continua só com o texto.
+function quadrosDaAbertura(cap) {
+  try {
+    const q = JSON.parse(readFileSync(new URL('../../narrador/carmen/quadros-t1.json', import.meta.url), 'utf8'));
+    const p = q.capitulos?.[String(cap)]?.abertura?.paineis;
+    return Array.isArray(p) && p.length ? p : null;
+  } catch { return null; }
+}
+
 
 const args = process.argv.slice(2);
 const n = Number(args.find((a) => /^\d+$/.test(a)) || 1);
@@ -79,7 +92,7 @@ for (const l of c.publico.lugares) {
   };
 }
 const publico = {
-  formato: 'rota', rotulo: `Capítulo ${n}`, subtitulo: c.publico.subtitulo, abertura: { paineis: null, texto: c.publico.abertura },
+  formato: 'rota', rotulo: `Capítulo ${n}`, subtitulo: c.publico.subtitulo, abertura: { paineis: quadrosDaAbertura(n), texto: c.publico.abertura },
   ajuda: [
     '<b>Ouça as testemunhas</b> de cada lugar. Umas contam para onde a presa foi, sem dizer o nome do lugar; outras contam como ela é.',
     '<b>No mapa</b> (botão Lugares ou M), escolha o próximo lugar. Cada viagem gasta minutos da noite. No lugar errado, ninguém viu nada.',
