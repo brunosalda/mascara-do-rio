@@ -388,7 +388,7 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .regist
 }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .registro-noite li:not(:nth-last-child(-n + 3)) { display: none; }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .registro-noite li { font-size: 14px; line-height: 1.35; }
-body:not(.celular) .tela-jogo.bg2.tela-caso.carmen.registro-quieto:not(.paineis-ocultos) .painel-baixo:not(:hover) .registro-noite { opacity: 0; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen.registro-quieto:not(.paineis-ocultos) .painel-baixo:not(:hover) .registro-noite { opacity: 0; pointer-events: none; }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:has(.painel-pergunta.com-pergunta) .registro-noite { visibility: hidden; }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-pergunta.com-pergunta { inset: auto 0 0 0; max-height: 52vh; }
 /* Os botões: três pílulas embaixo à direita (Mapa, Arquivo, Pistas) e o resto no menu "⋯". */
@@ -515,19 +515,19 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-ar
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2a33a' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5'/%3E%3Cpath d='M15 15l5 5'/%3E%3C/svg%3E") center / 58% no-repeat, rgba(13, 19, 34, 0.82);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7); transition: transform var(--t-rapido) var(--curva-sai), opacity var(--t-medio), filter var(--t-medio);
 }
-.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):not(.feito)::after {
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):not(.feito, .visto)::after {
   border: calc(2px / var(--escala, 1)) solid var(--c-sodio); pointer-events: none; animation: carmen-anel 1.8s ease-out infinite;
 }
 @keyframes carmen-anel { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.6); opacity: 0; } }
-.tela-caso.carmen .ponto.feito:not(.ponto-saida, .ponto-presa, .ponto-porta)::before {
+.tela-caso.carmen .ponto:is(.feito, .visto):not(.ponto-saida, .ponto-presa, .ponto-porta)::before {
   border-color: var(--c-linha-forte); opacity: 0.72; filter: grayscale(0.5);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ba5b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
 }
-.tela-caso.carmen .ponto.feito:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo::after { content: none; }
+.tela-caso.carmen .ponto:is(.feito, .visto):not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo::after { content: none; }
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):is(:hover, .perto, :focus-visible)::before { transform: scale(1.08); opacity: 1; filter: none; }
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo { left: calc(50% + 26px / var(--escala, 1)); }
 body.celular .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) { --lado: 44px; }
-@media (prefers-reduced-motion: reduce) { .tela-caso.carmen .ponto:not(.feito)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .tela-caso.carmen .ponto:not(.feito, .visto)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
 
 /* 2. Os botões redondos (visão, centrar, pausa, painéis) saem de cima da cena: vão para o "⋯" e para as teclas V, C, espaço e H.
    Com os painéis escondidos, o botão de mostrá-los continua, senão não haveria volta pelo toque. */
@@ -539,7 +539,7 @@ body.celular .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-por
 .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { display: block; margin-top: 8px; font: 500 16px/1.3 var(--f-ui); font-style: normal; color: var(--c-texto); }
 body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { font-size: 13px; }
 .carmen .mapa-coluna .mapa-fora, .mapa-tela-cheia .mapa-fora { margin: 0 0 10px; font: 500 14px/1.35 var(--f-ui); color: var(--c-texto-suave); }
-/* O "visto" do jogo antigo apagava o ponto (opacidade e saturação); no Carmen, só o exame feito apaga. */
+/* No Carmen, o "visto" é a coisa já examinada: o ✓ apaga só o círculo (acima), não o ponto inteiro. */
 .tela-caso.carmen .ponto.visto:not(.ponto-saida, .ponto-presa, .ponto-porta) { opacity: 1; filter: none; }
 
 /* 4. Relógio do celular: 72 px de largura, hora em 20 px e o "faltam" em 11 px (sem o zoom que o deixava com 52 px). */
@@ -566,3 +566,130 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo { cursor: pointer; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-caso { display: flex; align-items: center; width: 100%; height: 44px; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo { text-align: left; }
+
+/* ============ Etapa 3: o Arquivo (direção de arte, 7.3): frase com lacunas e fichas em papel ============ */
+.arquivo-mesa { display: grid; grid-template-columns: 440px minmax(0, 1fr); height: 100%; min-height: 0; }
+.arquivo-esq { position: relative; overflow-y: auto; padding: 18px 22px 22px; border-right: 1px solid var(--c-linha); background: var(--c-noite-1); display: flex; flex-direction: column; gap: 16px; }
+.arquivo-dir { overflow-y: auto; padding: 14px 24px 28px; background: radial-gradient(120% 90% at 30% 10%, #172036, var(--c-noite-0) 70%); }
+
+/* O que se sabe de quem fugiu: o retrato falado na foto e os traços confirmados. */
+.carmen .arquivo-ladrao { display: flex; gap: 16px; align-items: flex-start; padding: 0; border: 0; background: none; }
+.carmen .arquivo-ladrao .ficha-foto { width: 112px; flex: none; }
+.carmen .arquivo-pergunta { margin: 0 0 6px; font: 800 26px/1 var(--f-titulo); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto); }
+.carmen .arquivo-sabidos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font: 500 15px/1.3 var(--f-ui); color: var(--c-texto); }
+.carmen .arquivo-sabidos li { display: flex; gap: 6px; align-items: center; }
+.carmen .arquivo-sabidos .icone { color: var(--c-pista); flex: none; }
+.carmen .arquivo-conta { margin: 8px 0 0; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-texto-suave); }
+
+/* A frase com lacunas. */
+.arquivo-frase { position: relative; font: 500 21px/2 var(--f-ui); color: var(--c-texto); }
+.arquivo-frase .frase-linha { display: block; margin-top: 4px; }
+.lacuna {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 2px; padding: 2px 10px; min-height: 36px; vertical-align: baseline;
+  border: 0; border-bottom: 2px dashed var(--c-linha-forte); border-radius: 6px 6px 0 0; background: rgba(200, 214, 240, 0.06);
+  color: var(--c-texto-suave); font: 600 19px/1.2 var(--f-ui); cursor: pointer; transition: background var(--t-rapido), border-color var(--t-rapido);
+}
+.lacuna i { font-style: normal; font-size: 12px; opacity: 0.7; }
+.lacuna:hover, .lacuna[aria-expanded='true'] { background: rgba(200, 214, 240, 0.14); border-bottom-color: var(--c-texto); }
+.lacuna.preenchida { color: var(--c-sodio); border-bottom: 2px solid var(--c-sodio); background: var(--c-sodio-fraco); }
+.lacuna.sem-pista:not(.preenchida) { color: var(--c-texto-suave); opacity: 0.75; }
+.lacuna:focus-visible { outline: 2px solid var(--c-sodio); outline-offset: 2px; }
+.lacuna.treme { animation: carmen-treme 360ms ease-in-out 2; }
+@keyframes carmen-treme { 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
+
+/* O painel de vidro de cada lacuna: os valores, um por linha, e o que as pistas disseram. */
+.lacuna-painel {
+  position: absolute; z-index: 5; left: 0; right: 0; margin-top: 6px; padding: 10px; display: grid; gap: 10px;
+  border: 1px solid var(--c-linha-forte); border-radius: 12px; background: var(--c-vidro); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6); font: 500 15px/1.3 var(--f-ui); animation: carmen-surge 180ms var(--curva-sai) both;
+}
+@keyframes carmen-surge { from { opacity: 0; translate: 0 -6px; } }
+.lacuna-valores { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lacuna-valores button {
+  width: 100%; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 0; border-radius: 8px;
+  background: none; color: var(--c-texto); font: 500 16px/1.2 var(--f-ui); text-align: left; cursor: pointer;
+}
+.lacuna-valores button:hover, .lacuna-valores button:focus-visible { background: rgba(200, 214, 240, 0.12); outline: none; }
+.lacuna-valores button[aria-selected='true'] { color: var(--c-sodio); background: var(--c-sodio-fraco); }
+.lacuna-valores .icone { flex: none; color: var(--c-texto-suave); }
+.lacuna-valores button[aria-selected='true'] .icone { color: var(--c-sodio); }
+.lacuna-valores .lacuna-limpar { color: var(--c-texto-suave); font-size: 14px; }
+.lacuna-pistas { padding-top: 8px; border-top: 1px solid var(--c-linha); }
+.lacuna-pistas > small { display: block; margin-bottom: 6px; font: 600 11px/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); }
+.lacuna-pistas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lacuna-pistas q { color: var(--c-texto); font-style: italic; }
+.lacuna-pistas .btn { margin-top: 4px; }
+.lacuna-cadeado { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--c-texto-suave); }
+
+/* O pé da coluna: o que resta e a Licença. */
+.arquivo-pe { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+.arquivo-pe .arquivo-pedir { flex: 1; min-height: 48px; }
+.arquivo-pe .arquivo-pedir:disabled { opacity: 0.45; cursor: default; }
+.arquivo-restam-mini { display: none; margin: 0; font: 600 13px/1.2 var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-texto-suave); }
+.arquivo-restam-mini b { font: 800 22px/1 var(--f-titulo); color: var(--c-texto); }
+.arquivo-restam-mini .nenhuma { font-size: 15px; color: var(--c-rastro-texto); }
+.carmen .arquivo-aviso { margin: 0; color: var(--c-rastro-texto); font: 500 14px/1.35 var(--f-ui); }
+.carmen .arquivo-licenca { margin: 0; font: 500 16px/1.4 var(--f-ui); color: var(--c-texto); }
+.arquivo-sobrou { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; }
+
+/* RESTAM 3 DE 12 */
+.carmen .arquivo-restam { margin: 0 0 14px; font: 800 32px/1 var(--f-titulo); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto); }
+.carmen .arquivo-restam .nenhuma { color: var(--c-rastro-texto); }
+
+/* As fichas (5.2): papel 3:4, foto com borda branca e clipe, codinome, clã e quatro traços com ícone. */
+.carmen .arquivo-fichas { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, 176px); }
+.carmen .arquivo-fichas.foras { gap: 10px; grid-template-columns: repeat(auto-fill, 112px); }
+.carmen .ficha-ciranda {
+  position: relative; box-sizing: border-box; width: 176px; min-height: 236px; padding: 12px 12px 10px; border: 0; border-radius: 3px;
+  background: var(--c-papel); color: var(--c-tinta); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5); rotate: -1deg;
+  transition: translate var(--t-rapido) var(--curva-sai), rotate var(--t-rapido) var(--curva-sai), box-shadow var(--t-rapido), opacity var(--t-medio), filter var(--t-medio);
+}
+.carmen .ficha-ciranda:nth-child(2n) { rotate: 1.2deg; }
+.carmen .ficha-ciranda:nth-child(3n) { rotate: -0.4deg; }
+.carmen .ficha-ciranda:hover { translate: 0 -4px; rotate: 0deg; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.6); }
+.ficha-foto { position: relative; aspect-ratio: 1; padding: 6px; background: #fbf8f1; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35); }
+.ficha-foto .retrato-falado { display: block; width: 100%; height: 100%; max-width: none; margin: 0; }
+.carmen .ficha-ciranda .ficha-foto { width: 96px; margin: 0 auto 8px; }
+/* O clipe, desenhado em CSS: um laço de arame no alto da foto. */
+.ficha-clipe { position: absolute; top: -8px; left: 18px; width: 12px; height: 26px; border: 2px solid #8c96a8; border-radius: 6px; z-index: 1; }
+.ficha-clipe::after { content: ""; position: absolute; left: 2px; top: 4px; width: 4px; height: 14px; border: 2px solid #8c96a8; border-radius: 3px; }
+.carmen .ficha-nome { display: block; font: 800 24px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-tinta); }
+.carmen .ficha-cla { margin: 2px 0 6px; font: 600 15px/1.2 var(--f-ui); color: var(--c-tinta); }
+.carmen .ficha-cla small { display: block; font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-tinta-suave); }
+.carmen .ficha-tracos { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font: 500 14px/1.2 var(--f-ui); }
+.carmen .ficha-tracos li { display: flex; gap: 6px; align-items: flex-start; }
+.carmen .ficha-tracos .icone { flex: none; color: var(--c-tinta-suave); margin-top: 1px; }
+.carmen .ficha-ciranda > .carimbo { position: absolute; top: 34%; left: 50%; translate: -50% 0; animation: none; mix-blend-mode: multiply; background: none; }
+.carmen .ficha-ciranda.carimbando > .carimbo { animation: carmen-carimbar 420ms var(--curva-mola) both; }
+/* As de fora: menores, ao fundo, em cinza. Só a foto, o nome e o carimbo. */
+.carmen .ficha-ciranda.descartada { width: 112px; min-height: 0; padding: 8px; opacity: 0.4; filter: grayscale(1); rotate: 0deg; }
+.carmen .ficha-ciranda.descartada .ficha-foto { width: 64px; margin-bottom: 4px; }
+.carmen .ficha-ciranda.descartada :is(.ficha-cla, .ficha-tracos) { display: none; }
+.carmen .ficha-ciranda.descartada .ficha-nome { font-size: 16px; text-align: center; }
+.carmen .ficha-ciranda.descartada > .carimbo { font-size: 14px; top: 26%; }
+.carmen .ficha-ciranda.com-licenca { box-shadow: 0 0 0 3px var(--c-rastro), 0 6px 16px rgba(0, 0, 0, 0.5); }
+.carmen .ficha-ciranda.presa .ficha-foto { filter: grayscale(1); }
+.carmen .ficha-ciranda.sozinha { rotate: 0deg; }
+
+/* Celular: uma coluna só, as fichas em duas colunas, e o pé (RESTAM e a Licença) preso embaixo. */
+body.celular .arquivo-mesa { display: block; height: 100%; overflow-y: auto; }
+body.celular .arquivo-esq { overflow: visible; padding: 12px 14px 0; border: 0; gap: 12px; }
+body.celular .arquivo-dir { overflow: visible; padding: 12px 14px 90px; }
+body.celular .carmen .arquivo-ladrao .ficha-foto { width: 72px; }
+body.celular .carmen .arquivo-pergunta { font-size: 22px; }
+body.celular .arquivo-frase { font-size: 18px; line-height: 2.1; }
+body.celular .lacuna { font-size: 17px; min-height: 40px; }
+body.celular .arquivo-pe {
+  position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--c-vidro); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--c-linha);
+}
+body.celular .arquivo-restam-mini { display: block; }
+body.celular .carmen .arquivo-restam { font-size: 24px; }
+body.celular .carmen .arquivo-fichas { grid-template-columns: repeat(2, 160px); justify-content: center; gap: 12px; }
+body.celular .carmen .arquivo-fichas.foras { grid-template-columns: repeat(3, 104px); gap: 8px; }
+body.celular .carmen .ficha-ciranda { width: 160px; min-height: 214px; padding: 10px; }
+body.celular .carmen .ficha-ciranda.descartada { width: 104px; }
+body.celular .carmen .ficha-nome { font-size: 21px; }
+body.celular .carmen .ficha-ciranda .ficha-foto { width: 84px; }
+body.celular .carmen .ficha-ciranda.descartada .ficha-foto { width: 56px; }
+body:not(.celular) .arquivo-pe { position: sticky; bottom: -22px; z-index: 4; margin: auto -22px -22px; padding: 12px 22px 16px; background: linear-gradient(transparent, var(--c-noite-1) 30%); }

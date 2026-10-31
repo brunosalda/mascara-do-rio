@@ -524,66 +524,163 @@ export function retratoFalado(tr = {}, { genero = null } = {}) {
   </svg>`;
 }
 
-// --- O Arquivo da Xerife ------------------------------------------------------------------------------
+// --- O Arquivo da Xerife (direção de arte, 7.3) -------------------------------------------------------
+// Uma frase com lacunas, à esquerda ("Procuro alguém de [aparência], com [sinal]…"), e as fichas da Ciranda
+// em papel, à direita. Cada lacuna abre um painel com os valores e o que as pistas disseram daquele tipo de
+// traço. As fichas reagem na hora: a que deixa de combinar leva o carimbo FORA e desce para o fundo, menor.
 // conhecidos: os traços já conquistados ('categoria=valor'). marcados: { categoria: valor } do jogador.
 // aoPedirLicenca(quem, marcados) devolve a resposta do banco.
 export function restantesDo(caso, marcados, presos = []) {
   return caso.arquivo.suspeitos.filter((s) => !presos.includes(s.id) && Object.entries(marcados).every(([k, v]) => !v || s.tracos[k] === v));
 }
-// indiretas: as pistas que só descrevem um traço (a partir do capítulo 2), ainda sem a leitura da Xerife;
-// nCategorias: quantos tipos de traço já têm pista (a conta da Licença); aoPedirLeitura(id) pede a leitura.
-export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhecidos.length, indiretas = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca, aoPedirLeitura }) {
-  // Os tipos de traço cujo valor já se sabe: a indireta deles não precisa mais de leitura.
+const ICONE_CAT = { aparencia: 'rosto', sinal: 'marca', habito: 'mao', veiculo: 'roda', cla: 'mascara' };
+// O texto antes de cada lacuna e o que vem depois dela. O clã fica numa linha à parte.
+const FRASE = { aparencia: ['Procuro alguém de ', ','], sinal: [' com ', ','], habito: [' que ', ''], veiculo: [' e foge de ', '.'] };
+const TRACOS_FICHA = ['aparencia', 'sinal', 'habito', 'veiculo'];
+// pistas: as pistas de traço já ouvidas ({ id, texto, titulo, categoria, indireta, lida }); comPista: os tipos
+// de traço com pista (a conta da Licença); aoPedirLeitura(id) pede à Xerife a leitura de uma pista indireta.
+export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pistas = [], indiretas = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca, aoPedirLeitura }) {
   const sabidas = new Set(conhecidos.map((t) => t.split('=')[0]));
-  const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || val;
+  const comPistaSet = new Set(comPista || [...sabidas, ...pistas.map((x) => x.categoria).filter(Boolean)]);
+  const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || caso.arquivo.categorias.find((c) => c.id === cat)?.valores.find((v) => v.id === val)?.nome || val;
+  const cats = caso.arquivo.categorias;
+  const total = caso.arquivo.suspeitos.length;
   return abrirJanela(raiz, {
     titulo: 'Arquivo da Xerife',
-    classe: 'janela-arquivo',
+    classe: 'janela-arquivo mapa-tela-cheia',
     montar: (corpo, camada) => {
       const sel = { ...marcados };
+      let aberta = null;
       let aviso = '';
-      function desenhar() {
-        const rest = restantesDo(caso, sel, presos);
-        const vivos = new Set(rest.map((s) => s.id));
+      let ultima = null;
+      corpo.innerHTML = '<div class="arquivo-mesa"><section class="arquivo-esq"></section><section class="arquivo-dir" aria-label="As fichas da Ciranda"></section></div>';
+      const esq = corpo.querySelector('.arquivo-esq');
+      const dir = corpo.querySelector('.arquivo-dir');
+      const algum = () => Object.values(sel).some(Boolean);
+      const vivosDe = () => new Set(restantesDo(caso, sel, presos).map((s) => s.id));
+
+      const ficha = (s, vivos, extra = '') => {
+        const presa = presos.includes(s.id);
+        const fora = !vivos.has(s.id) && !presa;
+        const estado = presa ? `<span class="carimbo carimbo-p">${s.genero === 'f' ? 'Presa' : 'Preso'}</span>`
+          : licenca === s.id ? '<span class="carimbo carimbo-p">Licença</span>' : fora ? '<span class="carimbo carimbo-p">Fora</span>' : '';
+        return `<li class="ficha-ciranda${fora ? ' descartada' : ''}${presa ? ' presa' : ''}${licenca === s.id ? ' com-licenca' : ''}${extra}" data-ficha="${esc(s.id)}">
+          <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(s.tracos, { genero: s.genero })}</div>
+          <b class="ficha-nome">${esc(s.apelido || s.nome)}</b>
+          <p class="ficha-cla"><small>Clã aparente</small> ${esc(nome('cla', s.tracos.cla))}</p>
+          <ul class="ficha-tracos">${TRACOS_FICHA.map((k) => `<li>${icone(ICONE_CAT[k], { tam: 16 })}<span>${esc(nome(k, s.tracos[k]))}</span></li>`).join('')}</ul>
+          ${estado}
+        </li>`;
+      };
+
+      const lacuna = (c) => {
+        const v = sel[c.id];
+        const semPista = !comPistaSet.has(c.id);
+        return `<button type="button" class="lacuna${v ? ' preenchida' : ''}${semPista ? ' sem-pista' : ''}${ultima === c.id ? ' treme' : ''}" data-lacuna="${esc(c.id)}" aria-expanded="${aberta === c.id}" aria-haspopup="listbox">${icone(semPista ? 'cadeado' : ICONE_CAT[c.id] || 'lupa', { tam: 16 })}<span>${esc(v ? nome(c.id, v) : c.nome.toLowerCase())}</span><i aria-hidden="true">▾</i></button>`;
+      };
+
+      const painelDa = (c) => {
+        const ditas = pistas.filter((x) => x.categoria === c.id);
+        const ler = indiretas.filter((x) => x.categoria === c.id && !sabidas.has(c.id));
+        return `<div class="lacuna-painel" role="listbox" aria-label="${esc(c.nome)}">
+          <ul class="lacuna-valores">${c.valores.map((v) => `<li><button type="button" role="option" data-cat="${esc(c.id)}" data-val="${esc(v.id)}" aria-selected="${sel[c.id] === v.id}">${icone(sel[c.id] === v.id ? 'feito' : ICONE_CAT[c.id] || 'lupa', { tam: 16 })}${esc(v.nome)}</button></li>`).join('')}
+            ${sel[c.id] ? `<li><button type="button" class="lacuna-limpar" data-cat="${esc(c.id)}" data-val="">Deixar em branco</button></li>` : ''}</ul>
+          <div class="lacuna-pistas"><small>O que as pistas disseram</small>
+            ${ditas.length ? `<ul>${ditas.map((x) => `<li><q>${esc(x.texto || x.titulo || '')}</q>${ler.some((y) => y.id === x.id) ? ` <button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>` : ''}</li>`).join('')}</ul>`
+              : `<p class="lacuna-cadeado">${icone('cadeado', { tam: 16 })} Nenhuma pista falou disso.</p>`}
+          </div>
+        </div>`;
+      };
+
+      function desenharEsq(vivos) {
         const ladrao = Object.fromEntries(conhecidos.map((t) => t.split('=')));
         const lic = licenca ? caso.arquivo.suspeitos.find((s) => s.id === licenca) : null;
-        const fichas = [...caso.arquivo.suspeitos].sort((a, b) => Number(!vivos.has(a.id)) - Number(!vivos.has(b.id)));
-        corpo.innerHTML = `
-          <section class="arquivo-ladrao" aria-label="O que se sabe de quem fugiu">
-            ${retratoFalado(ladrao)}
-            <div>
-              <p class="arquivo-pergunta">Quem é?</p>
-              <ul class="arquivo-sabidos">${conhecidos.length ? conhecidos.map((t) => { const [c, v] = t.split('='); return `<li><b>${esc(caso.arquivo.categorias.find((x) => x.id === c)?.nome || c)}:</b> ${esc(nome(c, v))}</li>`; }).join('') : '<li>Ainda nada.</li>'}</ul>
-              <p class="nota">${nCategorias > 3 ? `${nCategorias} tipos de traço com pista (bastam 3 para a Xerife emitir a Licença de Caça).` : `${nCategorias} de 3 tipos de traço com pista para a Xerife emitir a Licença de Caça.`}</p>
-            </div>
-          </section>
-          ${indiretas.length ? `<section class="arquivo-indiretas" aria-label="Pistas que só descrevem">
-            <p class="nota">Estas testemunhas descreveram um traço sem dizer qual. Compare com as fichas${indiretas.some((x) => !sabidas.has(x.categoria)) ? ', ou peça à Xerife que leia' : ''}.</p>
-            <ul>${indiretas.map((x) => `<li${sabidas.has(x.categoria) ? ' class="ja-sabido"' : ''}><q>${esc(x.texto || x.titulo || '')}</q> <small>${esc(caso.arquivo.categorias.find((c) => c.id === x.categoria)?.nome || '')}</small>
-              ${sabidas.has(x.categoria) ? '<small class="nota">Você já sabe este traço.</small>' : `<button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>`}</li>`).join('')}</ul>
-          </section>` : ''}
-          <section class="arquivo-marcar" aria-label="Marcar traços">
-            ${caso.arquivo.categorias.map((c) => `<div class="arquivo-categoria"><b title="${esc(c.dica || '')}">${esc(c.nome)}</b>
-              <span class="arquivo-valores">${c.valores.map((v) => `<button type="button" class="chip${sel[c.id] === v.id ? ' marcado' : ''}" data-cat="${esc(c.id)}" data-val="${esc(v.id)}" aria-pressed="${sel[c.id] === v.id}">${esc(v.nome)}</button>`).join('')}</span></div>`).join('')}
-          </section>
-          <p class="arquivo-restam" aria-live="polite">${Object.values(sel).some(Boolean) ? (rest.length === 1 ? 'Sobrou uma ficha só.' : rest.length ? `Restam ${rest.length} fichas.` : 'Nenhuma ficha combina. Algum traço está errado.') : 'Marque os traços que as pistas contaram. As fichas que não combinam saem do quadro.'}${aviso ? ` <b>${esc(aviso)}</b>` : ''}</p>
-          ${lic ? `<p class="arquivo-licenca"><span class="carimbo">Licença de Caça</span> contra ${esc(lic.apelido || lic.nome)}. Vá ao esconderijo e cerque.</p>`
-            : rest.length === 1 && Object.values(sel).some(Boolean) ? `<p><button type="button" class="btn destaque" data-licenca="${esc(rest[0].id)}">Pedir à Xerife a Licença de Caça contra ${esc(rest[0].apelido || rest[0].nome)}</button></p>` : ''}
-          <ol class="arquivo-fichas">${fichas.map((s) => `<li class="ficha-ciranda${vivos.has(s.id) ? '' : ' descartada'}${presos.includes(s.id) ? ' presa' : ''}${licenca === s.id ? ' com-licenca' : ''}">
-            ${retratoFalado(s.tracos, { genero: s.genero })}
-            <b>${esc(s.apelido || s.nome)}</b><small>${esc(nome('cla', s.tracos.cla))} aparente</small>
-            <ul>${['aparencia', 'sinal', 'habito', 'veiculo'].map((k) => `<li>${esc(nome(k, s.tracos[k]))}</li>`).join('')}</ul>
-            ${presos.includes(s.id) ? '<span class="carimbo">preso</span>' : vivos.has(s.id) ? '' : '<span class="carimbo">descartado</span>'}
-          </li>`).join('')}</ol>`;
+        const sobrou = algum() && vivos.size === 1 ? caso.arquivo.suspeitos.find((s) => vivos.has(s.id)) : null;
+        const nTipos = comPistaSet.size;
+        const frase = cats.filter((c) => FRASE[c.id]).map((c) => `${esc(FRASE[c.id][0])}${lacuna(c)}${aberta === c.id ? painelDa(c) : ''}${esc(FRASE[c.id][1])}`).join('');
+        const outras = cats.filter((c) => !FRASE[c.id]).map((c) => `<span class="frase-linha">${esc(c.id === 'cla' ? 'Clã aparente' : c.nome)}: ${lacuna(c)}${aberta === c.id ? painelDa(c) : ''}</span>`).join('');
+        esq.innerHTML = `
+          <div class="arquivo-ladrao">
+            <div class="ficha-foto">${retratoFalado(ladrao)}</div>
+            <div><p class="arquivo-pergunta">Quem é?</p>
+              <ul class="arquivo-sabidos">${conhecidos.length ? conhecidos.map((t) => { const [c, v] = t.split('='); return `<li>${icone(ICONE_CAT[c] || 'lupa', { tam: 16 })}${esc(nome(c, v))}</li>`; }).join('') : '<li class="nota">Nenhum traço confirmado ainda.</li>'}</ul>
+              <p class="arquivo-conta">${Math.min(nTipos, 3)} de 3 tipos de traço com pista</p></div>
+          </div>
+          <div class="arquivo-frase">${frase}${outras}</div>
+          ${sobrou && !lic ? `<ol class="arquivo-sobrou">${ficha(sobrou, vivos, ' sozinha')}</ol>` : ''}
+          ${lic ? `<p class="arquivo-licenca">Licença de Caça contra <b>${esc(lic.apelido || lic.nome)}</b>. Vá ao esconderijo e cerque.</p>` : ''}
+          <div class="arquivo-pe">
+            <p class="arquivo-restam-mini">${restamTexto(vivos)}</p>
+            ${lic ? '' : `<button type="button" class="btn destaque arquivo-pedir"${sobrou ? ` data-licenca="${esc(sobrou.id)}"` : ' disabled'}>${sobrou ? `Pedir a Licença contra ${esc(sobrou.apelido || sobrou.nome)}` : 'Licença'}</button>`}
+          </div>
+          ${aviso ? `<p class="arquivo-aviso" role="alert">${esc(aviso)}</p>` : ''}`;
       }
+      const restamTexto = (vivos) => (algum() && !vivos.size ? '<b class="nenhuma">Nenhuma ficha combina</b>' : `Restam <b>${vivos.size}</b> de ${total}`);
+
+      function desenharDir(vivos) {
+        const lic = !!licenca;
+        const sobrou = algum() && vivos.size === 1 && !lic;
+        const ordem = [...caso.arquivo.suspeitos].sort((a, b) => Number(!vivos.has(a.id)) - Number(!vivos.has(b.id)));
+        // Sobrou uma: ela vai para a coluna da esquerda, embaixo da frase; aqui ficam só as de fora.
+        const vivas = sobrou ? [] : ordem.filter((s) => vivos.has(s.id));
+        const foras = ordem.filter((s) => !vivos.has(s.id));
+        dir.innerHTML = `
+          <h3 class="arquivo-restam" aria-live="polite">${algum() && !vivos.size ? '<span class="nenhuma">Nenhuma ficha combina</span>' : `Restam ${vivos.size} de ${total}`}</h3>
+          ${vivas.length ? `<ol class="arquivo-fichas vivas">${vivas.map((s) => ficha(s, vivos)).join('')}</ol>` : ''}
+          ${foras.length ? `<ol class="arquivo-fichas foras">${foras.map((s) => ficha(s, vivos)).join('')}</ol>` : ''}`;
+      }
+
+      // Muda os traços e anima as fichas (FLIP, 320 ms): guarda onde cada ficha estava, redesenha e anima da
+      // posição antiga para a nova. A que acabou de sair ganha o carimbo batendo.
+      function mudar() {
+        const antes = new Map([...corpo.querySelectorAll('[data-ficha]')].map((el) => [el.dataset.ficha + (el.closest('.arquivo-sobrou') ? '*' : ''), el.getBoundingClientRect()]));
+        const foraAntes = new Set([...dir.querySelectorAll('.ficha-ciranda.descartada')].map((el) => el.dataset.ficha));
+        const vivos = vivosDe();
+        desenharEsq(vivos);
+        desenharDir(vivos);
+        let saiu = false;
+        let voltou = false;
+        if (!cerimoniasCurtas()) {
+          for (const el of corpo.querySelectorAll('[data-ficha]')) {
+            const a = antes.get(el.dataset.ficha + (el.closest('.arquivo-sobrou') ? '*' : '')) || antes.get(el.dataset.ficha);
+            if (!a) continue;
+            const b = el.getBoundingClientRect();
+            if (!b.width) continue;
+            const dx = a.left - b.left;
+            const dy = a.top - b.top;
+            const k = a.width / b.width;
+            if (Math.abs(dx) + Math.abs(dy) < 1 && Math.abs(k - 1) < 0.01) continue;
+            el.animate([{ transformOrigin: '0 0', transform: `translate(${dx}px, ${dy}px) scale(${k})` }, { transformOrigin: '0 0', transform: 'none' }], { duration: 320, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+          }
+        }
+        for (const el of dir.querySelectorAll('.ficha-ciranda')) {
+          const fora = el.classList.contains('descartada');
+          if (fora && !foraAntes.has(el.dataset.ficha)) { saiu = true; el.classList.add('carimbando'); }
+          if (!fora && foraAntes.has(el.dataset.ficha)) voltou = true;
+        }
+        if (saiu) som.carmen?.('descartar');
+        else if (voltou) som.carmen?.('painel');
+      }
+
       corpo.addEventListener('click', async (ev) => {
+        const lac = ev.target.closest('[data-lacuna]');
+        if (lac) {
+          aberta = aberta === lac.dataset.lacuna ? null : lac.dataset.lacuna;
+          ultima = null;
+          desenharEsq(vivosDe());
+          corpo.querySelector(`.lacuna-painel [aria-selected="true"], .lacuna-painel button`)?.focus({ preventScroll: true });
+          return;
+        }
         const ch = ev.target.closest('[data-cat]');
         if (ch) {
           const { cat, val } = ch.dataset;
-          sel[cat] = sel[cat] === val ? null : val;
+          sel[cat] = val || null;
+          aberta = null;
           aviso = '';
           aoMudar?.({ ...sel });
-          desenhar();
+          ultima = algum() && !vivosDe().size ? cat : null;
+          mudar();
+          corpo.querySelector(`[data-lacuna="${CSS.escape(cat)}"]`)?.focus({ preventScroll: true });
           return;
         }
         const ler = ev.target.closest('[data-ler]');
@@ -596,10 +693,15 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], nCategorias = conhec
           else aviso = r?.motivo === 'poucos-tracos' ? 'A Xerife quer pelo menos 3 traços contados por alguém.'
             : r?.motivo === 'traco-sem-pista' ? 'A Xerife pergunta: quem te contou isso? Nenhuma pista falou ainda de um dos tipos de traço que você marcou.'
               : 'A Xerife não emite a Licença com esses traços.';
-          desenhar();
+          mudar();
+          return;
         }
+        // Clicar fora do painel aberto fecha o painel.
+        if (aberta && !ev.target.closest('.lacuna-painel')) { aberta = null; desenharEsq(vivosDe()); }
       });
-      desenhar();
+      const vivos = vivosDe();
+      desenharEsq(vivos);
+      desenharDir(vivos);
     },
   });
 }

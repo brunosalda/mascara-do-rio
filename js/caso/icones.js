@@ -16,6 +16,13 @@ const D = {
   lupa: '<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5.5 5.5"/>',
   mapa: '<path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/>',
   arquivo: '<path d="M4 7h16v13H4z"/><path d="M4 7l2-3h12l2 3"/><path d="M10 11h4"/>',
+  // Os tipos de traço do Arquivo (guia, 5.2): rosto, marca, mão, roda e máscara (clã); e o cadeado da lacuna sem pista.
+  rosto: '<circle cx="12" cy="9" r="4.5"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/>',
+  marca: '<path d="M12 3.5 14 9l5.5.5-4.2 3.6 1.3 5.4L12 15.6l-4.6 2.9 1.3-5.4L4.5 9.5 10 9z"/>',
+  mao: '<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V12"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-.5a5.5 5.5 0 0 1-4.6-2.5L3.5 14a1.6 1.6 0 0 1 2.6-1.8L8 14.5"/>',
+  roda: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3.5v6M12 14.5v6M3.5 12h6M14.5 12h6"/>',
+  mascara: '<path d="M3 8c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0 0 6-3 10-6 10-1.6 0-2.4-1.5-3-3-.6 1.5-1.4 3-3 3-3 0-6-4-6-10z"/><path d="M7 11.5h2.5M14.5 11.5H17"/>',
+  cadeado: '<rect x="5" y="11" width="14" height="9.5" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 };
 
 export const NOMES_ICONES = Object.keys(D);

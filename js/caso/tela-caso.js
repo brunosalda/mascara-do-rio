@@ -1114,7 +1114,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function abrirOArquivo() {
     const e = banco.estado;
     abrirArquivo(tela, {
-      caso, conhecidos: e.tracos || [], nCategorias: (e.categorias || e.tracos || []).length, presos: e.presos || [], licenca: e.licenca,
+      caso, conhecidos: e.tracos || [], comPista: e.categorias || null, presos: e.presos || [], licenca: e.licenca,
+      pistas: (e.pistas || []).filter((x) => x.tipo === 'traco'),
       indiretas: (e.pistas || []).filter((x) => x.tipo === 'traco' && x.indireta && !x.lida),
       marcados: st.marcados || {},
       aoMudar: (m) => { st.marcados = m; salvar(); },
