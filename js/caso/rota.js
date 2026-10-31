@@ -588,7 +588,7 @@ export function retratoFalado(tr = {}, { genero = null, semente = null, novos = 
   const h = semente == null ? null : semear(semente);
   const rx = (genero === 'f' ? 17 : 18) + (h == null ? 0 : ((h % 3) - 1) * 1.5);
   const ry = 22 + (h == null ? 0 : (((h >> 3) % 3) - 1) * 1.5);
-  const lapis = (cat, svg) => (svg && novos?.has(cat) ? `<g class="rf-novo">${svg.replace(/<(path|circle)/g, '<$1 pathLength="1"')}</g>` : svg);
+  const lapis = (cat, svg) => (svg && novos?.has(cat) ? `<g class="rf-novo">${svg.replace(/<(path|circle)\b/g, '<$1 pathLength="1"')}</g>` : svg);
   return `<svg class="retrato-falado${genero ? ` g-${genero}` : ''}" viewBox="0 0 100 100" aria-hidden="true">
     <rect class="rf-fundo" width="100" height="100"/>
     <g transform="${esc0}">
