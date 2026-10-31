@@ -7,7 +7,7 @@ import { abrirJanela } from '../jogo/camadas.js';
 import { esc } from '../ui.js';
 import { som } from '../ambiente.js';
 import { cerimoniasCurtas } from '../leitura.js';
-import { POSICOES } from '../jogo/mapa.js';
+import { POSICOES, VIZINHOS } from '../jogo/mapa.js';
 
 const LARGURA = 1920;
 const ALTURA = 1080;
@@ -79,7 +79,7 @@ export function relogioArco({ inicio, fim, hora, custo = 0 }) {
       ${arco(inicio, h, 'gasto')}${arco(h, fim, 'resta')}${custo > 0 ? arco(h, Math.min(fim, hora + custo), 'custo') : ''}
       <circle class="ponteiro" cx="${px}" cy="${py}" r="4.5"/>
     </svg>
-    <b>${hhmm(h)}</b><small${custo > 0 && !passa ? ' class="ao-chegar"' : ''}>${passa ? 'o sol chega antes' : custo > 0 ? `faltam ${duracao(resta - custo)} ao chegar` : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
+    <b>${hhmm(h)}</b><small${custo > 0 && !passa ? ' class="ao-chegar"' : ''}>${passa ? 'o sol chega antes' : custo > 0 ? `<span class="faltam">faltam </span>${duracao(resta - custo)} ao chegar` : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
   </div>`;
 }
 
@@ -108,6 +108,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
       let viajando = false;
       let cidade = caso.lugares[atual]?.cidade === 'sp' ? 'sp' : 'rio';
       let vb = null;
+      let gruposBorda = {};
 
       const relogioHtml = (custo = 0) => (relogio ? relogioArco({ ...relogio, custo }) : '');
       function medalhao(id, P) {
@@ -118,7 +119,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           visitados.includes(id) || percurso.includes(id) || id === atual ? 'visitado' : 'novo', !t && id !== atual ? 'sem-ligacao' : ''].filter(Boolean).join(' ');
         const [x, y] = P[id];
         const tempo = t ? `${t.voo ? 'VOO ' : ''}${duracao(t.minutos).toUpperCase()}` : '';
-        const largura = tempo.length * 12 + 26;
+        const largura = tempo.length * 14 + 28;
         // O aeroporto é de onde saem os voos para a outra cidade (mais de um destino).
         const aeroporto = /aeroporto/.test(id) || voos.filter((v) => v.de === id).length > 1;
         return `<g class="${classes}" data-lugar="${esc(id)}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${esc(l.nome)}${t ? `, ${duracao(t.minutos)}` : ''}${id === atual ? ', você está aqui' : ''}">
@@ -131,11 +132,11 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             <circle class="rota-aro" r="${R_MED}"/>
           </g>
           ${id === atual ? `<text class="rota-voce-tag" y="${-R_MED - 16}">VOCÊ</text>` : ''}
-          <g class="rota-rotulo" transform="translate(0 ${R_MED + FOLGA + 2})">
+          <g class="rota-rotulo" transform="translate(0 ${R_MED + FOLGA + 2})"><g class="rota-rotulo-esc">
             <text class="rota-nome" y="24">${esc(l.nome)}</text>
             ${tempo ? `<g class="rota-pilula"><rect x="${-largura / 2}" y="34" width="${largura}" height="30" rx="15"/><text y="56">${esc(tempo)}</text></g>` : ''}
-            ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 92 : 62}">${esc(l.marcas.join(' · '))}</text>` : ''}
-          </g>
+            ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 94 : 62}">${esc(l.marcas.join(' · '))}</text>` : ''}
+          </g></g>
         </g>`;
       }
 
@@ -168,6 +169,26 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           <g class="rota-outra-cidade" data-cidade="${direita ? 'sp' : 'rio'}" role="button" tabindex="0" aria-label="Ver o mapa ${direita ? 'de São Paulo' : 'do Rio'}" transform="translate(${bx} ${by})">
             <text text-anchor="${direita ? 'end' : 'start'}">${direita ? 'São Paulo ›' : '‹ Rio'}</text>
           </g>`;
+      }
+
+      // O mapa vivo (Caminho até o 10, Mapa, item 3): as luzes da cidade piscam devagar, faróis correm nas vias e a
+      // barca cruza a baía. Só SVG e CSS, em opacidade baixa, para não puxar o olho; com menos movimento, nada disso.
+      function vivo(P) {
+        if (cidade !== 'rio' || cerimoniasCurtas()) return '';
+        let semente = 7;
+        const sorte = () => (semente = (semente * 9301 + 49297) % 233280) / 233280;
+        const luzes = Object.values(P).flatMap(([x, y]) => Array.from({ length: 7 }, () => {
+          const a = sorte() * Math.PI * 2;
+          const r = R_MED + 30 + sorte() * 150;
+          const [lx, ly] = [x + r * Math.cos(a), y + r * Math.sin(a)];
+          // Só sobre a pintura: fora dela é a faixa escura, onde não há cidade.
+          if (lx < 40 || lx > LARGURA - 40 || ly < 60 || ly > ALTURA - 60) return '';
+          return `<circle class="vivo-luz" cx="${lx.toFixed(0)}" cy="${ly.toFixed(0)}" r="${(5 + sorte() * 4).toFixed(1)}" style="animation-duration:${(4 + sorte() * 4).toFixed(1)}s;animation-delay:-${(sorte() * 6).toFixed(1)}s"/>`;
+        })).join('');
+        const vias = VIZINHOS.filter(([a, b]) => P[a] && P[b] && !(a === 'centro' && b === 'niteroi'))
+          .map(([a, b], i) => `<circle class="vivo-farol" r="8"><animateMotion dur="${9 + (i % 4) * 2.5}s" begin="-${(i * 1.7).toFixed(1)}s" repeatCount="indefinite" path="M${P[i % 2 ? b : a]} L${P[i % 2 ? a : b]}"/></circle>`).join('');
+        const barca = P.centro && P.niteroi ? `<g class="vivo-barca"><circle r="14"/><animateMotion dur="26s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1;0;0" keyTimes="0;0.42;0.5;0.92;1" path="M${P.centro} L${P.niteroi}"/></g>` : '';
+        return `<g class="rota-vivo" aria-hidden="true">${luzes}${vias}${barca}</g>`;
       }
 
       // O mapa enquadra só a área dos lugares (com folga para os rótulos e a ponte aérea).
@@ -229,6 +250,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
                     <marker id="rota-seta" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M1 1 L9 5 L1 9z"/></marker>
                   </defs>
                   ${fundo}
+                  ${vivo(P)}
                   <g class="rota-linhas">${linhas(P)}</g>
                   <g class="rota-proposta-g"></g>
                   ${ponteAerea(P)}
@@ -255,6 +277,9 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
               <div class="mapa-acao" aria-live="polite"></div>
             </aside>
           </div>`;
+        ajustarLetra();
+        // A última hora (item 5): a borda de baixo do mapa ganha o brilho do amanhecer.
+        corpo.classList.toggle('ultima-hora', restanteAgora != null && restanteAgora > 0 && restanteAgora <= 60);
         posicionarRotulos(P, ids);
         // A medida dos rótulos depende da fonte: quando ela termina de chegar, os rótulos são postos de novo.
         document.fonts?.ready.then(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids); });
@@ -270,9 +295,26 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         // A janela entra com animação: as medidas só valem depois que ela assenta.
         for (const ms of [400, 900]) setTimeout(() => { if (corpo.isConnected && pos[cidade] === P) bordas(P, ids); }, ms);
         // E de novo quando a tela muda de tamanho (girar o celular, abrir o teclado).
-        const vigia = new ResizeObserver(() => { if (corpo.isConnected && pos[cidade] === P) bordas(P, ids); });
+        const vigia = new ResizeObserver(() => {
+          if (!corpo.isConnected || pos[cidade] !== P) return;
+          if (ajustarLetra()) posicionarRotulos(P, ids);
+          else bordas(P, ids);
+        });
         vigia.observe(caixa);
         if (caixa.firstElementChild) vigia.observe(caixa.firstElementChild);
+      }
+
+      // O mapa é desenhado em escala: numa tela pequena, os rótulos encolheriam abaixo de 11 px (Base, item 2).
+      // --u aumenta os rótulos na medida certa para a pílula de tempo (24 unidades) ficar com 11,5 px na tela.
+      // Devolve verdadeiro quando a escala mudou (os rótulos precisam ser postos de novo).
+      function ajustarLetra() {
+        const svg = corpo.querySelector('.rota-mapa svg');
+        if (!svg?.clientWidth || !vb) return false;
+        const k = Math.min(svg.clientWidth / vb.w, svg.clientHeight / vb.h || Infinity);
+        const u = Math.max(1, 11.5 / (24 * k)).toFixed(2);
+        if (svg.style.getPropertyValue('--u') === u) return false;
+        svg.style.setProperty('--u', u);
+        return true;
       }
 
       // Nenhum rótulo encosta em outro nem passa por cima de um medalhão: cada um tenta o lado preferido (NOME),
@@ -362,12 +404,19 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           livres.push({ x: mx, y: my, w: 2 * R_MED * kx, h: 2 * R_MED * ky });
           livres.push({ x: esq + desvio, y: topo, w: lw, h: lh });
         }
-        camadaBordas.innerHTML = fora.map((f) => `<button type="button" class="mapa-borda ${f.lado}" data-ir="${esc(f.id)}">${f.lado === 'esq' ? '‹ ' : ''}${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}${f.lado === 'dir' ? ' ›' : ''}</button>`).join('');
+        // Dois ou mais lugares na mesma borda viram um indicador só ("‹ 3 lugares"), que abre a lista deles
+        // (item 4): as pílulas não cobrem o mapa.
+        const itens = ['esq', 'dir'].map((lado) => fora.filter((f) => f.lado === lado)).filter((l) => l.length)
+          .map((l) => (l.length === 1 ? l[0] : { lado: l[0].lado, grupo: l, y: l.reduce((s, f) => s + f.y, 0) / l.length }));
+        gruposBorda = Object.fromEntries(itens.filter((f) => f.grupo).map((f) => [f.lado, f.grupo]));
+        camadaBordas.innerHTML = itens.map((f) => (f.grupo
+          ? `<button type="button" class="mapa-borda ${f.lado} grupo" data-grupo="${f.lado}" aria-expanded="false">${f.lado === 'esq' ? '‹ ' : ''}${f.grupo.length} lugares${f.lado === 'dir' ? ' ›' : ''}</button>`
+          : `<button type="button" class="mapa-borda ${f.lado}" data-vai="${esc(f.id)}">${f.lado === 'esq' ? '‹ ' : ''}${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}${f.lado === 'dir' ? ' ›' : ''}</button>`)).join('');
         // Cada indicador fica na altura do lugar, sem cobrir um medalhão nem um nome da vista nem outro indicador.
         const ALT = 44;
         const postos = [];
         [...camadaBordas.children].forEach((b, i) => {
-          const f = fora[i];
+          const f = itens[i];
           const w = b.offsetWidth;
           const x = f.lado === 'esq' ? 6 : W - 6 - w;
           const max = caixa.clientHeight - ALT - 4;
@@ -383,6 +432,23 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           postos.push({ x, y: topo, w, h: ALT });
           b.style.top = `${Math.round(caixa.offsetTop + topo)}px`;
         });
+      }
+
+      // O indicador de grupo abre (e fecha) a lista dos lugares daquela borda, logo abaixo dele.
+      function abrirGrupo(b) {
+        const camadaBordas = corpo.querySelector('.mapa-bordas');
+        const aberto = b.getAttribute('aria-expanded') === 'true';
+        camadaBordas.querySelector('.mapa-borda-lista')?.remove();
+        camadaBordas.querySelectorAll('[data-grupo]').forEach((x) => x.setAttribute('aria-expanded', 'false'));
+        if (aberto) return;
+        b.setAttribute('aria-expanded', 'true');
+        const el = document.createElement('div');
+        el.className = `mapa-borda-lista ${b.dataset.grupo}`;
+        el.innerHTML = (gruposBorda[b.dataset.grupo] || []).map((f) => `<button type="button" data-vai="${esc(f.id)}">${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}</button>`).join('');
+        camadaBordas.append(el);
+        const abaixo = b.offsetTop + b.offsetHeight + 6;
+        el.style.top = `${abaixo + el.offsetHeight > camadaBordas.clientHeight - 6 ? Math.max(4, b.offsetTop - el.offsetHeight - 6) : abaixo}px`;
+        el.querySelector('button')?.focus();
       }
 
       function selecionar(id) {
@@ -463,12 +529,14 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           aoViajar?.(id);
           return;
         }
-        const ir = ev.target.closest('[data-ir]');
+        const gr = ev.target.closest('[data-grupo]');
+        if (gr) { abrirGrupo(gr); return; }
+        const ir = ev.target.closest('[data-vai]');
         if (ir) {
           const caixa = corpo.querySelector('.rota-mapa');
           const P = pos[cidade];
-          caixa.scrollTo({ left: ((P[ir.dataset.ir][0] - vb.x) / vb.w) * caixa.scrollWidth - caixa.clientWidth / 2, behavior: cerimoniasCurtas() ? 'auto' : 'smooth' });
-          selecionar(ir.dataset.ir);
+          caixa.scrollTo({ left: ((P[ir.dataset.vai][0] - vb.x) / vb.w) * caixa.scrollWidth - caixa.clientWidth / 2, behavior: cerimoniasCurtas() ? 'auto' : 'smooth' });
+          selecionar(ir.dataset.vai);
           return;
         }
         const c = ev.target.closest('[data-cidade]');

@@ -193,7 +193,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
 .rota-pilula rect { fill: rgba(7, 10, 18, 0.85); stroke: rgba(242, 163, 58, 0.45); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .rota-pilula text { fill: #f2a33a; font: 700 20px var(--f-ui); letter-spacing: 0.06em; text-anchor: middle; }
 .carmen .rota-marcas { fill: #9ba5b8; font: italic 500 21px var(--f-ui); text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 7px; opacity: 0; transition: opacity 120ms; }
-.rota-lugar:hover .rota-marcas, .rota-lugar:focus-visible .rota-marcas, .rota-lugar.escolhido .rota-marcas { opacity: 1; }
+.rota-lugar:hover .rota-marcas, .rota-lugar:focus-visible .rota-marcas { opacity: 1; }
 .viajando .rota-lugar, .viajando .rota-lista button { pointer-events: none; }
 
 /* A legenda e os indicadores de borda. */
@@ -1088,3 +1088,53 @@ body.celular .tela-caso.carmen .tira-rota .balao { font-size: 13px; }
 body.celular .tela-caso.carmen .tira-rota .legenda { max-width: 70%; top: 6px; left: 6px; padding: 0.2rem 0.4rem; }
 body.celular .tela-caso.carmen .tira-rota .balao { left: auto; top: auto; right: 6px; bottom: 6px; max-width: 64%; padding: 0.25rem 0.5rem 0.3rem; }
 body.celular .tela-caso.carmen .tira-rota .balao::after { display: none; }
+
+/* Polimento do Mapa ("Caminho até o 10"). Item 2: o trecho que a viagem vai gastar fica hachurado em sódio sobre o
+   arco (vermelho quando passa do sol). Item 3: o mapa vivo, em opacidade baixa. Item 4: a lista dos lugares de uma
+   borda, no celular. Item 5: na última hora, o brilho do amanhecer na borda de baixo do mapa. */
+.relogio-arco .custo { stroke: #ffd27a; stroke-width: 11; stroke-linecap: butt; stroke-dasharray: 1.6 2.2; }
+.relogio-arco.passa .custo { stroke: #ff4d63; }
+.rota-vivo { pointer-events: none; }
+.vivo-luz { fill: #ffd58a; opacity: 0.2; animation: vivo-luz 6s ease-in-out infinite alternate; }
+@keyframes vivo-luz { from { opacity: 0.1; } to { opacity: 0.55; } }
+.vivo-farol { fill: #fff1c9; opacity: 0.5; }
+.vivo-barca circle { fill: #ffe2a0; opacity: 0.6; }
+.mapa-borda.grupo { color: var(--c-texto); }
+.mapa-borda.grupo[aria-expanded='true'] { border-color: var(--c-sodio); }
+.mapa-borda-lista {
+  position: absolute; pointer-events: auto; display: grid; gap: 2px; padding: 6px; max-width: 72%; border-radius: 14px;
+  background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--c-linha-forte);
+}
+.mapa-borda-lista.esq { left: 6px; }
+.mapa-borda-lista.dir { right: 6px; }
+.mapa-borda-lista button {
+  min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--c-texto); text-align: left;
+  font: 600 13px/1 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; cursor: pointer;
+}
+.mapa-borda-lista button:hover, .mapa-borda-lista button:focus-visible { background: var(--c-noite-2); }
+.mapa-borda-lista small { margin-left: 6px; color: #f2a33a; }
+.mapa-area::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 600ms;
+  background: linear-gradient(to top, rgba(255, 122, 60, 0.4), rgba(255, 170, 90, 0.12) 50%, transparent);
+}
+.ultima-hora .mapa-area::after { opacity: 1; animation: mapa-amanhece 3.2s ease-in-out infinite alternate; }
+@keyframes mapa-amanhece { from { opacity: 0.7; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .ultima-hora .mapa-area::after { animation: none; } }
+/* Os rótulos do mapa nunca abaixo de 11 px na tela (Base, item 2): --u vem de ajustarLetra(), em rota.js. */
+.rota-rotulo-esc { transform: scale(var(--u, 1)); }
+.carmen .rota-voce-tag { font-size: calc(24px * var(--u, 1)); }
+.rota-outra-cidade text { font-size: calc(30px * var(--u, 1)); }
+.rota-pilula text { font-size: 24px; }
+.carmen .rota-marcas { font-size: 24px; }
+/* As marcas do lugar escolhido ficam só no cartão (no mapa, cobriam o nome do vizinho). No celular, o relógio do
+   mapa fica compacto em tamanho real (sem zoom), com a linha de baixo mais curta (14 px, pela regra do celular), numa linha só. */
+body.celular .rota-marcas { display: none; }
+.mapa-relogio .relogio-arco small.ao-chegar { left: -10px; right: -10px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .mapa-relogio .relogio-arco { zoom: 1; width: 96px; height: 64px; padding: 4px 8px 2px; }
+  .mapa-relogio .relogio-arco svg { width: 72px; height: 50px; }
+  .mapa-relogio .relogio-arco b { top: 21px; }
+  .mapa-relogio .relogio-arco small { top: 50px; left: -8px; right: -8px; white-space: nowrap; }
+  body.celular .tela-jogo .mapa-relogio .relogio-arco b { font-size: 20px; }
+  .mapa-relogio .relogio-arco small.ao-chegar .faltam { display: none; }
+}

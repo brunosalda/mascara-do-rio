@@ -23,7 +23,7 @@ export const POSICOES = {
 };
 
 // Caminhos entre vizinhos (pontilhados no pergaminho).
-const VIZINHOS = [
+export const VIZINHOS = [
   ['baixada', 'zona-norte'], ['zona-norte', 'porto'], ['zona-norte', 'santa-teresa'], ['porto', 'centro'], ['centro', 'lapa'],
   ['lapa', 'santa-teresa'], ['lapa', 'cemiterio'], ['centro', 'niteroi'], ['cemiterio', 'zona-sul'], ['santa-teresa', 'morro'],
   ['zona-sul', 'morro'], ['morro', 'barra'], ['barra', 'zona-norte'],
