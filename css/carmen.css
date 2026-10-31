@@ -780,3 +780,8 @@ body.celular .licenca-quem b { font-size: 28px; }
 body.celular .licenca-campos div { grid-template-columns: 1fr; gap: 2px; }
 body.celular .carmen .licenca-doc .licenca-carimbo { right: 18px; bottom: 150px; }
 body.celular .licenca-guardar { position: fixed; z-index: 5; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); min-height: 52px; }
+/* A assinatura se desenha da esquerda para a direita (500 ms) antes do carimbo; os rótulos sobem a 12 px. */
+.licenca-doc:not(.emitida):not(.assinada) .licenca-assina span { clip-path: inset(0 100% 0 0); }
+.licenca-doc.assinando:not(.assinada) .licenca-assina span { animation: licenca-assinar 500ms ease-out forwards; }
+@keyframes licenca-assinar { to { clip-path: inset(0 0 0 0); } }
+body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, body:not(.celular) .licenca-assina small { font-size: 12px; }

@@ -754,12 +754,40 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
       const doc = corpo.querySelector('.licenca-doc');
       corpo.querySelector('[data-guardar]').addEventListener('click', () => camada.fechar());
       if (jaEmitida) return;
-      // O carimbo cai depois de o papel assentar; no impacto, o som e um tremor de 2 px.
-      const espera = cerimoniasCurtas() ? 0 : 700;
-      setTimeout(() => {
+      // A cerimônia (guia, 6.2): os valores se datilografam (25 ms por letra, uma tecla a cada 3), a assinatura
+      // se desenha (500 ms) e o carimbo cai, com som e um tremor de 2 px. Um clique no papel completa tudo;
+      // com "menos movimento", vai direto ao fim.
+      const campos = [...doc.querySelectorAll('.datilo')].map((el) => ({ el, txt: el.textContent }));
+      const timers = [];
+      const depois = (ms, fn) => timers.push(setTimeout(fn, ms));
+      let caiu = false;
+      const carimbar = () => {
+        if (caiu) return;
+        caiu = true;
         doc.classList.add('carimbando');
-        setTimeout(() => { som.carmen?.('carimbo'); doc.classList.add('tremor'); setTimeout(() => doc.classList.remove('tremor'), 140); }, cerimoniasCurtas() ? 0 : 180);
-      }, espera);
+        depois(cerimoniasCurtas() ? 0 : 180, () => { som.carmen?.('carimbo'); doc.classList.add('tremor'); depois(140, () => doc.classList.remove('tremor')); });
+      };
+      const completar = () => {
+        timers.splice(0).forEach(clearTimeout);
+        campos.forEach(({ el, txt }) => { el.textContent = txt; });
+        doc.classList.add('assinada');
+        carimbar();
+      };
+      if (cerimoniasCurtas()) { completar(); return; }
+      campos.forEach(({ el }) => { el.textContent = ''; });
+      let t = 420;
+      let n = 0;
+      for (const { el, txt } of campos) {
+        for (let i = 1; i <= txt.length; i += 1) {
+          const k = n++;
+          depois(t, () => { el.textContent = txt.slice(0, i); if (k % 3 === 0) som.carmen?.('tecla'); });
+          t += 25;
+        }
+        t += 90;
+      }
+      depois(t, () => doc.classList.add('assinando'));
+      depois(t + 560, () => { doc.classList.add('assinada'); carimbar(); });
+      doc.addEventListener('click', (ev) => { if (!ev.target.closest('[data-guardar]') && !caiu) completar(); });
     },
   });
 }
