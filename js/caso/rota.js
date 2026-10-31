@@ -850,7 +850,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
 // pelo Arquivo, sem o carimbo cair de novo.
 const numeroLicenca = (n) => String(n || 1).padStart(4, '0');
 const CAMPOS_LICENCA = [['aparencia', 'Aparência'], ['sinal', 'Sinal particular'], ['habito', 'Hábito'], ['veiculo', 'Como se move']];
-export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', cidade = 'Rio', jaEmitida = false }) {
+export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', cidade = 'Rio', portador = '', jaEmitida = false }) {
   if (!suspeito) return null;
   const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || caso.arquivo.categorias.find((c) => c.id === cat)?.valores.find((v) => v.id === val)?.nome || val;
   return abrirJanela(raiz, {
@@ -865,13 +865,43 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
             <div><small>Codinome</small><b>${esc(suspeito.apelido || suspeito.nome)}</b><p><small>Clã aparente</small> <span class="datilo">${esc(nome('cla', suspeito.tracos.cla))}</span></p></div>
           </div>
           <dl class="licenca-campos">${CAMPOS_LICENCA.map(([k, r]) => `<div><dt>${esc(r)}</dt><dd class="datilo">${esc(nome(k, suspeito.tracos[k]))}</dd></div>`).join('')}</dl>
-          <p class="licenca-autorizo datilo">Autorizo a caça. ${esc(cidade)}${hora ? `, ${esc(hora)}` : ''}.</p>
+          <p class="licenca-autorizo datilo">${portador ? `Autorizo ${esc(portador)} a caçar` : 'Autorizo a caça'}. ${esc(cidade)}${hora ? `, ${esc(hora)}` : ''}.</p>
           <p class="licenca-assina"><span>Iolanda</span><small>Xerife</small></p>
           <span class="carimbo carimbo-g licenca-carimbo" aria-hidden="true">Licença</span>
           <button type="button" class="btn destaque licenca-guardar" data-guardar>Guardar a Licença</button>
         </article>`;
       const doc = corpo.querySelector('.licenca-doc');
-      corpo.querySelector('[data-guardar]').addEventListener('click', () => camada.fechar());
+      // Guardar: o papel encolhe e voa até a miniatura no alto do Arquivo (400 ms), que pisca ao receber.
+      let guardando = false;
+      corpo.querySelector('[data-guardar]').addEventListener('click', () => {
+        const mini = raiz.querySelector('.licenca-mini');
+        if (guardando) return;
+        if (!mini || cerimoniasCurtas() || !doc.animate) { camada.fechar(); return; }
+        guardando = true;
+        doc.getAnimations().forEach((a) => { try { a.finish(); } catch { a.cancel(); } });
+        doc.style.animation = 'none';
+        const de = doc.getBoundingClientRect();
+        const para = mini.getBoundingClientRect();
+        const dx = para.left + para.width / 2 - (de.left + de.width / 2);
+        const dy = para.top + para.height / 2 - (de.top + de.height / 2);
+        const k = Math.max(0.08, Math.min(para.width / de.width, para.height / de.height));
+        camada.el.classList.add('guardando');
+        const voo = doc.animate([
+          { transform: 'none', opacity: 1 },
+          { transform: `translate(${dx * 0.6}px, ${dy * 0.6}px) scale(${(1 + k) / 2}) rotate(-4deg)`, opacity: 1, offset: 0.6 },
+          { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(-1deg)`, opacity: 0.2 },
+        ], { duration: 400, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'forwards' });
+        // Se a aba perder o foco no meio, o voo não trava a tela.
+        const reserva = setTimeout(() => voo.finish(), 700);
+        voo.onfinish = () => {
+          clearTimeout(reserva);
+          camada.fechar();
+          mini.classList.remove('recebe');
+          void mini.offsetWidth;
+          mini.classList.add('recebe');
+          som.carmen?.('papel');
+        };
+      });
       if (jaEmitida) return;
       // A cerimônia (guia, 6.2): os valores se datilografam (25 ms por letra, uma tecla a cada 3), a assinatura
       // se desenha (500 ms) e o carimbo cai, com som e um tremor de 2 px. Um clique no papel completa tudo;
@@ -894,15 +924,17 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
       };
       if (cerimoniasCurtas()) { completar(); return; }
       campos.forEach(({ el }) => { el.textContent = ''; });
+      // 25 ms por letra, mas a datilografia inteira cabe em 1,7 s: a assinatura começa antes de 2,5 s.
+      const passo = Math.min(25, 1700 / Math.max(1, campos.reduce((n, c) => n + c.txt.length, 0)));
       let t = 420;
       let n = 0;
       for (const { el, txt } of campos) {
         for (let i = 1; i <= txt.length; i += 1) {
           const k = n++;
           depois(t, () => { el.textContent = txt.slice(0, i); if (k % 3 === 0) som.carmen?.('tecla'); });
-          t += 25;
+          t += passo;
         }
-        t += 90;
+        t += 60;
       }
       depois(t, () => doc.classList.add('assinando'));
       depois(t + 560, () => { doc.classList.add('assinada'); carimbar(); });

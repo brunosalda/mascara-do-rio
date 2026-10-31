@@ -1242,6 +1242,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     return lider.licenca ? `${lider.nome} já tirou a Licença` : `${lider.nome} já está no ${lider.passo || 1}º lugar`;
   }
   const noEsconderijo = () => rota && banco && !st.resolvido && caso.tamanhoRota && banco.estado.rota_passo === caso.tamanhoRota - 1 && (banco.estado.percurso || []).at(-1) === st.lugar;
+  const serieLicenca = () => { let h = 7; for (const c of `${caso.id}:${p.id}`) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 100 + (h % 8800); };
   function abrirOArquivo() {
     const e = banco.estado;
     abrirArquivo(tela, {
@@ -1251,7 +1252,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       marcados: st.marcados || {},
       aoMudar: (m) => { st.marcados = m; salvar(); },
       // A Licença de Caça: a ordem dela no capítulo (as erradas vêm antes), a hora e a cidade em que saiu.
-      dadosLicenca: () => ({ numero: (banco.estado.acusacoes_erradas || 0) + 1, hora: st.licencaHora || '', cidade: caso.lugares[st.lugar]?.cidade === 'sp' ? 'São Paulo' : 'Rio' }),
+      // O número é a série do jogador neste capítulo mais a ordem: cada Licença sai com o seu, e o portador é quem joga.
+      dadosLicenca: () => ({ numero: serieLicenca() + (banco.estado.acusacoes_erradas || 0), hora: st.licencaHora || '', cidade: caso.lugares[st.lugar]?.cidade === 'sp' ? 'São Paulo' : 'Rio', portador: p.nome }),
       aoPedirLeitura: async (id) => {
         const r = await noBanco(() => F.xerife(caso.id, p.id, id));
         if (!r) return;
