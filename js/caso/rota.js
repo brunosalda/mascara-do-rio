@@ -791,3 +791,30 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
     },
   });
 }
+
+// O rastro do jogador em miniatura, para o placar (direção de arte, 7.6): a cidade do esconderijo, os trechos
+// seguidos em vermelho (desenhados com stroke-dashoffset) e as viagens erradas em cinza tracejado.
+export function miniRastro(caso, { percurso = [], visitados = [] } = {}) {
+  const fim = percurso.at(-1);
+  const cidade = caso.lugares[fim]?.cidade === 'sp' ? 'sp' : 'rio';
+  const P = cidade === 'sp' ? posicoesSP(caso) : POS_RIO;
+  const ids = [...new Set([...percurso, ...visitados])].filter((id) => P[id] && (caso.lugares[id]?.cidade === 'sp' ? 'sp' : 'rio') === cidade);
+  if (!ids.length) return '';
+  const xs = ids.map((id) => P[id][0]);
+  const ys = ids.map((id) => P[id][1]);
+  let vb = { x: Math.min(...xs) - 120, y: Math.min(...ys) - 90, w: Math.max(...xs) - Math.min(...xs) + 240, h: Math.max(...ys) - Math.min(...ys) + 180 };
+  // Formato fixo de 16:9, com o rastro no meio.
+  if (vb.w / vb.h < 16 / 9) { const w = vb.h * 16 / 9; vb = { ...vb, x: vb.x - (w - vb.w) / 2, w }; } else { const h = vb.w * 9 / 16; vb = { ...vb, y: vb.y - (h - vb.h) / 2, h }; }
+  const noRio = percurso.filter((id) => P[id]);
+  const seguidos = noRio.slice(1).map((id, i) => `<path class="mini-seguido" pathLength="1" style="--i:${i}" d="M${P[noRio[i]]} L${P[id]}"/>`).join('');
+  const erradas = visitados.filter((id) => !percurso.includes(id) && P[id]).map((id) => {
+    const antes = visitados.slice(0, visitados.indexOf(id)).reverse().find((x) => P[x]) || noRio[0];
+    return P[antes] ? `<path class="mini-errado" d="M${P[antes]} L${P[id]}"/>` : '';
+  }).join('');
+  const pontos = ids.map((id) => `<circle class="mini-ponto${percurso.includes(id) ? '' : ' errado'}${id === fim ? ' fim' : ''}" cx="${P[id][0]}" cy="${P[id][1]}" r="${id === fim ? 26 : 18}"/>`).join('');
+  const fundo = cidade === 'rio'
+    ? `<image href="img/mapa-rio.jpg" x="0" y="0" width="${LARGURA}" height="${ALTURA}" preserveAspectRatio="xMidYMid slice"/>`
+    : `<rect class="rota-fundo-sp" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}"/>`;
+  return `<svg class="mini-rastro" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="O seu rastro no mapa: ${percurso.length} lugares seguidos">
+    ${fundo}<rect class="mini-veu" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}"/>${erradas}${seguidos}${pontos}</svg>`;
+}

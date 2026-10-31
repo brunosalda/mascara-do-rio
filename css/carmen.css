@@ -788,7 +788,7 @@ body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, b
 
 /* ============ Etapa 5: o Cerco (direção de arte, 7.5) ============ */
 .tela-jogo.bg2.tela-caso.carmen .palco { transition: transform 800ms var(--curva-sai), filter 400ms; transform-origin: 50% 55%; }
-.tela-jogo.bg2.tela-caso.carmen.cercando .palco { transform: scale(1.15); }
+.tela-jogo.bg2.tela-caso.carmen.cercando .palco { transform: translate(var(--cerco-dx, 0px), var(--cerco-dy, 0px)) scale(1.15); }
 .cerco-camada { position: absolute; inset: 0; z-index: 700; display: grid; place-items: end center; padding-bottom: calc(12vh + 24px); background: radial-gradient(70% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.7)); }
 .faixa-cerco { position: absolute; left: 0; right: 0; height: 12%; background: #000; animation: cerco-faixa 400ms var(--curva-sai) both; }
 .faixa-cerco.cima { top: 0; transform-origin: top; }
@@ -823,3 +823,135 @@ body.celular .cerco-botoes { flex-direction: column; }
 body.celular .cerco-botoes .btn { min-height: 52px; }
 /* No cerco, o HUD some: só a cena, as faixas e o cartão. */
 .tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo, .faixa-demo, .dica-acao, .ponto-dica, .dica) { opacity: 0; pointer-events: none; transition: opacity 300ms; }
+/* Cerco, ajustes da Avaliação: sem marcadores na cena (rostos, lupas, setas da borda), menos o alvo com anel fino. */
+.tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.cena-pontos > :not(.alvo-cerco), .rosto-testemunha, .dica-interagir, .contornos, .seta-borda, .borda-mais, .marca-destino, .balao-voz) { opacity: 0 !important; pointer-events: none; }
+.tela-caso.carmen .ponto.alvo-cerco::before { border-color: var(--c-rastro); background-image: none; box-shadow: 0 0 0 2px rgba(224, 38, 63, 0.35), 0 0 18px rgba(224, 38, 63, 0.5); }
+.tela-caso.carmen .ponto.alvo-cerco::after { border-color: var(--c-rastro); }
+.tela-caso.carmen .ponto.alvo-cerco .ponto-rotulo { opacity: 0 !important; }
+body:not(.celular) .cerco-fim .carimbo.carimbo-g { font-size: 64px; border-width: 6px; padding: 8px 26px 6px; }
+body:not(.celular) .cerco-camada.cartao-no-alto { place-items: start center; padding: calc(12vh + 20px) 0 0; }
+.carmen .cerco-fim.curta .carimbo { animation: none; opacity: 0.92; } .cerco-fim.curta .cerco-clarao { animation: none; }
+
+/* ============ Etapa 6: o Placar (direção de arte, 7.6): tela própria sobre a cena do esconderijo escurecida ============ */
+.carmen .janela-fundo.janela-placar { display: flex; padding: 0; background: rgba(4, 6, 12, 0.8); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.carmen .janela-placar .janela { flex: 1; width: 100% !important; max-width: none !important; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; display: flex; flex-direction: column; }
+.carmen .janela-placar .janela-cabeca { position: absolute; top: 12px; right: 14px; z-index: 3; padding: 0; border: 0; }
+.carmen .janela-placar .janela-cabeca h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.carmen .janela-placar .janela-corpo { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
+.placar-tela {
+  box-sizing: border-box; height: 100%; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 1fr); gap: 0;
+  padding: 40px 48px 32px; color: var(--c-texto);
+}
+.placar-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 28px; }
+.placar-col + .placar-col { border-left: 1px solid var(--c-linha); }
+.placar-col:first-child { padding-left: 0; }
+.placar-col:last-child { padding-right: 0; }
+.placar-kicker { font: 600 13px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-sodio); }
+.carmen .placar-carimbo { align-self: flex-start; margin: 2px 0 0 4px; color: var(--c-rastro-texto); border-color: var(--c-rastro-texto); font-size: 30px; padding: 5px 16px 3px; animation-delay: 1700ms; }
+.placar-caso h3 { margin: 0; font: 800 52px/0.95 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; }
+.placar-linha { margin: 0; font: 500 16px/1.4 var(--f-texto); color: var(--c-texto-suave); }
+.placar-rastro { margin: 4px 0 0; display: grid; gap: 6px; }
+.mini-rastro { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; border: 1px solid var(--c-linha-forte); background: var(--c-noite-1); }
+.mini-veu { fill: rgba(7, 10, 18, 0.45); }
+.mini-seguido { fill: none; stroke: var(--c-rastro); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.mini-errado { fill: none; stroke: #9ba5b8; stroke-width: 8; stroke-dasharray: 18 16; opacity: 0.85; }
+.mini-ponto { fill: var(--c-rastro); stroke: var(--c-noite-0); stroke-width: 6; }
+.mini-ponto.errado { fill: #6c7588; }
+.mini-ponto.fim { fill: var(--c-papel); stroke: var(--c-rastro); stroke-width: 8; }
+.placar-rastro figcaption { display: flex; gap: 16px; font: 600 12px/1 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-texto-suave); }
+.placar-rastro figcaption span { display: inline-flex; align-items: center; gap: 6px; }
+.placar-rastro figcaption i { width: 22px; height: 0; border-top: 4px solid var(--c-rastro); }
+.placar-rastro figcaption .leg-errado { border-top: 3px dashed #9ba5b8; }
+.placar-resumo { margin: 0; font: 600 15px/1.2 var(--f-ui); color: var(--c-texto); }
+.placar-semana { margin: 0; font: 500 14px/1.4 var(--f-texto); color: var(--c-texto-suave); }
+.placar-arquivo { align-self: flex-start; margin-top: auto; min-height: 48px; }
+
+.placar-nota { align-items: center; text-align: center; }
+.placar-numero { display: grid; justify-items: center; margin-top: 8px; }
+.placar-numero b { font: 800 120px/0.9 var(--f-titulo); letter-spacing: 0.01em; color: var(--c-texto); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.placar-numero small { font: 600 15px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-texto-suave); }
+.placar-numero.pulou b { animation: placar-pula 360ms var(--curva-mola); }
+@keyframes placar-pula { 0% { scale: 1.12; } 100% { scale: 1; } }
+.placar-estrelas { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.placar-estrelas .estrela svg { display: block; width: 40px; height: 40px; fill: none; stroke: var(--c-linha-forte); stroke-width: 1.5; }
+.placar-estrelas .estrela.ganha svg { fill: var(--c-sodio); stroke: var(--c-sodio); filter: drop-shadow(0 0 8px rgba(244, 180, 76, 0.55)); }
+.placar-estrelas small { flex-basis: 100%; font: 600 13px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-sodio); }
+.placar-contas { width: 100%; margin: 8px 0 0; display: grid; gap: 0; }
+.placar-contas div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid var(--c-linha); font: 500 15px/1.2 var(--f-ui); }
+.placar-contas dt { color: var(--c-texto-suave); }
+.placar-contas dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.placar-lado h4 { margin: 4px 0 0; font: 600 13px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-texto-suave); }
+.placar-ranking { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.placar-ranking li { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; background: var(--c-noite-1); font: 500 16px/1.2 var(--f-ui); }
+.placar-ranking li.voce { background: color-mix(in srgb, var(--c-rastro) 22%, var(--c-noite-1)); box-shadow: inset 3px 0 0 var(--c-rastro); position: relative; z-index: 1; }
+.placar-ranking li.vazio { display: block; padding: 12px; color: var(--c-texto-suave); font-size: 14px; }
+.placar-ranking b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placar-pos { font: 800 22px/1 var(--f-titulo); color: var(--c-texto-suave); }
+.placar-ranking .voce .placar-pos { color: var(--c-texto); }
+.placar-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--c-noite-2); border: 1px solid var(--c-linha-forte); font: 700 12px/1 var(--f-ui); color: var(--c-texto); }
+.placar-pontos { font: 700 16px/1 var(--f-ui); font-variant-numeric: tabular-nums; }
+.placar-selos { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.placar-selos li { display: grid; justify-items: center; gap: 4px; width: 64px; text-align: center; }
+.placar-selos svg { width: 48px; height: 48px; }
+.placar-selos .selo-aro { fill: none; stroke: var(--c-linha-forte); stroke-width: 2; stroke-dasharray: 4 4; }
+.placar-selos .selo-miolo { fill: var(--c-noite-1); }
+.placar-selos .ganho .selo-aro { stroke: var(--c-sodio); stroke-dasharray: none; stroke-width: 3; }
+.placar-selos .ganho .selo-miolo { fill: color-mix(in srgb, var(--c-sodio) 25%, var(--c-noite-2)); }
+.placar-selos .selo-estrela { fill: var(--c-sodio); }
+.placar-selos .ganho svg { filter: drop-shadow(0 0 6px rgba(244, 180, 76, 0.45)); }
+.placar-selos small { font: 600 10px/1.15 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto-suave); }
+.placar-selos .ganho small { color: var(--c-texto); }
+.placar-patente { margin: 0; font: 800 26px/1 var(--f-titulo); text-transform: uppercase; color: var(--c-sodio); }
+.placar-botoes { margin-top: auto; display: grid; gap: 8px; }
+.placar-botoes .btn { min-height: 48px; }
+
+/* A cerimônia (6.2): a nota conta (no JS); as contagens entram uma a uma, 120 ms entre elas; a sua linha desliza;
+   as estrelas e os selos caem com brilho; o rastro se desenha. Com "menos movimento", tudo já aparece no lugar. */
+.placar-tela.animando .placar-contas div { animation: placar-entra 240ms var(--curva-sai) both; animation-delay: calc(300ms + var(--i) * 120ms); }
+.placar-tela.animando .placar-ranking li:not(.voce) { animation: placar-entra 240ms var(--curva-sai) both; animation-delay: calc(200ms + var(--i) * 80ms); }
+.placar-tela.animando .placar-ranking li.voce { animation: placar-sobe 700ms var(--curva-sai) 900ms both; }
+.placar-tela.animando .estrela { animation: placar-cai 420ms var(--curva-mola) both; animation-delay: calc(1300ms + var(--i) * 160ms); }
+.placar-tela.animando .placar-selos li { animation: placar-cai 420ms var(--curva-mola) both; animation-delay: calc(1900ms + var(--i) * 140ms); }
+.placar-tela.animando .mini-seguido { stroke-dashoffset: 1; animation: placar-traco 420ms ease-out forwards; animation-delay: calc(400ms + var(--i) * 260ms); }
+.placar-tela.animando .mini-errado, .placar-tela.animando .mini-ponto.errado { animation: placar-entra 300ms ease-out 300ms both; }
+@keyframes placar-entra { from { opacity: 0; translate: 0 8px; } }
+@keyframes placar-sobe { from { translate: 0 var(--sobe, 0%); } }
+@keyframes placar-cai { from { opacity: 0; translate: 0 -18px; scale: 1.3; } }
+@keyframes placar-traco { to { stroke-dashoffset: 0; } }
+.placar-tela.completo * { animation: none !important; }
+.placar-tela.completo .mini-seguido { stroke-dashoffset: 0; }
+.carmen .placar-tela.completo .placar-carimbo { opacity: 1; }
+
+/* Celular: uma coluna (o título, a nota, o rastro, o ranking, os selos), com "Voltar à temporada" preso embaixo. */
+body.celular .carmen .janela-placar .janela-corpo { overflow-y: auto; }
+body.celular .placar-tela { height: auto; display: flex; flex-direction: column; gap: 14px; padding: 20px 16px calc(132px + env(safe-area-inset-bottom)); }
+body.celular .placar-col { display: contents; }
+body.celular .placar-kicker { order: 1; padding-right: 52px; }
+body.celular .carmen .placar-carimbo { order: 2; font-size: 24px; }
+body.celular .placar-caso h3 { order: 3; font-size: 40px; }
+body.celular .placar-linha { order: 4; }
+body.celular .placar-numero { order: 5; margin-top: 0; }
+body.celular .placar-numero b { font-size: 96px; }
+body.celular .placar-estrelas { order: 6; }
+body.celular .placar-contas { order: 7; }
+body.celular .placar-rastro { order: 8; }
+body.celular .placar-resumo { order: 9; }
+body.celular .placar-semana { order: 10; }
+body.celular .placar-lado h4:nth-of-type(1) { order: 11; }
+body.celular .placar-ranking { order: 12; }
+body.celular .placar-lado h4:nth-of-type(2) { order: 13; }
+body.celular .placar-selos { order: 14; justify-content: space-between; }
+body.celular .placar-lado h4:nth-of-type(3) { order: 15; }
+body.celular .placar-patente { order: 16; }
+body.celular .placar-arquivo { order: 17; align-self: stretch; margin-top: 0; }
+body.celular .placar-botoes { position: fixed; z-index: 5; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); margin: 0; grid-template-columns: 1fr; padding: 10px; border-radius: 14px; background: var(--c-vidro); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid var(--c-linha); }
+body.celular .placar-botoes .btn { min-height: 52px; }
+body.celular .placar-selos li { width: 58px; }
+/* No celular, só "Voltar à temporada" fica preso embaixo; o ✕ do alto já volta para a cena. */
+body.celular .placar-botoes [data-placar="cena"] { display: none !important; }
+body.celular .placar-selos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+body.celular .placar-selos li { width: auto; }
+body.celular .placar-selos svg { width: 44px; height: 44px; }
+body.celular .placar-tela { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+body.celular .carmen .janela-placar .fechar-camada { background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }

@@ -7,7 +7,7 @@ import { CENAS, clasSugeridos, montarFicha } from '../motor/roteiro.js';
 import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
-import { abrirMapaRota, abrirArquivo, relogioArco } from './rota.js';
+import { abrirMapaRota, abrirArquivo, relogioArco, miniRastro } from './rota.js';
 import { icone } from './icones.js';
 import { cerimoniasCurtas } from '../leitura.js';
 import { iniciarPerseguicao } from './perseguicao.js';
@@ -1137,10 +1137,29 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function momentoCerco() {
     if (tela.querySelector('.cartao-cerco')) return;
     const lic = !!banco.estado.licenca;
+    // A câmera aproxima no ponto do esconderijo, que ganha um anel fino: o alvo fica marcado.
+    const palcoEl = tela.querySelector('.palco');
+    const alvo = tela.querySelector('[data-ponto="cercar"]');
+    let alvoEmBaixo = false;
+    if (palcoEl && alvo) {
+      const a = alvo.getBoundingClientRect();
+      const b = palcoEl.getBoundingClientRect();
+      const ox = a.left + a.width / 2 - b.left;
+      const oy = a.bottom - b.top;
+      palcoEl.style.transformOrigin = `${ox}px ${oy}px`;
+      // Leva o alvo para o alto da tela, acima do cartão, sem passar da folga que o zoom de 15% dá nas bordas.
+      const entre = (v, min, max) => Math.max(min, Math.min(max, v));
+      palcoEl.style.setProperty('--cerco-dx', `${entre(b.width / 2 - ox, -0.15 * (b.width - ox), 0.15 * ox)}px`);
+      const dy = entre(b.height * 0.4 - oy, -0.15 * (b.height - oy), 0.15 * oy);
+      palcoEl.style.setProperty('--cerco-dy', `${dy}px`);
+      // Se nem assim o alvo sobe o bastante, no computador o cartão vai para o alto (no celular fica embaixo, perto do polegar).
+      alvoEmBaixo = oy + dy > b.height * 0.5;
+      alvo.classList.add('alvo-cerco');
+    }
     tela.classList.add('cercando');
     som.reacao?.('susto', 0);
     const el = document.createElement('div');
-    el.className = 'cerco-camada';
+    el.className = `cerco-camada${alvoEmBaixo ? ' cartao-no-alto' : ''}`;
     el.innerHTML = `<span class="faixa-cerco cima" aria-hidden="true"></span><span class="faixa-cerco baixo" aria-hidden="true"></span>
       <section class="cartao-cerco" role="dialog" aria-label="O esconderijo">
         <h3>Está aqui.</h3>
@@ -1151,7 +1170,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           : '<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença</button>'}</div>
       </section>`;
     tela.appendChild(el);
-    const sair = () => { el.remove(); tela.classList.remove('cercando'); };
+    const sair = () => { el.remove(); tela.classList.remove('cercando'); alvo?.classList.remove('alvo-cerco'); };
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-cerco]');
       if (!b) return;
@@ -1167,12 +1186,17 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const s = caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca);
       const texto = preso ? (s?.genero === 'f' ? 'Presa' : 'Preso') : 'Fugiu';
       const el = document.createElement('div');
-      el.className = `cerco-fim ${preso ? 'preso' : 'fugiu'}`;
+      el.className = `cerco-fim ${preso ? 'preso' : 'fugiu'}${cerimoniasCurtas() ? ' curta' : ''}`;
       el.innerHTML = `<span class="cerco-clarao" aria-hidden="true"></span><span class="carimbo carimbo-g">${texto}</span>`;
       tela.classList.add(preso ? 'cena-preso' : 'cena-fugiu');
       tela.appendChild(el);
-      const dur = cerimoniasCurtas() ? 600 : preso ? 1800 : 1500;
-      setTimeout(() => { el.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); }, dur);
+      // Com "menos movimento", o carimbo já aparece assentado e fica 1,5 s (ou até o clique).
+      const dur = cerimoniasCurtas() ? 1500 : preso ? 1800 : 1500;
+      let foi = false;
+      const fim = () => { if (foi) return; foi = true; el.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); };
+      el.style.pointerEvents = 'auto';
+      el.addEventListener('click', fim);
+      setTimeout(fim, dur);
     });
   }
   async function cercar() {
@@ -1629,10 +1653,131 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
 
   // Banco: a nota de proficiência, os selos e o ranking do capítulo (sem rivais fictícios).
   const SELOS = { 'sem-erros': 'sem erros', 'sem-dicas': 'sem dicas', detetive: 'detetive', primeiro: 'primeiro a resolver', 'mais-rapido': 'mais rápido do capítulo' };
+
+  // O placar do formato rota (direção de arte, 7.6): uma tela própria sobre a cena escurecida, em três colunas
+  // (a prisão e o rastro; a nota; o ranking, as estrelas e os selos). A nota conta de 0 até o valor, as contagens
+  // entram uma a uma, a sua linha desliza até a posição e os selos caem. Um clique completa tudo.
+  const TODOS_SELOS = ['sem-erros', 'sem-dicas', 'detetive', 'primeiro', 'mais-rapido'];
+  const ESTRELAS_LINHA = {
+    1: ['Por pouco', 'Prisão no limite. A Xerife não comenta, e isso já é um elogio.'],
+    2: ['Bom trabalho', 'Rastro limpo, Licença certa. A Xerife anota o seu nome.'],
+    3: ['Rastro perfeito', 'Nenhum minuto perdido. Na Ciranda, já falam de você.'],
+  };
+  // As faixas são as de js/carmen/regras.js (ESTRELAS): 90 minutos ou mais antes do sol, 3 estrelas; 45, 2.
+  const estrelasDoTempo = (restante) => (restante >= 90 ? 3 : restante >= 45 ? 2 : 1);
+  const estrelaSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>';
+  const seloSvg = (n) => `<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="selo-aro" cx="24" cy="24" r="21"/><circle class="selo-miolo" cx="24" cy="24" r="15"/>${n ? `<path class="selo-estrela" d="M24 15.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>` : ''}</svg>`;
+
+  function placarRota() {
+    const e = banco.estado;
+    const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
+    const pos = resolvidos.findIndex((x) => x.voce);
+    const horaFim = st.resolvido?.hora ?? e.hora;
+    const estrelas = e.revanche ? 1 : estrelasDoTempo(caso.relogio.fim - horaFim);
+    const [nomeEstrelas, linhaEstrelas] = ESTRELAS_LINHA[estrelas];
+    const suspeito = caso.arquivo?.suspeitos.find((x) => x.id === e.licenca);
+    const percurso = e.percurso || [];
+    const visitados = [...new Set([...(st.visitados || []), ...percurso])];
+    const erradas = e.viagens_erradas || 0;
+    const nota = e.nota ?? 0;
+    const contagens = [
+      ['Lugares no rastro', percurso.length],
+      ['Viagens erradas', erradas],
+      ['Licenças erradas', e.acusacoes_erradas || 0],
+      ['Dicas pedidas', e.dicas_pedidas || 0],
+      ['Pistas achadas', (e.pistas || []).length],
+      ...(e.acao_vencida != null ? [['Ação no cerco', e.acao_vencida ? 'vencida' : 'perdida']] : []),
+    ];
+    const iniciais = (n) => esc(((n || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map((x) => x[0]).join('').toUpperCase());
+    const linhaRanking = (x, i) => `<li class="${x.voce ? 'voce' : ''}" style="--i:${i}"><span class="placar-pos">${i + 1}º</span><span class="placar-avatar">${iniciais(x.nome)}</span><b>${x.voce ? 'Você' : esc(x.nome)}</b><span class="placar-pontos">${x.nota ?? '—'}</span></li>`;
+    abrirJanela(tela, {
+      titulo: `${caso.titulo}: placar`,
+      classe: 'janela-placar',
+      montar: (corpo, camada) => {
+        corpo.innerHTML = `
+          <div class="placar-tela">
+            <section class="placar-col placar-caso">
+              <small class="placar-kicker">${esc(caso.rotulo)} · ${esc(caso.titulo)}</small>
+              <span class="carimbo carimbo-g placar-carimbo">Caso fechado</span>
+              <h3>${suspeito?.genero === 'f' ? 'Presa' : 'Preso'} às ${doisDigitos(Math.floor(horaFim / 60) % 24)}:${doisDigitos(horaFim % 60)}</h3>
+              <p class="placar-linha">${esc(linhaEstrelas)}</p>
+              <figure class="placar-rastro">${miniRastro(caso, { percurso, visitados })}
+                <figcaption><span><i class="leg-seguido"></i>seguido</span><span><i class="leg-errado"></i>errado</span></figcaption>
+              </figure>
+              <p class="placar-resumo">${percurso.length} ${percurso.length === 1 ? 'lugar' : 'lugares'} · ${erradas} ${erradas === 1 ? 'errada' : 'erradas'}</p>
+              ${banco.final ? `<p class="placar-semana"><b>Na semana seguinte:</b> ${esc(banco.final.efeito || '')}</p>` : ''}
+              <button type="button" class="btn placar-arquivo" data-placar="arquivo">Ver o Arquivo</button>
+            </section>
+            <section class="placar-col placar-nota" aria-label="Sua nota">
+              <div class="placar-numero"><b data-nota>${nota}</b><small>de 1000</small></div>
+              <div class="placar-estrelas" aria-label="${estrelas} de 3 estrelas: ${nomeEstrelas}">
+                ${[1, 2, 3].map((n) => `<span class="estrela${n <= estrelas ? ' ganha' : ''}" style="--i:${n}">${estrelaSvg}</span>`).join('')}
+                <small>${esc(nomeEstrelas)}</small>
+              </div>
+              <dl class="placar-contas">${contagens.map(([k, v], i) => `<div style="--i:${i}"><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+            </section>
+            <section class="placar-col placar-lado">
+              <h4>Ranking do capítulo</h4>
+              <ol class="placar-ranking">${resolvidos.map(linhaRanking).join('') || '<li class="vazio">Ninguém mais fechou este capítulo ainda.</li>'}</ol>
+              <h4>Selos</h4>
+              <ul class="placar-selos">${TODOS_SELOS.map((s, i) => {
+                const tem = (e.selos || []).includes(s);
+                return `<li class="${tem ? 'ganho' : ''}" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small></li>`;
+              }).join('')}</ul>
+              ${e.patente ? `<h4>Patente</h4><p class="placar-patente">${esc(e.patente)}</p>` : ''}
+              <div class="placar-botoes">
+                <button type="button" class="btn destaque" data-placar="voltar">${esc(textoVoltar)}</button>
+                <button type="button" class="btn sair" data-placar="cena">Andar pela cena</button>
+              </div>
+            </section>
+          </div>`;
+        const telaP = corpo.querySelector('.placar-tela');
+        const numero = corpo.querySelector('[data-nota]');
+        const voce = corpo.querySelector('.placar-ranking .voce');
+        // A sua linha começa no fim da lista e sobe até a posição.
+        if (voce && pos > 0) voce.style.setProperty('--sobe', `${(resolvidos.length - 1 - pos) * 100}%`);
+        let raf = 0;
+        const completar = () => {
+          cancelAnimationFrame(raf);
+          numero.textContent = nota;
+          telaP.classList.add('completo');
+        };
+        if (cerimoniasCurtas()) completar();
+        else {
+          telaP.classList.add('animando');
+          numero.textContent = '0';
+          const t0 = performance.now();
+          const dur = 1400;
+          let ultimo = 0;
+          const passo = (t) => {
+            const k = Math.min(1, (t - t0) / dur);
+            const v = Math.round(nota * (1 - (1 - k) ** 3));
+            numero.textContent = v;
+            if (Math.floor(v / 50) > Math.floor(ultimo / 50)) som.carmen?.('tecla');
+            ultimo = v;
+            if (k < 1) raf = requestAnimationFrame(passo);
+            else { som.carmen?.('carimbo'); numero.parentElement.classList.add('pulou'); }
+          };
+          raf = requestAnimationFrame(passo);
+          setTimeout(() => telaP.classList.add('completo'), 3200);
+          telaP.addEventListener('click', (ev) => { if (!ev.target.closest('button')) completar(); });
+        }
+        corpo.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-placar]');
+          if (!b) return;
+          camada.fechar();
+          if (b.dataset.placar === 'arquivo') abrirOArquivo();
+          if (b.dataset.placar === 'voltar') { cena?.desmontar(); location.hash = voltarPara; }
+        });
+      },
+    });
+  }
+
   async function telaFinalBanco() {
     if (!banco.final && st.final) banco.final = await noBanco(() => F.escolherFinal(caso.id, p.id, st.final));
     if (!banco.final && !rota) { fecho(); return; }
     banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
+    if (rota) { placarRota(); return; }
     const e = banco.estado;
     const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
     const html = `
