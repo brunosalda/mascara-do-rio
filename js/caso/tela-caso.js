@@ -1797,6 +1797,14 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // (a prisão e o rastro; a nota; o ranking, as estrelas e os selos). A nota conta de 0 até o valor, as contagens
   // entram uma a uma, a sua linha desliza até a posição e os selos caem. Um clique completa tudo.
   const TODOS_SELOS = ['sem-erros', 'sem-dicas', 'detetive', 'primeiro', 'mais-rapido'];
+  // O motivo para voltar: cada selo que faltou diz como se ganha (ao passar o mouse, ao focar ou ao tocar).
+  const COMO_GANHAR = {
+    'sem-erros': 'Viaje só pelo rastro e peça a Licença certa.',
+    'sem-dicas': 'Feche o caso sem pedir dica.',
+    detetive: 'Ache todas as pistas do capítulo.',
+    primeiro: 'Seja o primeiro a fechar o capítulo.',
+    'mais-rapido': 'Feche o capítulo com mais noite de sobra que todos.',
+  };
   const ESTRELAS_LINHA = {
     1: ['Por pouco', 'O céu já clareava. A Xerife não comenta, e isso já é um elogio.'],
     2: ['Com folga', 'Ainda sobrou noite. A Xerife anota o seu nome.'],
@@ -1849,7 +1857,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
               <button type="button" class="btn placar-arquivo" data-placar="arquivo">Ver o Arquivo</button>
             </section>
             <section class="placar-col placar-nota" aria-label="Sua nota">
-              <div class="placar-numero"><b data-nota>${nota}</b><small>de 1000</small></div>
+              <div class="placar-numero"><b data-nota style="--alvo:${nota}"><span>${nota}</span></b><small>de 1000</small></div>
               <div class="placar-estrelas" aria-label="${estrelas} de 3 estrelas: ${nomeEstrelas}">
                 ${[1, 2, 3].map((n) => `<span class="estrela${n <= estrelas ? ' ganha' : ''}" style="--i:${n}">${estrelaSvg}</span>`).join('')}
                 <small>${esc(nomeEstrelas)}</small>
@@ -1862,7 +1870,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
               <h4>Selos</h4>
               <ul class="placar-selos">${TODOS_SELOS.map((s, i) => {
                 const tem = (e.selos || []).includes(s);
-                return `<li class="${tem ? 'ganho' : ''}" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small></li>`;
+                return tem ? `<li class="ganho" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small></li>`
+                  : `<li style="--i:${i}" tabindex="0" aria-label="${esc(SELOS[s])}, ainda não ganho. ${esc(COMO_GANHAR[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small><span class="selo-como" aria-hidden="true">${esc(COMO_GANHAR[s])}</span></li>`;
               }).join('')}</ul>
               ${e.patente ? `<h4>Patente</h4><p class="placar-patente">${esc(e.patente)}</p>` : ''}
               <div class="placar-botoes">
@@ -1878,30 +1887,23 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         // Com mais de 5, a lista mostra os 5 primeiros e a sua linha.
         const linhas = Math.min(resolvidos.length, 5 + (pos >= 5 ? 1 : 0));
         if (voce && pos > 0) voce.style.setProperty('--sobe', `${(linhas - 1 - Math.min(pos, 5)) * 100}%`);
-        let raf = 0;
+        // A nota conta em CSS (um contador animado em ::before, 1.400 ms), para a captura poder parar no meio.
+        // O tique de máquina cai a cada 50 pontos, na hora em que a curva passa por eles.
+        const relogios = [];
+        const depois = (ms, fn) => relogios.push(setTimeout(fn, ms));
         const completar = () => {
-          cancelAnimationFrame(raf);
-          numero.textContent = nota;
+          relogios.forEach(clearTimeout);
           telaP.classList.add('completo');
         };
         if (cerimoniasCurtas()) completar();
         else {
           telaP.classList.add('animando');
-          numero.textContent = '0';
-          const t0 = performance.now();
           const dur = 1400;
-          let ultimo = 0;
-          const passo = (t) => {
-            const k = Math.min(1, (t - t0) / dur);
-            const v = Math.round(nota * (1 - (1 - k) ** 3));
-            numero.textContent = v;
-            if (Math.floor(v / 50) > Math.floor(ultimo / 50)) som.carmen?.('tecla');
-            ultimo = v;
-            if (k < 1) raf = requestAnimationFrame(passo);
-            else { som.carmen?.('carimbo'); numero.parentElement.classList.add('pulou'); }
-          };
-          raf = requestAnimationFrame(passo);
-          setTimeout(() => telaP.classList.add('completo'), 3200);
+          for (let m = 50; m <= nota; m += 50) depois(dur * (1 - Math.cbrt(1 - m / nota)), () => som.carmen?.('tecla'));
+          depois(dur, () => { numero.classList.add('contou'); som.carmen?.('carimbo'); numero.parentElement.classList.add('pulou'); });
+          // Cada selo ganho brilha e soa quando assenta (CSS: 1.900 ms + 140 ms por selo, 420 ms de queda).
+          (e.selos || []).forEach((s) => { const i = TODOS_SELOS.indexOf(s); if (i >= 0) depois(2250 + i * 140, () => som.carmen?.('pista')); });
+          depois(3200, () => telaP.classList.add('completo'));
           telaP.addEventListener('click', (ev) => { if (!ev.target.closest('button')) completar(); });
         }
         corpo.addEventListener('click', (ev) => {
