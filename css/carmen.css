@@ -1021,3 +1021,23 @@ body.celular .cartao-testemunha { left: 16px; top: 10px; width: 96px; padding: 5
 body.celular .cartao-testemunha .ct-foto { width: 96px; height: 108px; }
 body.celular .cartao-testemunha figcaption { font-size: 16px; bottom: 1px; }
 body.celular .cartao-testemunha small { display: none; }
+/* No celular, durante a conversa, o rosto redondo some da cena: o retrato já está no cartão. */
+body.celular.em-conversa .tela-caso.carmen .rosto-testemunha { display: none; }
+/* O aviso de versão nova não cobre as perguntas: durante a conversa, vai para o alto. */
+body.em-conversa .aviso-versao { bottom: auto; top: max(14px, env(safe-area-inset-top)); }
+
+/* ============ Etapa 8: a abertura (régua do 10): o cartão do capítulo, as falas uma a uma e as dicas na hora ============ */
+.tela-caso.carmen .cartao-capitulo {
+  position: absolute; inset: 0; z-index: 600; display: grid; place-content: center; gap: 12px; padding: 16px; text-align: center; cursor: pointer;
+  background: radial-gradient(ellipse at 50% 45%, rgba(20, 16, 12, 0.72), rgba(6, 6, 9, 0.94));
+  animation: capitulo-entra 500ms var(--curva-sai) both; transition: opacity 300ms ease;
+}
+.tela-caso.carmen .cartao-capitulo b { font: 800 64px/0.9 var(--f-titulo); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto); }
+.tela-caso.carmen .cartao-capitulo span { font: 600 18px/1.2 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--c-sodio); }
+.tela-caso.carmen .cartao-capitulo.saindo { opacity: 0; pointer-events: none; }
+@keyframes capitulo-entra { from { opacity: 0; letter-spacing: 0.2em; } }
+.tela-caso.carmen .dialogo-caso.abertura-rota.entrando .texto-narracao > * { animation: fala-entra 360ms var(--curva-sai) both; animation-delay: calc(var(--i, 0) * 300ms); }
+@keyframes fala-entra { from { opacity: 0; translate: 0 10px; } }
+.faixa-caso.faixa-dica { top: 9.6rem; border-color: var(--c-sodio); }
+.faixa-caso.faixa-dica b { color: var(--c-sodio); }
+body.celular .faixa-caso.faixa-dica { top: 10.6rem; }

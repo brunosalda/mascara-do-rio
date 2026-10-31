@@ -262,8 +262,10 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     el.innerHTML = `<b>${esc(rotulo)}</b> ${esc(texto)}`;
     tela.querySelectorAll(`.faixa-caso.${classe}`).forEach((x) => x.remove());
     tela.appendChild(el);
-    setTimeout(() => el.classList.add('saindo'), 2600);
-    setTimeout(() => el.remove(), 3200);
+    // A dica fica mais tempo: é para ler.
+    const dura = classe === 'faixa-dica' ? 5600 : 2600;
+    setTimeout(() => el.classList.add('saindo'), dura);
+    setTimeout(() => el.remove(), dura + 600);
   }
 
   // Avisos (pista nova, opção nova na dedução, evento, corrida) esperam a caixa terminar de revelar o
@@ -478,7 +480,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
       const tipo = r.novas?.[0]?.tipo;
-      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(tipo); });
+      // No Carmen não há quadro: o lugar das pistas se chama Pistas (avaliação, etapa 7).
+      const faixa = rota ? (novas.length > 1 ? 'Pistas novas em Pistas' : 'Pista nova em Pistas') : novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro';
+      avisar('faixa-pista', faixa, novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(tipo); });
+      if (r.novas.some((x) => x.tipo === 'destino')) dica('mapa', 'Essa pista fala do próximo lugar. Abra o Mapa e viaje para lá.');
+      if (r.novas.some((x) => x.tipo === 'traco')) dica('arquivo', 'Essa pista diz como a presa é. No Arquivo, marque o traço: as fichas que não batem saem.');
     }
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
@@ -2014,7 +2020,53 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         </figure>
       </div>`;
   }
+  // Carmen 2026 (régua do 10, abertura): o cartão "CAPÍTULO N" por 1,5 s; depois as falas entram uma a uma,
+  // 300 ms entre elas, e um clique mostra tudo. Um clique leva à cena: as regras viram dicas na hora certa.
+  function aberturaRota() {
+    const cartao = document.createElement('div');
+    cartao.className = 'cartao-capitulo';
+    cartao.innerHTML = `<b>${esc(caso.rotulo)}</b><span>${esc(caso.titulo)}</span>`;
+    tela.appendChild(cartao);
+    let foi = false;
+    const seguir = () => {
+      if (foi) return;
+      foi = true;
+      cartao.classList.add('saindo');
+      setTimeout(() => cartao.remove(), 300);
+      if (som.ligado()) som.trovao?.(0.4);
+      const cam = caixa({
+        rotulo: `${caso.rotulo} · ${caso.titulo}`, fechavel: false, texto: caso.abertura.texto,
+        opcoes: [{ html: '<b>Começar a investigar</b>', fn: (c) => {
+          st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
+          dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`);
+        } }],
+      });
+      cam.el.classList.add('abertura-rota');
+      // A leitura começa do alto, não do botão (este quadro vem depois do que a camada pediu, que rola até o fim).
+      const corpo = cam.el.querySelector('.dialogo-corpo');
+      requestAnimationFrame(() => { if (corpo) corpo.scrollTop = 0; });
+      if (cerimoniasCurtas()) return;
+      const falas = [...cam.el.querySelectorAll('.texto-narracao > *')];
+      falas.forEach((f, i) => f.style.setProperty('--i', i));
+      cam.el.classList.add('entrando');
+      const tudo = () => cam.el.classList.remove('entrando');
+      setTimeout(tudo, falas.length * 300 + 400);
+      cam.el.querySelector('.texto-narracao')?.addEventListener('click', tudo, { once: true });
+    };
+    cartao.addEventListener('click', seguir);
+    setTimeout(seguir, cerimoniasCurtas() ? 600 : 1500);
+  }
+  // As regras na hora: cada dica aparece uma vez, quando a coisa acontece pela primeira vez.
+  function dica(chave, texto) {
+    if (!rota) return;
+    st.dicasVistas ||= [];
+    if (st.dicasVistas.includes(chave)) return;
+    st.dicasVistas.push(chave);
+    salvar();
+    avisar('faixa-dica', 'Dica', texto);
+  }
   function abertura() {
+    if (rota) { aberturaRota(); return; }
     caixa({
       rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,
       html: caso.abertura.paineis ? tiraAbertura() : '',
