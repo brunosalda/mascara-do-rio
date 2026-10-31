@@ -105,7 +105,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 @keyframes carmen-surgir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 body.cerimonias-curtas .carmen *, .carmen.cerimonias-curtas * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 @media (prefers-reduced-motion: reduce) {
-  .carmen *, .carmen *::before, .carmen *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  body:not(.movimento-forcado) .carmen *, body:not(.movimento-forcado) .carmen *::before, body:not(.movimento-forcado) .carmen *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 }
 
 /* Ícones no mapa (no lugar do "●" e do "✓"). */
@@ -527,7 +527,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-ar
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):is(:hover, .perto, :focus-visible)::before { transform: scale(1.08); opacity: 1; filter: none; }
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo { left: calc(50% + 26px / var(--escala, 1)); }
 body.celular .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) { --lado: 44px; }
-@media (prefers-reduced-motion: reduce) { .tela-caso.carmen .ponto:not(.feito, .visto)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .tela-caso.carmen .ponto:not(.feito, .visto)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
 
 /* 2. Os botões redondos (visão, centrar, pausa, painéis) saem de cima da cena: vão para o "⋯" e para as teclas V, C, espaço e H.
    Com os painéis escondidos, o botão de mostrá-los continua, senão não haveria volta pelo toque. */
@@ -955,3 +955,69 @@ body.celular .placar-selos li { width: auto; }
 body.celular .placar-selos svg { width: 44px; height: 44px; }
 body.celular .placar-tela { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 body.celular .carmen .janela-placar .fechar-camada { background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+/* Placar, ajustes da Avaliação (31/10): selos com rótulo de 12 px e 2 linhas; ranking longo mais baixo; o carimbo
+   desce para não cobrir a linha do capítulo. */
+.placar-selos { align-items: start; }
+.placar-selos small { font-size: 12px; line-height: 1.15; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-transform: none; letter-spacing: 0; }
+.placar-ranking.longo li { min-height: 36px; }
+.placar-ranking.longo { gap: 3px; }
+.carmen .placar-carimbo { margin-top: 24px; }
+body.celular .carmen .placar-carimbo { margin-top: 4px; }
+body.celular .placar-selos { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; }
+/* O alvo do cerco: alguém de costas, em preto contra a luz do lugar, dentro do anel vermelho. */
+.tela-caso.carmen .ponto.alvo-cerco::before {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath fill='%23050608' d='M20 6.5a5.6 5.6 0 1 1 0 11.2a5.6 5.6 0 0 1 0-11.2zM9 40c0-10 3.5-19 11-19s11 9 11 19z'/%3E%3C/svg%3E") center 62% / 78% no-repeat,
+    radial-gradient(circle at 50% 40%, rgba(255, 196, 110, 0.95), rgba(214, 120, 40, 0.75) 45%, rgba(40, 18, 10, 0.9) 75%) !important;
+}
+/* O piso de 14 px do celular vale também nos selos, sem passar disso. */
+body.celular .tela-jogo .placar-selos small { font-size: 14px; }
+
+/* ============ Etapa 7: a conversa (direção de arte, 5.4): o cartão da testemunha, o marca-texto e o cartãozinho ============ */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena.dialogo-caso.com-cartao::before { display: none; }
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-caso.com-cartao { padding-left: 236px; min-height: 300px; }
+.cartao-testemunha {
+  position: absolute; z-index: 2; left: 28px; top: 16px; margin: 0; box-sizing: content-box; width: 168px; padding: 8px 8px 28px;
+  background: #f1ead8; rotate: -2deg; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(28, 23, 19, 0.2);
+  animation: cartao-testemunha 320ms var(--curva-sai) both;
+}
+@keyframes cartao-testemunha { from { opacity: 0; translate: -10px 8px; rotate: -6deg; } }
+.cartao-testemunha .ct-foto {
+  display: block; width: 168px; height: 210px; background-color: #1a1410;
+  background-repeat: no-repeat; background-size: 250% auto; background-position: 50% 3%;
+}
+/* Sem figura pintada: uma silhueta contra a luz do lugar. */
+.cartao-testemunha.sem-figura .ct-foto {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 50'%3E%3Cpath fill='%23090a0e' d='M20 9a7 7 0 1 1 0 14a7 7 0 0 1 0-14zM5 50c0-13 5-23 15-23s15 10 15 23z'/%3E%3C/svg%3E") 50% 100% / 86% auto no-repeat,
+    radial-gradient(circle at 50% 35%, #c98a4a, #5a3a24 55%, #1a1410 90%);
+}
+.cartao-testemunha figcaption { position: absolute; left: 6px; right: 6px; bottom: 2px; overflow: hidden; text-align: center; white-space: nowrap; text-overflow: ellipsis; font: 700 22px/1.1 var(--f-mao); color: #1d2a55; }
+.cartao-testemunha small { position: absolute; top: calc(100% + 8px); left: -4px; right: -4px; text-align: center; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); rotate: 2deg; }
+/* O marca-texto: a frase que é pista ganha o fundo sódio, que se desenha da esquerda para a direita. */
+.tela-caso.carmen .dialogo-corpo mark.marca-pista {
+  padding: 1px 2px; border-radius: 2px; color: inherit; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  background: linear-gradient(rgba(242, 163, 58, 0.3), rgba(242, 163, 58, 0.3)) 0 0 / 100% 100% no-repeat;
+  animation: marca-texto 400ms ease-out 250ms both;
+}
+@keyframes marca-texto { from { background-size: 0% 100%; } }
+/* O cartãozinho que voa até o botão de pistas: só o tipo, nunca se é verdadeira ou isca. */
+.pista-voa.pista-voa-tipo {
+  width: auto; height: auto; margin: -15px 0 0 -44px; padding: 6px 10px; display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 3px; background: var(--c-papel); color: var(--c-tinta); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  font: 700 12px/1 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.pista-voa.pista-voa-tipo::before, .pista-voa.pista-voa-tipo::after { display: none; }
+.pista-voa.pista-voa-tipo .icone { color: var(--c-sodio); }
+/* Perguntas numeradas, com o tempo numa pílula sódio ("10 MIN"). */
+.tela-caso.carmen .escolhas-caso small.etiqueta-tempo {
+  display: inline-block; margin-left: 6px; padding: 3px 8px 2px; border: 0; border-radius: 999px; vertical-align: 2px;
+  background: var(--c-sodio); color: #1a1206; font: 700 12px/1 var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase;
+}
+/* No celular: o retrato encolhe para uns 96 px no alto da folha, ao lado do nome; o texto e as perguntas ocupam a largura toda. */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-caso.com-cartao { padding-left: 0; min-height: 0; }
+body.celular .tela-caso.carmen .dialogo-caso.com-cartao .dialogo-cabeca { padding-left: 132px; min-height: 146px; box-sizing: border-box; }
+body.celular .cartao-testemunha { left: 16px; top: 10px; width: 96px; padding: 5px 5px 20px; }
+body.celular .cartao-testemunha .ct-foto { width: 96px; height: 108px; }
+body.celular .cartao-testemunha figcaption { font-size: 16px; bottom: 1px; }
+body.celular .cartao-testemunha small { display: none; }

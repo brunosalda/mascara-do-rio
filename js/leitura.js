@@ -29,7 +29,22 @@ export function ritmoDasPalavras() {
   return Number.isFinite(r) ? r : 34;
 }
 
+// Vitrine: &movimento liga as animações mesmo com "menos movimento" no sistema, para a avaliação conferir quadro a
+// quadro (&movimento=0 desliga). Fica guardado na aba, porque a vitrine apaga os parâmetros do endereço. A classe do
+// body desliga as regras de prefers-reduced-motion do CSS.
+function lerMovimento() {
+  const m = location.hash.match(/[?&]movimento(=0)?(?=$|&)/);
+  try {
+    if (m) sessionStorage.setItem('mascara.movimento', m[1] ? '0' : '1');
+    return sessionStorage.getItem('mascara.movimento') === '1';
+  } catch { return !!m && !m[1]; }
+}
+function aplicarMovimento() { document.body?.classList.toggle('movimento-forcado', lerMovimento()); }
+aplicarMovimento();
+window.addEventListener('hashchange', aplicarMovimento);
+
 // Cerimônias curtas: pedido do sistema (menos movimento) ou escolha do jogador.
 export function cerimoniasCurtas() {
+  if (document.body.classList.contains('movimento-forcado')) return false;
   return document.body.classList.contains('cerimonias-curtas') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }

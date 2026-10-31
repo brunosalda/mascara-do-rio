@@ -1797,7 +1797,9 @@ export function montarCena(raiz, {
     // Perto de um objeto marcado, a câmera aproxima um pouco e enquadra o objeto junto.
     const marcado = !conversa && perto && (perto.contorno || perto.parada) ? perto : null;
     const foco = focoBeijo || (focoEscolha && performance.now() < focoEscolha.ate ? focoEscolha : null);
-    const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? ZOOM_CONVERSA : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
+    // No Carmen (vista do alto), a conversa não afasta a câmera: a cena fica do tamanho que estava (direção de arte, 5.4).
+    const zConversa = geo.alto && cena.closest('.carmen') ? Math.max(ZOOM_CONVERSA, nivelZoom()) : ZOOM_CONVERSA;
+    const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? zConversa : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * 4) : 1);
     const W = mw * cam.z;
     const H = mh * cam.z;
@@ -1873,6 +1875,11 @@ export function montarCena(raiz, {
     alvoX = limitar(alvoX, vw - W, 0);
     const folgaPeCam = geo.alto && document.body.classList.contains('celular') && !document.body.classList.contains('deitado') && !cena.closest('.carmen') ? 72 : 0;
     alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H - folgaPeCam, 0);
+    // No Carmen 2026, o pé da pintura não sobe acima da folha da conversa: sem faixa vazia entre a cena e a fala.
+    if (conversa && estreito && cena.closest('.carmen')) {
+      const folha = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso');
+      if (folha) alvoY = Math.min(0, Math.max(alvoY, folha.getBoundingClientRect().top - cena.getBoundingClientRect().top - H));
+    }
     // Movimento reduzido (rodada 42): a câmera vai direto, sem deslizar.
     const k = !cameraPronta || reduzido() || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));
     if (geo.alto && camLivre.suave && Math.abs(alvoX - cam.x) + Math.abs(alvoY - cam.y) < 2) camLivre.suave = false;

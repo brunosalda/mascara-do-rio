@@ -17,7 +17,7 @@ import { rolarParada } from '../motor/dados.js';
 import { montarCena } from '../jogo/cena.js';
 import { geografia } from '../jogo/lugares.js';
 import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
-import { narracao, quadrinhos, esc, aviso, grupoVoz } from '../ui.js';
+import { narracao, quadrinhos, esc, aviso, grupoVoz, escreverPalavras } from '../ui.js';
 import { definirTempo, definirSomDoLugar, definirClima, som, efeitos } from '../ambiente.js';
 import { retratoDe } from '../cidade.js';
 import { resumoFicha } from '../ficha.js';
@@ -285,9 +285,10 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     setTimeout(() => { soltando = false; soltarAvisos(); }, 1100);
   }
   // A pista nova voa do meio da tela até o botão do Quadro, que pulsa ao recebê-la.
-  function voarPista() {
+  // No formato rota, o cartãozinho diz só o tipo (destino ou traço), nunca se a pista é verdadeira ou isca.
+  function voarPista(tipo = null) {
     const alvo = [...tela.querySelectorAll('.hud-botoes [data-hud="quadro"]')].find((b) => b.offsetParent);
-    if (!alvo || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!alvo || cerimoniasCurtas()) return;
     const rt = tela.getBoundingClientRect();
     const ra = alvo.getBoundingClientRect();
     const x0 = rt.width / 2;
@@ -295,6 +296,10 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const el = document.createElement('span');
     el.className = 'pista-voa';
     el.setAttribute('aria-hidden', 'true');
+    if (rota && tipo) {
+      el.classList.add('pista-voa-tipo');
+      el.innerHTML = `${icone(tipo === 'destino' ? 'seta' : 'digital', { tam: 14 })}<b>${tipo === 'destino' ? 'destino' : 'traço'}</b>`;
+    }
     el.style.left = `${x0}px`;
     el.style.top = `${y0}px`;
     tela.appendChild(el);
@@ -469,9 +474,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     for (const x of r.novas || []) if (!st.novas.includes(x.id)) st.novas.push(x.id);
     // Formato rota: onde cada pista de destino foi ouvida, para a coluna "Para onde foi?" do mapa.
     if (rota) for (const x of r.novas || []) if (x.tipo === 'destino') { st.ouvidas ||= {}; st.ouvidas[x.id] ??= r.estado?.lugar || st.lugar; }
+    if (rota && r.novas?.length) novasDaFala = r.novas;
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
-      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(); });
+      const tipo = r.novas?.[0]?.tipo;
+      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(tipo); });
     }
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
@@ -589,6 +596,60 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // --- Caixas de diálogo -------------------------------------------------------------------------
   const figuraDe =(pid) => { const pe = caso.pessoas[pid]; const f = pe?.figura || FIGURAS_GENTE[pe?.tipo]?.[0]; return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
   let numCaixa = 0;
+  // Formato rota: as pistas que a última resposta deu, para o marca-texto na frase que é pista (direção de arte, 5.4).
+  let novasDaFala = [];
+  // Palavras de 4 letras ou mais, sem acento, pelo radical de 5 letras (para "cigarro" casar com "cigarros", "tatuagem" com "tatuada").
+  const palavrasDe = (t) => new Set((String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().match(/[a-z]{4,}/g) || []).map((w) => w.slice(0, 5)));
+  // A voz (régua do 10, conversa, item 5): a fala entra palavra por palavra, com um tique baixo, e um clique completa.
+  // O marca-texto espera as palavras dele aparecerem.
+  function digitarFala(raiz) {
+    const p = raiz.querySelector('.dialogo-corpo p');
+    if (!p || cerimoniasCurtas() || p.classList.contains('oculto')) return;
+    p.classList.remove('pronto');
+    const dur = escreverPalavras(p);
+    for (const m of p.querySelectorAll('mark.marca-pista')) m.style.animationDelay = m.querySelector('.palavra')?.style.animationDelay || '0ms';
+    let feito = false;
+    const tique = setInterval(() => som.carmen?.('tecla'), 110);
+    const completar = () => { if (feito) return; feito = true; clearInterval(tique); p.classList.add('pronto'); p.querySelectorAll('mark.marca-pista').forEach((m) => { m.style.animationDelay = '0ms'; }); };
+    setTimeout(completar, dur);
+    raiz.querySelector('.dialogo-corpo').addEventListener('click', completar, { once: true });
+  }
+  // Acha na fala a frase (ou o par de frases seguidas) que mais se parece com cada pista nova e a envolve num <mark>.
+  function marcarPistas(raiz) {
+    const falas = [...raiz.querySelectorAll('.dialogo-corpo p')];
+    for (const pista of novasDaFala) {
+      // O rótulo do tipo ("Sinal particular:") não está na fala: sai antes de comparar.
+      const alvo = palavrasDe(String(pista.texto || pista.titulo || '').replace(/^[^:]{1,20}:\s*/, ''));
+      if (!alvo.size) continue;
+      let melhor = null;
+      for (const f of falas) {
+        for (const no of [...f.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE)) {
+          const texto = no.textContent;
+          const frases = [...texto.matchAll(/[^.!?…]+[.!?…]*/g)].map((m) => {
+            const pulo = m[0].match(/^[\s—–-]*/)[0].length;
+            return { ini: m.index + pulo, fim: m.index + m[0].trimEnd().length };
+          }).filter((x) => x.fim > x.ini);
+          for (let i = 0; i < frases.length; i++) {
+            for (const n of [1, 2]) {
+              const ult = frases[i + n - 1];
+              if (!ult) continue;
+              const tem = palavrasDe(texto.slice(frases[i].ini, ult.fim));
+              const nota = [...alvo].filter((w) => tem.has(w)).length / alvo.size - (n - 1) * 0.2;
+              if (nota >= 0.4 && (!melhor || nota > melhor.nota)) melhor = { no, ini: frases[i].ini, fim: ult.fim, nota };
+            }
+          }
+        }
+      }
+      if (!melhor) continue;
+      const faixa = document.createRange();
+      faixa.setStart(melhor.no, melhor.ini);
+      faixa.setEnd(melhor.no, melhor.fim);
+      const marca = document.createElement('mark');
+      marca.className = 'marca-pista';
+      faixa.surroundContents(marca);
+    }
+    novasDaFala = [];
+  }
   // opcoes: [{ html, fn, desligada, classe }]. revelar: fala por fala, com "Continuar".
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
     const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
@@ -610,13 +671,28 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     for (const f of camada.el.querySelectorAll('p.fala')) {
       const nome = f.querySelector('.falante')?.textContent?.trim();
       const pid = Object.keys(caso.pessoas).find((id) => caso.pessoas[id].nome.toUpperCase() === nome);
-      const src = pid ? figuraDe(pid) : '';
+      // No formato rota, só a figura da própria pessoa: a genérica do tipo repetiria o mesmo rosto em várias testemunhas.
+      const src = pid && (!rota || caso.pessoas[pid].figura) ? figuraDe(pid) : '';
       const rosto = f.querySelector('.rosto');
       if (src && rosto) { rosto.classList.add('rosto-pintado'); rosto.innerHTML = `<img src="${esc(src)}" alt="">`; }
     }
     if (falante && figuraDe(falante)) {
       camada.el.classList.add('com-falante');
       camada.el.style.setProperty('--retrato-falante', `url('${new URL(figuraDe(falante), location.href).href}')`);
+    }
+    // Formato rota (direção de arte, 5.4): o retrato vira uma foto de papel, com o nome à mão na borda de baixo e o
+    // ofício embaixo. Sem figura pintada, uma silhueta, nunca um quadrado vazio.
+    if (falante && rota && caso.pessoas[falante]) {
+      const pe = caso.pessoas[falante];
+      const src = pe.figura ? figuraDe(falante) : '';
+      const cartao = document.createElement('figure');
+      cartao.className = `cartao-testemunha${src ? '' : ' sem-figura'}`;
+      cartao.setAttribute('aria-hidden', 'true');
+      cartao.innerHTML = `<span class="ct-foto"${src ? ` style="background-image:url('${esc(new URL(src, location.href).href)}')"` : ''}></span><figcaption>${esc(pe.nome)}</figcaption><small>${esc(pe.sub || '')}</small>`;
+      camada.el.prepend(cartao);
+      camada.el.classList.add('com-cartao');
+      marcarPistas(camada.el);
+      digitarFala(camada.el);
     }
     camada.el.querySelectorAll('[data-escolha]').forEach((b) => {
       const o = opcoes[Number(b.dataset.escolha)];
@@ -628,7 +704,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // Cerimônia do teste: a habilidade e a dificuldade, uma pausa, o resultado com cor e som. Um clique pula.
   function cerimonia(pool, dif, res) {
     return new Promise((resolver) => {
-      const curto = document.body.classList.contains('cerimonias-curtas') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const curto = cerimoniasCurtas();
       const ok = R.deuCerto(res);
       const el = document.createElement('div');
       el.className = `cerimonia-teste grupo-${grupoVoz(R.vozDoTeste(pool))}`;
@@ -1659,9 +1735,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // entram uma a uma, a sua linha desliza até a posição e os selos caem. Um clique completa tudo.
   const TODOS_SELOS = ['sem-erros', 'sem-dicas', 'detetive', 'primeiro', 'mais-rapido'];
   const ESTRELAS_LINHA = {
-    1: ['Por pouco', 'Prisão no limite. A Xerife não comenta, e isso já é um elogio.'],
-    2: ['Bom trabalho', 'Rastro limpo, Licença certa. A Xerife anota o seu nome.'],
-    3: ['Rastro perfeito', 'Nenhum minuto perdido. Na Ciranda, já falam de você.'],
+    1: ['Por pouco', 'O céu já clareava. A Xerife não comenta, e isso já é um elogio.'],
+    2: ['Com folga', 'Ainda sobrou noite. A Xerife anota o seu nome.'],
+    3: ['Noite de sobra', 'O sol ainda estava longe. Na Ciranda, já falam de você.'],
   };
   // As faixas são as de js/carmen/regras.js (ESTRELAS): 90 minutos ou mais antes do sol, 3 estrelas; 45, 2.
   const estrelasDoTempo = (restante) => (restante >= 90 ? 3 : restante >= 45 ? 2 : 1);
@@ -1686,7 +1762,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       ['Licenças erradas', e.acusacoes_erradas || 0],
       ['Dicas pedidas', e.dicas_pedidas || 0],
       ['Pistas achadas', (e.pistas || []).length],
-      ...(e.acao_vencida != null ? [['Ação no cerco', e.acao_vencida ? 'vencida' : 'perdida']] : []),
+      // A ação do cerco só aparece quando foi vencida: perdida, ela não muda nada e soaria como derrota.
+      ...(e.acao_vencida ? [['Ação no cerco', 'vencida']] : []),
     ];
     const iniciais = (n) => esc(((n || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map((x) => x[0]).join('').toUpperCase());
     const linhaRanking = (x, i) => `<li class="${x.voce ? 'voce' : ''}" style="--i:${i}"><span class="placar-pos">${i + 1}º</span><span class="placar-avatar">${iniciais(x.nome)}</span><b>${x.voce ? 'Você' : esc(x.nome)}</b><span class="placar-pontos">${x.nota ?? '—'}</span></li>`;
@@ -1718,7 +1795,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
             </section>
             <section class="placar-col placar-lado">
               <h4>Ranking do capítulo</h4>
-              <ol class="placar-ranking">${resolvidos.map(linhaRanking).join('') || '<li class="vazio">Ninguém mais fechou este capítulo ainda.</li>'}</ol>
+              <ol class="placar-ranking${resolvidos.length > 5 ? ' longo' : ''}">${resolvidos.map(linhaRanking).filter((_, i) => i < 5 || i === pos).join('') || '<li class="vazio">Ninguém mais fechou este capítulo ainda.</li>'}</ol>
               <h4>Selos</h4>
               <ul class="placar-selos">${TODOS_SELOS.map((s, i) => {
                 const tem = (e.selos || []).includes(s);
@@ -1735,7 +1812,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const numero = corpo.querySelector('[data-nota]');
         const voce = corpo.querySelector('.placar-ranking .voce');
         // A sua linha começa no fim da lista e sobe até a posição.
-        if (voce && pos > 0) voce.style.setProperty('--sobe', `${(resolvidos.length - 1 - pos) * 100}%`);
+        // Com mais de 5, a lista mostra os 5 primeiros e a sua linha.
+        const linhas = Math.min(resolvidos.length, 5 + (pos >= 5 ? 1 : 0));
+        if (voce && pos > 0) voce.style.setProperty('--sobe', `${(linhas - 1 - Math.min(pos, 5)) * 100}%`);
         let raf = 0;
         const completar = () => {
           cancelAnimationFrame(raf);

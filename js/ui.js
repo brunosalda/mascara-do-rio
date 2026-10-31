@@ -99,7 +99,7 @@ export function narracaoComPaineis(texto, paineis, { cenario, classe = '' } = {}
 
 // As palavras de um parágrafo surgem uma a uma, como se estivessem sendo escritas.
 
-function escreverPalavras(p) {
+export function escreverPalavras(p) {
   const RITMO_PALAVRA = ritmoDasPalavras();
   if (RITMO_PALAVRA <= 0) { p.classList.add('pronto'); return 0; } // instantânea
   const nos = [];
