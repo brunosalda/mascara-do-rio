@@ -1253,10 +1253,11 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 
 /* Licença, polimento: a tela escurece ao abrir; ao guardar, o fundo clareia enquanto o papel voa até a
    miniatura, que pisca ao receber. */
-.carmen .janela-fundo.janela-licenca { animation: licenca-escurece 300ms ease-out both; }
+.carmen .janela-fundo.janela-licenca { animation: licenca-escurece 300ms ease-out backwards; }
 @keyframes licenca-escurece { from { background-color: rgba(4, 6, 12, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 .carmen .janela-fundo.janela-licenca.guardando { background-color: rgba(4, 6, 12, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); transition: background-color 400ms ease-in, backdrop-filter 400ms ease-in; pointer-events: none; }
 .carmen .janela-licenca.guardando .janela-cabeca { visibility: hidden; }
+.carmen .janela-licenca.guardando .janela { clip-path: none; background: transparent; border-color: transparent; box-shadow: none; }
 .carmen .licenca-mini.recebe { animation: licenca-recebe 480ms var(--curva-mola); }
 @keyframes licenca-recebe { 30% { scale: 1.05; box-shadow: 0 0 0 5px var(--c-rastro), 0 0 24px rgba(255, 210, 122, 0.55); } }
 @media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .carmen .janela-fundo.janela-licenca, body:not(.movimento-forcado) .carmen .licenca-mini.recebe { animation: none; } }
