@@ -343,6 +343,9 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           const g = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`);
           const rot = g?.querySelector('.rota-rotulo');
           if (!rot) continue;
+          // O medalhão cortado na borda some: o indicador fica no lugar dele.
+          g.style.opacity = visiveis.includes(id) ? '' : '0';
+          g.style.pointerEvents = visiveis.includes(id) ? '' : 'none';
           if (rot.dataset.base) rot.setAttribute('transform', rot.dataset.base);
           rot.style.visibility = visiveis.includes(id) ? '' : 'hidden';
           if (!visiveis.includes(id)) continue;
