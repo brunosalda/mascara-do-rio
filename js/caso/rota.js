@@ -641,7 +641,7 @@ function sinal(s, c) {
     case 'dedo-faltando': return mao(80, 'M74.4 85 v-9 M78.4 85 v-11 M82.4 85 v-1.6 M86.2 85 v-8', '<path class="rf-sinal" d="M80.8 82.4 q1.6 -1.4 3.2 0"/>');
     case 'anel-serpente': return mao(20, 'M13.8 85 v-8 M17.8 85 v-10 M21.8 85 v-10 M25.6 85 v-8', '<path class="rf-sinal ouro-linha" d="M19.8 80 h4 M19.8 78.4 h4"/><circle class="rf-sinal ouro" cx="24.6" cy="77.6" r="1.1"/>');
     case 'brinco-perola': return `<circle class="rf-sinal perola" cx="${e - 1.6}" cy="50.5" r="2.4"/>`;
-    case 'ancora': return `<path class="rf-sinal tinta" d="M59 ${q + 1} v8 m-3 -5.5 h6 m-6.5 3.5 q3.5 4 7 0 M59 ${q + 1} m-1.2 -1.2 a1.2 1.2 0 1 0 2.4 0 a1.2 1.2 0 1 0 -2.4 0"/>`;
+    case 'ancora': return `<path class="rf-sinal rf-tinta" d="M59 ${q + 1} v8 m-3 -5.5 h6 m-6.5 3.5 q3.5 4 7 0 M59 ${q + 1} m-1.2 -1.2 a1.2 1.2 0 1 0 2.4 0 a1.2 1.2 0 1 0 -2.4 0"/>`;
     case 'cicatriz': return '<path class="rf-sinal" d="M55 45 L63 54 M56.4 48.6 l2.4 -1.6 M58.4 50.8 l2.4 -1.6 M60.4 53 l2.4 -1.6"/>';
     case 'medalha': return `<path class="rf-corrente" d="M43 ${q + 5} Q50 ${q + 19} 57 ${q + 5}"/><circle class="rf-sinal ouro" cx="50" cy="${q + 15.5}" r="3.4"/>`;
     default: return '';

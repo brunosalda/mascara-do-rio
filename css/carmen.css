@@ -1258,6 +1258,7 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .carmen .janela-fundo.janela-licenca.guardando { background-color: rgba(4, 6, 12, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); transition: background-color 400ms ease-in, backdrop-filter 400ms ease-in; pointer-events: none; }
 .carmen .janela-licenca.guardando .janela-cabeca { visibility: hidden; }
 .carmen .janela-licenca.guardando .janela { clip-path: none; background: transparent; border-color: transparent; box-shadow: none; }
+.tela-jogo.bg2.tela-caso.carmen .janela-licenca.guardando .janela { background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .carmen .licenca-mini.recebe { animation: licenca-recebe 480ms var(--curva-mola); }
 @keyframes licenca-recebe { 30% { scale: 1.05; box-shadow: 0 0 0 5px var(--c-rastro), 0 0 24px rgba(255, 210, 122, 0.55); } }
 @media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .carmen .janela-fundo.janela-licenca, body:not(.movimento-forcado) .carmen .licenca-mini.recebe { animation: none; } }
@@ -1285,7 +1286,7 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .retrato-falado.esboco .rf-tranca { fill: var(--hachura); stroke: var(--grafite); stroke-width: 0.9; }
 .retrato-falado.esboco .rf-oculos { fill: none; stroke: var(--grafite); stroke-width: 1.3; }
 .retrato-falado.esboco .rf-sinal { fill: none; stroke: #9e2a24; stroke-width: 1.2; stroke-linecap: round; }
-.retrato-falado.esboco .rf-sinal.tinta { stroke: #2d4a7a; stroke-width: 1; }
+.retrato-falado.esboco .rf-sinal.rf-tinta { stroke: #2d4a7a; stroke-width: 1; }
 .retrato-falado.esboco .rf-sinal.perola { fill: #fffdf6; stroke: var(--grafite); stroke-width: 0.7; }
 .retrato-falado.esboco .rf-sinal.ouro { fill: #c9a24a; stroke: #6b5320; stroke-width: 0.7; }
 .retrato-falado.esboco .rf-sinal.ouro-linha { stroke: #a8822e; stroke-width: 1.3; }
