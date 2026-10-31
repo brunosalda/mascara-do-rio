@@ -1305,6 +1305,9 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .carmen .vivo-luz { fill: url(#vivo-brilho); opacity: 0.35; animation: vivo-luz 6s ease-in-out infinite alternate; }
 @keyframes vivo-luz { from { opacity: 0.2; } to { opacity: 0.85; } }
 .carmen .vivo-farol { fill: #fff1c9; opacity: 0.55; }
+/* As luzes das avenidas de São Paulo: postes, mais firmes que as janelas. */
+.carmen .vivo-luz.avenida { opacity: 0.5; animation-name: vivo-luz-avenida; }
+@keyframes vivo-luz-avenida { from { opacity: 0.35; } to { opacity: 0.7; } }
 .vivo-barca .vivo-casco { fill: #e9dcc0; opacity: 0.8; }
 .vivo-barca .vivo-cabine { fill: #ffd27a; opacity: 0.9; }
 .vivo-barca .vivo-esteira { fill: none; stroke: #cfe3f2; stroke-width: 2; stroke-linecap: round; opacity: 0.35; }
@@ -1312,6 +1315,7 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .sp-rua { fill: #1d1c18; }
 .sp-quadra { fill: #0f1729; }
 .sp-quadra.centro { fill: #121828; }
+.sp-quadra.praca { fill: #131c1b; }
 .sp-janela { fill: #f0c068; opacity: 0.55; }
 .sp-janela.fraca { opacity: 0.25; }
 .sp-avenida-brilho { fill: none; stroke: #ffb347; stroke-width: 34; stroke-linecap: round; opacity: 0.08; }

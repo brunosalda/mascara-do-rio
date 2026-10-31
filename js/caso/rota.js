@@ -203,9 +203,20 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         let semente = 7;
         const sorte = () => (semente = (semente * 9301 + 49297) % 233280) / 233280;
         const longeDosMedalhoes = ([x, y]) => Object.values(P).every(([px, py]) => Math.hypot(x - px, y - py) > R_MED + 14);
+        // Em São Paulo, a maior parte das luzes acompanha as avenidas, dos dois lados, a cada 7% do traçado; o resto
+        // fica solto pelos quarteirões.
+        const aoLongo = cidade === 'sp' ? AVENIDAS_SP.flatMap((av) => {
+          const q = av.pts.map(([la, lo]) => projSP(la, lo));
+          return Array.from({ length: 14 }, (_, i) => 0.04 + i * 0.07).flatMap((t) => {
+            const [x, y] = [0, 1].map((k) => (1 - t) ** 2 * q[0][k] + 2 * (1 - t) * t * q[1][k] + t ** 2 * q[2][k]);
+            const [dx, dy] = [0, 1].map((k) => 2 * (1 - t) * (q[1][k] - q[0][k]) + 2 * t * (q[2][k] - q[1][k]));
+            const n = Math.hypot(dx, dy) || 1;
+            return [1, -1].map((lado) => [x - (dy / n) * lado * (15 + sorte() * 6), y + (dx / n) * lado * (15 + sorte() * 6), true]);
+          });
+        }) : [];
         const pontos = cidade === 'rio' ? LUZES_RIO
-          : Array.from({ length: 120 }, () => [vb.x + sorte() * vb.w, vb.y + sorte() * vb.h]);
-        const luzes = pontos.filter(longeDosMedalhoes).map(([x, y]) => `<circle class="vivo-luz" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(4 + sorte() * 3).toFixed(1)}" fill="url(#vivo-brilho)" style="animation-duration:${(4 + sorte() * 4).toFixed(1)}s;animation-delay:-${(sorte() * 6).toFixed(1)}s"/>`).join('');
+          : [...aoLongo, ...Array.from({ length: 50 }, () => [vb.x + sorte() * vb.w, vb.y + sorte() * vb.h])];
+        const luzes = pontos.filter(longeDosMedalhoes).map(([x, y, av]) => `<circle class="vivo-luz${av ? ' avenida' : ''}" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(av ? 6 + sorte() * 2 : 4 + sorte() * 3).toFixed(1)}" fill="url(#vivo-brilho)" style="animation-duration:${(4 + sorte() * 4).toFixed(1)}s;animation-delay:-${(sorte() * 6).toFixed(1)}s"/>`).join('');
         const trechos = cidade === 'rio'
           ? VIZINHOS.filter(([a, b]) => P[a] && P[b] && !(a === 'centro' && b === 'niteroi')).map(([a, b]) => `M${P[a]} L${P[b]}`)
           : AVENIDAS_SP.map((av) => `M${av.pts.map(([la, lo]) => projSP(la, lo)).join(' L')}`);
@@ -221,6 +232,46 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         }
         const nevoa = cidade === 'sp' ? [0.25, 0.6, 0.85].map((f, i) => `<ellipse class="vivo-nevoa" cx="${(vb.x + vb.w * f).toFixed(0)}" cy="${(vb.y + vb.h * (0.3 + i * 0.22)).toFixed(0)}" rx="${(vb.w * 0.28).toFixed(0)}" ry="${(vb.h * 0.12).toFixed(0)}" fill="url(#vivo-nevoa)" style="animation-delay:-${i * 9}s"/>`).join('') : '';
         return `<g class="rota-vivo" aria-hidden="true">${luzes}${vias}${barca}${nevoa}</g>`;
+      }
+
+      // A trama de São Paulo em 3 × 3 células de 200 × 132 (600 × 396 até repetir, em vez de 200 × 132): cada célula
+      // tem uma das quatro divisões de quarteirão, diferente da vizinha da esquerda, às vezes uma praça, e janelas em
+      // lugares sorteados. Algumas janelas piscam devagar (sem movimento, ficam acesas). O Centro, em 2 × 2.
+      function tramaSP() {
+        let semente = 11;
+        const sorte = () => (semente = (semente * 9301 + 49297) % 233280) / 233280;
+        const piscar = !cerimoniasCurtas();
+        const janelas = (x, y, w, h, quantas) => Array.from({ length: quantas }, () => {
+          const [jx, jy, r] = [x + 6 + sorte() * (w - 17), y + 6 + sorte() * (h - 14), sorte()];
+          const pisca = piscar && r > 0.86
+            ? `<animate attributeName="opacity" values="0.55;0.55;0.06;0.06;0.55" keyTimes="0;0.6;0.64;0.8;1" dur="${(6 + sorte() * 7).toFixed(1)}s" begin="-${(sorte() * 9).toFixed(1)}s" repeatCount="indefinite"/>` : '';
+          return `<rect class="sp-janela${r < 0.3 ? ' fraca' : ''}" x="${jx.toFixed(0)}" y="${jy.toFixed(0)}" width="5" height="4">${pisca}</rect>`;
+        }).join('');
+        const DIVISOES = [
+          [[4, 4, 118, 52], [128, 4, 68, 52], [4, 62, 60, 66], [70, 62, 126, 66]],
+          [[4, 4, 60, 124], [70, 4, 126, 40], [70, 50, 60, 78], [136, 50, 60, 78]],
+          [[4, 4, 192, 36], [4, 46, 90, 82], [100, 46, 96, 38], [100, 90, 96, 38]],
+          [[4, 4, 86, 58], [96, 4, 100, 58], [4, 68, 140, 60], [150, 68, 46, 60]],
+        ];
+        let a = '';
+        for (let l = 0; l < 3; l++) {
+          let antes = -1;
+          for (let c = 0; c < 3; c++) {
+            let k = Math.floor(sorte() * 4);
+            if (k === antes) k = (k + 1) % 4;
+            antes = k;
+            for (const [x, y, w, h] of DIVISOES[k]) {
+              const [qx, qy] = [c * 200 + x, l * 132 + y];
+              const praca = sorte() < 0.08;
+              a += `<rect class="sp-quadra${praca ? ' praca' : ''}" x="${qx}" y="${qy}" width="${w}" height="${h}" rx="2"/>`;
+              if (!praca) a += janelas(qx, qy, w, h, Math.max(1, Math.round(((w * h) / 2600) * (0.6 + sorte()))));
+            }
+          }
+        }
+        let b = '';
+        for (const [x, y] of [[0, 0], [70, 0], [0, 70], [70, 70]]) b += `<rect class="sp-quadra centro" x="${x + 5}" y="${y + 5}" width="60" height="60" rx="2"/>${janelas(x + 5, y + 5, 60, 60, 2 + Math.floor(sorte() * 3))}`;
+        return `<pattern id="sp-quadras-a" width="600" height="396" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect class="sp-rua" width="600" height="396"/>${a}</pattern>
+                    <pattern id="sp-quadras-b" width="140" height="140" patternUnits="userSpaceOnUse" patternTransform="rotate(9)"><rect class="sp-rua" width="140" height="140"/>${b}</pattern>`;
       }
 
       // São Paulo sem pintura (decisão do Bruno de 30/10: nenhuma imagem nova): uma trama de ruas em SVG nas cores da
@@ -314,8 +365,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
                     <radialGradient id="vivo-brilho"><stop offset="0" stop-color="#fff3d0"/><stop offset="0.3" stop-color="#ffd27a" stop-opacity="0.85"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
                     ${cidade === 'sp' ? `<radialGradient id="vivo-nevoa"><stop offset="0" stop-color="#9fb4d8" stop-opacity="0.14"/><stop offset="1" stop-color="#9fb4d8" stop-opacity="0"/></radialGradient>
                     <radialGradient id="sp-vinheta" cx="0.5" cy="0.5" r="0.75"><stop offset="0.55" stop-color="#0a0f1c" stop-opacity="0"/><stop offset="1" stop-color="#0a0f1c" stop-opacity="0.85"/></radialGradient>
-                    <pattern id="sp-quadras-a" width="200" height="132" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect class="sp-rua" width="200" height="132"/><rect class="sp-quadra" x="4" y="4" width="118" height="52" rx="2"/><rect class="sp-quadra" x="128" y="4" width="68" height="52" rx="2"/><rect class="sp-quadra" x="4" y="62" width="60" height="66" rx="2"/><rect class="sp-quadra" x="70" y="62" width="126" height="66" rx="2"/><rect class="sp-janela" x="16" y="14" width="5" height="4"/><rect class="sp-janela" x="88" y="34" width="5" height="4"/><rect class="sp-janela fraca" x="150" y="20" width="5" height="4"/><rect class="sp-janela" x="30" y="96" width="5" height="4"/><rect class="sp-janela fraca" x="110" y="80" width="5" height="4"/><rect class="sp-janela" x="170" y="108" width="5" height="4"/></pattern>
-                    <pattern id="sp-quadras-b" width="70" height="70" patternUnits="userSpaceOnUse" patternTransform="rotate(9)"><rect class="sp-rua" width="70" height="70"/><rect class="sp-quadra centro" x="5" y="5" width="60" height="60" rx="2"/><rect class="sp-janela" x="14" y="16" width="5" height="4"/><rect class="sp-janela fraca" x="44" y="30" width="5" height="4"/><rect class="sp-janela" x="26" y="48" width="5" height="4"/></pattern>` : ''}
+                    ${tramaSP()}` : ''}
                   </defs>
                   ${fundo}
                   ${vivo(P)}
