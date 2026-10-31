@@ -1055,7 +1055,8 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         const voo = doc.animate([
           { transform: 'none', opacity: 1 },
           { transform: `translate(${dx * 0.6}px, ${dy * 0.6}px) scale(${(1 + k) / 2}) rotate(-4deg)`, opacity: 1, offset: 0.6 },
-          { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(-1deg)`, opacity: 0.2 },
+          { transform: `translate(${dx * 0.92}px, ${dy * 0.92}px) scale(${k + (1 - k) * 0.08}) rotate(-1.4deg)`, opacity: 1, offset: 0.85 },
+          { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(-1deg)`, opacity: 0 },
         ], { duration: 400, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'forwards' });
         // Se a aba perder o foco no meio, o voo não trava a tela.
         const reserva = setTimeout(() => voo.finish(), 700);
@@ -1093,11 +1094,13 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
       // 25 ms por letra, mas a datilografia inteira cabe em 1,7 s: a assinatura começa antes de 2,5 s.
       const passo = Math.min(25, 1700 / Math.max(1, campos.reduce((n, c) => n + c.txt.length, 0)));
       let t = 420;
-      let n = 0;
+      // A tecla soa no máximo a cada 90 ms: mais que isso vira chocalho.
+      let ultimaTecla = -Infinity;
       for (const { el, txt } of campos) {
         for (let i = 1; i <= txt.length; i += 1) {
-          const k = n++;
-          depois(t, () => { el.textContent = txt.slice(0, i); if (k % 3 === 0) som.carmen?.('tecla'); });
+          const toca = t - ultimaTecla >= 90;
+          if (toca) ultimaTecla = t;
+          depois(t, () => { el.textContent = txt.slice(0, i); if (toca) som.carmen?.('tecla'); });
           t += passo;
         }
         t += 60;

@@ -1350,3 +1350,13 @@ body.celular .placar-proximo { display: none; }
 .alvo-fugindo { width: 56px; height: 56px; }
 /* A foto da prisão no placar com 200 px: no computador, no alto da coluna, antes do carimbo (a coluna é flex). */
 body:not(.celular) .placar-foto { position: relative; top: auto; right: auto; align-self: flex-start; width: 200px; margin: 2px 0 8px; }
+
+/* ============ Segunda volta: a Licença ============ */
+/* No celular, o papel é um objeto: 92% da largura, inclinado 1 grau, com o Arquivo escuro em volta. */
+body.celular .carmen .janela-fundo.janela-licenca { padding: 14px 0; place-items: start center; }
+body.celular .carmen .janela-licenca .janela { width: 92% !important; height: auto; }
+body.celular .carmen .janela-licenca .janela-corpo { height: auto; overflow: visible; }
+body.celular .licenca-doc { min-height: 0; rotate: 1deg; border-radius: 3px; padding-bottom: 22px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7); }
+body.celular .licenca-guardar { position: static; margin-top: 8px; }
+body.celular .carmen .janela-fundo.janela-licenca { overflow-y: auto; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .janela-licenca .janela { margin: 0 auto; background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; clip-path: none; }
