@@ -338,6 +338,9 @@ export const som = {
         ruido(A, t, 0.04, { freq: 2500, q: 1.5, volume: 0.04 });
         break;
       case 'descartar': ruido(A, t, 0.08, { freq: variar(3500), q: 1.2, volume: 0.02 }); break;
+      case 'lapis': // três riscos de grafite no papel, ao longo dos 400 ms do traço
+        for (const [d, l] of [[0, 0.11], [0.14, 0.09], [0.27, 0.13]]) ruido(A, t + d, l, { freq: variar(4200), ate: variar(5200), q: 1.6, volume: 0.011, ataque: 0.02 });
+        break;
       case 'tecla': ruido(A, t, 0.015, { freq: variar(3000), q: 4, volume: 0.02, ataque: 0.002 }); break;
       case 'preso':
         ruido(A, t, 0.03, { freq: 2500, q: 2, volume: 0.05 });

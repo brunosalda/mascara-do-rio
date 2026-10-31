@@ -576,19 +576,29 @@ const SINAL = {
   'anel-serpente': '<circle class="rf-sinal" cx="20" cy="92" r="3"/>',
   medalha: '<circle class="rf-sinal ouro" cx="50" cy="80" r="3.4"/>',
 };
-export function retratoFalado(tr = {}, { genero = null } = {}) {
+// Cada ficha tem um rosto próprio: a semente (o id da ficha) muda a cabeça, os ombros e a gola, sem mudar
+// o que os traços dizem. novos: os tipos de traço que acabaram de ser confirmados, desenhados a lápis.
+const OMBROS = ['M14 100 Q16 72 38 66 L62 66 Q84 72 86 100 Z', 'M20 100 Q22 74 40 67 L60 67 Q78 74 80 100 Z', 'M8 100 Q12 70 36 65 L64 65 Q88 70 92 100 Z'];
+const GOLA = ['', '<path class="rf-gola" d="M42 67 L50 80 L58 67"/>', '<path class="rf-gola" d="M40 66 L46 76 L50 69 L54 76 L60 66"/>', '<path class="rf-gola" d="M38 70 Q50 78 62 70"/>'];
+const semear = (txt) => [...String(txt)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+export function retratoFalado(tr = {}, { genero = null, semente = null, novos = null } = {}) {
   const alto = tr.aparencia === 'muito-alto';
   const miudo = tr.aparencia === 'miudo';
   const esc0 = miudo ? 'translate(10 14) scale(0.8)' : alto ? 'translate(-4 -6) scale(1.08)' : '';
+  const h = semente == null ? null : semear(semente);
+  const rx = (genero === 'f' ? 17 : 18) + (h == null ? 0 : ((h % 3) - 1) * 1.5);
+  const ry = 22 + (h == null ? 0 : (((h >> 3) % 3) - 1) * 1.5);
+  const lapis = (cat, svg) => (svg && novos?.has(cat) ? `<g class="rf-novo">${svg.replace(/<(path|circle)/g, '<$1 pathLength="1"')}</g>` : svg);
   return `<svg class="retrato-falado${genero ? ` g-${genero}` : ''}" viewBox="0 0 100 100" aria-hidden="true">
     <rect class="rf-fundo" width="100" height="100"/>
     <g transform="${esc0}">
-      <path class="rf-busto" d="M14 100 Q16 72 38 66 L62 66 Q84 72 86 100 Z"/>
-      <ellipse class="rf-cabeca" cx="50" cy="44" rx="${genero === 'f' ? 17 : 18}" ry="22"/>
-      ${CABELO[tr.aparencia] || ''}
-      ${SINAL[tr.sinal] || ''}
+      <path class="rf-busto" d="${OMBROS[h == null ? 0 : (h >> 5) % 3]}"/>
+      ${h == null ? '' : GOLA[(h >> 7) % 4]}
+      <ellipse class="rf-cabeca" cx="50" cy="44" rx="${rx}" ry="${ry}"/>
+      ${lapis('aparencia', CABELO[tr.aparencia] || '')}
+      ${lapis('sinal', SINAL[tr.sinal] || '')}
     </g>
-    ${alto ? '<path class="rf-regua" d="M94 8 v84 m-3 0 h6 m-6 -84 h6"/>' : ''}
+    ${alto ? lapis('aparencia', '<path class="rf-regua" d="M94 8 v84 m-3 0 h6 m-6 -84 h6"/>') : ''}
   </svg>`;
 }
 
@@ -608,6 +618,8 @@ const TRACOS_FICHA = ['aparencia', 'sinal', 'habito', 'veiculo'];
 // pistas: as pistas de traço já ouvidas ({ id, texto, titulo, categoria, indireta, lida }); comPista: os tipos
 // de traço com pista (a conta da Licença); aoPedirLeitura(id) pede à Xerife a leitura de uma pista indireta.
 // dadosLicenca() devolve { numero, hora, cidade } da Licença emitida, para o documento.
+// Os traços que o retrato falado já mostrou, por caso: o que for novo ao abrir o Arquivo se desenha a lápis.
+const retratoVisto = new WeakMap();
 export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pistas = [], indiretas = [], marcados = {}, presos = [], licenca = null, dadosLicenca = () => ({}), aoMudar, aoPedirLicenca, aoPedirLeitura }) {
   const sabidas = new Set(conhecidos.map((t) => t.split('=')[0]));
   const comPistaSet = new Set(comPista || [...sabidas, ...pistas.map((x) => x.categoria).filter(Boolean)]);
@@ -622,6 +634,11 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
       let aberta = null;
       let aviso = '';
       let ultima = null;
+      let monteAberto = false;
+      const visto = retratoVisto.get(caso.arquivo) || new Set();
+      const novos = cerimoniasCurtas() ? new Set() : new Set(conhecidos.filter((t) => !visto.has(t)).map((t) => t.split('=')[0]));
+      retratoVisto.set(caso.arquivo, new Set([...visto, ...conhecidos]));
+      if (novos.size) setTimeout(() => som.carmen?.('lapis'), 200);
       corpo.innerHTML = '<div class="arquivo-mesa"><section class="arquivo-esq"></section><section class="arquivo-dir" aria-label="As fichas da Ciranda"></section></div>';
       const esq = corpo.querySelector('.arquivo-esq');
       const dir = corpo.querySelector('.arquivo-dir');
@@ -634,7 +651,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
         const estado = presa ? `<span class="carimbo carimbo-p">${s.genero === 'f' ? 'Presa' : 'Preso'}</span>`
           : licenca === s.id ? '<span class="carimbo carimbo-p">Licença</span>' : fora ? '<span class="carimbo carimbo-p">Fora</span>' : '';
         return `<li class="ficha-ciranda${fora ? ' descartada' : ''}${presa ? ' presa' : ''}${licenca === s.id ? ' com-licenca' : ''}${extra}" data-ficha="${esc(s.id)}">
-          <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(s.tracos, { genero: s.genero })}</div>
+          <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(s.tracos, { genero: s.genero, semente: s.id })}</div>
           <b class="ficha-nome">${esc(s.apelido || s.nome)}</b>
           <p class="ficha-cla"><small>Clã aparente</small> ${esc(nome('cla', s.tracos.cla))}</p>
           <ul class="ficha-tracos">${TRACOS_FICHA.map((k) => `<li>${icone(ICONE_CAT[k], { tam: 16 })}<span>${esc(nome(k, s.tracos[k]))}</span></li>`).join('')}</ul>
@@ -679,7 +696,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
             <span class="carimbo carimbo-p">Licença</span>
           </button>` : ''}
           <div class="arquivo-ladrao">
-            <div class="ficha-foto">${retratoFalado(ladrao)}</div>
+            <div class="ficha-foto">${retratoFalado(ladrao, { novos })}</div>
             <div><p class="arquivo-pergunta">Quem é?</p>
               <ul class="arquivo-sabidos">${conhecidos.length ? conhecidos.map((t) => { const [c, v] = t.split('='); return `<li>${icone(ICONE_CAT[c] || 'lupa', { tam: 16 })}${esc(nome(c, v))}</li>`; }).join('') : '<li class="nota">Nenhum traço confirmado ainda.</li>'}</ul>
               <p class="arquivo-conta">${Math.min(nTipos, 3)} de 3 tipos de traço com pista</p></div>
@@ -704,7 +721,9 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
         dir.innerHTML = `
           <h3 class="arquivo-restam" aria-live="polite">${algum() && !vivos.size ? '<span class="nenhuma">Nenhuma ficha combina</span>' : `Restam ${vivos.size} de ${total}`}</h3>
           ${vivas.length ? `<ol class="arquivo-fichas vivas">${vivas.map((s) => ficha(s, vivos)).join('')}</ol>` : ''}
-          ${foras.length ? `<ol class="arquivo-fichas foras">${foras.map((s) => ficha(s, vivos)).join('')}</ol>` : ''}`;
+          ${foras.length ? `<div class="foras-monte${monteAberto ? ' aberto' : ''}">
+            <button type="button" class="foras-botao" data-monte aria-expanded="${monteAberto}">${foras.length} ${foras.length === 1 ? 'ficha fora' : 'fichas fora'} <i aria-hidden="true">${monteAberto ? '▴' : '▾'}</i></button>
+            <ol class="arquivo-fichas foras">${foras.map((s) => ficha(s, vivos)).join('')}</ol></div>` : ''}`;
       }
 
       // Muda os traços e anima as fichas (FLIP, 320 ms): guarda onde cada ficha estava, redesenha e anima da
@@ -740,6 +759,13 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
       }
 
       corpo.addEventListener('click', async (ev) => {
+        // Celular: as fichas de fora ficam num monte de papéis, que abre e fecha com um toque.
+        if (ev.target.closest('[data-monte]')) {
+          monteAberto = !monteAberto;
+          desenharDir(vivosDe());
+          corpo.querySelector('[data-monte]')?.focus({ preventScroll: true });
+          return;
+        }
         const lac = ev.target.closest('[data-lacuna]');
         if (lac) {
           aberta = aberta === lac.dataset.lacuna ? null : lac.dataset.lacuna;
@@ -788,6 +814,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
       const vivos = vivosDe();
       desenharEsq(vivos);
       desenharDir(vivos);
+      novos.clear();
     },
   });
 }
@@ -810,7 +837,7 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         <article class="licenca-doc${jaEmitida ? ' emitida' : ''}">
           <header class="licenca-cabeca"><h3>Licença de Caça</h3><span class="licenca-num">Nº ${numeroLicenca(numero)}</span></header>
           <div class="licenca-quem">
-            <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(suspeito.tracos, { genero: suspeito.genero })}</div>
+            <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(suspeito.tracos, { genero: suspeito.genero, semente: suspeito.id })}</div>
             <div><small>Codinome</small><b>${esc(suspeito.apelido || suspeito.nome)}</b><p><small>Clã aparente</small> <span class="datilo">${esc(nome('cla', suspeito.tracos.cla))}</span></p></div>
           </div>
           <dl class="licenca-campos">${CAMPOS_LICENCA.map(([k, r]) => `<div><dt>${esc(r)}</dt><dd class="datilo">${esc(nome(k, suspeito.tracos[k]))}</dd></div>`).join('')}</dl>

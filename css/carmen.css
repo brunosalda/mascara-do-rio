@@ -1160,3 +1160,26 @@ body.celular .tela-caso.carmen .tira-rota .balao { max-width: 56%; font-size: 13
 .faixa-caso.faixa-dica.saindo { translate: -50% 0.6rem; }
 /* O retrato emprestado (a mulher de guarda-chuva usa a silhueta da mulher do celular) vem espelhado. */
 :is(.tela-caso.carmen .pessoa .rosto-testemunha.silhueta, .cartao-testemunha .ct-foto.com-silhueta) > i { scale: var(--espelho, 1) 1; }
+
+/* ============ Polimento do Arquivo (Caminho até o 10) ============ */
+/* 1. O traço novo do retrato falado se desenha a lápis (400 ms); nas formas cheias, a tinta entra depois. */
+.retrato-falado .rf-gola { fill: none; stroke: #d9c194; stroke-width: 1.6; stroke-linejoin: round; opacity: 0.55; }
+.arquivo-ladrao .retrato-falado .rf-gola { stroke: #a88a5a; }
+.rf-novo :is(path, circle) { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rf-desenha 400ms ease-out 200ms both; }
+.rf-novo :is(.rf-cabelo, .perola, .ouro) { stroke: #e8d6a8; stroke-width: 1.2; animation: rf-desenha 400ms ease-out 200ms both, rf-tinta 260ms ease-out 600ms both; }
+@keyframes rf-desenha { to { stroke-dashoffset: 0; } }
+@keyframes rf-tinta { from { fill-opacity: 0; } to { fill-opacity: 1; stroke-opacity: 0; } }
+/* 3. Celular: as fichas de fora num monte de papéis; um toque abre o monte em grade. */
+.foras-botao { display: none; }
+body.celular .foras-monte { display: flex; flex-direction: column; align-items: center; }
+body.celular .foras-botao {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0 0 12px; padding: 6px 18px; border: 1px solid var(--c-linha-forte);
+  border-radius: 999px; background: var(--c-vidro); color: var(--c-texto); font: 600 15px/1 var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+body.celular .foras-botao:focus-visible { outline: 2px solid var(--c-sodio); outline-offset: 2px; }
+body.celular .foras-monte:not(.aberto) .arquivo-fichas.foras { grid-template-columns: 104px; grid-template-areas: "m"; justify-content: center; margin-bottom: 0; pointer-events: none; }
+body.celular .foras-monte:not(.aberto) .ficha-ciranda.descartada { grid-area: m; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45); }
+body.celular .foras-monte:not(.aberto) .ficha-ciranda.descartada:nth-child(2n) { rotate: 5deg; translate: 7px 2px; }
+body.celular .foras-monte:not(.aberto) .ficha-ciranda.descartada:nth-child(3n) { rotate: -6deg; translate: -7px 4px; }
+body.celular .foras-monte:not(.aberto) .ficha-ciranda.descartada:nth-child(5n) { rotate: 9deg; translate: 3px -3px; }
+body.celular .foras-monte:not(.aberto) .ficha-ciranda.carimbando { z-index: 2; rotate: 0deg; translate: none; }
