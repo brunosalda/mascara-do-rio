@@ -54,7 +54,7 @@ const AVENIDAS_SP = [
 ];
 // As luzes acesas da pintura do Rio (medidas uma vez na imagem, em 1920 × 1080): as luzes do mapa vivo piscam
 // só onde a pintura já tem cidade acesa, nunca na água.
-const LUZES_RIO = '252,122 322,116 456,124 694,126 98,172 134,162 224,182 248,182 352,154 360,152 486,156 504,166 588,132 662,128 736,158 780,162 812,162 1052,182 1088,182 1648,186 290,250 298,232 402,208 432,200 522,242 562,234 624,234 870,250 874,252 968,202 1026,230 1100,240 1212,212 1284,210 1620,236 174,306 232,306 350,316 412,318 424,268 626,256 862,274 872,256 960,270 1048,314 1064,304 1140,316 1498,296 1568,308 1632,314 1674,316 1760,316 1780,268 1852,284 164,320 206,336 252,342 298,352 366,352 470,324 500,330 998,342 1030,324 1114,376 1140,326 1192,354 1268,376 1334,338 1472,324 1630,328 1674,328 1730,328 1768,360 1856,376 514,402 778,440 1058,392 1102,404 1188,398 1220,404 1256,388 1372,442 1416,418 1480,446 66,510 710,482 744,478 1110,478 1162,472 1222,498 1294,456 1364,462 1442,448 1480,450 1698,476 1710,480 92,540 116,570 184,518 1022,556 1120,572 1140,518 1224,520 1258,534 1542,566 1576,566 1780,566 66,582 160,596 224,602 238,584 320,626 368,616 1036,592 1076,594 1180,626 1204,576 1266,626 1360,634 1402,624 1538,580 1638,616 1644,632 1786,578 46,696 106,696 282,668 320,680 372,682 484,700 490,696 1188,642 1236,676 1258,682 1378,660 1402,668 1462,702 1638,642 1682,652 1762,670 1806,694 1840,684 92,710 140,714 226,740 248,716 304,762 410,762 434,750 498,718 1028,762 1110,744 1148,740 1206,710 1280,750 1326,738 1402,742 1462,766 1532,732 1576,754 1664,712 1848,708 252,768 318,768 372,792 482,814 548,772 560,782 628,774 790,814 832,822 902,820 996,782 1060,830 1092,816 1188,830 1202,812 1268,790 1378,786 1430,776 1452,772 1670,776 1742,806 334,860 394,860 448,846 538,834 592,872 646,870 718,864 754,870 846,864 890,836 992,832 1056,836 1118,892 1172,850 1222,876 1256,846 350,900 448,900 532,902 980,898 1040,924 1094,910 1138,906 1134,982'.split(' ').map((p) => p.split(',').map(Number));
+const LUZES_RIO = '252,122 322,116 456,124 694,126 98,172 134,162 224,182 248,182 352,154 360,152 486,156 504,166 588,132 662,128 736,158 780,162 812,162 1052,182 1088,182 1648,186 290,250 298,232 402,208 432,200 522,242 562,234 624,234 870,250 874,252 968,202 1026,230 1100,240 1212,212 1284,210 1620,236 174,306 232,306 350,316 412,318 424,268 626,256 862,274 872,256 960,270 1048,314 1064,304 1140,316 1498,296 1568,308 1632,314 1674,316 1760,316 1780,268 1852,284 164,320 206,336 252,342 298,352 366,352 470,324 500,330 998,342 1030,324 1114,376 1140,326 1192,354 1268,376 1334,338 1472,324 1630,328 1674,328 1730,328 1768,360 1856,376 514,402 778,440 1058,392 1102,404 1188,398 1220,404 1256,388 1372,442 1416,418 66,510 710,482 744,478 1110,478 1162,472 1222,498 1294,456 1364,462 1698,476 1710,480 92,540 116,570 184,518 1022,556 1120,572 1140,518 1224,520 1258,534 1542,566 1576,566 1780,566 66,582 160,596 224,602 238,584 320,626 368,616 1036,592 1076,594 1180,626 1204,576 1266,626 1360,634 1402,624 1538,580 1638,616 1644,632 1786,578 46,696 106,696 282,668 320,680 372,682 484,700 490,696 1188,642 1236,676 1258,682 1378,660 1402,668 1462,702 1638,642 1682,652 1762,670 1806,694 1840,684 92,710 140,714 226,740 248,716 304,762 410,762 434,750 498,718 1028,762 1110,744 1148,740 1206,710 1280,750 1326,738 1402,742 1462,766 1532,732 1576,754 1664,712 1848,708 252,768 318,768 372,792 482,814 548,772 560,782 628,774 790,814 832,822 902,820 996,782 1060,830 1092,816 1188,830 1202,812 1268,790 1378,786 1430,776 1452,772 1670,776 1742,806 334,860 394,860 448,846 538,834 592,872 646,870 718,864 754,870 846,864 890,836 992,832 1056,836 1118,892 1172,850 1222,876 1256,846 350,900 448,900 532,902 980,898 1040,924 1094,910 1138,906 1134,982'.split(' ').map((p) => p.split(',').map(Number));
 
 function rotulos(lado) {
   if (lado === 'esq') return { anc: 'end', nx: -48, ny: 4, my: 40 };
@@ -237,11 +237,11 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           const [x2, y2] = pts[2];
           const ang = (Math.atan2(y2 - y0, x2 - x0) * 180) / Math.PI;
           const giro = ang > 90 || ang < -90 ? ang + 180 : ang;
-          // O nome a 72% da avenida, longe do meio, onde costuma ficar um lugar.
-          const t = 0.72;
-          const [rx, ry] = [0, 1].map((k) => (1 - t) ** 2 * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t ** 2 * pts[2][k]);
+          // O nome vai a 72% da avenida, longe do meio, onde costuma ficar um lugar; se ali sair do quadro, tenta
+          // 50%, 28% e 85% (nomesAvenidas, depois da medida).
+          const vagas = [0.72, 0.5, 0.28, 0.85].map((t) => [0, 1].map((k) => (1 - t) ** 2 * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t ** 2 * pts[2][k]).map((v) => v.toFixed(0)).join(' '));
           return `<path class="sp-avenida-brilho" d="${d}"/><path class="sp-avenida" d="${d}"/>
-            <text class="sp-avenida-nome" transform="translate(${rx.toFixed(0)} ${ry.toFixed(0)}) rotate(${giro.toFixed(0)})" y="-14">${esc(av.nome)}</text>`;
+            <text class="sp-avenida-nome" data-vagas="${vagas.join(';')}" data-giro="${giro.toFixed(0)}" transform="translate(${vagas[0]}) rotate(${giro.toFixed(0)})" y="-14">${esc(av.nome)}</text>`;
         }).join('');
         const tiete = `M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}`;
         return `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>
@@ -420,10 +420,42 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           g.dataset.lado = melhor.k;
           obst.push(melhor.c);
         }
+        nomesAvenidas(P, ids, obst.slice(ids.length));
         // Sem medida (a tela ainda não desenhou o texto): tenta de novo no quadro seguinte; até lá, o nome fica embaixo.
         if (faltou && tentativa < 20) requestAnimationFrame(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids, tentativa + 1); });
         // Os indicadores de borda dependem de onde os nomes ficaram.
         else if (corpo.querySelector('.mapa-bordas')) bordas(P, ids);
+      }
+
+      // Cada nome de avenida fica na primeira vaga em que cabe inteiro no quadro (com 30 de folga), longe dos
+      // medalhões e sem cobrir um nome de lugar. Se nenhuma vaga servir, o nome não aparece.
+      function nomesAvenidas(P, ids, nomes) {
+        for (const txt of corpo.querySelectorAll('.sp-avenida-nome[data-vagas]')) {
+          const bb = txt.getBBox?.();
+          if (!bb?.width) continue;
+          const giro = (Number(txt.dataset.giro) * Math.PI) / 180;
+          const [cs, sn] = [Math.cos(giro), Math.sin(giro)];
+          const cantos = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]];
+          const serve = ([ox, oy]) => {
+            const pts = cantos.map(([a, b]) => [ox + a * cs - b * sn, oy + a * sn + b * cs]);
+            if (pts.some(([x, y]) => x < vb.x + 30 || x > vb.x + vb.w - 30 || y < vb.y + 30 || y > vb.y + vb.h - 30)) return false;
+            // O medalhão no sistema do texto: a distância do centro dele à caixa do nome.
+            const longe = ids.every((id) => {
+              const [dx, dy] = [P[id][0] - ox, P[id][1] - oy];
+              const [lx, ly] = [dx * cs + dy * sn, -dx * sn + dy * cs];
+              const [qx, qy] = [Math.max(bb.x - lx, 0, lx - bb.x - bb.width), Math.max(bb.y - ly, 0, ly - bb.y - bb.height)];
+              return Math.hypot(qx, qy) > R_MED + 20 + (id === atual ? 44 : 0);
+            });
+            if (!longe) return false;
+            const xs = pts.map((q) => q[0]);
+            const ys = pts.map((q) => q[1]);
+            const c = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+            return nomes.every((o) => !areaComum(c, o));
+          };
+          const vaga = txt.dataset.vagas.split(';').map((v) => v.split(' ').map(Number)).find(serve);
+          txt.style.display = vaga ? '' : 'none';
+          if (vaga) txt.setAttribute('transform', `translate(${vaga[0]} ${vaga[1]}) rotate(${txt.dataset.giro})`);
+        }
       }
 
       // No celular: os lugares fora da vista viram indicadores na borda ("‹ Barra 25 min"), que levam até eles.
@@ -449,6 +481,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         // O nome de um medalhão inteiro não sai da vista: se passar da borda, desliza para dentro.
         // O nome de um lugar que virou indicador sai da vista (ficaria cortado na borda).
         const livres = [];
+        const nomesVista = [];
         for (const id of ids) {
           const g = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`);
           const rot = g?.querySelector('.rota-rotulo');
@@ -466,18 +499,41 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           let [tx = 0, ty = 0] = (rot.dataset.base || '').match(/-?[\d.]+/g)?.map(Number) || [];
           let [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
           const [lw, lh] = [bb.width * kx, bb.height * ky];
-          // O nome ao lado do medalhão que passaria da borda vai para baixo dele: deslizar para dentro o poria em cima
-          // do próprio medalhão (Santa Teresa, no celular).
-          if ((esq < 6 || esq + lw > W - 6) && ['esq', 'dir'].includes(rot.dataset.lado)) {
-            [tx, ty] = [0, R_MED + FOLGA + 2 - bb.y + 3];
-            rot.setAttribute('transform', `translate(${tx} ${ty})`);
-            [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
+          // Nenhum nome entra no aro de um medalhão da vista, nem no do próprio (Santa Teresa, ao lado, deslizaria para
+          // cima dele): tenta a vaga de sempre, embaixo e em cima, cada uma deslizada para dentro da tela, e fica na
+          // primeira livre (ou na que menos entra). Também não cobre o nome de outro lugar já posto.
+          const meio = -bb.y - bb.height / 2;
+          const vagas = [[tx, ty], [0, R_MED + FOLGA + 2 - bb.y + 3], [0, -(R_MED + FOLGA + 4) - (bb.y + bb.height) - (id === atual ? 44 : 0)],
+            [R_MED + FOLGA + 8 + bb.width / 2, meio], [-(R_MED + FOLGA + 8 + bb.width / 2), meio]];
+          // E as de cima e de baixo um pouco mais longe, para fugir do aro do vizinho.
+          for (const mais of [24, 48]) vagas.push([0, vagas[1][1] + mais], [0, vagas[2][1] - mais]);
+          let melhor = null;
+          for (const [vx, vy] of vagas) {
+            const [e] = tela(P[id][0] + vx + bb.x, 0);
+            const dv = e < 6 ? 6 - e : e + lw > W - 6 ? W - 6 - (e + lw) : 0;
+            const [x0, y0] = [P[id][0] + vx + bb.x + dv / kx, P[id][1] + vy + bb.y];
+            const entra = visiveis.reduce((soma, o) => {
+              const [cx, cy] = P[o];
+              const d = Math.hypot(Math.max(x0 - cx, 0, cx - x0 - bb.width), Math.max(y0 - cy, 0, cy - y0 - bb.height));
+              return soma + Math.max(0, R_MED + 3 + (o === atual ? 4 : 0) - d);
+            }, 0) + nomesVista.reduce((soma, n) => {
+              const [ex, ey] = tela(x0, y0);
+              return soma + areaComum({ x: ex, y: ey, w: lw, h: lh }, n) / 20;
+            }, 0);
+            if (!melhor || entra < melhor.entra) melhor = { vx, vy, dv, entra };
+            if (!entra) break;
           }
-          const desvio = esq < 6 ? 6 - esq : esq + lw > W - 6 ? W - 6 - (esq + lw) : 0;
-          if (desvio) rot.setAttribute('transform', `${rot.getAttribute('transform')} translate(${desvio / kx} 0)`);
+          [tx, ty] = [melhor.vx, melhor.vy];
+          const desvio = melhor.dv;
+          rot.setAttribute('transform', `translate(${tx} ${ty})${desvio ? ` translate(${desvio / kx} 0)` : ''}`);
+          [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
           const [mx, my] = tela(P[id][0] - R_MED, P[id][1] - R_MED);
           livres.push({ x: mx, y: my, w: 2 * R_MED * kx, h: 2 * R_MED * ky });
+          // Sem vaga livre (um nome largo num canto apertado, perto da borda), o nome some até a rolagem abrir espaço:
+          // o lugar continua no medalhão e na lista.
+          if (melhor.entra > 8) { rot.style.visibility = 'hidden'; continue; }
           livres.push({ x: esq + desvio, y: topo, w: lw, h: lh });
+          nomesVista.push({ x: esq + desvio, y: topo, w: lw, h: lh });
         }
         // Dois ou mais lugares na mesma borda viram um indicador só ("‹ 3 lugares"), que abre a lista deles
         // (item 4): as pílulas não cobrem o mapa.
