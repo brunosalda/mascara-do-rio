@@ -716,3 +716,67 @@ body.celular .lacuna, body.celular .lacuna-valores button { min-height: 44px; }
 body.celular .carmen .ficha-ciranda.descartada { min-height: 0; padding: 6px; }
 body.celular .carmen .ficha-ciranda.descartada .ficha-nome { font-size: 14px; }
 body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
+
+/* ============ Etapa 4: a Licença de Caça (direção de arte, 7.4): o documento em papel e o carimbo que cai ============ */
+.carmen .janela-fundo.janela-licenca { display: grid; place-items: center; padding: 16px; background: rgba(4, 6, 12, 0.78); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.carmen .janela-licenca .janela { width: auto !important; max-width: none !important; max-height: none; padding: 0; border: 0; background: none; box-shadow: none; }
+.carmen .janela-licenca .janela-cabeca { position: absolute; top: 8px; right: 8px; z-index: 3; padding: 0; border: 0; }
+.carmen .janela-licenca .janela-cabeca h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.carmen .janela-licenca .janela-corpo { padding: 0; overflow: visible; }
+.licenca-doc {
+  position: relative; box-sizing: border-box; width: 520px; min-height: min(640px, calc(100dvh - 48px)); padding: 24px 34px 22px; display: flex; flex-direction: column; gap: 11px;
+  color: var(--c-tinta); border-radius: 3px; rotate: -0.8deg;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23p)'/%3E%3C/svg%3E"),
+    radial-gradient(130% 100% at 50% 0%, #f4eddc, var(--c-papel) 60%, #ddd2b8);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(28, 23, 19, 0.15);
+  animation: licenca-entra 420ms var(--curva-sai) both;
+}
+@keyframes licenca-entra { from { opacity: 0; translate: 0 24px; rotate: -3deg; } }
+.licenca-doc.tremor { animation: licenca-tremor 140ms linear; }
+@keyframes licenca-tremor { 25% { translate: -2px 1px; } 50% { translate: 2px -1px; } 75% { translate: -1px 2px; } }
+.licenca-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 2px solid var(--c-tinta); }
+.licenca-cabeca h3 { margin: 0; font: 800 40px/1 var(--f-titulo); letter-spacing: 0.03em; text-transform: uppercase; color: var(--c-tinta); }
+.licenca-num { font: 700 16px/1 'Courier Prime', ui-monospace, monospace; color: var(--c-tinta-suave); white-space: nowrap; }
+.licenca-quem { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; }
+.licenca-quem .ficha-foto { width: 112px; rotate: -2deg; }
+.licenca-quem small, .licenca-campos dt { display: block; font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
+.licenca-quem b { display: block; margin: 2px 0 8px; font: 800 34px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; }
+.licenca-quem p { margin: 0; }
+.datilo { font: 400 16px/1.3 'Courier Prime', ui-monospace, monospace; color: #241d17; }
+.licenca-campos { margin: 0; display: grid; gap: 8px; }
+.licenca-campos div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; align-items: baseline; padding-bottom: 4px; border-bottom: 1px dotted rgba(28, 23, 19, 0.4); }
+.licenca-campos dd { margin: 0; }
+.licenca-autorizo { margin: 6px 0 0; }
+.licenca-assina { margin: 0; display: grid; justify-items: start; }
+.licenca-assina span { font: 700 40px/1 var(--f-mao); color: #1d2a55; rotate: -4deg; }
+.licenca-assina small { padding-top: 2px; min-width: 160px; border-top: 1px solid var(--c-tinta); font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
+/* O carimbo G cai sobre a assinatura; até lá, não aparece. Reaberta pelo Arquivo, já está no papel. */
+.carmen .licenca-doc .licenca-carimbo { position: absolute; right: 40px; bottom: 112px; rotate: -10deg; opacity: 0; animation: none; mix-blend-mode: multiply; background: none; }
+.carmen .licenca-doc.carimbando .licenca-carimbo { opacity: 0.92; animation: carmen-carimbar 420ms var(--curva-mola) both; }
+.carmen .licenca-doc.emitida .licenca-carimbo { opacity: 0.92; }
+.licenca-guardar { margin-top: auto; min-height: 48px; }
+
+/* A Licença depois de emitida: menor, no alto da coluna esquerda do Arquivo. */
+.carmen .licenca-mini {
+  position: relative; display: grid; gap: 2px; width: 100%; padding: 10px 14px; border: 0; border-radius: 3px; text-align: left; cursor: pointer;
+  background: var(--c-papel); color: var(--c-tinta); box-shadow: 0 0 0 3px var(--c-rastro), 0 6px 16px rgba(0, 0, 0, 0.5); rotate: -0.6deg;
+}
+.carmen .licenca-mini:hover { rotate: 0deg; }
+.licenca-mini-titulo { font: 800 20px/1 var(--f-titulo); letter-spacing: 0.03em; text-transform: uppercase; }
+.licenca-mini-titulo small { margin-left: 6px; font: 700 13px/1 'Courier Prime', ui-monospace, monospace; color: var(--c-tinta-suave); }
+.licenca-mini-quem { font: 500 14px/1.3 var(--f-ui); }
+.carmen .licenca-mini .carimbo { position: absolute; right: 12px; top: 50%; translate: 0 -50%; font-size: 14px; animation: none; mix-blend-mode: multiply; background: none; }
+
+/* Celular: o documento ocupa a tela, com o botão preso embaixo. */
+body.celular .carmen .janela-fundo.janela-licenca { padding: 0; place-items: stretch; }
+body.celular .carmen .janela-licenca .janela { width: 100% !important; height: 100%; }
+body.celular .carmen .janela-licenca .janela-corpo { height: 100%; overflow-y: auto; }
+body.celular .licenca-doc { width: 100%; min-height: 100%; padding: 22px 18px calc(84px + env(safe-area-inset-bottom)); rotate: 0deg; border-radius: 0; gap: 12px; }
+body.celular .licenca-cabeca h3 { font-size: 30px; }
+body.celular .licenca-quem { grid-template-columns: 88px minmax(0, 1fr); gap: 12px; }
+body.celular .licenca-quem .ficha-foto { width: 88px; }
+body.celular .licenca-quem b { font-size: 28px; }
+body.celular .licenca-campos div { grid-template-columns: 1fr; gap: 2px; }
+body.celular .carmen .licenca-doc .licenca-carimbo { right: 18px; bottom: 150px; }
+body.celular .licenca-guardar { position: fixed; z-index: 5; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); min-height: 52px; }

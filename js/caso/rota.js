@@ -539,7 +539,8 @@ const FRASE = { aparencia: ['Procuro alguém de ', ','], sinal: [' com ', ','], 
 const TRACOS_FICHA = ['aparencia', 'sinal', 'habito', 'veiculo'];
 // pistas: as pistas de traço já ouvidas ({ id, texto, titulo, categoria, indireta, lida }); comPista: os tipos
 // de traço com pista (a conta da Licença); aoPedirLeitura(id) pede à Xerife a leitura de uma pista indireta.
-export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pistas = [], indiretas = [], marcados = {}, presos = [], licenca = null, aoMudar, aoPedirLicenca, aoPedirLeitura }) {
+// dadosLicenca() devolve { numero, hora, cidade } da Licença emitida, para o documento.
+export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pistas = [], indiretas = [], marcados = {}, presos = [], licenca = null, dadosLicenca = () => ({}), aoMudar, aoPedirLicenca, aoPedirLeitura }) {
   const sabidas = new Set(conhecidos.map((t) => t.split('=')[0]));
   const comPistaSet = new Set(comPista || [...sabidas, ...pistas.map((x) => x.categoria).filter(Boolean)]);
   const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || caso.arquivo.categorias.find((c) => c.id === cat)?.valores.find((v) => v.id === val)?.nome || val;
@@ -604,6 +605,11 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
         const frase = cats.filter((c) => FRASE[c.id]).map((c) => `${esc(FRASE[c.id][0])}${lacuna(c)}${aberta === c.id ? painelDa(c) : ''}${esc(FRASE[c.id][1])}`).join('');
         const outras = cats.filter((c) => !FRASE[c.id]).map((c) => `<span class="frase-linha">${esc(c.id === 'cla' ? 'Clã aparente' : c.nome)}: ${lacuna(c)}${aberta === c.id ? painelDa(c) : ''}</span>`).join('');
         esq.innerHTML = `
+          ${lic ? `<button type="button" class="licenca-mini" data-ver-licenca aria-label="Ver a Licença de Caça">
+            <span class="licenca-mini-titulo">Licença de Caça <small>Nº ${numeroLicenca(dadosLicenca().numero)}</small></span>
+            <span class="licenca-mini-quem">contra <b>${esc(lic.apelido || lic.nome)}</b>. Vá ao esconderijo e cerque.</span>
+            <span class="carimbo carimbo-p">Licença</span>
+          </button>` : ''}
           <div class="arquivo-ladrao">
             <div class="ficha-foto">${retratoFalado(ladrao)}</div>
             <div><p class="arquivo-pergunta">Quem é?</p>
@@ -612,7 +618,6 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
           </div>
           <div class="arquivo-frase">${frase}${outras}</div>
           ${sobrou && !lic ? `<ol class="arquivo-sobrou">${ficha(sobrou, vivos, ' sozinha deitada')}</ol>` : ''}
-          ${lic ? `<p class="arquivo-licenca">Licença de Caça contra <b>${esc(lic.apelido || lic.nome)}</b>. Vá ao esconderijo e cerque.</p>` : ''}
           <div class="arquivo-pe">
             <p class="arquivo-restam-mini">${restamTexto(vivos)}</p>
             ${lic ? '' : `<button type="button" class="btn destaque arquivo-pedir"${sobrou ? ` data-licenca="${esc(sobrou.id)}"` : ' disabled'}>${sobrou ? `Pedir a Licença contra ${esc(sobrou.apelido || sobrou.nome)}` : 'Licença'}</button>`}
@@ -687,14 +692,23 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
           corpo.querySelector(`[data-lacuna="${CSS.escape(cat)}"]`)?.focus({ preventScroll: true });
           return;
         }
+        if (ev.target.closest('[data-ver-licenca]')) {
+          documentoLicenca(raiz, { caso, suspeito: caso.arquivo.suspeitos.find((s) => s.id === licenca), ...dadosLicenca(), jaEmitida: true });
+          return;
+        }
         const ler = ev.target.closest('[data-ler]');
         if (ler) { camada.fechar(); aoPedirLeitura?.(ler.dataset.ler); return; }
         const b = ev.target.closest('[data-licenca]');
         if (b) {
           b.disabled = true;
           const r = await aoPedirLicenca?.(b.dataset.licenca, Object.fromEntries(Object.entries(sel).filter(([, v]) => v)));
-          if (r?.licenca) licenca = r.licenca;
-          else aviso = r?.motivo === 'poucos-tracos' ? 'A Xerife quer pelo menos 3 traços contados por alguém.'
+          if (r?.licenca) {
+            licenca = r.licenca;
+            mudar();
+            documentoLicenca(raiz, { caso, suspeito: caso.arquivo.suspeitos.find((s) => s.id === licenca), ...dadosLicenca() });
+            return;
+          }
+          aviso = r?.motivo === 'poucos-tracos' ? 'A Xerife quer pelo menos 3 traços contados por alguém.'
             : r?.motivo === 'traco-sem-pista' ? 'A Xerife pergunta: quem te contou isso? Nenhuma pista falou ainda de um dos tipos de traço que você marcou.'
               : 'A Xerife não emite a Licença com esses traços.';
           mudar();
@@ -706,6 +720,46 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
       const vivos = vivosDe();
       desenharEsq(vivos);
       desenharDir(vivos);
+    },
+  });
+}
+
+// --- A Licença de Caça (direção de arte, 7.4) -----------------------------------------------------------
+// Um documento em papel no meio da tela: o retrato e os traços da ficha datilografados, a autorização da
+// Xerife com a hora e a assinatura, e o carimbo que cai. É o mesmo com a Licença certa ou errada: quem
+// decide se a presa é essa é o cerco. numero: a ordem da Licença no capítulo (1ª, 2ª…). jaEmitida: reabrir
+// pelo Arquivo, sem o carimbo cair de novo.
+const numeroLicenca = (n) => String(n || 1).padStart(4, '0');
+const CAMPOS_LICENCA = [['aparencia', 'Aparência'], ['sinal', 'Sinal particular'], ['habito', 'Hábito'], ['veiculo', 'Como se move']];
+export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', cidade = 'Rio', jaEmitida = false }) {
+  if (!suspeito) return null;
+  const nome = (cat, val) => caso.arquivo.nomes?.[cat]?.[val] || caso.arquivo.categorias.find((c) => c.id === cat)?.valores.find((v) => v.id === val)?.nome || val;
+  return abrirJanela(raiz, {
+    titulo: 'Licença de Caça',
+    classe: 'janela-licenca',
+    montar: (corpo, camada) => {
+      corpo.innerHTML = `
+        <article class="licenca-doc${jaEmitida ? ' emitida' : ''}">
+          <header class="licenca-cabeca"><h3>Licença de Caça</h3><span class="licenca-num">Nº ${numeroLicenca(numero)}</span></header>
+          <div class="licenca-quem">
+            <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(suspeito.tracos, { genero: suspeito.genero })}</div>
+            <div><small>Codinome</small><b>${esc(suspeito.apelido || suspeito.nome)}</b><p><small>Clã aparente</small> <span class="datilo">${esc(nome('cla', suspeito.tracos.cla))}</span></p></div>
+          </div>
+          <dl class="licenca-campos">${CAMPOS_LICENCA.map(([k, r]) => `<div><dt>${esc(r)}</dt><dd class="datilo">${esc(nome(k, suspeito.tracos[k]))}</dd></div>`).join('')}</dl>
+          <p class="licenca-autorizo datilo">Autorizo a caça. ${esc(cidade)}${hora ? `, ${esc(hora)}` : ''}.</p>
+          <p class="licenca-assina"><span>Iolanda</span><small>Xerife</small></p>
+          <span class="carimbo carimbo-g licenca-carimbo" aria-hidden="true">Licença</span>
+          <button type="button" class="btn destaque licenca-guardar" data-guardar>Guardar a Licença</button>
+        </article>`;
+      const doc = corpo.querySelector('.licenca-doc');
+      corpo.querySelector('[data-guardar]').addEventListener('click', () => camada.fechar());
+      if (jaEmitida) return;
+      // O carimbo cai depois de o papel assentar; no impacto, o som e um tremor de 2 px.
+      const espera = cerimoniasCurtas() ? 0 : 700;
+      setTimeout(() => {
+        doc.classList.add('carimbando');
+        setTimeout(() => { som.carmen?.('carimbo'); doc.classList.add('tremor'); setTimeout(() => doc.classList.remove('tremor'), 140); }, cerimoniasCurtas() ? 0 : 180);
+      }, espera);
     },
   });
 }

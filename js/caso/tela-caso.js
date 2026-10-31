@@ -1119,6 +1119,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       indiretas: (e.pistas || []).filter((x) => x.tipo === 'traco' && x.indireta && !x.lida),
       marcados: st.marcados || {},
       aoMudar: (m) => { st.marcados = m; salvar(); },
+      // A Licença de Caça: a ordem dela no capítulo (as erradas vêm antes), a hora e a cidade em que saiu.
+      dadosLicenca: () => ({ numero: (banco.estado.acusacoes_erradas || 0) + 1, hora: st.licencaHora || '', cidade: caso.lugares[st.lugar]?.cidade === 'sp' ? 'São Paulo' : 'Rio' }),
       aoPedirLeitura: async (id) => {
         const r = await noBanco(() => F.xerife(caso.id, p.id, id));
         if (!r) return;
@@ -1130,7 +1132,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const r = await noBanco(() => F.licenca(caso.id, p.id, quem, tracos));
         if (!r) return null;
         aplicarBanco(r);
-        if (r.licenca) { som.carmen?.('carimbo'); anotar('XERIFE IOLANDA', 'Licença de Caça emitida. Traga de volta o que foi levado.'); }
+        if (r.licenca) { st.licencaHora = hora(st.hora); salvar(); anotar('XERIFE IOLANDA', 'Licença de Caça emitida. Traga de volta o que foi levado.'); }
         return r;
       },
     });
