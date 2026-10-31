@@ -617,6 +617,8 @@ div.opcao { cursor: default; padding: 0; }
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.55));
   z-index: 1;
 }
+/* Quadro sem imagem (semImagem do Narrador): fundo escuro liso, só a legenda e o balão. */
+.painel.so-texto { background: radial-gradient(120% 90% at 50% 40%, #1c1714, #080605); }
 .legenda {
   position: absolute;
   z-index: 2;

@@ -215,6 +215,15 @@ function urlSegura(u) {
   return typeof u === 'string' && /^(https:\/\/|img\/)/.test(u) ? u : null;
 }
 
+// A imagem do painel: um caminho, ou o objeto dos quadros do Narrador ({ arquivo | reuso, semImagem }).
+// Com semImagem, o painel fica só com legenda e balão: não busca imagem nem usa o recorte do cenário.
+function imagemDoPainel(im) {
+  if (typeof im === 'string') return urlSegura(im);
+  if (!im || typeof im !== 'object' || im.semImagem) return null;
+  const u = im.reuso || im.arquivo;
+  return typeof u === 'string' ? urlSegura(u.includes('/') ? u : `img/carmen/${u}`) : null;
+}
+
 export function quadrinhos(paineis, { cenario = CENARIO_PADRAO, solto = false, indice = 0 } = {}) {
   const lista = (Array.isArray(paineis) ? paineis : []).filter((p) => p && (p.legenda || p.imagem || p.baloes?.length));
   if (!lista.length) return '';
@@ -222,14 +231,16 @@ export function quadrinhos(paineis, { cenario = CENARIO_PADRAO, solto = false, i
     <div class="hq ${solto ? 'hq-solto' : `hq-${Math.min(lista.length, 3)}`}">
       ${lista.map((p, j) => {
         const i = solto ? indice : j;
-        const img = urlSegura(p.imagem);
+        const img = imagemDoPainel(p.imagem);
+        const soTexto = !!p.imagem?.semImagem;
         const fundo = img
           ? `<img src="${esc(img)}" alt="${esc(p.legenda || 'Painel')}" loading="lazy">`
+          : soTexto ? ''
           : `<div class="painel-cenario" style="background-image:url('${esc(urlSegura(cenario) || CENARIO_PADRAO)}');background-position:${ENQUADRAMENTOS[i % ENQUADRAMENTOS.length]}"></div>`;
         const baloes = (p.baloes || []).slice(0, 2).map((b, j) => `
           <div class="balao balao-${j}"><b>${esc(String(b.quem || '').toUpperCase())}</b>${esc(b.texto || '')}</div>`).join('');
         return `
-          <figure class="painel ${img ? '' : 'sem-imagem'}">
+          <figure class="painel ${img ? '' : 'sem-imagem'}${soTexto ? ' so-texto' : ''}">
             ${fundo}
             ${p.legenda ? `<figcaption class="legenda">${esc(p.legenda)}</figcaption>` : ''}
             ${baloes}
