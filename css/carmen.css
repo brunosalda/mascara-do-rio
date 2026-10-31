@@ -1261,3 +1261,37 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .carmen .licenca-mini.recebe { animation: licenca-recebe 480ms var(--curva-mola); }
 @keyframes licenca-recebe { 30% { scale: 1.05; box-shadow: 0 0 0 5px var(--c-rastro), 0 0 24px rgba(255, 210, 122, 0.55); } }
 @media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .carmen .janela-fundo.janela-licenca, body:not(.movimento-forcado) .carmen .licenca-mini.recebe { animation: none; } }
+
+/* ============ Segunda volta: o retrato falado a grafite (Arquivo, Licença) ============ */
+/* O desenho de um perito no papel marfim: contorno a grafite, sombra em hachura, traço um pouco tremido.
+   O ruivo é lápis vermelho; a pérola, a medalha e o anel são as únicas cores de tinta. */
+.retrato-falado.esboco { --grafite: #3a342e; --papel-rf: #f1e9d6; }
+.retrato-falado.esboco .rf-fundo, .arquivo-ladrao .retrato-falado.esboco .rf-fundo { fill: var(--papel-rf); }
+.retrato-falado.esboco :is(.rf-busto, .rf-cabeca), .arquivo-ladrao .retrato-falado.esboco :is(.rf-busto, .rf-cabeca) { fill: var(--papel-rf); stroke: var(--grafite); stroke-width: 1.3; stroke-linejoin: round; }
+.retrato-falado.esboco .rf-hachura { stroke: var(--grafite); stroke-width: 0.45; }
+.retrato-falado.esboco .rf-hachura.ruiva { stroke: #a8402a; stroke-width: 0.7; }
+.retrato-falado.esboco .rf-sombra { stroke: none; opacity: 0.5; }
+.retrato-falado.esboco :is(.rf-linha, .rf-orelha, .rf-roupa-linha, .rf-fio, .rf-mao, .rf-corrente, .rf-lapis) { fill: none; stroke: var(--grafite); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.retrato-falado.esboco .rf-mao { fill: var(--papel-rf); }
+.retrato-falado.esboco .rf-linha.fina, .retrato-falado.esboco .rf-fio { stroke-width: 0.8; }
+.retrato-falado.esboco .rf-olho, .retrato-falado.esboco .rf-botao { fill: var(--grafite); }
+.retrato-falado.esboco .rf-dedo { fill: none; stroke: var(--grafite); stroke-width: 3.6; stroke-linecap: round; }
+.retrato-falado.esboco .rf-dedo-miolo { fill: none; stroke: var(--papel-rf); stroke-width: 1.9; stroke-linecap: round; }
+.retrato-falado.esboco .rf-linha.leve { opacity: 0.45; }
+.retrato-falado.esboco .rf-cabelo { fill: var(--hachura); stroke: var(--grafite); stroke-width: 1; stroke-linejoin: round; }
+.retrato-falado.esboco .rf-cabelo.branco { fill: #fbf8f1; }
+.retrato-falado.esboco .rf-cabelo.ruivo { fill: var(--ruiva); stroke: #8a3522; }
+.retrato-falado.esboco .rf-cabelo.trancas { fill: var(--hachura); }
+.retrato-falado.esboco .rf-tranca { fill: var(--hachura); stroke: var(--grafite); stroke-width: 0.9; }
+.retrato-falado.esboco .rf-oculos { fill: none; stroke: var(--grafite); stroke-width: 1.3; }
+.retrato-falado.esboco .rf-sinal { fill: none; stroke: #9e2a24; stroke-width: 1.2; stroke-linecap: round; }
+.retrato-falado.esboco .rf-sinal.tinta { stroke: #2d4a7a; stroke-width: 1; }
+.retrato-falado.esboco .rf-sinal.perola { fill: #fffdf6; stroke: var(--grafite); stroke-width: 0.7; }
+.retrato-falado.esboco .rf-sinal.ouro { fill: #c9a24a; stroke: #6b5320; stroke-width: 0.7; }
+.retrato-falado.esboco .rf-sinal.ouro-linha { stroke: #a8822e; stroke-width: 1.3; }
+.retrato-falado.esboco .rf-flor circle { fill: #fffdf6; stroke: var(--grafite); stroke-width: 0.6; }
+.retrato-falado.esboco .rf-gravata { fill: var(--grafite); }
+.retrato-falado.esboco .rf-regua { fill: none; stroke: var(--grafite); stroke-width: 1; }
+/* O traço novo a lápis: no papel claro, o contorno é grafite e o preenchimento entra depois, sem apagar o traço. */
+.retrato-falado.esboco .rf-novo :is(.rf-cabelo, .perola, .ouro, .rf-tranca, .rf-mao) { animation: rf-desenha 400ms ease-out 200ms both, rf-preenche 260ms ease-out 600ms both; }
+@keyframes rf-preenche { from { fill-opacity: 0; } }

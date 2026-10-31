@@ -584,45 +584,129 @@ export function fotoPrisao(foto, texto = 'Preso', classe = '') {
 }
 
 // --- O retrato falado ---------------------------------------------------------------------------------
-// Silhueta de busto. Cada traço conhecido acrescenta um detalhe: o cabelo (aparência), o sinal particular e,
-// no rodapé, o clã aparente. Sem traço, só a sombra.
-const CABELO = {
-  'cabelo-branco': '<path class="rf-cabelo branco" d="M30 38 Q50 18 70 38 L70 34 Q50 12 30 34 Z"/>',
-  ruivo: '<path class="rf-cabelo ruivo" d="M26 46 Q24 16 50 14 Q78 16 74 46 Q70 30 50 28 Q32 30 26 46 Z"/>',
-  trancas: '<path class="rf-cabelo trancas" d="M28 40 Q50 10 72 40 Z"/><path class="rf-tranca" d="M30 40 L26 78 M70 40 L74 78"/>',
-  'careca-oculos': '<g class="rf-oculos"><circle cx="42" cy="44" r="6"/><circle cx="58" cy="44" r="6"/><path d="M48 44 h4"/></g>',
+// O desenho de um perito, a grafite no papel: cabeça, orelhas, olhos e boca variam pela ficha (a semente),
+// a sombra é hachura de lápis e o traço treme um pouco. Cada traço conhecido entra no lugar certo: o cabelo
+// (aparência), o sinal particular no rosto ou na mão e a roupa que combina com o hábito. Sem traço, só o
+// rosto sem cabelo, como o retrato do alto da mesa no começo.
+// As cabeças: o contorno, a meia largura na altura das orelhas e a linha do queixo.
+const elipse = (rx, ry, cy = 42) => `M${50 - rx} ${cy} a${rx} ${ry} 0 1 0 ${2 * rx} 0 a${rx} ${ry} 0 1 0 ${-2 * rx} 0 Z`;
+const CABECAS = [
+  { d: elipse(17, 22), w: 17, topo: 20, queixo: 64 },
+  { d: 'M33 31 Q33 20 50 20 Q67 20 67 31 L67 50 Q66 62 50 64 Q34 62 33 50 Z', w: 17, topo: 20, queixo: 64 },
+  { d: elipse(15, 25), w: 15, topo: 17, queixo: 67 },
+  { d: elipse(19, 20), w: 19, topo: 22, queixo: 62 },
+];
+const OMBROS = ['M14 100 Q16 74 40 70 L60 70 Q84 74 86 100 Z', 'M20 100 Q22 76 41 71 L59 71 Q78 76 80 100 Z', 'M8 100 Q12 72 38 69 L62 69 Q88 72 92 100 Z'];
+// O cabelo pela aparência; muito alto e miúdo não dizem o cabelo, então ele varia pela ficha.
+function cabelo(ap, c, f, v) {
+  const e = 50 - c.w;
+  const d = 50 + c.w;
+  const t = c.topo;
+  switch (ap) {
+    case 'cabelo-branco':
+      return f
+        ? `<path class="rf-cabelo branco" d="M${e - 3} 60 Q${e - 5} ${t - 4} 50 ${t - 3} Q${d + 5} ${t - 4} ${d + 3} 60 L${d - 1} 58 Q${d} 30 50 ${t + 6} Q${e} 30 ${e + 1} 58 Z"/><path class="rf-fio" d="M44 ${t + 1} q-6 8 -8 22 M56 ${t + 1} q6 8 8 22 M50 ${t - 2} v6"/>`
+        : `<path class="rf-cabelo branco" d="M${e} 38 Q${e - 1} ${t - 3} 50 ${t - 3} Q${d + 1} ${t - 3} ${d} 38 Q${d - 3} ${t + 5} 50 ${t + 5} Q${e + 3} ${t + 5} ${e} 38 Z"/><path class="rf-fio" d="M42 ${t} l2 4 M48 ${t - 2} l1 4 M55 ${t - 1} l-1 4 M61 ${t + 1} l-2 4"/>`;
+    case 'ruivo':
+      return f
+        ? `<path class="rf-cabelo ruivo" d="M${e - 4} 74 Q${e - 9} 50 ${e - 4} 30 Q${e} ${t - 6} 50 ${t - 5} Q${d} ${t - 6} ${d + 4} 30 Q${d + 9} 50 ${d + 4} 74 Q${d - 2} 60 ${d - 1} 40 Q${d - 6} ${t + 6} 50 ${t + 7} Q${e + 6} ${t + 6} ${e + 1} 40 Q${e + 2} 60 ${e - 4} 74 Z"/>`
+        : `<path class="rf-cabelo ruivo" d="M${e - 2} 44 Q${e - 6} ${t - 2} ${e + 4} ${t - 4} Q50 ${t - 10} ${d - 4} ${t - 4} Q${d + 6} ${t - 2} ${d + 2} 44 Q${d - 2} ${t + 6} 50 ${t + 6} Q${e + 2} ${t + 6} ${e - 2} 44 Z"/>`;
+    case 'trancas': {
+      const contas = (x) => [0, 1, 2, 3, 4, 5].map((i) => `<circle class="rf-tranca" cx="${x}" cy="${44 + i * 5.2}" r="2.8"/>`).join('');
+      return `<path class="rf-cabelo trancas" d="M${e - 1} 44 Q${e - 2} ${t - 3} 50 ${t - 3} Q${d + 2} ${t - 3} ${d + 1} 44 Q${d - 2} ${t + 4} 50 ${t + 4} Q${e + 2} ${t + 4} ${e - 1} 44 Z"/><path class="rf-fio" d="M50 ${t - 3} v7"/>${contas(e - 2)}${contas(d + 2)}`;
+    }
+    case 'careca-oculos':
+      return `<path class="rf-fio" d="M43 ${t + 3} q6 -3 12 0"/><g class="rf-oculos"><circle cx="44" cy="42" r="5.6"/><circle cx="56" cy="42" r="5.6"/><path d="M49.6 41.4 q0.4 -1 0.8 0 M38.4 41 L${e} 40 M61.6 41 L${d} 40"/></g>`;
+    case 'muito-alto':
+    case 'miudo': {
+      const estilos = f
+        ? [`M${e - 2} 62 Q${e - 4} ${t - 4} 50 ${t - 3} Q${d + 4} ${t - 4} ${d + 2} 62 Q${d - 1} 34 50 ${t + 6} Q${e + 1} 34 ${e - 2} 62 Z`,
+          `M${e} 42 Q${e - 2} ${t - 3} 50 ${t - 3} Q${d + 2} ${t - 3} ${d} 42 Q${d - 6} ${t + 4} 44 ${t + 6} Q${e + 3} ${t + 8} ${e} 42 Z M${d - 2} ${t + 1} q8 2 6 12 q-4 -6 -7 -6 Z`,
+          `M${e - 1} 50 Q${e - 3} ${t - 4} 50 ${t - 3} Q${d + 3} ${t - 4} ${d + 1} 50 Q${d - 2} ${t + 5} 50 ${t + 5} Q${e + 2} ${t + 5} ${e - 1} 50 Z`]
+        : [`M${e} 38 Q${e} ${t - 3} 50 ${t - 3} Q${d} ${t - 3} ${d} 38 Q${d - 2} ${t + 4} 50 ${t + 4} Q${e + 2} ${t + 4} ${e} 38 Z`,
+          `M${e} 40 Q${e - 1} ${t - 2} 44 ${t - 4} Q${d + 2} ${t - 4} ${d} 38 Q${d - 4} ${t + 2} 46 ${t + 3} L44 ${t + 6} Q${e + 2} ${t + 6} ${e} 40 Z`,
+          `M${e + 1} 34 Q${e + 2} ${t - 5} 50 ${t - 6} Q${d - 2} ${t - 5} ${d - 1} 34 Q${d - 4} ${t + 2} 50 ${t + 1} Q${e + 4} ${t + 2} ${e + 1} 34 Z`];
+      return `<path class="rf-cabelo" d="${estilos[v % 3]}"/>`;
+    }
+    default: return '';
+  }
+}
+// O sinal particular, no rosto, no pescoço ou na mão.
+function sinal(s, c) {
+  const e = 50 - c.w;
+  const q = c.queixo;
+  // A mão erguida: os dedos em contorno (um traço grosso de grafite com o miolo de papel por cima).
+  const mao = (x, dedos, extra = '') => `<path class="rf-dedo" d="${dedos}"/><path class="rf-dedo-miolo" d="${dedos}"/><path class="rf-mao" d="M${x - 8} 100 L${x - 8} 88 Q${x - 8} 84 ${x - 4} 84 L${x + 4} 84 Q${x + 8} 84 ${x + 8} 88 L${x + 8} 100"/>${extra}`;
+  switch (s) {
+    case 'dedo-faltando': return mao(80, 'M74.4 85 v-9 M78.4 85 v-11 M82.4 85 v-1.6 M86.2 85 v-8', '<path class="rf-sinal" d="M80.8 82.4 q1.6 -1.4 3.2 0"/>');
+    case 'anel-serpente': return mao(20, 'M13.8 85 v-8 M17.8 85 v-10 M21.8 85 v-10 M25.6 85 v-8', '<path class="rf-sinal ouro-linha" d="M19.8 80 h4 M19.8 78.4 h4"/><circle class="rf-sinal ouro" cx="24.6" cy="77.6" r="1.1"/>');
+    case 'brinco-perola': return `<circle class="rf-sinal perola" cx="${e - 1.6}" cy="50.5" r="2.4"/>`;
+    case 'ancora': return `<path class="rf-sinal tinta" d="M59 ${q + 1} v8 m-3 -5.5 h6 m-6.5 3.5 q3.5 4 7 0 M59 ${q + 1} m-1.2 -1.2 a1.2 1.2 0 1 0 2.4 0 a1.2 1.2 0 1 0 -2.4 0"/>`;
+    case 'cicatriz': return '<path class="rf-sinal" d="M55 45 L63 54 M56.4 48.6 l2.4 -1.6 M58.4 50.8 l2.4 -1.6 M60.4 53 l2.4 -1.6"/>';
+    case 'medalha': return `<path class="rf-corrente" d="M43 ${q + 5} Q50 ${q + 19} 57 ${q + 5}"/><circle class="rf-sinal ouro" cx="50" cy="${q + 15.5}" r="3.4"/>`;
+    default: return '';
+  }
+}
+// A roupa pelo hábito: o paletó de quem rola a moeda, o jasmim na lapela, a gola de marinheiro, o colete com
+// gravata-borboleta do jogador, o bolso com lápis do caderninho e a camisa aberta de quem assobia.
+const ROUPA = {
+  'rola-moeda': '<path class="rf-roupa-linha" d="M44 70 L50 84 L56 70 M41 71 L47 100 M59 71 L53 100"/>',
+  jasmim: '<path class="rf-roupa-linha" d="M44 70 L50 82 L56 70 M41 71 L46 100 M59 71 L54 100"/><g class="rf-flor"><circle cx="36" cy="82" r="1.8"/><circle cx="39.2" cy="83.6" r="1.8"/><circle cx="38" cy="86.8" r="1.8"/><circle cx="34.4" cy="86.6" r="1.8"/><circle cx="33" cy="83.4" r="1.8"/></g>',
+  barquinho: '<path class="rf-roupa-linha" d="M40 70 L50 84 L60 70 M37 72 L34 88 L50 84 L66 88 L63 72 M35.6 82 L50 79 L64.4 82"/>',
+  baralho: '<path class="rf-roupa-linha" d="M44 70 L50 78 L56 70 M42 76 L50 96 L58 76"/><path class="rf-gravata" d="M44 72.6 l6 3 l-6 3 Z M56 72.6 l-6 3 l6 3 Z"/>',
+  caderninho: '<path class="rf-roupa-linha" d="M44 70 L48 78 L50 74 L52 78 L56 70 M50 78 V100 M56 84 h9 v8 h-9 Z"/><path class="rf-lapis" d="M59 84 L61 75"/>',
+  assobia: '<path class="rf-roupa-linha" d="M43 70 L48 80 L50 76 L52 80 L57 70"/><circle class="rf-botao" cx="50" cy="86" r="0.9"/><circle class="rf-botao" cx="50" cy="93" r="0.9"/>',
 };
-const SINAL = {
-  'dedo-faltando': '<path class="rf-sinal" d="M80 92 v-10 m4 10 v-12 m4 12 v-6"/>',
-  'brinco-perola': '<circle class="rf-sinal perola" cx="30" cy="54" r="2.6"/>',
-  ancora: '<path class="rf-sinal" d="M60 66 v8 m-4 -4 h8 m-8 6 q4 4 8 0"/>',
-  cicatriz: '<path class="rf-sinal" d="M54 34 l8 6"/>',
-  'anel-serpente': '<circle class="rf-sinal" cx="20" cy="92" r="3"/>',
-  medalha: '<circle class="rf-sinal ouro" cx="50" cy="80" r="3.4"/>',
-};
-// Cada ficha tem um rosto próprio: a semente (o id da ficha) muda a cabeça, os ombros e a gola, sem mudar
-// o que os traços dizem. novos: os tipos de traço que acabaram de ser confirmados, desenhados a lápis.
-const OMBROS = ['M14 100 Q16 72 38 66 L62 66 Q84 72 86 100 Z', 'M20 100 Q22 74 40 67 L60 67 Q78 74 80 100 Z', 'M8 100 Q12 70 36 65 L64 65 Q88 70 92 100 Z'];
-const GOLA = ['', '<path class="rf-gola" d="M42 67 L50 80 L58 67"/>', '<path class="rf-gola" d="M40 66 L46 76 L50 69 L54 76 L60 66"/>', '<path class="rf-gola" d="M38 70 Q50 78 62 70"/>'];
 const semear = (txt) => [...String(txt)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+let retratos = 0;
 export function retratoFalado(tr = {}, { genero = null, semente = null, novos = null } = {}) {
   const alto = tr.aparencia === 'muito-alto';
   const miudo = tr.aparencia === 'miudo';
-  const esc0 = miudo ? 'translate(10 14) scale(0.8)' : alto ? 'translate(-4 -6) scale(1.08)' : '';
-  const h = semente == null ? null : semear(semente);
-  const rx = (genero === 'f' ? 17 : 18) + (h == null ? 0 : ((h % 3) - 1) * 1.5);
-  const ry = 22 + (h == null ? 0 : (((h >> 3) % 3) - 1) * 1.5);
+  const esc0 = miudo ? 'translate(10 16) scale(0.8)' : alto ? 'translate(-4 -6) scale(1.08)' : '';
+  const h = semente == null ? 0 : semear(semente);
+  const f = genero === 'f';
+  const c = CABECAS[(h >> 2) % 4];
+  const u = `rf${(retratos += 1)}`;
+  const e = 50 - c.w;
+  const d = 50 + c.w;
+  const q = c.queixo;
+  const orelha = 3.5 + ((h >> 11) % 2) * 1.2;
+  const sobr = (((h >> 9) % 3) - 1) * 1.2;
+  const boca = [0.5, -0.5, 0.1][(h >> 13) % 3];
   const lapis = (cat, svg) => (svg && novos?.has(cat) ? `<g class="rf-novo">${svg.replace(/<(path|circle)\b/g, '<$1 pathLength="1"')}</g>` : svg);
-  return `<svg class="retrato-falado${genero ? ` g-${genero}` : ''}" viewBox="0 0 100 100" aria-hidden="true">
+  const regua = alto ? '<path class="rf-regua" d="M94 8 v84 m-3 0 h6 m-6 -84 h6"/>'
+    : miudo ? '<path class="rf-regua" d="M94 8 v84 m-3 0 h6 m-6 -84 h6 m-6 28 h6"/>' : '';
+  return `<svg class="retrato-falado esboco${genero ? ` g-${genero}` : ''}" viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <pattern id="${u}h" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><path d="M0 0 V3" class="rf-hachura"/></pattern>
+      <pattern id="${u}r" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)"><path d="M0 0 V2.4" class="rf-hachura ruiva"/></pattern>
+      <clipPath id="${u}c"><path d="${c.d}"/></clipPath>
+      <filter id="${u}t" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="2" seed="${h % 97}" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.3" xChannelSelector="R" yChannelSelector="G"/></filter>
+      <filter id="${u}g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="${(h >> 4) % 97}"/><feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.2  0 0 0 0 0.16  0 0 0 0.7 -0.28"/></filter>
+    </defs>
     <rect class="rf-fundo" width="100" height="100"/>
-    <g transform="${esc0}">
-      <path class="rf-busto" d="${OMBROS[h == null ? 0 : (h >> 5) % 3]}"/>
-      ${h == null ? '' : GOLA[(h >> 7) % 4]}
-      <ellipse class="rf-cabeca" cx="50" cy="44" rx="${rx}" ry="${ry}"/>
-      ${lapis('aparencia', CABELO[tr.aparencia] || '')}
-      ${lapis('sinal', SINAL[tr.sinal] || '')}
+    <rect width="100" height="100" filter="url(#${u}g)"/>
+    <g style="--hachura:url(#${u}h);--ruiva:url(#${u}r)" filter="url(#${u}t)">
+      <g transform="${esc0}">
+        <path class="rf-busto" d="${OMBROS[f ? 1 : (h >> 5) % 3]}"/>
+        <path class="rf-sombra" d="${OMBROS[f ? 1 : (h >> 5) % 3]}" fill="url(#${u}h)"/>
+        ${lapis('habito', ROUPA[tr.habito] || '')}
+        <path class="rf-linha" d="M44 ${q - 3} L44 70 M56 ${q - 3} L56 70"/>
+        <path class="rf-sombra" d="M44 ${q - 1} Q50 ${q + 5} 56 ${q - 1} L56 ${q + 5} Q50 ${q + 8} 44 ${q + 5} Z" fill="url(#${u}h)"/>
+        <path class="rf-orelha" d="M${e} 38 q-${orelha} 0.6 -${orelha - 0.6} 5 q0.4 3.6 ${orelha - 0.6} 4.4 M${d} 38 q${orelha} 0.6 ${orelha - 0.6} 5 q-0.4 3.6 -${orelha - 0.6} 4.4"/>
+        <path class="rf-cabeca" d="${c.d}"/>
+        <rect x="55" y="10" width="30" height="64" fill="url(#${u}h)" clip-path="url(#${u}c)" class="rf-sombra"/>
+        <path class="rf-linha fina" d="M40 ${37 + sobr} q4 -2.2 8 -0.4 M52 ${36.6} q4 -1.8 8 ${0.4 + sobr}"/>
+        <path class="rf-linha" d="M41 42 q3 -2.4 6 0 q-3 1.6 -6 0 M53 42 q3 -2.4 6 0 q-3 1.6 -6 0"/>
+        <circle class="rf-olho" cx="44" cy="42" r="0.9"/><circle class="rf-olho" cx="56" cy="42" r="0.9"/>
+        <path class="rf-sombra" d="M${e + 2} 48 q4 ${4 + ((h >> 19) % 3)} 9 6 l-1 2 q-6 -1 -8 -6 Z M52 44 l-1.4 7 l2.6 -0.4 Z" fill="url(#${u}h)"/>
+        <path class="rf-linha fina leve" d="M41.6 44.6 q2.4 1 4.8 0 M53.6 44.6 q2.4 1 4.8 0"/>
+        <path class="rf-linha fina" d="M50 44 q-2 6 -0.6 8 q1.6 0.8 3.2 -0.2 M45 ${q - 9} q5 ${boca} 10 0${(h >> 15) % 2 ? ` M48.6 ${q - 3} q1.4 0.8 2.8 0` : ''}"/>
+        ${lapis('aparencia', cabelo(tr.aparencia, c, f, h >> 17))}
+        ${lapis('sinal', sinal(tr.sinal, c))}
+      </g>
+      ${lapis('aparencia', regua)}
     </g>
-    ${alto ? lapis('aparencia', '<path class="rf-regua" d="M94 8 v84 m-3 0 h6 m-6 -84 h6"/>') : ''}
   </svg>`;
 }
 
