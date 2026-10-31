@@ -1208,3 +1208,11 @@ body.celular .foras-monte:not(.aberto) .ficha-ciranda.carimbando { z-index: 2; r
 body.celular .placar-selos li .selo-como { left: 50%; right: auto; translate: -50% 0; font-size: 14px; }
 body.celular .placar-selos li:nth-child(3n+1) .selo-como { left: 0; translate: none; }
 body.celular .placar-selos li:nth-child(3n) .selo-como { left: auto; right: 0; translate: none; }
+
+/* ============ Acerto do Mapa (31/10, Avaliação) ============ */
+/* O custo da viagem num anel por fora do arco, com um pino na hora de chegada, para não sumir sob o ponteiro. */
+.relogio-arco .custo { stroke-width: 4; stroke-linecap: round; stroke-dasharray: none; }
+.relogio-arco .custo-pino { stroke: #ffd27a; stroke-width: 2.6; stroke-linecap: round; }
+.relogio-arco.passa .custo-pino { stroke: #ff4d63; }
+/* "7h05 ao chegar" também no computador: "faltam …" inteiro passava da caixa e cruzava o arco. */
+.mapa-relogio .relogio-arco small.ao-chegar .faltam { display: none; }

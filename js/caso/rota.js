@@ -55,12 +55,19 @@ export function relogioArco({ inicio, fim, hora, custo = 0 }) {
   const R = 46;
   const ang = (m) => -110 + 220 * Math.min(1, Math.max(0, (m - inicio) / total));
   const pt = (a, r = R) => [60 + r * Math.sin((a * Math.PI) / 180), 58 - r * Math.cos((a * Math.PI) / 180)].map((v) => v.toFixed(1));
-  const arco = (m0, m1, classe) => {
+  const arco = (m0, m1, classe, r = R) => {
     if (m1 <= m0) return '';
     const [a0, a1] = [ang(m0), ang(m1)];
-    const [x0, y0] = pt(a0);
-    const [x1, y1] = pt(a1);
-    return `<path class="${classe}" d="M${x0} ${y0} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}"/>`;
+    const [x0, y0] = pt(a0, r);
+    const [x1, y1] = pt(a1, r);
+    return `<path class="${classe}" d="M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}"/>`;
+  };
+  // O custo corre num anel por fora (raio + 10), longe do ponteiro, e termina num pino na hora de chegada:
+  // numa viagem de 10 minutos o trecho é curto, mas o pino se vê.
+  const custoDe = (h0, h1) => {
+    const [x0, y0] = pt(ang(h1), R + 5);
+    const [x1, y1] = pt(ang(h1), R + 16);
+    return `${arco(h0, h1, 'custo', R + 10)}<path class="custo-pino" d="M${x0} ${y0} L${x1} ${y1}"/>`;
   };
   let tracos = '';
   for (let m = Math.ceil(inicio / 30) * 30; m <= fim; m += 30) {
@@ -76,7 +83,7 @@ export function relogioArco({ inicio, fim, hora, custo = 0 }) {
   return `<div class="relogio-arco${ultima ? ' ultima-hora' : ''}${passa ? ' passa' : ''}" role="img" aria-label="São ${hhmm(h)}; ${resta ? `faltam ${duracao(resta)} até o sol` : 'o sol chegou'}">
     <svg viewBox="0 0 120 84" aria-hidden="true">
       <g class="tracos">${tracos}</g>
-      ${arco(inicio, h, 'gasto')}${arco(h, fim, 'resta')}${custo > 0 ? arco(h, Math.min(fim, hora + custo), 'custo') : ''}
+      ${arco(inicio, h, 'gasto')}${arco(h, fim, 'resta')}${custo > 0 ? custoDe(h, Math.min(fim, hora + custo)) : ''}
       <circle class="ponteiro" cx="${px}" cy="${py}" r="4.5"/>
     </svg>
     <b>${hhmm(h)}</b><small${custo > 0 && !passa ? ' class="ao-chegar"' : ''}>${passa ? 'o sol chega antes' : custo > 0 ? `<span class="faltam">faltam </span>${duracao(resta - custo)} ao chegar` : resta ? `faltam ${duracao(resta)}` : 'o sol chegou'}</small>
@@ -490,10 +497,15 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         const curva = t.voo ? `M${x0} ${y0} Q${(x0 + x1) / 2} ${Math.min(y0, y1) - 220} ${x1} ${y1}` : `M${x0} ${y0} L${x1} ${y1}`;
         const g = corpo.querySelector('.rota-viagem-g');
         corpo.querySelector('.rota-proposta-g').innerHTML = '';
-        g.innerHTML = `<path class="rota-viagem" d="${curva}"/><g class="rota-veiculo"><circle r="30"/>${icone(veiculo(atual, id, t), { svg: true, tam: 36 })}</g>`;
+        g.innerHTML = `<path class="rota-viagem" d="${curva}"/><g class="rota-veiculo"><circle r="40"/>${icone(veiculo(atual, id, t), { svg: true, tam: 50 })}</g>`;
         const linha = g.querySelector('.rota-viagem');
         const carro = g.querySelector('.rota-veiculo');
         const total = linha.getTotalLength();
+        // O traço da viagem é medido em unidades do mapa, como o comprimento: sem o non-scaling-stroke, o tracejado
+        // anda junto com o veículo. A espessura de 5 px na tela vem da escala atual.
+        const k = linha.getScreenCTM()?.a || 1;
+        linha.style.vectorEffect = 'none';
+        linha.style.strokeWidth = `${5 / k}`;
         linha.style.strokeDasharray = `${total}`;
         som.carmen?.(t.voo ? 'voo' : 'viagem', dur / 1000);
         const rel = corpo.querySelector('.mapa-relogio');
