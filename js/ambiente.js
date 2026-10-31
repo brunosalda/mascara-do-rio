@@ -320,7 +320,7 @@ export const som = {
     const t = audio.ctx.currentTime + 0.01;
     const A = audio;
     switch (nome) {
-      case 'clique': ruido(A, t, 0.03, { freq: 2000, q: 3, volume: 0.035 }); break;
+      case 'clique': ruido(A, t, 0.03, { freq: variar(2000), q: 3, volume: 0.035 }); break; // ±3% de altura: o mesmo clique não cansa (Base 4)
       case 'painel': ruido(A, t, 0.12, { freq: 600, ate: 3200, q: 0.8, volume: 0.018 }); break;
       case 'pista':
         ruido(A, t, 0.18, { freq: 1500, ate: 4000, q: 0.7, volume: 0.012 });
@@ -337,8 +337,8 @@ export const som = {
         pulso(A, t, 60, 0.12);
         ruido(A, t, 0.04, { freq: 2500, q: 1.5, volume: 0.04 });
         break;
-      case 'descartar': ruido(A, t, 0.08, { freq: 3500, q: 1.2, volume: 0.02 }); break;
-      case 'tecla': ruido(A, t, 0.015, { freq: 3000, q: 4, volume: 0.02, ataque: 0.002 }); break;
+      case 'descartar': ruido(A, t, 0.08, { freq: variar(3500), q: 1.2, volume: 0.02 }); break;
+      case 'tecla': ruido(A, t, 0.015, { freq: variar(3000), q: 4, volume: 0.02, ataque: 0.002 }); break;
       case 'preso':
         ruido(A, t, 0.03, { freq: 2500, q: 2, volume: 0.05 });
         ruido(A, t + 0.09, 0.03, { freq: 2200, q: 2, volume: 0.05 });

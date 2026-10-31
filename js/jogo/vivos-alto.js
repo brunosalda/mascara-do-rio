@@ -159,4 +159,48 @@ export const VIVOS_ALTO = {
       { x: 0.45, y: 0.6, raio: 0.06, quando: 'parar', som: 'motor' },
     ],
   },
+  // São Paulo (polimento até o 10, Lugar 1): pelo menos duas coisas vivas além da chuva e das poças.
+  paulista: {
+    vivos: [
+      { tipo: 'veiculo', som: 'motor', de: [0.3, 0.39], ate: [0.46, 0.99], dur: 24, cor: '#fff0c0' },
+      { tipo: 'veiculo', som: 'motor', de: [0.62, 0.99], ate: [0.33, 0.39], dur: 31, cor: '#ff4030' },
+      { tipo: 'neon', x: 0.405, y: 0.1, w: 0.02, h: 0.08, cor: '#b050ff' },
+      { tipo: 'janela', x: 0.58, y: 0.22 },
+      { tipo: 'janela', x: 0.94, y: 0.24 },
+    ],
+  },
+  liberdade: {
+    vivos: [
+      { tipo: 'neon', x: 0.12, y: 0.1, w: 0.15, h: 0.12, cor: '#ff5a3a' },
+      { tipo: 'neon', x: 0.75, y: 0.22, w: 0.11, h: 0.1, cor: '#ff5a3a' },
+      { tipo: 'veiculo', som: 'motor', de: [0.54, 0.56], ate: [0.6, 0.99], dur: 28, cor: '#fff0c0' },
+      { tipo: 'janela', x: 0.3, y: 0.08 },
+      { tipo: 'janela', x: 0.44, y: 0.15 },
+    ],
+  },
+  augusta: {
+    vivos: [
+      { tipo: 'neon', x: 0.26, y: 0.55, w: 0.1, h: 0.1, cor: '#c040ff' },
+      { tipo: 'neon', x: 0.52, y: 0.62, w: 0.06, h: 0.06, cor: '#ff2c3c' },
+      { tipo: 'veiculo', som: 'motor', de: [0.88, 0.48], ate: [0.62, 0.99], dur: 26, cor: '#fff0c0' },
+      { tipo: 'janela', x: 0.355, y: 0.13 },
+      { tipo: 'janela', x: 0.535, y: 0.25 },
+    ],
+  },
+  'centro-sp': {
+    vivos: [
+      { tipo: 'agua', x: 0.37, y: 0.62, w: 0.3, h: 0.25 },
+      { tipo: 'veiculo', som: 'motor', de: [0.2, 0.49], ate: [0.9, 0.52], dur: 40, cor: '#fff0c0' },
+      { tipo: 'janela', x: 0.18, y: 0.27 },
+      { tipo: 'janela', x: 0.5, y: 0.13 },
+    ],
+  },
+  se: {
+    vivos: [
+      { tipo: 'veiculo', som: 'motor', de: [0.27, 0.18], ate: [0.2, 0.58], dur: 34, cor: '#fff0c0' },
+      { tipo: 'agua', x: 0.2, y: 0.86, w: 0.12, h: 0.1 },
+      { tipo: 'janela', x: 0.08, y: 0.47 },
+      { tipo: 'janela', x: 0.62, y: 0.06 },
+    ],
+  },
 };

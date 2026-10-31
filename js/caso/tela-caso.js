@@ -601,7 +601,49 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   }
 
   // --- Caixas de diálogo -------------------------------------------------------------------------
-  const figuraDe =(pid) => { const pe = caso.pessoas[pid]; const f = pe?.figura || FIGURAS_GENTE[pe?.tipo]?.[0]; return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
+  const figuraDe =(pid) => { const f = figuraDoCaso(pid); return f ? figuraLeve(`img/gente/${f}.png`) : ''; };
+  // Formato rota (Lugar 5 e Conversa 1 do "Caminho até o 10"): quem não tem figura própria ganha uma genérica fixa,
+  // diferente das outras do mesmo lugar. O corpo na cena, o rosto redondo e o cartão usam a mesma; o retrato é a
+  // silhueta dela, para não fingir que a figura genérica é o rosto da testemunha.
+  // Só figuras sem farda nem ofício, para não contradizer o ofício escrito no cartão; o gênero vem do tratamento
+  // ("Dona", "Seu"), do ofício ("vendedora", "porteiro") ou, por último, da última letra do nome.
+  const GENERICAS = { f: ['mulher-celular', 'mulher-guarda-chuva'], m: ['passante-teste', 'passante-celular'] };
+  function generoDe(pe) {
+    const nome = String(pe.nome || '').toLowerCase();
+    if (/^(dona|tia|irmã|dra\.?|sra\.?|vó)\s/.test(nome)) return 'f';
+    if (/^(seu|sr\.?|padre|mestre|dr\.?|sd\.?|tio|vô)\s/.test(nome)) return 'm';
+    const oficio = String(pe.sub || '').toLowerCase().split(/[\s,·]/)[0];
+    if (/(ora|eira|ina|esa|triz|ã)$/.test(oficio) || (/a$/.test(oficio) && !/ista$/.test(oficio))) return 'f';
+    if (/(or|eiro|o|ês)$/.test(oficio)) return 'm';
+    if (/\b(dona|freira|mãe)\b/.test(String(pe.sub || '').toLowerCase())) return 'f';
+    return /[ai]$/.test(nome.split(/\s/)[0]) ? 'f' : 'm';
+  }
+  // Enquadre da silhueta em cabeça e ombros: proporção da figura, centro da cabeça (x) e alto da cabeça (y), medidos
+  // nas imagens (no guarda-chuva, a cabeça fica abaixo da copa).
+  const ENQUADRE = { 'passante-teste': [0.369, 0.507, 0], 'passante-celular': [0.306, 0.439, 0], 'mulher-celular': [0.428, 0.472, 0], 'mulher-guarda-chuva': [0.581, 0.5, 0.06] };
+  const enquadreDe = (pid) => { const [a, hx, ht] = ENQUADRE[figuraDoCaso(pid)] || [0.4, 0.5, 0]; return `--a:${a};--hx:${hx};--ht:${ht}`; };
+  const sorteadas = {};
+  function figuraDoCaso(pid) {
+    const pe = caso.pessoas[pid];
+    if (!pe) return null;
+    if (pe.figura) return pe.figura;
+    if (!rota) return FIGURAS_GENTE[pe.tipo]?.[0] || null;
+    if (!sorteadas[pid]) {
+      const doLugar = Object.values(caso.lugares).find((l) => l.pessoas?.includes(pid))?.pessoas || [pid];
+      const usadas = new Set(doLugar.map((o) => caso.pessoas[o]?.figura).filter(Boolean));
+      for (const o of doLugar) {
+        if (caso.pessoas[o]?.figura || sorteadas[o]) continue;
+        let h = 0;
+        for (const c of o) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+        const lista = GENERICAS[generoDe(caso.pessoas[o])];
+        let f = lista[h % lista.length];
+        for (let i = 1; usadas.has(f) && i < lista.length; i++) f = lista[(h + i) % lista.length];
+        usadas.add(f);
+        sorteadas[o] = f;
+      }
+    }
+    return sorteadas[pid] || null;
+  }
   let numCaixa = 0;
   // Formato rota: as pistas que a última resposta deu, para o marca-texto na frase que é pista (direção de arte, 5.4).
   let novasDaFala = [];
@@ -691,11 +733,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     // ofício embaixo. Sem figura pintada, uma silhueta, nunca um quadrado vazio.
     if (falante && rota && caso.pessoas[falante]) {
       const pe = caso.pessoas[falante];
-      const src = pe.figura ? figuraDe(falante) : '';
+      const src = figuraDe(falante);
+      const url = src ? esc(new URL(src, location.href).href) : '';
       const cartao = document.createElement('figure');
-      cartao.className = `cartao-testemunha${src ? '' : ' sem-figura'}`;
+      cartao.className = `cartao-testemunha${pe.figura && src ? '' : ' sem-figura'}`;
       cartao.setAttribute('aria-hidden', 'true');
-      cartao.innerHTML = `<span class="ct-foto"${src ? ` style="background-image:url('${esc(new URL(src, location.href).href)}')"` : ''}></span><figcaption>${esc(pe.nome)}</figcaption><small>${esc(pe.sub || '')}</small>`;
+      const foto = !src ? '<span class="ct-foto"></span>'
+        : pe.figura ? `<span class="ct-foto" style="background-image:url('${url}')"></span>`
+          : `<span class="ct-foto com-silhueta" style="--rosto:url('${url}');${enquadreDe(falante)}"><i></i></span>`;
+      cartao.innerHTML = `${foto}<figcaption>${esc(pe.nome)}</figcaption><small>${esc(pe.sub || '')}</small>`;
       camada.el.prepend(cartao);
       camada.el.classList.add('com-cartao');
       marcarPistas(camada.el);
@@ -1323,7 +1369,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     return caso.lugares[id].pessoas.filter((pid) => !st.escondidos.includes(pid)).map((pid) => {
       const pe = caso.pessoas[pid];
       const pos = st.posPessoas[pid];
-      return { id: pid, tipo: pe.tipo, nome: pe.nome, sub: subDe(pid), figura: pe.figura, x: pos?.[0] ?? pe.x, y: pos?.[1] ?? pe.y, falas: pe.falas };
+      return { id: pid, tipo: pe.tipo, nome: pe.nome, sub: subDe(pid), figura: rota ? figuraDoCaso(pid) : pe.figura, x: pos?.[0] ?? pe.x, y: pos?.[1] ?? pe.y, falas: pe.falas };
     });
   }
   const subDe = (pid) => `${caso.pessoas[pid].sub}${!foraDoRastro() && temAssuntoNovo(pid) && st.achados.includes(`conheceu-${pid}`) ? ' · assunto novo' : ''}`;
@@ -1350,6 +1396,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           rosto.className = 'rosto-testemunha';
           rosto.setAttribute('aria-hidden', 'true');
           rosto.style.setProperty('--rosto', `url('${new URL(src, location.href).href}')`);
+          // Sem figura própria, a silhueta da figura genérica, igual à do cartão.
+          if (!caso.pessoas[pid].figura) { rosto.classList.add('silhueta'); rosto.innerHTML = '<i></i>'; rosto.style.cssText += `;${enquadreDe(pid)}`; }
           el.appendChild(rosto);
         }
         rosto?.classList.toggle('nova', quer);
