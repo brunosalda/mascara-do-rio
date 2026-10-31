@@ -219,6 +219,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     alca.setAttribute('aria-label', aberta ? 'Recolher o quadro do caso e o registro' : 'Abrir o quadro do caso e o registro');
   });
   painelBaixo.prepend(alca);
+  // Carmen 2026, celular: a pílula do caso ("Onde? · Quem?") também abre a folha.
+  painelBaixo.addEventListener('click', (ev) => { if (ev.target.closest('.quadro-resumo') && !painelBaixo.classList.contains('folha-aberta')) alca.click(); });
   const ajustarFolha = () => {
     if (!tela.isConnected) { window.removeEventListener('resize', ajustarFolha); return; }
     const celular = document.body.classList.contains('celular');
@@ -970,6 +972,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     return a?.dentro === para || b?.dentro === de || (a?.dentro && a.dentro === b?.dentro) ? 2 : caso.custo.viagem;
   }
   const destinoEm = (l) => l.em.replace(/^em /, 'a ').replace(/^na /, 'à ').replace(/^no /, 'ao ');
+  // Formato rota: o lugar atual não está no rastro (chegou por uma viagem errada).
+  function foraDoRastro() { return rota && !!banco?.estado?.percurso?.length && !banco.estado.percurso.includes(st.lugar); }
   function viajar() {
     if (rota && st.resolvido) { verORastro(); return; }
     if (rota) {
@@ -977,12 +981,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       // As pistas de destino ouvidas aqui: pelo registro da chegada da pista ou, sem ele (jogo salvo antes), pela
       // fonte (uma pessoa ou um ponto deste lugar).
       const ouvidas = st.ouvidas || {};
-      const aqui = caso.lugares[st.lugar];
+      // Fora do rastro (viagem errada), o mapa mostra as pistas do último lugar certo.
+      const fora = foraDoRastro();
+      const base = fora ? (e.percurso || []).at(-1) : st.lugar;
+      const aqui = caso.lugares[base] || caso.lugares[st.lugar];
       const nomes = [...(aqui.pessoas || []).map((id) => caso.pessoas[id]?.nome), ...(aqui.pontos || []).map((x) => x.rotulo)].filter(Boolean).map((n) => n.toLowerCase());
-      const daqui = (x) => (ouvidas[x.id] ? ouvidas[x.id] === st.lugar : nomes.some((n) => { const f = (x.fonte || '').toLowerCase(); return f && (f === n || f.includes(n) || n.includes(f)); }));
+      const daqui = (x) => (ouvidas[x.id] ? ouvidas[x.id] === base : nomes.some((n) => { const f = (x.fonte || '').toLowerCase(); return f && (f === n || f.includes(n) || n.includes(f)); }));
       abrirMapaRota(tela, {
         caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])],
-        destinos: (e.pistas || []).filter((x) => x.tipo === 'destino' && daqui(x)),
+        destinos: (e.pistas || []).filter((x) => x.tipo === 'destino' && daqui(x)), fora: fora ? (aqui.em || `em ${aqui.nome}`) : null,
         relogio: { inicio: caso.relogio.inicio, fim: caso.relogio.fim, hora: st.hora }, aoViajar: (id) => irPara(id),
       });
       return;
@@ -1055,7 +1062,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const el = document.createElement('div');
     el.className = 'cartao-chegada';
     el.setAttribute('role', 'status');
-    el.innerHTML = `<b>${esc(l.nome)}</b><small>${hora(st.hora)}${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${v?.tipo === 'errada' ? '<span class="carimbo carimbo-p">Ninguém viu</span>' : ''}`;
+    el.innerHTML = `<b>${esc(l.nome)}</b><small><span class="hora-cartao">${hora(st.hora)}</span>${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${v?.tipo === 'errada' ? `<span class="carimbo carimbo-p">Ninguém viu</span><em class="cartao-volta">Ninguém ${esc(l.em)} viu quem você procura. Volte ao mapa.</em>` : ''}`;
     tela.appendChild(el);
     tela.classList.add('chegando');
     if (v?.tipo === 'errada') setTimeout(() => som.carmen?.('carimbo'), cerimoniasCurtas() ? 0 : 420);
@@ -1083,7 +1090,6 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     if (v.voo) anotar('VOCÊ', l.cidade === 'sp' ? 'A ponte aérea pousa em São Paulo.' : 'A ponte aérea pousa de volta no Rio.');
     if (v.tipo === 'errada') {
       anotar('A FOME', `Nenhum cheiro dele ${l.em}. O rastro não passou por aqui.`);
-      avisar('faixa-evento', 'Lugar errado', `Ninguém ${l.em} viu quem você procura. Volte ao mapa.`);
     } else if (v.esconderijo) {
       som.reacao?.('susto', 0);
       caixa({ rotulo: 'O esconderijo', texto: `${v.avistamento || ''}
@@ -1170,7 +1176,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       return { id: pid, tipo: pe.tipo, nome: pe.nome, sub: subDe(pid), figura: pe.figura, x: pos?.[0] ?? pe.x, y: pos?.[1] ?? pe.y, falas: pe.falas };
     });
   }
-  const subDe = (pid) => `${caso.pessoas[pid].sub}${temAssuntoNovo(pid) && st.achados.includes(`conheceu-${pid}`) ? ' · assunto novo' : ''}`;
+  const subDe = (pid) => `${caso.pessoas[pid].sub}${!foraDoRastro() && temAssuntoNovo(pid) && st.achados.includes(`conheceu-${pid}`) ? ' · assunto novo' : ''}`;
   function atualizarCena() {
     if (!cena) return;
     cena.atualizarPontos(pontosDo(st.lugar));
@@ -1182,7 +1188,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       // Rodada 46: o nome fica sempre à vista sobre quem você já conhece.
       el.classList.toggle('conhecida', st.achados.includes(`conheceu-${pid}`));
       // Balão sobre a cabeça de quem tem algo novo a dizer (sempre à vista, sem Tab).
-      const quer = !fuga && temAssuntoNovo(pid);
+      // Fora do rastro, ninguém tem o que contar sobre a fuga: sem ponto de assunto novo.
+      const quer = !fuga && !foraDoRastro() && temAssuntoNovo(pid);
       // Carmen 2026 (7.2): no lugar do balão, o rosto da testemunha num círculo; o ponto de sódio marca
       // assunto novo, e o rosto fica apagado depois da conversa.
       if (rota) {
@@ -1773,12 +1780,16 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         rotulo: 'Mais opções',
         texto: `<p>${esc(caso.rotulo)} da temporada: o progresso fica guardado no servidor.</p>`,
         // No Carmen 2026, a ficha, o som e a ajuda moram aqui (a cena só tem Mapa, Arquivo e Pistas).
-        opcoes: [...(rota ? ['Ver a ficha', som.ligado() ? 'Desligar o som' : 'Ligar o som', 'Como jogar'] : []), ...(st.resolvido ? [] : ['Pedir uma dica']), 'Ver o ranking da temporada', 'Sair do caso', 'Voltar ao caso'],
+        opcoes: [...(rota ? ['Ver a ficha', som.ligado() ? 'Desligar o som' : 'Ligar o som', 'Como jogar', 'Ver a cena inteira (V)', 'Centrar no personagem (C)', tela.querySelector('.botao-pausa')?.getAttribute('aria-pressed') === 'true' ? 'Soltar a cena (espaço)' : 'Pausar a cena (espaço)', 'Esconder os painéis (H)'] : []), ...(st.resolvido ? [] : ['Pedir uma dica']), 'Ver o ranking da temporada', 'Sair do caso', 'Voltar ao caso'],
       });
-      const escolha = [...(rota ? ['ficha', 'som', 'ajuda'] : []), ...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
+      const escolha = [...(rota ? ['ficha', 'som', 'ajuda', 'visao', 'centrar', 'pausa', 'paineis'] : []), ...(st.resolvido ? [] : ['dica']), 'ranking', 'sair', 'voltar'][rb];
       if (escolha === 'ficha') verFicha();
       if (escolha === 'som') { som.alternar(); tela.querySelector('[data-hud="som"]')?.setAttribute('aria-pressed', String(som.ligado())); }
       if (escolha === 'ajuda') ajuda();
+      if (escolha === 'visao') cena?.visaoGeral();
+      if (escolha === 'centrar') cena?.centrarCamera();
+      if (escolha === 'pausa') cena?.alternarPausa();
+      if (escolha === 'paineis') alternarPaineis();
       if (escolha === 'dica') pedirDica();
       if (escolha === 'ranking') { cena?.desmontar(); location.hash = voltarPara; }
       if (escolha === 'sair') { cena?.desmontar(); location.hash = voltarPara; }

@@ -95,7 +95,7 @@ const areaComum = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.ma
 const meioDe = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 const veiculo = (de, para, t) => (t?.voo ? 'aviao' : [de, para].includes('niteroi') ? 'barca' : 'carro');
 
-export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], relogio = null, restante = null, aoViajar }) {
+export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], fora = null, relogio = null, restante = null, aoViajar }) {
   const voos = caso.tempos.filter((t) => t.voo);
   const temSP = caso.ordem.some((id) => caso.lugares[id].cidade === 'sp');
   const pos = { rio: POS_RIO, sp: posicoesSP(caso) };
@@ -243,7 +243,8 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             </div>
             <aside class="mapa-coluna">
               ${aoViajar ? `<section class="mapa-pistas">
-                <h3>Para onde foi?${destinos.length ? ` <small>${destinos.length}</small>` : ''}</h3>
+                <h3>${fora ? 'Fora do rastro' : 'Para onde foi?'}${destinos.length ? ` <small>${destinos.length}</small>` : ''}</h3>
+                ${fora ? `<p class="mapa-fora">Ninguém aqui viu a fuga. Estas são as pistas ouvidas ${esc(fora)}, o último lugar do rastro:</p>` : ''}
                 ${destinos.length ? destinos.map((d) => `<blockquote class="mapa-pista"><p>${esc(d.titulo)}</p>${d.fonte ? `<cite>${esc(d.fonte)}</cite>` : ''}</blockquote>`).join('')
                   : '<p class="mapa-vazio">Ninguém daqui disse ainda para onde a fuga seguiu. Converse com as testemunhas antes de viajar.</p>'}
               </section>

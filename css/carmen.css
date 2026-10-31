@@ -499,3 +499,70 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noit
 body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 0.6; width: 120px; }
 /* O rosto fica acima do nome (o nome ocupa os 30 px de cima da pessoa). */
 .tela-caso.carmen .pessoa .rosto-testemunha { bottom: calc(100% + 34px); }
+
+/* ============ Etapa 2, ajustes da Avaliação (30/10) ============ */
+/* 1. Coisas para examinar: um círculo de 36 px (44 no celular) com lupa em sódio, como o rosto das testemunhas.
+   O anel pulsa até o primeiro exame; depois, ✓ apagado. O nome só aparece no mouse, de perto ou no "mostrar tudo". */
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) :is(.ponto-luz, .ponto-faiscas, .ponto-contorno) { display: none; }
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) { --lado: 36px; }
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta)::before,
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta)::after {
+  content: ""; display: block; position: absolute; left: 50%; bottom: 0; translate: -50% 0; border-radius: 50%;
+  width: calc(var(--lado) / var(--escala, 1)); height: calc(var(--lado) / var(--escala, 1));
+}
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta)::before {
+  z-index: 1; box-sizing: border-box; border: calc(2px / var(--escala, 1)) solid var(--c-sodio);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2a33a' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5'/%3E%3Cpath d='M15 15l5 5'/%3E%3C/svg%3E") center / 58% no-repeat, rgba(13, 19, 34, 0.82);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7); transition: transform var(--t-rapido) var(--curva-sai), opacity var(--t-medio), filter var(--t-medio);
+}
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):not(.feito)::after {
+  border: calc(2px / var(--escala, 1)) solid var(--c-sodio); pointer-events: none; animation: carmen-anel 1.8s ease-out infinite;
+}
+@keyframes carmen-anel { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.6); opacity: 0; } }
+.tela-caso.carmen .ponto.feito:not(.ponto-saida, .ponto-presa, .ponto-porta)::before {
+  border-color: var(--c-linha-forte); opacity: 0.72; filter: grayscale(0.5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ba5b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.tela-caso.carmen .ponto.feito:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo::after { content: none; }
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):is(:hover, .perto, :focus-visible)::before { transform: scale(1.08); opacity: 1; filter: none; }
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo { left: calc(50% + 26px / var(--escala, 1)); }
+body.celular .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) { --lado: 44px; }
+@media (prefers-reduced-motion: reduce) { .tela-caso.carmen .ponto:not(.feito)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
+
+/* 2. Os botões redondos (visão, centrar, pausa, painéis) saem de cima da cena: vão para o "⋯" e para as teclas V, C, espaço e H.
+   Com os painéis escondidos, o botão de mostrá-los continua, senão não haveria volta pelo toque. */
+.tela-jogo.bg2.tela-caso.carmen :is(.botao-visao, .botao-centrar, .botao-pausa) { display: none !important; }
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .mostrar-paineis { display: none !important; }
+
+/* 3. Viagem errada: o "Volte ao mapa" vai no cartão (sem a faixa); a hora do cartão em minúsculas ("2h11"). */
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada .hora-cartao { text-transform: none; }
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { display: block; margin-top: 8px; font: 500 16px/1.3 var(--f-ui); font-style: normal; color: var(--c-texto); }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { font-size: 13px; }
+.carmen .mapa-coluna .mapa-fora, .mapa-tela-cheia .mapa-fora { margin: 0 0 10px; font: 500 14px/1.35 var(--f-ui); color: var(--c-texto-suave); }
+/* O "visto" do jogo antigo apagava o ponto (opacidade e saturação); no Carmen, só o exame feito apaga. */
+.tela-caso.carmen .ponto.visto:not(.ponto-saida, .ponto-presa, .ponto-porta) { opacity: 1; filter: none; }
+
+/* 4. Relógio do celular: 72 px de largura, hora em 20 px e o "faltam" em 11 px (sem o zoom que o deixava com 52 px). */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite.com-arco { width: 88px !important; min-width: 88px; right: 4px !important; left: auto !important; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 1; transform: none; position: relative; width: 72px; height: 64px; margin: 0 auto; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite .relogio-arco svg { width: 72px; height: 50px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco b { top: 19px; font-size: 20px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco small { display: block; top: 50px; left: -8px; right: -8px; font-size: 11px !important; white-space: nowrap; }
+
+/* 5. A faixa de baixo do celular: retrato, gotas e a pílula do caso numa fileira só, de 44 px, sobre a barra.
+   Tocar na pílula abre a folha (o quadro do caso e o registro). */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) { --folha: 44px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-retrato {
+  bottom: calc(var(--barra) + env(safe-area-inset-bottom)); left: 8px; height: 44px; z-index: 620; gap: 4px;
+}
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .retrato-grande { width: 40px; height: 40px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-retrato .gotas { display: flex !important; flex-direction: column; gap: 1px; margin: 0; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-retrato .gota { width: 7px; height: 8px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) {
+  height: 44px; min-height: 0; padding: 0 12px 0 68px; align-items: center; overflow: hidden;
+}
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) > :not(.quadro-caso, .alca-folha) { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .alca-folha { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo { cursor: pointer; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-caso { display: flex; align-items: center; width: 100%; height: 44px; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo:not(.folha-aberta) .quadro-resumo { text-align: left; }
