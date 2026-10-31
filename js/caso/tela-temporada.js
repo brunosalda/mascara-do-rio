@@ -4,6 +4,7 @@
 import { sb } from '../banco.js';
 import { ranking } from './fonte-banco.js';
 import { esc } from '../ui.js';
+import { fotoPrisao } from './rota.js';
 
 const SELOS = { 'sem-erros': 'sem erros', 'sem-dicas': 'sem dicas', detetive: 'detetive', primeiro: 'primeiro a resolver', 'mais-rapido': 'mais rápido' };
 
@@ -31,7 +32,10 @@ export async function telaTemporada(raiz, estadoApp) {
     const linhasCap = caps.map((c) => {
       const pr = meu[c.id];
       const situacao = pr?.resolvido_em ? `resolvido · ${pr.nota} pontos${pr.selos?.length ? ` · ${pr.selos.map((s) => SELOS[s] || s).join(', ')}` : ''}` : pr ? 'em andamento' : 'novo';
-      return `<li><a class="btn${pr?.resolvido_em ? '' : ' destaque'}" href="#/temporada/${encodeURIComponent(c.id)}">Capítulo ${c.ordem}: ${esc(c.titulo)}</a><small>${esc(situacao)}</small><p class="nota">${esc(c.pergunta)}</p></li>`;
+      // A foto da prisão fica neste aparelho, no estado do capítulo (tela-caso.js guarda na hora do cerco).
+      let foto = null;
+      if (pr?.resolvido_em && p) try { foto = JSON.parse(localStorage.getItem(`mascara.temporada.${c.id}.${p.id}`))?.foto || null; } catch { /* sem armazenamento */ }
+      return `<li${foto ? ' class="com-foto"' : ''}>${fotoPrisao(foto, foto?.texto, 'temporada-foto')}<a class="btn${pr?.resolvido_em ? '' : ' destaque'}" href="#/temporada/${encodeURIComponent(c.id)}">Capítulo ${c.ordem}: ${esc(c.titulo)}</a><small>${esc(situacao)}</small><p class="nota">${esc(c.pergunta)}</p></li>`;
     }).join('');
     const linhasRk = (rk?.ranking || []).map((x, i) => `<li class="${x.voce ? 'voce' : ''}"><span class="placar-pos">${i + 1}º</span><b>${esc(x.nome)}</b><small>${x.media != null ? `média ${x.media}` : 'sem capítulo resolvido'} · ${x.resolvidos} ${x.resolvidos === 1 ? 'capítulo' : 'capítulos'}${x.erros ? ` · ${x.erros} ${x.erros > 1 ? 'erros' : 'erro'}` : ''}</small></li>`).join('');
     return `<section class="cartao temporada">

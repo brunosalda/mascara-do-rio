@@ -7,7 +7,7 @@ import { CENAS, clasSugeridos, montarFicha } from '../motor/roteiro.js';
 import * as R from './regras.js';
 import { CASO } from './demo-beco.js';
 import { abrirQuadro, palavrasLiberadas } from './quadro.js';
-import { abrirMapaRota, abrirArquivo, relogioArco, miniRastro } from './rota.js';
+import { abrirMapaRota, abrirArquivo, relogioArco, miniRastro, fotoPrisao } from './rota.js';
 import { icone } from './icones.js';
 import { cerimoniasCurtas } from '../leitura.js';
 import { iniciarPerseguicao } from './perseguicao.js';
@@ -1271,6 +1271,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // Carmen 2026 (7.5): o momento antes do cerco. Faixas pretas em cima e embaixo, a cena aproxima 1,15, uma
   // batida de coração e o cartão "Está aqui." Sem Licença, o primário é abrir o Arquivo, e cercar fica como
   // secundário, com o risco escrito.
+  // Onde o alvo estava na cena (em %), para a foto da prisão: depois do cerco, o ponto sai da cena.
+  let posAlvo = null;
   function momentoCerco() {
     if (tela.querySelector('.cartao-cerco')) return;
     const lic = !!banco.estado.licenca;
@@ -1283,6 +1285,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const b = palcoEl.getBoundingClientRect();
       const ox = a.left + a.width / 2 - b.left;
       const oy = a.bottom - b.top;
+      posAlvo = { x: Math.round((ox / b.width) * 100), y: Math.round(((a.top + a.height / 2 - b.top) / b.height) * 100) };
       palcoEl.style.transformOrigin = `${ox}px ${oy}px`;
       // Leva o alvo para o alto da tela, acima do cartão, sem passar da folga que o zoom de 15% dá nas bordas.
       const entre = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -1325,12 +1328,21 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const el = document.createElement('div');
       el.className = `cerco-fim ${preso ? 'preso' : 'fugiu'}${cerimoniasCurtas() ? ' curta' : ''}`;
       el.innerHTML = `<span class="cerco-clarao" aria-hidden="true"></span><span class="carimbo carimbo-g">${texto}</span>`;
+      // O alvo continua no anel: preso, fica na foto; no FUGIU, a silhueta sai do anel e some.
+      const alvo = tela.querySelector('[data-ponto="cercar"]');
+      alvo?.classList.add('alvo-cerco');
+      if (!preso && alvo && !cerimoniasCurtas()) alvo.insertAdjacentHTML('beforeend', '<span class="alvo-fugindo" aria-hidden="true"></span>');
+      if (preso) {
+        const lim = (v, pad) => Math.max(5, Math.min(95, v ?? pad));
+        st.foto = { img: geografia(caso.lugares[st.lugar].geo).imagem, x: lim(posAlvo?.x, 50), y: lim(posAlvo?.y, 60), texto };
+        salvar();
+      }
       tela.classList.add(preso ? 'cena-preso' : 'cena-fugiu');
       tela.appendChild(el);
       // Com "menos movimento", o carimbo já aparece assentado e fica 1,5 s (ou até o clique).
       const dur = cerimoniasCurtas() ? 1500 : preso ? 1800 : 1500;
       let foi = false;
-      const fim = () => { if (foi) return; foi = true; el.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); };
+      const fim = () => { if (foi) return; foi = true; el.remove(); alvo?.classList.remove('alvo-cerco'); alvo?.querySelector('.alvo-fugindo')?.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); };
       el.style.pointerEvents = 'auto';
       el.addEventListener('click', fim);
       setTimeout(fim, dur);
@@ -1846,6 +1858,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           <div class="placar-tela">
             <section class="placar-col placar-caso">
               <small class="placar-kicker">${esc(caso.rotulo)} · ${esc(caso.titulo)}</small>
+              ${fotoPrisao(st.foto, st.foto?.texto, 'placar-foto')}
               <span class="carimbo carimbo-g placar-carimbo">Caso fechado</span>
               <h3>${suspeito?.genero === 'f' ? 'Presa' : 'Preso'} às ${doisDigitos(Math.floor(horaFim / 60) % 24)}:${doisDigitos(horaFim % 60)}</h3>
               <p class="placar-linha">${esc(linhaEstrelas)}</p>

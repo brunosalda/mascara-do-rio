@@ -571,6 +571,18 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
   });
 }
 
+// --- A foto da prisão -----------------------------------------------------------------------------------
+// A lembrança do cerco: a pintura do esconderijo em preto e branco, a silhueta do alvo onde ele estava e o
+// carimbo. foto: { img, x, y } (x e y em % da cena), guardada no estado do capítulo na hora da prisão.
+export function fotoPrisao(foto, texto = 'Preso', classe = '') {
+  if (!foto?.img) return '';
+  const url = new URL(foto.img, location.href).href;
+  return `<figure class="foto-prisao ${classe}" style="--foto:url('${esc(url)}')" aria-label="A foto da prisão">
+    <span class="foto-alvo" style="left:${Number(foto.x) || 50}%;top:${Number(foto.y) || 60}%" aria-hidden="true"></span>
+    <span class="carimbo carimbo-p">${esc(texto)}</span>
+  </figure>`;
+}
+
 // --- O retrato falado ---------------------------------------------------------------------------------
 // Silhueta de busto. Cada traço conhecido acrescenta um detalhe: o cabelo (aparência), o sinal particular e,
 // no rodapé, o clã aparente. Sem traço, só a sombra.
