@@ -1323,3 +1323,5 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 /* Os nomes das avenidas e do rio também nunca abaixo de 11 px na tela. */
 .carmen .sp-avenida-nome { font-size: calc(24px * var(--u, 1)); }
 .carmen .rota-agua-nome { font-size: calc(26px * var(--u, 1)); }
+/* O brilho da pérola. */
+.retrato-falado.esboco .rf-brilho { fill: #ffffff; }

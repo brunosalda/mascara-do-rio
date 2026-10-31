@@ -673,17 +673,15 @@ function cabelo(ap, c, f, v) {
   const d = 50 + c.w;
   const t = c.topo;
   switch (ap) {
-    case 'cabelo-branco':
-      return f
-        ? `<path class="rf-cabelo branco" d="M${e - 3} 60 Q${e - 5} ${t - 4} 50 ${t - 3} Q${d + 5} ${t - 4} ${d + 3} 60 L${d - 1} 58 Q${d} 30 50 ${t + 6} Q${e} 30 ${e + 1} 58 Z"/><path class="rf-fio" d="M44 ${t + 1} q-6 8 -8 22 M56 ${t + 1} q6 8 8 22 M50 ${t - 2} v6"/>`
-        : `<path class="rf-cabelo branco" d="M${e} 38 Q${e - 1} ${t - 3} 50 ${t - 3} Q${d + 1} ${t - 3} ${d} 38 Q${d - 3} ${t + 5} 50 ${t + 5} Q${e + 3} ${t + 5} ${e} 38 Z"/><path class="rf-fio" d="M42 ${t} l2 4 M48 ${t - 2} l1 4 M55 ${t - 1} l-1 4 M61 ${t + 1} l-2 4"/>`;
+    case 'cabelo-branco': // rente, também nas mulheres; nelas, com uma franja de lado
+      return `${f ? `<path class="rf-cabelo branco" d="M${e + 1} 36 Q${e + 4} ${t + 1} 52 ${t + 3} Q${d - 2} ${t + 6} ${d - 4} ${t + 13} Q${d - 9} ${t + 7} 50 ${t + 7} Q${e + 5} ${t + 9} ${e + 1} 36 Z"/>` : ''}<path class="rf-cabelo branco" d="M${e} 38 Q${e - 1} ${t - 3} 50 ${t - 3} Q${d + 1} ${t - 3} ${d} 38 Q${d - 3} ${t + 5} 50 ${t + 5} Q${e + 3} ${t + 5} ${e} 38 Z"/><path class="rf-fio" d="M42 ${t} l2 4 M48 ${t - 2} l1 4 M55 ${t - 1} l-1 4 M61 ${t + 1} l-2 4"/>`;
     case 'ruivo':
       return f
         ? `<path class="rf-cabelo ruivo" d="M${e - 4} 74 Q${e - 9} 50 ${e - 4} 30 Q${e} ${t - 6} 50 ${t - 5} Q${d} ${t - 6} ${d + 4} 30 Q${d + 9} 50 ${d + 4} 74 Q${d - 2} 60 ${d - 1} 40 Q${d - 6} ${t + 6} 50 ${t + 7} Q${e + 6} ${t + 6} ${e + 1} 40 Q${e + 2} 60 ${e - 4} 74 Z"/>`
         : `<path class="rf-cabelo ruivo" d="M${e - 2} 44 Q${e - 6} ${t - 2} ${e + 4} ${t - 4} Q50 ${t - 10} ${d - 4} ${t - 4} Q${d + 6} ${t - 2} ${d + 2} 44 Q${d - 2} ${t + 6} 50 ${t + 6} Q${e + 2} ${t + 6} ${e - 2} 44 Z"/>`;
     case 'trancas': {
-      const contas = (x) => [0, 1, 2, 3, 4, 5].map((i) => `<circle class="rf-tranca" cx="${x}" cy="${44 + i * 5.2}" r="2.8"/>`).join('');
-      return `<path class="rf-cabelo trancas" d="M${e - 1} 44 Q${e - 2} ${t - 3} 50 ${t - 3} Q${d + 2} ${t - 3} ${d + 1} 44 Q${d - 2} ${t + 4} 50 ${t + 4} Q${e + 2} ${t + 4} ${e - 1} 44 Z"/><path class="rf-fio" d="M50 ${t - 3} v7"/>${contas(e - 2)}${contas(d + 2)}`;
+      const contas = (x) => [0, 1, 2, 3, 4, 5].map((i) => `<circle class="rf-tranca" cx="${x}" cy="${46 + i * 4.8}" r="2.4"/>`).join('');
+      return `<path class="rf-cabelo trancas" d="M${e - 1} 44 Q${e - 2} ${t - 3} 50 ${t - 3} Q${d + 2} ${t - 3} ${d + 1} 44 Q${d - 2} ${t + 4} 50 ${t + 4} Q${e + 2} ${t + 4} ${e - 1} 44 Z"/><path class="rf-fio" d="M50 ${t - 3} v7"/>${contas(e - 6)}${contas(d + 6)}`;
     }
     case 'careca-oculos':
       return `<path class="rf-fio" d="M43 ${t + 3} q6 -3 12 0"/><g class="rf-oculos"><circle cx="44" cy="42" r="5.6"/><circle cx="56" cy="42" r="5.6"/><path d="M49.6 41.4 q0.4 -1 0.8 0 M38.4 41 L${e} 40 M61.6 41 L${d} 40"/></g>`;
@@ -710,9 +708,9 @@ function sinal(s, c) {
   switch (s) {
     case 'dedo-faltando': return mao(80, 'M74.4 85 v-9 M78.4 85 v-11 M82.4 85 v-1.6 M86.2 85 v-8', '<path class="rf-sinal" d="M80.8 82.4 q1.6 -1.4 3.2 0"/>');
     case 'anel-serpente': return mao(20, 'M13.8 85 v-8 M17.8 85 v-10 M21.8 85 v-10 M25.6 85 v-8', '<path class="rf-sinal ouro-linha" d="M19.8 80 h4 M19.8 78.4 h4"/><circle class="rf-sinal ouro" cx="24.6" cy="77.6" r="1.1"/>');
-    case 'brinco-perola': return `<circle class="rf-sinal perola" cx="${e - 1.6}" cy="50.5" r="2.4"/>`;
+    case 'brinco-perola': return `<path class="rf-sinal ouro-linha" d="M${e - 1.4} 48.6 v3.4"/><circle class="rf-sinal perola" cx="${e - 1.4}" cy="54.4" r="2.4"/><circle class="rf-brilho" cx="${e - 2.2}" cy="53.6" r="0.7"/>`;
     case 'ancora': return `<path class="rf-sinal rf-tinta" d="M59 ${q + 1} v8 m-3 -5.5 h6 m-6.5 3.5 q3.5 4 7 0 M59 ${q + 1} m-1.2 -1.2 a1.2 1.2 0 1 0 2.4 0 a1.2 1.2 0 1 0 -2.4 0"/>`;
-    case 'cicatriz': return '<path class="rf-sinal" d="M55 45 L63 54 M56.4 48.6 l2.4 -1.6 M58.4 50.8 l2.4 -1.6 M60.4 53 l2.4 -1.6"/>';
+    case 'cicatriz': return '<path class="rf-sinal" d="M54.6 32 L61.4 46 M55.2 35.2 l2.6 -1.2 M56.8 38.6 l2.6 -1.2 M58.4 42 l2.6 -1.2"/>';
     case 'medalha': return `<path class="rf-corrente" d="M43 ${q + 5} Q50 ${q + 19} 57 ${q + 5}"/><circle class="rf-sinal ouro" cx="50" cy="${q + 15.5}" r="3.4"/>`;
     default: return '';
   }
@@ -727,6 +725,18 @@ const ROUPA = {
   caderninho: '<path class="rf-roupa-linha" d="M44 70 L48 78 L50 74 L52 78 L56 70 M50 78 V100 M56 84 h9 v8 h-9 Z"/><path class="rf-lapis" d="M59 84 L61 75"/>',
   assobia: '<path class="rf-roupa-linha" d="M43 70 L48 80 L50 76 L52 80 L57 70"/><circle class="rf-botao" cx="50" cy="86" r="0.9"/><circle class="rf-botao" cx="50" cy="93" r="0.9"/>',
 };
+// O rosto pela ficha: três olhos (amendoado, de pálpebra pesada, estreito) e três narizes (curto, comprido e reto,
+// largo); os lábios, finos ou cheios, vão no meio do retrato.
+const OLHOS = [
+  'M41 42 q3 -2.4 6 0 q-3 1.6 -6 0 M53 42 q3 -2.4 6 0 q-3 1.6 -6 0',
+  'M41 42.4 q3 -3.2 6 0 q-3 1.4 -6 0 M53 42.4 q3 -3.2 6 0 q-3 1.4 -6 0 M40.8 40.4 q3.2 -1.6 6.4 0.2 M52.8 40.6 q3.2 -1.8 6.4 -0.2',
+  'M40.6 42 q3.4 -1.4 6.8 0 q-3.4 0.8 -6.8 0 M52.6 42 q3.4 -1.4 6.8 0 q-3.4 0.8 -6.8 0',
+];
+const NARIZES = [
+  'M50 44 q-2 6 -0.6 8 q1.6 0.8 3.2 -0.2',
+  'M50.4 42.6 L49 52.4 q1.8 1.2 3.8 -0.2',
+  'M50 45 q-0.8 4.6 -2.8 6.2 q1.8 1.6 3.2 0.4 q1.6 1.2 3.4 -0.4 q-1.4 -0.8 -1.6 -2',
+];
 const semear = (txt) => [...String(txt)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 let retratos = 0;
 export function retratoFalado(tr = {}, { genero = null, semente = null, novos = null } = {}) {
@@ -767,11 +777,13 @@ export function retratoFalado(tr = {}, { genero = null, semente = null, novos = 
         <path class="rf-cabeca" d="${c.d}"/>
         <rect x="55" y="10" width="30" height="64" fill="url(#${u}h)" clip-path="url(#${u}c)" class="rf-sombra"/>
         <path class="rf-linha fina" d="M40 ${37 + sobr} q4 -2.2 8 -0.4 M52 ${36.6} q4 -1.8 8 ${0.4 + sobr}"/>
-        <path class="rf-linha" d="M41 42 q3 -2.4 6 0 q-3 1.6 -6 0 M53 42 q3 -2.4 6 0 q-3 1.6 -6 0"/>
-        <circle class="rf-olho" cx="44" cy="42" r="0.9"/><circle class="rf-olho" cx="56" cy="42" r="0.9"/>
+        <path class="rf-linha" d="${OLHOS[(h >> 21) % 3]}"/>
+        <circle class="rf-olho" cx="44" cy="42" r="${(h >> 21) % 3 === 2 ? 0.75 : 0.95}"/><circle class="rf-olho" cx="56" cy="42" r="${(h >> 21) % 3 === 2 ? 0.75 : 0.95}"/>
+        ${f ? '<path class="rf-linha fina" d="M40.8 41.2 l-1.6 -1.2 M41.2 40.4 l-1 -1.6 M59.2 41.2 l1.6 -1.2 M58.8 40.4 l1 -1.6"/>' : ''}
+        ${tr.aparencia === 'cabelo-branco' ? `<path class="rf-linha fina leve" d="M43 ${c.topo + 11} q7 -1.6 14 0 M44.4 ${c.topo + 14} q5.6 -1.2 11.2 0 M39.6 43.6 l-1.8 0.8 M39.8 42 l-2 -0.2 M60.4 43.6 l1.8 0.8 M60.2 42 l2 -0.2 M46 50 q-2.4 3.4 -1.6 6.4 M54 50 q2.4 3.4 1.6 6.4"/>` : ''}
         <path class="rf-sombra" d="M${e + 2} 48 q4 ${4 + ((h >> 19) % 3)} 9 6 l-1 2 q-6 -1 -8 -6 Z M52 44 l-1.4 7 l2.6 -0.4 Z" fill="url(#${u}h)"/>
         <path class="rf-linha fina leve" d="M41.6 44.6 q2.4 1 4.8 0 M53.6 44.6 q2.4 1 4.8 0"/>
-        <path class="rf-linha fina" d="M50 44 q-2 6 -0.6 8 q1.6 0.8 3.2 -0.2 M45 ${q - 9} q5 ${boca} 10 0${(h >> 15) % 2 ? ` M48.6 ${q - 3} q1.4 0.8 2.8 0` : ''}"/>
+        <path class="rf-linha fina" d="${NARIZES[(h >> 23) % 3]} ${f || (h >> 25) % 2 ? `M45 ${q - 9} q2.5 -1.6 5 -0.4 q2.5 -1.2 5 0.4 M45 ${q - 9} q5 ${boca} 10 0 M46.4 ${q - 8.4} q3.6 2.8 7.2 0` : `M45 ${q - 9} q5 ${boca} 10 0`}${(h >> 15) % 2 ? ` M48.6 ${q - 3} q1.4 0.8 2.8 0` : ''}"/>
         ${lapis('aparencia', cabelo(tr.aparencia, c, f, h >> 17))}
         ${lapis('sinal', sinal(tr.sinal, c))}
       </g>
