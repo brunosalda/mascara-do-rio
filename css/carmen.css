@@ -785,3 +785,41 @@ body.celular .licenca-guardar { position: fixed; z-index: 5; left: 14px; right: 
 .licenca-doc.assinando:not(.assinada) .licenca-assina span { animation: licenca-assinar 500ms ease-out forwards; }
 @keyframes licenca-assinar { to { clip-path: inset(0 0 0 0); } }
 body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, body:not(.celular) .licenca-assina small { font-size: 12px; }
+
+/* ============ Etapa 5: o Cerco (direção de arte, 7.5) ============ */
+.tela-jogo.bg2.tela-caso.carmen .palco { transition: transform 800ms var(--curva-sai), filter 400ms; transform-origin: 50% 55%; }
+.tela-jogo.bg2.tela-caso.carmen.cercando .palco { transform: scale(1.15); }
+.cerco-camada { position: absolute; inset: 0; z-index: 700; display: grid; place-items: end center; padding-bottom: calc(12vh + 24px); background: radial-gradient(70% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.7)); }
+.faixa-cerco { position: absolute; left: 0; right: 0; height: 12%; background: #000; animation: cerco-faixa 400ms var(--curva-sai) both; }
+.faixa-cerco.cima { top: 0; transform-origin: top; }
+.faixa-cerco.baixo { bottom: 0; transform-origin: bottom; }
+@keyframes cerco-faixa { from { transform: scaleY(0); } }
+.cartao-cerco {
+  position: relative; width: min(520px, calc(100% - 32px)); padding: 22px 24px 20px; display: grid; gap: 10px;
+  border: 1px solid var(--c-linha-forte); border-radius: 14px; background: var(--c-vidro); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); animation: cerco-cartao 500ms var(--curva-sai) 400ms both;
+}
+@keyframes cerco-cartao { from { opacity: 0; translate: 0 24px; } }
+.cartao-cerco h3 { margin: 0; font: 800 56px/0.95 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-texto); }
+.cartao-cerco p { margin: 0; font: 500 17px/1.4 var(--f-ui); color: var(--c-texto); }
+.cartao-cerco .cerco-risco { color: var(--c-rastro-texto); font-size: 15px; }
+.cerco-botoes { display: flex; gap: 10px; margin-top: 6px; }
+.cerco-botoes .btn { min-height: 48px; }
+.cerco-botoes .btn.destaque { flex: 1; }
+/* Preso: clarão branco de 80 ms e a cena em preto e branco com o carimbo G. Fugiu: a cena escurece e leva FUGIU. */
+.cerco-fim { position: absolute; inset: 0; z-index: 720; display: grid; place-items: center; pointer-events: none; }
+.cerco-clarao { position: absolute; inset: 0; background: #fff; opacity: 0; }
+.cerco-fim.preso .cerco-clarao { animation: cerco-clarao 380ms ease-out 150ms both; }
+@keyframes cerco-clarao { 0% { opacity: 0; } 20% { opacity: 0.95; } 100% { opacity: 0; } }
+.cerco-fim .carimbo { animation-delay: 300ms; background: rgba(236, 228, 210, 0.85); }
+.tela-jogo.bg2.tela-caso.carmen.cena-preso .palco { filter: grayscale(1) contrast(1.1); }
+.tela-jogo.bg2.tela-caso.carmen.cena-fugiu .palco { filter: brightness(0.35) saturate(0.6); }
+/* Celular: faixas de 8% e o cartão sobe de baixo, com os botões ao alcance do polegar. */
+body.celular .faixa-cerco { height: 8%; }
+body.celular .cerco-camada { padding-bottom: calc(8vh + 12px); }
+body.celular .cartao-cerco { width: calc(100% - 24px); padding: 18px 16px 16px; }
+body.celular .cartao-cerco h3 { font-size: 44px; }
+body.celular .cerco-botoes { flex-direction: column; }
+body.celular .cerco-botoes .btn { min-height: 52px; }
+/* No cerco, o HUD some: só a cena, as faixas e o cartão. */
+.tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo, .faixa-demo, .dica-acao, .ponto-dica, .dica) { opacity: 0; pointer-events: none; transition: opacity 300ms; }

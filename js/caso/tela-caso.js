@@ -1091,14 +1091,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     if (v.tipo === 'errada') {
       anotar('A FOME', `Nenhum cheiro dele ${l.em}. O rastro não passou por aqui.`);
     } else if (v.esconderijo) {
-      som.reacao?.('susto', 0);
-      caixa({ rotulo: 'O esconderijo', texto: `${v.avistamento || ''}
-
-[PRONTIDÃO] É aqui. ${banco.estado.licenca ? 'Você tem a Licença de Caça. Cerque.' : 'Sem a Licença de Caça da Xerife, se você cercar agora, a presa foge. Abra o Arquivo.'}`,
-        opcoes: [
-          ...(banco.estado.licenca ? [{ html: 'Cercar agora', fn: (c) => { c.fechar(); cercar(); } }] : [{ html: 'Abrir o Arquivo', fn: (c) => { c.fechar(); abrirOArquivo(); } }]),
-          { html: 'Esperar', classe: 'sair', fn: (c) => c.fechar() },
-        ] });
+      st.avistamento = v.avistamento || '';
+      momentoCerco();
     }
   }
   // A notícia dos rivais na rota: só o progresso (em que lugar da rota cada um está, pelo número), nunca o lugar.
@@ -1137,6 +1131,50 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       },
     });
   }
+  // Carmen 2026 (7.5): o momento antes do cerco. Faixas pretas em cima e embaixo, a cena aproxima 1,15, uma
+  // batida de coração e o cartão "Está aqui." Sem Licença, o primário é abrir o Arquivo, e cercar fica como
+  // secundário, com o risco escrito.
+  function momentoCerco() {
+    if (tela.querySelector('.cartao-cerco')) return;
+    const lic = !!banco.estado.licenca;
+    tela.classList.add('cercando');
+    som.reacao?.('susto', 0);
+    const el = document.createElement('div');
+    el.className = 'cerco-camada';
+    el.innerHTML = `<span class="faixa-cerco cima" aria-hidden="true"></span><span class="faixa-cerco baixo" aria-hidden="true"></span>
+      <section class="cartao-cerco" role="dialog" aria-label="O esconderijo">
+        <h3>Está aqui.</h3>
+        ${st.avistamento ? `<p>${esc(st.avistamento)}</p>` : ''}
+        ${lic ? '' : '<p class="cerco-risco">Sem a Licença de Caça, a presa foge e você perde tempo até achar o rastro de novo.</p>'}
+        <div class="cerco-botoes">${lic
+          ? '<button type="button" class="btn destaque" data-cerco="cercar">Cercar</button><button type="button" class="btn" data-cerco="nao">Ainda não</button>'
+          : '<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença</button>'}</div>
+      </section>`;
+    tela.appendChild(el);
+    const sair = () => { el.remove(); tela.classList.remove('cercando'); };
+    el.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-cerco]');
+      if (!b) return;
+      sair();
+      if (b.dataset.cerco === 'cercar') cercar();
+      if (b.dataset.cerco === 'arquivo') abrirOArquivo();
+    });
+    el.querySelector('.btn')?.focus({ preventScroll: true });
+  }
+  // A cerimônia do fim do cerco (6.2): PRESO/PRESA com clarão e a cena em preto e branco, ou FUGIU com a cena escurecendo.
+  function cerimoniaCerco(preso) {
+    return new Promise((ok) => {
+      const s = caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca);
+      const texto = preso ? (s?.genero === 'f' ? 'Presa' : 'Preso') : 'Fugiu';
+      const el = document.createElement('div');
+      el.className = `cerco-fim ${preso ? 'preso' : 'fugiu'}`;
+      el.innerHTML = `<span class="cerco-clarao" aria-hidden="true"></span><span class="carimbo carimbo-g">${texto}</span>`;
+      tela.classList.add(preso ? 'cena-preso' : 'cena-fugiu');
+      tela.appendChild(el);
+      const dur = cerimoniasCurtas() ? 600 : preso ? 1800 : 1500;
+      setTimeout(() => { el.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); }, dur);
+    });
+  }
   async function cercar() {
     const r = await noBanco(() => F.cercar(caso.id, p.id));
     if (!r) return;
@@ -1146,10 +1184,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       banco.fecho = r.fecho || null;
       banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
       som.carmen?.('preso');
-      setTimeout(fecho, 350);
+      if (rota) await cerimoniaCerco(true);
+      setTimeout(fecho, rota ? 0 : 350);
       return;
     }
     som.carmen?.('fugiu');
+    if (rota) await cerimoniaCerco(false);
     const texto = r.motivo === 'sem-licenca'
       ? `Sem a Licença da Xerife, você não tem como segurar a presa. Ela some na noite, e você perde ${duracao(r.minutos)} até achar o rastro de novo. Abra o Arquivo.`
       : `A Licença era contra a pessoa errada. A Xerife cancela a Licença, e você perde ${duracao(r.minutos)}. Volte ao Arquivo.`;
@@ -1269,7 +1309,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         if (st.resolvido) { telaFinal(); return; }
         if (checarAmanhecer()) return;
         if (pt.tipo === 'pessoa') conversar(pt.caso?.id || pt.id.replace(/^pessoa-/, ''));
-        else if (pt.id === 'cercar') cercar();
+        else if (pt.id === 'cercar') momentoCerco();
         else if (pt.tipo === 'detalhe') examinar(pt.id);
         else if (pt.tipo === 'cacar') cacar();
         else if (pt.tipo === 'saida' && pt.destino) irPara(pt.destino);
