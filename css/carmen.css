@@ -433,8 +433,9 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialog
 .tela-caso.carmen .pessoa:hover .rosto-testemunha { transform: scale(1.08); opacity: 1; filter: none; }
 
 /* A chegada: a cena nova abre em íris (600 ms). */
-.tela-jogo.bg2.tela-caso.carmen .palco.iris { animation: carmen-iris 600ms var(--curva-sai) both; }
-@keyframes carmen-iris { from { clip-path: circle(0% at 50% 55%); } to { clip-path: circle(120% at 50% 55%); } }
+/* O círculo para em 80% (cobre o canto da tela até no celular, 375 × 812) e acelera no meio: a íris se vê. */
+.tela-jogo.bg2.tela-caso.carmen .palco.iris { animation: carmen-iris 500ms ease-in-out both; }
+@keyframes carmen-iris { from { clip-path: circle(0% at 50% 55%); } to { clip-path: circle(80% at 50% 55%); } }
 /* O cartão de chegada: nome grande, hora e marcas; encolhe até o título. */
 .tela-jogo.bg2.tela-caso.carmen .cartao-chegada {
   position: absolute; z-index: 420; top: 22px; left: 26px; display: grid; gap: 6px; padding: 14px 22px 16px; max-width: min(640px, 80vw);
@@ -1038,7 +1039,9 @@ body.em-conversa .aviso-versao { bottom: auto; top: max(14px, env(safe-area-inse
 @keyframes capitulo-entra { from { opacity: 0; letter-spacing: 0.2em; } }
 .tela-caso.carmen .dialogo-caso.abertura-rota.entrando .texto-narracao > * { animation: fala-entra 360ms var(--curva-sai) both; animation-delay: calc(var(--i, 0) * 300ms); }
 @keyframes fala-entra { from { opacity: 0; translate: 0 10px; } }
-.faixa-caso.faixa-dica { top: calc(9.6rem - 8px); /* 8 px acima do alto dos rostos que pulsam (Avaliação, 31/10) */ border-color: var(--c-sodio); }
+/* No pé da tela também no computador, logo acima da barra de baixo, para não cobrir rosto nem coisa (Avaliação, 11h10). */
+.faixa-caso.faixa-dica { top: auto; bottom: 92px; border-color: var(--c-sodio); animation-name: dica-sobe-centro; }
+@keyframes dica-sobe-centro { from { opacity: 0; translate: -50% 10px; } }
 .faixa-caso.faixa-dica b { color: var(--c-sodio); }
 body.celular .faixa-caso.faixa-dica { top: 10.6rem; }
 /* Atrás do cartão do capítulo, a cena fica limpa: sem nomes, ofícios nem marcadores (avaliação, etapa 8). */
@@ -1138,3 +1141,22 @@ body.celular .rota-marcas { display: none; }
   body.celular .tela-jogo .mapa-relogio .relogio-arco b { font-size: 20px; }
   .mapa-relogio .relogio-arco small.ao-chegar .faltam { display: none; }
 }
+
+/* Quadros da abertura, segunda volta (Avaliação, 11h10): a tira na largura toda, com quadros de 2:1, e a legenda
+   numa faixa própria no alto do quadro, fora da imagem, como na HQ. Sobre a imagem fica só o balão, estreito e num
+   canto, cobrindo até 30% do quadro. */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-caso.abertura-rota .tira-rota.hq-tira { max-width: none; width: 100%; box-sizing: border-box; }
+.tela-jogo.bg2.tela-caso.carmen .dialogo-caso.abertura-rota:has(.tira-rota) :is(.dialogo-corpo, .dialogo-cabeca, .dialogo-escolhas) { padding-left: 1.3rem; padding-right: 1.3rem; }
+.tela-jogo.bg2.tela-caso.carmen .dialogo-caso.abertura-rota .tira-rota.hq-tira .painel { aspect-ratio: 2 / 1; height: auto; max-height: none; display: flex; flex-direction: column; }
+.tela-caso.carmen .tira-rota .painel > img { position: relative; inset: auto; flex: 1; min-height: 0; height: auto; }
+.tela-caso.carmen .tira-rota .legenda { position: relative; inset: auto; order: -1; flex: none; max-width: none; margin: 0; border-width: 0 0 2px; padding: 5px 8px; font-size: 12px; }
+.tela-caso.carmen .tira-rota .balao { left: auto; top: auto; right: 6px; bottom: 6px; max-width: 52%; padding: 4px 8px 5px; font-size: 13px; line-height: 1.22; }
+.tela-caso.carmen .tira-rota .balao::after { display: none; }
+body.celular .tela-caso.carmen .tira-rota .legenda { top: auto; left: auto; max-width: none; padding: 4px 8px; }
+body.celular .tela-caso.carmen .tira-rota .balao { max-width: 56%; font-size: 13px; }
+
+/* As setas da borda da cena na fonte da interface (a Cormorant saiu das telas do Carmen). */
+.tela-jogo.bg2.tela-caso.carmen :is(.seta-borda, .borda-mais) { font-family: var(--f-ui); }
+.faixa-caso.faixa-dica.saindo { translate: -50% 0.6rem; }
+/* O retrato emprestado (a mulher de guarda-chuva usa a silhueta da mulher do celular) vem espelhado. */
+:is(.tela-caso.carmen .pessoa .rosto-testemunha.silhueta, .cartao-testemunha .ct-foto.com-silhueta) > i { scale: var(--espelho, 1) 1; }

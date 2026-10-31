@@ -621,7 +621,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // Enquadre da silhueta em cabeça e ombros: proporção da figura, centro da cabeça (x) e alto da cabeça (y), medidos
   // nas imagens (no guarda-chuva, a cabeça fica abaixo da copa).
   const ENQUADRE = { 'passante-teste': [0.369, 0.507, 0], 'passante-celular': [0.306, 0.439, 0], 'mulher-celular': [0.428, 0.472, 0], 'mulher-guarda-chuva': [0.581, 0.5, 0.06] };
-  const enquadreDe = (pid) => { const [a, hx, ht] = ENQUADRE[figuraDoCaso(pid)] || [0.4, 0.5, 0]; return `--a:${a};--hx:${hx};--ht:${ht}`; };
+  // No retrato de 58 px, a copa do guarda-chuva engole a cabeça (um disco preto): essa figura serve só para o corpo, e o
+  // retrato usa a silhueta da mulher do celular, espelhada (duas mulheres no mesmo lugar não ficam com o mesmo retrato).
+  const RETRATO = { 'mulher-guarda-chuva': 'mulher-celular' };
+  const enquadreDe = (pid) => {
+    const fig = figuraDoCaso(pid);
+    const r = RETRATO[fig];
+    const [a, hx, ht] = ENQUADRE[r || fig] || [0.4, 0.5, 0];
+    return `--a:${a};--hx:${hx};--ht:${ht}${r ? `;--rosto:url('${new URL(figuraLeve(`img/gente/${r}.png`), location.href).href}');--espelho:-1` : ''}`;
+  };
   const sorteadas = {};
   function figuraDoCaso(pid) {
     const pe = caso.pessoas[pid];
