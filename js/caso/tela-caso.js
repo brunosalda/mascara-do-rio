@@ -447,7 +447,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
-      avisar('faixa-pista', novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro', novas.join(' · '), () => { som.reacao?.('pista', 0); voarPista(); });
+      const lugarDasPistas = rota ? 'em Pistas' : 'no quadro';
+      avisar('faixa-pista', `${novas.length > 1 ? 'Pistas novas' : 'Pista nova'} ${lugarDasPistas}`, novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(); });
     }
     const depois = palavrasLiberadas(caso, achados());
     const abriu = caso.lacunas.filter((l) => depois[l.id].length > antes[l.id].length);
@@ -2027,11 +2028,13 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     cartao.className = 'cartao-capitulo';
     cartao.innerHTML = `<b>${esc(caso.rotulo)}</b><span>${esc(caso.titulo)}</span>`;
     tela.appendChild(cartao);
+    tela.classList.add('abrindo-capitulo');
     let foi = false;
     const seguir = () => {
       if (foi) return;
       foi = true;
       cartao.classList.add('saindo');
+      tela.classList.remove('abrindo-capitulo');
       setTimeout(() => cartao.remove(), 300);
       if (som.ligado()) som.trovao?.(0.4);
       const cam = caixa({
@@ -2042,6 +2045,13 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         } }],
       });
       cam.el.classList.add('abertura-rota');
+      // Quem liga é a Xerife: o mesmo cartão de foto da conversa (sem retrato pintado, a silhueta).
+      const foto = document.createElement('figure');
+      foto.className = 'cartao-testemunha sem-figura';
+      foto.setAttribute('aria-hidden', 'true');
+      foto.innerHTML = '<span class="ct-foto"></span><figcaption>Iolanda</figcaption><small>Xerife</small>';
+      cam.el.prepend(foto);
+      cam.el.classList.add('com-cartao');
       // A leitura começa do alto, não do botão (este quadro vem depois do que a camada pediu, que rola até o fim).
       const corpo = cam.el.querySelector('.dialogo-corpo');
       requestAnimationFrame(() => { if (corpo) corpo.scrollTop = 0; });
@@ -2064,6 +2074,11 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     st.dicasVistas.push(chave);
     salvar();
     avisar('faixa-dica', 'Dica', texto);
+    // Enquanto a dica de conversa está à vista, os rostos das testemunhas pulsam.
+    if (chave === 'conversa') {
+      tela.classList.add('com-dica-conversa');
+      setTimeout(() => tela.classList.remove('com-dica-conversa'), 7000);
+    }
   }
   function abertura() {
     if (rota) { aberturaRota(); return; }

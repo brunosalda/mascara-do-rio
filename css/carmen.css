@@ -1041,3 +1041,11 @@ body.em-conversa .aviso-versao { bottom: auto; top: max(14px, env(safe-area-inse
 .faixa-caso.faixa-dica { top: 9.6rem; border-color: var(--c-sodio); }
 .faixa-caso.faixa-dica b { color: var(--c-sodio); }
 body.celular .faixa-caso.faixa-dica { top: 10.6rem; }
+/* Atrás do cartão do capítulo, a cena fica limpa: sem nomes, ofícios nem marcadores (avaliação, etapa 8). */
+.tela-jogo.bg2.tela-caso.carmen.abrindo-capitulo :is(.cena-pontos, .pessoa-nome, .rosto-testemunha, .dica-interagir, .contornos, .seta-borda, .borda-mais, .marca-destino, .balao-voz) { opacity: 0 !important; pointer-events: none; }
+/* No celular, a dica fica embaixo, acima da faixa do caso, para não cobrir os rostos; os rostos pulsam enquanto ela está à vista. */
+body.celular .faixa-caso.faixa-dica { top: auto; bottom: 144px; left: 16px; right: 16px; translate: none; max-width: none; animation-name: dica-sobe; }
+@keyframes dica-sobe { from { opacity: 0; translate: 0 10px; } }
+body.celular .faixa-caso.faixa-dica.saindo { translate: 0 0.6rem; }
+.tela-caso.carmen.com-dica-conversa .rosto-testemunha { animation: rosto-chama 1.2s ease-in-out infinite; }
+@keyframes rosto-chama { 50% { scale: 1.1; filter: drop-shadow(0 0 10px rgba(242, 163, 58, 0.8)); } }
