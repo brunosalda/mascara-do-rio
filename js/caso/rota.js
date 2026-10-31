@@ -764,7 +764,7 @@ function sinal(s, c) {
   switch (s) {
     case 'dedo-faltando': return mao(80, 'M74.4 85 v-9 M78.4 85 v-11 M82.4 85 v-1.6 M86.2 85 v-8', '<path class="rf-sinal" d="M80.8 82.4 q1.6 -1.4 3.2 0"/>');
     case 'anel-serpente': return mao(20, 'M13.8 85 v-8 M17.8 85 v-10 M21.8 85 v-10 M25.6 85 v-8', '<path class="rf-sinal ouro-linha" d="M19.8 80 h4 M19.8 78.4 h4"/><circle class="rf-sinal ouro" cx="24.6" cy="77.6" r="1.1"/>');
-    case 'brinco-perola': return `<path class="rf-sinal ouro-linha" d="M${e - 1.4} 48.6 v3.4"/><circle class="rf-sinal perola" cx="${e - 1.4}" cy="54.4" r="2.4"/><circle class="rf-brilho" cx="${e - 2.2}" cy="53.6" r="0.7"/>`;
+    case 'brinco-perola': return `<path class="rf-sinal ouro-linha" d="M${e - 1.4} 48.6 v5.2"/><circle class="rf-sinal perola" cx="${e - 1.4}" cy="56.6" r="2.8"/><circle class="rf-brilho" cx="${e - 2.4}" cy="55.6" r="0.8"/>`;
     case 'ancora': return `<path class="rf-sinal rf-tinta" d="M59 ${q + 1} v8 m-3 -5.5 h6 m-6.5 3.5 q3.5 4 7 0 M59 ${q + 1} m-1.2 -1.2 a1.2 1.2 0 1 0 2.4 0 a1.2 1.2 0 1 0 -2.4 0"/>`;
     case 'cicatriz': return '<path class="rf-sinal" d="M54.6 32 L61.4 46 M55.2 35.2 l2.6 -1.2 M56.8 38.6 l2.6 -1.2 M58.4 42 l2.6 -1.2"/>';
     case 'medalha': return `<path class="rf-corrente" d="M43 ${q + 5} Q50 ${q + 19} 57 ${q + 5}"/><circle class="rf-sinal ouro" cx="50" cy="${q + 15.5}" r="3.4"/>`;
@@ -786,7 +786,7 @@ const ROUPA = {
 const OLHOS = [
   'M41 42 q3 -2.4 6 0 q-3 1.6 -6 0 M53 42 q3 -2.4 6 0 q-3 1.6 -6 0',
   'M41 42.4 q3 -3.2 6 0 q-3 1.4 -6 0 M53 42.4 q3 -3.2 6 0 q-3 1.4 -6 0 M40.8 40.4 q3.2 -1.6 6.4 0.2 M52.8 40.6 q3.2 -1.8 6.4 -0.2',
-  'M40.6 42 q3.4 -1.4 6.8 0 q-3.4 0.8 -6.8 0 M52.6 42 q3.4 -1.4 6.8 0 q-3.4 0.8 -6.8 0',
+  'M40.6 42 q3.4 -1.8 6.8 0 q-3.4 0.8 -6.8 0 M52.6 42 q3.4 -1.8 6.8 0 q-3.4 0.8 -6.8 0',
 ];
 const NARIZES = [
   'M50 44 q-2 6 -0.6 8 q1.6 0.8 3.2 -0.2',
@@ -834,7 +834,7 @@ export function retratoFalado(tr = {}, { genero = null, semente = null, novos = 
         <rect x="55" y="10" width="30" height="64" fill="url(#${u}h)" clip-path="url(#${u}c)" class="rf-sombra"/>
         <path class="rf-linha fina" d="M40 ${37 + sobr} q4 -2.2 8 -0.4 M52 ${36.6} q4 -1.8 8 ${0.4 + sobr}"/>
         <path class="rf-linha" d="${OLHOS[(h >> 21) % 3]}"/>
-        <circle class="rf-olho" cx="44" cy="42" r="${(h >> 21) % 3 === 2 ? 0.75 : 0.95}"/><circle class="rf-olho" cx="56" cy="42" r="${(h >> 21) % 3 === 2 ? 0.75 : 0.95}"/>
+        <circle class="rf-olho" cx="44" cy="42" r="0.95"/><circle class="rf-olho" cx="56" cy="42" r="0.95"/>
         ${f ? '<path class="rf-linha fina" d="M40.8 41.2 l-1.6 -1.2 M41.2 40.4 l-1 -1.6 M59.2 41.2 l1.6 -1.2 M58.8 40.4 l1 -1.6"/>' : ''}
         ${tr.aparencia === 'cabelo-branco' ? `<path class="rf-linha fina leve" d="M43 ${c.topo + 11} q7 -1.6 14 0 M44.4 ${c.topo + 14} q5.6 -1.2 11.2 0 M39.6 43.6 l-1.8 0.8 M39.8 42 l-2 -0.2 M60.4 43.6 l1.8 0.8 M60.2 42 l2 -0.2 M46 50 q-2.4 3.4 -1.6 6.4 M54 50 q2.4 3.4 1.6 6.4"/>` : ''}
         <path class="rf-sombra" d="M${e + 2} 48 q4 ${4 + ((h >> 19) % 3)} 9 6 l-1 2 q-6 -1 -8 -6 Z M52 44 l-1.4 7 l2.6 -0.4 Z" fill="url(#${u}h)"/>
@@ -1113,9 +1113,10 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
           { transform: `translate(${dx * 0.6}px, ${dy * 0.6}px) scale(${(1 + k) / 2}) rotate(-4deg)`, opacity: 1, offset: 0.6 },
           { transform: `translate(${dx * 0.92}px, ${dy * 0.92}px) scale(${k + (1 - k) * 0.08}) rotate(-1.4deg)`, opacity: 1, offset: 0.85 },
           { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(-1deg)`, opacity: 0 },
-        ], { duration: 400, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'forwards' });
+        ], { duration: 400, delay: 80, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'forwards' });
+        // O botão Guardar se apaga em 80 ms (CSS) antes de o papel sair, para não voar junto.
         // Se a aba perder o foco no meio, o voo não trava a tela.
-        const reserva = setTimeout(() => voo.finish(), 700);
+        const reserva = setTimeout(() => voo.finish(), 780);
         voo.onfinish = () => {
           clearTimeout(reserva);
           camada.fechar();

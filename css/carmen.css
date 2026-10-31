@@ -1257,6 +1257,8 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 @keyframes licenca-escurece { from { background-color: rgba(4, 6, 12, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 .carmen .janela-fundo.janela-licenca.guardando { background-color: rgba(4, 6, 12, 0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); transition: background-color 400ms ease-in, backdrop-filter 400ms ease-in; pointer-events: none; }
 .carmen .janela-licenca.guardando .janela-cabeca { visibility: hidden; }
+.carmen .janela-licenca.guardando .licenca-guardar { opacity: 0; animation: licenca-apaga 80ms ease-out; }
+@keyframes licenca-apaga { from { opacity: 1; } }
 .carmen .janela-licenca.guardando .janela { clip-path: none; background: transparent; border-color: transparent; box-shadow: none; }
 .tela-jogo.bg2.tela-caso.carmen .janela-licenca.guardando .janela { background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .carmen .licenca-mini.recebe { animation: licenca-recebe 480ms var(--curva-mola); }
@@ -1283,7 +1285,8 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .retrato-falado.esboco .rf-cabelo.branco { fill: #fbf8f1; }
 .retrato-falado.esboco .rf-cabelo.ruivo { fill: var(--ruiva); stroke: #8a3522; }
 .retrato-falado.esboco .rf-cabelo.trancas { fill: var(--hachura); }
-.retrato-falado.esboco .rf-tranca { fill: var(--hachura); stroke: var(--grafite); stroke-width: 0.9; }
+/* As contas das tranças são "fios dourados": douradas, para a pérola ser a única coisa branca ali. */
+.retrato-falado.esboco .rf-tranca { fill: #c9a14a; stroke: #7a5c1e; stroke-width: 0.8; }
 .retrato-falado.esboco .rf-oculos { fill: none; stroke: var(--grafite); stroke-width: 1.3; }
 .retrato-falado.esboco .rf-sinal { fill: none; stroke: #9e2a24; stroke-width: 1.2; stroke-linecap: round; }
 .retrato-falado.esboco .rf-sinal.rf-tinta { stroke: #2d4a7a; stroke-width: 1; }
@@ -1360,3 +1363,5 @@ body.celular .licenca-doc { min-height: 0; rotate: 1deg; border-radius: 3px; pad
 body.celular .licenca-guardar { position: static; margin-top: 8px; }
 body.celular .carmen .janela-fundo.janela-licenca { overflow-y: auto; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .janela-licenca .janela { margin: 0 auto; background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; clip-path: none; }
+/* No celular, o papel começa abaixo do botão Fechar: o "×" claro sumia sobre o creme. */
+body.celular .carmen .janela-licenca .janela-corpo { padding-top: 50px; }
