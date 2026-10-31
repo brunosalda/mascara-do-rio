@@ -1829,6 +1829,14 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   const estrelaSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>';
   const seloSvg = (n) => `<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="selo-aro" cx="24" cy="24" r="21"/><circle class="selo-miolo" cx="24" cy="24" r="15"/>${n ? `<path class="selo-estrela" d="M24 15.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>` : ''}</svg>`;
 
+  // Enquanto ninguém mais fechou o capítulo, a coluna da direita não fica vazia: mostra o selo que falta e que é
+  // mais fácil de ganhar na próxima noite, com o jeito de ganhar.
+  const FACILIDADE = ['sem-dicas', 'sem-erros', 'detetive', 'mais-rapido', 'primeiro'];
+  function proximoSelo(ganhos) {
+    const s = FACILIDADE.find((x) => !ganhos.includes(x));
+    if (!s) return '<aside class="placar-proximo completo"><small>Selos</small><b>Todos os selos deste capítulo</b><p>A Xerife guarda o seu nome na primeira página do Arquivo.</p></aside>';
+    return `<aside class="placar-proximo">${seloSvg(false)}<div><small>O próximo selo</small><b>${esc(SELOS[s])}</b><p>${esc(COMO_GANHAR[s])}</p></div></aside>`;
+  }
   function placarRota() {
     const e = banco.estado;
     const resolvidos = banco.ranking.filter((x) => x.resolvido_em);
@@ -1888,6 +1896,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
                 return tem ? `<li class="ganho" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small></li>`
                   : `<li style="--i:${i}" tabindex="0" aria-label="${esc(SELOS[s])}, ainda não ganho. ${esc(COMO_GANHAR[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small><span class="selo-como" aria-hidden="true">${esc(COMO_GANHAR[s])}</span></li>`;
               }).join('')}</ul>
+              ${resolvidos.length <= 1 ? proximoSelo(e.selos || []) : ''}
               ${e.patente ? `<h4>Patente</h4><p class="placar-patente">${esc(e.patente)}</p>` : ''}
               <div class="placar-botoes">
                 <button type="button" class="btn destaque" data-placar="voltar">${esc(textoVoltar)}</button>
