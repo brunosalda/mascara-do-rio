@@ -1827,7 +1827,15 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // As faixas são as de js/carmen/regras.js (ESTRELAS): 90 minutos ou mais antes do sol, 3 estrelas; 45, 2.
   const estrelasDoTempo = (restante) => (restante >= 90 ? 3 : restante >= 45 ? 2 : 1);
   const estrelaSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>';
-  const seloSvg = (n) => `<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="selo-aro" cx="24" cy="24" r="21"/><circle class="selo-miolo" cx="24" cy="24" r="15"/>${n ? `<path class="selo-estrela" d="M24 15.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>` : ''}</svg>`;
+  // Cada selo tem o seu desenho no miolo: aceso quando ganho, apagado quando falta (e no cartão do próximo selo).
+  const SELO_DESENHO = {
+    'sem-erros': '<path d="M17.5 24.5l4.5 4.5 8.5-9.5"/>',
+    'sem-dicas': '<path d="M20.5 20.5a3.6 3.6 0 1 1 5 3.3c-1 .5-1.5 1.1-1.5 2.2v.8"/><circle cx="24" cy="30.6" r="0.6"/><path d="M16.5 31.5l15-15"/>',
+    detetive: '<circle cx="22.5" cy="22.5" r="5"/><path d="M26.2 26.2l5 5"/>',
+    primeiro: '<path d="M20.5 32V16.5l9.5 3.4-9.5 3.4"/>',
+    'mais-rapido': '<circle cx="24" cy="24" r="7"/><path d="M24 19.5V24l3 2"/>',
+  };
+  const seloSvg = (n, s) => `<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="selo-aro" cx="24" cy="24" r="21"/><circle class="selo-miolo" cx="24" cy="24" r="15"/><g class="selo-desenho${n ? '' : ' apagado'}">${SELO_DESENHO[s] || ''}</g></svg>`;
 
   // Enquanto ninguém mais fechou o capítulo, a coluna da direita não fica vazia: mostra o selo que falta e que é
   // mais fácil de ganhar na próxima noite, com o jeito de ganhar.
@@ -1835,7 +1843,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function proximoSelo(ganhos) {
     const s = FACILIDADE.find((x) => !ganhos.includes(x));
     if (!s) return '<aside class="placar-proximo completo"><small>Selos</small><b>Todos os selos deste capítulo</b><p>A Xerife guarda o seu nome na primeira página do Arquivo.</p></aside>';
-    return `<aside class="placar-proximo">${seloSvg(false)}<div><small>O próximo selo</small><b>${esc(SELOS[s])}</b><p>${esc(COMO_GANHAR[s])}</p></div></aside>`;
+    return `<aside class="placar-proximo">${seloSvg(false, s)}<div><small>O próximo selo</small><b>${esc(SELOS[s])}</b><p>${esc(COMO_GANHAR[s])}</p></div></aside>`;
   }
   function placarRota() {
     const e = banco.estado;
@@ -1893,8 +1901,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
               <h4>Selos</h4>
               <ul class="placar-selos">${TODOS_SELOS.map((s, i) => {
                 const tem = (e.selos || []).includes(s);
-                return tem ? `<li class="ganho" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small></li>`
-                  : `<li style="--i:${i}" tabindex="0" aria-label="${esc(SELOS[s])}, ainda não ganho. ${esc(COMO_GANHAR[s])}">${seloSvg(tem)}<small>${esc(SELOS[s])}</small><span class="selo-como" aria-hidden="true">${esc(COMO_GANHAR[s])}</span></li>`;
+                return tem ? `<li class="ganho" style="--i:${i}" title="${esc(SELOS[s])}">${seloSvg(tem, s)}<small>${esc(SELOS[s])}</small></li>`
+                  : `<li style="--i:${i}" tabindex="0" aria-label="${esc(SELOS[s])}, ainda não ganho. ${esc(COMO_GANHAR[s])}">${seloSvg(tem, s)}<small>${esc(SELOS[s])}</small><span class="selo-como" aria-hidden="true">${esc(COMO_GANHAR[s])}</span></li>`;
               }).join('')}</ul>
               ${resolvidos.length <= 1 ? proximoSelo(e.selos || []) : ''}
               ${e.patente ? `<h4>Patente</h4><p class="placar-patente">${esc(e.patente)}</p>` : ''}

@@ -899,7 +899,8 @@ body:not(.celular) .cerco-camada.cartao-no-alto { place-items: start center; pad
 .placar-selos .selo-miolo { fill: var(--c-noite-1); }
 .placar-selos .ganho .selo-aro { stroke: var(--c-sodio); stroke-dasharray: none; stroke-width: 3; }
 .placar-selos .ganho .selo-miolo { fill: color-mix(in srgb, var(--c-sodio) 25%, var(--c-noite-2)); }
-.placar-selos .selo-estrela { fill: var(--c-sodio); }
+.placar-selos .selo-desenho { fill: none; stroke: var(--c-sodio); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.placar-selos .selo-desenho.apagado { stroke: var(--c-texto-suave); stroke-width: 1.8; opacity: 0.4; }
 .placar-selos .ganho svg { filter: drop-shadow(0 0 6px rgba(244, 180, 76, 0.45)); }
 .placar-selos small { font: 600 10px/1.15 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto-suave); }
 .placar-selos .ganho small { color: var(--c-texto); }
@@ -1343,6 +1344,7 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .placar-proximo svg { width: 56px; height: 56px; }
 .placar-proximo .selo-aro { fill: none; stroke: var(--c-tinta-suave); stroke-width: 2; stroke-dasharray: 4 3; }
 .placar-proximo .selo-miolo { fill: rgba(28, 23, 19, 0.06); }
+.placar-proximo .selo-desenho { fill: none; stroke: var(--c-tinta-suave); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
 .placar-proximo small { display: block; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
 .placar-proximo b { display: block; margin: 2px 0 4px; font: 800 24px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; }
 .placar-proximo p { margin: 0; font: 500 15px/1.35 var(--f-ui); }
