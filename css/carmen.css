@@ -1343,3 +1343,10 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 @keyframes placar-proximo-entra { from { opacity: 0; translate: 0 12px; } }
 body.celular .placar-proximo { display: none; }
 @media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .placar-proximo { animation: none; } }
+
+/* ============ Segunda volta: o Cerco ============ */
+/* O alvo maior: o anel com 56 px, e a silhueta de costas com uns 50 px de altura; a que foge, do mesmo tamanho. */
+.tela-caso.carmen .ponto.alvo-cerco { --lado: 56px; }
+.alvo-fugindo { width: 56px; height: 56px; }
+/* A foto da prisão no placar com 200 px: no computador, no alto da coluna, antes do carimbo (a coluna é flex). */
+body:not(.celular) .placar-foto { position: relative; top: auto; right: auto; align-self: flex-start; width: 200px; margin: 2px 0 8px; }
