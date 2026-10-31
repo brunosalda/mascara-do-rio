@@ -27,18 +27,34 @@ export const minutosEntre = (caso, de, para) => caso.tempos.find((t) => t.de ===
 const duracao = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`);
 
 // São Paulo tem um mapa à parte, desenhado: as posições saem da latitude e da longitude de cada lugar.
-function posicoesSP(caso) {
+// projecaoSP devolve a conta (lat, lon) → ponto do mapa, a mesma dos lugares, para as avenidas.
+function projecaoSP(caso) {
   const sp = caso.ordem.filter((id) => caso.lugares[id].cidade === 'sp');
   const geo = sp.map((id) => caso.lugares[id].mapa || { lat: 0, lon: 0 });
   const lats = geo.map((g) => g.lat);
   const lons = geo.map((g) => g.lon);
   const [la0, la1, lo0, lo1] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
-  return Object.fromEntries(sp.map((id, i) => {
-    const fx = lo1 > lo0 ? (geo[i].lon - lo0) / (lo1 - lo0) : 0.5;
-    const fy = la1 > la0 ? (la1 - geo[i].lat) / (la1 - la0) : 0.5;
-    return [id, [Math.round(360 + fx * 1200), Math.round(160 + fy * 720)]];
-  }));
+  return (lat, lon) => {
+    const fx = lo1 > lo0 ? (lon - lo0) / (lo1 - lo0) : 0.5;
+    const fy = la1 > la0 ? (la1 - lat) / (la1 - la0) : 0.5;
+    return [Math.round(360 + fx * 1200), Math.round(160 + fy * 720)];
+  };
 }
+function posicoesSP(caso) {
+  const p = projecaoSP(caso);
+  return Object.fromEntries(caso.ordem.filter((id) => caso.lugares[id].cidade === 'sp')
+    .map((id) => [id, p(caso.lugares[id].mapa?.lat ?? 0, caso.lugares[id].mapa?.lon ?? 0)]));
+}
+// As avenidas de São Paulo que aparecem no mapa (latitude e longitude aproximadas das pontas e de uma curva).
+const AVENIDAS_SP = [
+  { nome: 'Av. Paulista', pts: [[-23.5552, -46.6623], [-23.5632, -46.6538], [-23.5713, -46.6448]] },
+  { nome: 'R. da Consolação', pts: [[-23.5552, -46.6623], [-23.5500, -46.6522], [-23.5443, -46.6430]] },
+  { nome: 'Av. 23 de Maio', pts: [[-23.5735, -46.6440], [-23.5600, -46.6400], [-23.5480, -46.6365]] },
+  { nome: 'Radial Leste', pts: [[-23.5480, -46.6340], [-23.5455, -46.6220], [-23.5440, -46.6100]] },
+];
+// As luzes acesas da pintura do Rio (medidas uma vez na imagem, em 1920 × 1080): as luzes do mapa vivo piscam
+// só onde a pintura já tem cidade acesa, nunca na água.
+const LUZES_RIO = '252,122 322,116 456,124 694,126 98,172 134,162 224,182 248,182 352,154 360,152 486,156 504,166 588,132 662,128 736,158 780,162 812,162 1052,182 1088,182 1648,186 290,250 298,232 402,208 432,200 522,242 562,234 624,234 870,250 874,252 968,202 1026,230 1100,240 1212,212 1284,210 1620,236 174,306 232,306 350,316 412,318 424,268 626,256 862,274 872,256 960,270 1048,314 1064,304 1140,316 1498,296 1568,308 1632,314 1674,316 1760,316 1780,268 1852,284 164,320 206,336 252,342 298,352 366,352 470,324 500,330 998,342 1030,324 1114,376 1140,326 1192,354 1268,376 1334,338 1472,324 1630,328 1674,328 1730,328 1768,360 1856,376 514,402 778,440 1058,392 1102,404 1188,398 1220,404 1256,388 1372,442 1416,418 1480,446 66,510 710,482 744,478 1110,478 1162,472 1222,498 1294,456 1364,462 1442,448 1480,450 1698,476 1710,480 92,540 116,570 184,518 1022,556 1120,572 1140,518 1224,520 1258,534 1542,566 1576,566 1780,566 66,582 160,596 224,602 238,584 320,626 368,616 1036,592 1076,594 1180,626 1204,576 1266,626 1360,634 1402,624 1538,580 1638,616 1644,632 1786,578 46,696 106,696 282,668 320,680 372,682 484,700 490,696 1188,642 1236,676 1258,682 1378,660 1402,668 1462,702 1638,642 1682,652 1762,670 1806,694 1840,684 92,710 140,714 226,740 248,716 304,762 410,762 434,750 498,718 1028,762 1110,744 1148,740 1206,710 1280,750 1326,738 1402,742 1462,766 1532,732 1576,754 1664,712 1848,708 252,768 318,768 372,792 482,814 548,772 560,782 628,774 790,814 832,822 902,820 996,782 1060,830 1092,816 1188,830 1202,812 1268,790 1378,786 1430,776 1452,772 1670,776 1742,806 334,860 394,860 448,846 538,834 592,872 646,870 718,864 754,870 846,864 890,836 992,832 1056,836 1118,892 1172,850 1222,876 1256,846 350,900 448,900 532,902 980,898 1040,924 1094,910 1138,906 1134,982'.split(' ').map((p) => p.split(',').map(Number));
 
 function rotulos(lado) {
   if (lado === 'esq') return { anc: 'end', nx: -48, ny: 4, my: 40 };
@@ -180,23 +196,63 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
 
       // O mapa vivo (Caminho até o 10, Mapa, item 3): as luzes da cidade piscam devagar, faróis correm nas vias e a
       // barca cruza a baía. Só SVG e CSS, em opacidade baixa, para não puxar o olho; com menos movimento, nada disso.
+      // As luzes são pontos de 2 a 4 px com brilho em degradê: no Rio, sobre as luzes da própria pintura; em São
+      // Paulo, sobre os quarteirões.
       function vivo(P) {
-        if (cidade !== 'rio' || cerimoniasCurtas()) return '';
+        if (cerimoniasCurtas()) return '';
         let semente = 7;
         const sorte = () => (semente = (semente * 9301 + 49297) % 233280) / 233280;
-        const luzes = Object.values(P).flatMap(([x, y]) => Array.from({ length: 7 }, () => {
-          const a = sorte() * Math.PI * 2;
-          const r = R_MED + 30 + sorte() * 150;
-          const [lx, ly] = [x + r * Math.cos(a), y + r * Math.sin(a)];
-          // Só sobre a pintura: fora dela é a faixa escura, onde não há cidade.
-          if (lx < 40 || lx > LARGURA - 40 || ly < 60 || ly > ALTURA - 60) return '';
-          return `<circle class="vivo-luz" cx="${lx.toFixed(0)}" cy="${ly.toFixed(0)}" r="${(5 + sorte() * 4).toFixed(1)}" style="animation-duration:${(4 + sorte() * 4).toFixed(1)}s;animation-delay:-${(sorte() * 6).toFixed(1)}s"/>`;
-        })).join('');
-        const vias = VIZINHOS.filter(([a, b]) => P[a] && P[b] && !(a === 'centro' && b === 'niteroi'))
-          .map(([a, b], i) => `<circle class="vivo-farol" r="8"><animateMotion dur="${9 + (i % 4) * 2.5}s" begin="-${(i * 1.7).toFixed(1)}s" repeatCount="indefinite" path="M${P[i % 2 ? b : a]} L${P[i % 2 ? a : b]}"/></circle>`).join('');
-        const barca = P.centro && P.niteroi ? `<g class="vivo-barca"><circle r="14"/><animateMotion dur="26s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1;0;0" keyTimes="0;0.42;0.5;0.92;1" path="M${P.centro} L${P.niteroi}"/></g>` : '';
-        return `<g class="rota-vivo" aria-hidden="true">${luzes}${vias}${barca}</g>`;
+        const longeDosMedalhoes = ([x, y]) => Object.values(P).every(([px, py]) => Math.hypot(x - px, y - py) > R_MED + 14);
+        const pontos = cidade === 'rio' ? LUZES_RIO
+          : Array.from({ length: 120 }, () => [vb.x + sorte() * vb.w, vb.y + sorte() * vb.h]);
+        const luzes = pontos.filter(longeDosMedalhoes).map(([x, y]) => `<circle class="vivo-luz" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(4 + sorte() * 3).toFixed(1)}" fill="url(#vivo-brilho)" style="animation-duration:${(4 + sorte() * 4).toFixed(1)}s;animation-delay:-${(sorte() * 6).toFixed(1)}s"/>`).join('');
+        const trechos = cidade === 'rio'
+          ? VIZINHOS.filter(([a, b]) => P[a] && P[b] && !(a === 'centro' && b === 'niteroi')).map(([a, b]) => `M${P[a]} L${P[b]}`)
+          : AVENIDAS_SP.map((av) => `M${av.pts.map(([la, lo]) => projSP(la, lo)).join(' L')}`);
+        const vias = trechos.map((d, i) => `<circle class="vivo-farol" r="5"><animateMotion dur="${9 + (i % 4) * 2.5}s" begin="-${(i * 1.7).toFixed(1)}s" repeatCount="indefinite" ${i % 2 ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear" ' : ''}path="${d}"/></circle>`).join('');
+        // A barca: um casco alongado com a esteira, que vai do Centro a Niterói por baixo do aeroporto e volta.
+        let barca = '';
+        if (cidade === 'rio' && P.centro && P.niteroi) {
+          const [cx, cy] = P.centro;
+          const [nx, ny] = P.niteroi;
+          const ida = `M${cx + 70} ${cy + 40} C ${cx + 180} ${cy + 170}, ${nx - 200} ${ny + 170}, ${nx - 70} ${ny + 40}`;
+          const volta = `C ${nx - 210} ${ny + 210}, ${cx + 170} ${cy + 210}, ${cx + 70} ${cy + 40}`;
+          barca = `<g class="vivo-barca"><path class="vivo-esteira" d="M-12 0 L-46 -7 M-12 0 L-46 7"/><path class="vivo-casco" d="M-16 -5 L10 -5 Q18 -5 22 0 Q18 5 10 5 L-16 5 Z"/><rect class="vivo-cabine" x="-8" y="-3" width="12" height="6" rx="1.5"/><animateMotion dur="34s" repeatCount="indefinite" rotate="auto" calcMode="linear" keyPoints="0;0.5;0.5;1;1" keyTimes="0;0.42;0.5;0.92;1" path="${ida} ${volta}"/></g>`;
+        }
+        const nevoa = cidade === 'sp' ? [0.25, 0.6, 0.85].map((f, i) => `<ellipse class="vivo-nevoa" cx="${(vb.x + vb.w * f).toFixed(0)}" cy="${(vb.y + vb.h * (0.3 + i * 0.22)).toFixed(0)}" rx="${(vb.w * 0.28).toFixed(0)}" ry="${(vb.h * 0.12).toFixed(0)}" fill="url(#vivo-nevoa)" style="animation-delay:-${i * 9}s"/>`).join('') : '';
+        return `<g class="rota-vivo" aria-hidden="true">${luzes}${vias}${barca}${nevoa}</g>`;
       }
+
+      // São Paulo sem pintura (decisão do Bruno de 30/10: nenhuma imagem nova): uma trama de ruas em SVG nas cores da
+      // pintura do Rio. Quarteirões escuros com janelas acesas, as ruas em sódio apagado, o Centro com a trama em
+      // outro ângulo, as avenidas mais fortes com o nome e a Marginal ao longo do Tietê.
+      function fundoSP() {
+        const P = pos.sp;
+        const centro = ['se', 'centro-sp', 'liberdade'].map((id) => P[id]).filter(Boolean);
+        const [mx, my] = centro.length ? centro.reduce(([a, b], [x, y]) => [a + x / centro.length, b + y / centro.length], [0, 0]) : [vb.x + vb.w * 0.7, vb.y + vb.h * 0.4];
+        const avenidas = AVENIDAS_SP.map((av) => {
+          const pts = av.pts.map(([la, lo]) => projSP(la, lo));
+          const d = `M${pts[0]} Q${pts[1]} ${pts[2]}`;
+          const [x0, y0] = pts[0];
+          const [x2, y2] = pts[2];
+          const ang = (Math.atan2(y2 - y0, x2 - x0) * 180) / Math.PI;
+          const giro = ang > 90 || ang < -90 ? ang + 180 : ang;
+          // O nome a 72% da avenida, longe do meio, onde costuma ficar um lugar.
+          const t = 0.72;
+          const [rx, ry] = [0, 1].map((k) => (1 - t) ** 2 * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t ** 2 * pts[2][k]);
+          return `<path class="sp-avenida-brilho" d="${d}"/><path class="sp-avenida" d="${d}"/>
+            <text class="sp-avenida-nome" transform="translate(${rx.toFixed(0)} ${ry.toFixed(0)}) rotate(${giro.toFixed(0)})" y="-14">${esc(av.nome)}</text>`;
+        }).join('');
+        const tiete = `M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}`;
+        return `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>
+          <rect x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}" fill="url(#sp-quadras-a)"/>
+          <circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="300" fill="url(#sp-quadras-b)"/>
+          <path class="rota-tiete" d="${tiete}"/><path class="sp-marginal" d="${tiete}" transform="translate(0 26)"/>
+          <text class="rota-agua-nome" x="${vb.x + vb.w * 0.62}" y="${vb.y + 40}">rio Tietê</text>
+          ${avenidas}
+          <rect class="sp-escuro" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}" fill="url(#sp-vinheta)"/>`;
+      }
+      const projSP = projecaoSP(caso);
 
       // O mapa enquadra só a área dos lugares (com folga para os rótulos e a ponte aérea).
       function enquadrar(P, ids) {
@@ -237,7 +293,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             <rect class="rota-borda-pintura" x="-600" y="-600" width="${LARGURA + 1200}" height="600"/><rect class="rota-borda-pintura" x="-600" y="${ALTURA}" width="${LARGURA + 1200}" height="600"/>
             <rect x="-600" y="0" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-cima)"/><rect x="-600" y="${ALTURA - 120}" width="${LARGURA + 1200}" height="120" fill="url(#rota-esfuma-baixo)"/>`
           : MAPA_SP ? `<image class="rota-pintura" href="${MAPA_SP}" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" preserveAspectRatio="xMidYMid slice"/><rect class="rota-agua" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>`
-          : `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/><path class="rota-tiete" d="M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}"/><text class="rota-agua-nome" x="${vb.x + vb.w * 0.62}" y="${vb.y + 40}">rio Tietê</text>`;
+          : fundoSP();
         const lista = ids.filter((id) => id !== atual)
           .map((id) => ({ id, t: minutosEntre(caso, atual, id) }))
           .sort((a, b) => (a.t ? a.t.minutos : 1e4) - (b.t ? b.t.minutos : 1e4));
@@ -255,6 +311,11 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
                     <linearGradient id="rota-esfuma-cima" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1322"/><stop offset="1" stop-color="#0d1322" stop-opacity="0"/></linearGradient>
                     <linearGradient id="rota-esfuma-baixo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1322" stop-opacity="0"/><stop offset="1" stop-color="#0d1322"/></linearGradient>
                     <marker id="rota-seta" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M1 1 L9 5 L1 9z"/></marker>
+                    <radialGradient id="vivo-brilho"><stop offset="0" stop-color="#fff3d0"/><stop offset="0.3" stop-color="#ffd27a" stop-opacity="0.85"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+                    ${cidade === 'sp' ? `<radialGradient id="vivo-nevoa"><stop offset="0" stop-color="#9fb4d8" stop-opacity="0.14"/><stop offset="1" stop-color="#9fb4d8" stop-opacity="0"/></radialGradient>
+                    <radialGradient id="sp-vinheta" cx="0.5" cy="0.5" r="0.75"><stop offset="0.55" stop-color="#0a0f1c" stop-opacity="0"/><stop offset="1" stop-color="#0a0f1c" stop-opacity="0.85"/></radialGradient>
+                    <pattern id="sp-quadras-a" width="200" height="132" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect class="sp-rua" width="200" height="132"/><rect class="sp-quadra" x="4" y="4" width="118" height="52" rx="2"/><rect class="sp-quadra" x="128" y="4" width="68" height="52" rx="2"/><rect class="sp-quadra" x="4" y="62" width="60" height="66" rx="2"/><rect class="sp-quadra" x="70" y="62" width="126" height="66" rx="2"/><rect class="sp-janela" x="16" y="14" width="5" height="4"/><rect class="sp-janela" x="88" y="34" width="5" height="4"/><rect class="sp-janela fraca" x="150" y="20" width="5" height="4"/><rect class="sp-janela" x="30" y="96" width="5" height="4"/><rect class="sp-janela fraca" x="110" y="80" width="5" height="4"/><rect class="sp-janela" x="170" y="108" width="5" height="4"/></pattern>
+                    <pattern id="sp-quadras-b" width="70" height="70" patternUnits="userSpaceOnUse" patternTransform="rotate(9)"><rect class="sp-rua" width="70" height="70"/><rect class="sp-quadra centro" x="5" y="5" width="60" height="60" rx="2"/><rect class="sp-janela" x="14" y="16" width="5" height="4"/><rect class="sp-janela fraca" x="44" y="30" width="5" height="4"/><rect class="sp-janela" x="26" y="48" width="5" height="4"/></pattern>` : ''}
                   </defs>
                   ${fundo}
                   ${vivo(P)}
@@ -402,9 +463,16 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           if (marcas) marcas.style.display = 'none';
           const bb = rot.getBBox();
           if (marcas) marcas.style.display = '';
-          const [tx = 0, ty = 0] = (rot.dataset.base || '').match(/-?[\d.]+/g)?.map(Number) || [];
-          const [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
+          let [tx = 0, ty = 0] = (rot.dataset.base || '').match(/-?[\d.]+/g)?.map(Number) || [];
+          let [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
           const [lw, lh] = [bb.width * kx, bb.height * ky];
+          // O nome ao lado do medalhão que passaria da borda vai para baixo dele: deslizar para dentro o poria em cima
+          // do próprio medalhão (Santa Teresa, no celular).
+          if ((esq < 6 || esq + lw > W - 6) && ['esq', 'dir'].includes(rot.dataset.lado)) {
+            [tx, ty] = [0, R_MED + FOLGA + 2 - bb.y + 3];
+            rot.setAttribute('transform', `translate(${tx} ${ty})`);
+            [esq, topo] = tela(P[id][0] + tx + bb.x, P[id][1] + ty + bb.y);
+          }
           const desvio = esq < 6 ? 6 - esq : esq + lw > W - 6 ? W - 6 - (esq + lw) : 0;
           if (desvio) rot.setAttribute('transform', `${rot.getAttribute('transform')} translate(${desvio / kx} 0)`);
           const [mx, my] = tela(P[id][0] - R_MED, P[id][1] - R_MED);
@@ -453,8 +521,10 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         el.className = `mapa-borda-lista ${b.dataset.grupo}`;
         el.innerHTML = (gruposBorda[b.dataset.grupo] || []).map((f) => `<button type="button" data-vai="${esc(f.id)}">${esc(caso.lugares[f.id].nome)}${f.t ? ` <small>${duracao(f.t.minutos)}</small>` : ''}</button>`).join('');
         camadaBordas.append(el);
+        // A lista abre embaixo do indicador; sem espaço, em cima, mas sem subir na chave Rio/São Paulo.
+        const minimo = (corpo.querySelector('.rota-mapa')?.offsetTop || 0) + 4;
         const abaixo = b.offsetTop + b.offsetHeight + 6;
-        el.style.top = `${abaixo + el.offsetHeight > camadaBordas.clientHeight - 6 ? Math.max(4, b.offsetTop - el.offsetHeight - 6) : abaixo}px`;
+        el.style.top = `${abaixo + el.offsetHeight > camadaBordas.clientHeight - 6 ? Math.max(minimo, b.offsetTop - el.offsetHeight - 6) : abaixo}px`;
         el.querySelector('button')?.focus();
       }
 

@@ -1296,3 +1296,30 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 /* O traço novo a lápis: no papel claro, o contorno é grafite e o preenchimento entra depois, sem apagar o traço. */
 .retrato-falado.esboco .rf-novo :is(.rf-cabelo, .perola, .ouro, .rf-tranca, .rf-mao) { animation: rf-desenha 400ms ease-out 200ms both, rf-preenche 260ms ease-out 600ms both; }
 @keyframes rf-preenche { from { fill-opacity: 0; } }
+
+/* ============ Segunda volta: o Mapa ============ */
+/* Item 3: luzes de cidade com brilho em degradê, sobre as luzes da própria pintura; a barca com casco e esteira. */
+.carmen .vivo-luz { fill: url(#vivo-brilho); opacity: 0.35; animation: vivo-luz 6s ease-in-out infinite alternate; }
+@keyframes vivo-luz { from { opacity: 0.2; } to { opacity: 0.85; } }
+.carmen .vivo-farol { fill: #fff1c9; opacity: 0.55; }
+.vivo-barca .vivo-casco { fill: #e9dcc0; opacity: 0.8; }
+.vivo-barca .vivo-cabine { fill: #ffd27a; opacity: 0.9; }
+.vivo-barca .vivo-esteira { fill: none; stroke: #cfe3f2; stroke-width: 2; stroke-linecap: round; opacity: 0.35; }
+/* Item 4: São Paulo em trama de ruas, nas cores da pintura do Rio. */
+.sp-rua { fill: #1d1c18; }
+.sp-quadra { fill: #0f1729; }
+.sp-quadra.centro { fill: #121828; }
+.sp-janela { fill: #f0c068; opacity: 0.55; }
+.sp-janela.fraca { opacity: 0.25; }
+.sp-avenida-brilho { fill: none; stroke: #ffb347; stroke-width: 34; stroke-linecap: round; opacity: 0.08; }
+.sp-avenida { fill: none; stroke: #c99a4c; stroke-width: 8; stroke-linecap: round; opacity: 0.55; }
+.sp-marginal { fill: none; stroke: #c99a4c; stroke-width: 10; stroke-linecap: round; opacity: 0.45; }
+.sp-avenida-nome { fill: #e8c98a; opacity: 0.7; font: italic 600 24px var(--f-ui); text-anchor: middle; letter-spacing: 0.04em; }
+.vivo-nevoa { animation: vivo-nevoa 28s ease-in-out infinite alternate; }
+@keyframes vivo-nevoa { from { translate: -60px 0; opacity: 0.6; } to { translate: 60px 10px; opacity: 1; } }
+/* Item 5: no celular, os lugares da lista de borda com 44 px para o dedo. */
+.mapa-borda-lista button { min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) :is(.vivo-luz, .vivo-nevoa) { animation: none; } }
+/* Os nomes das avenidas e do rio também nunca abaixo de 11 px na tela. */
+.carmen .sp-avenida-nome { font-size: calc(24px * var(--u, 1)); }
+.carmen .rota-agua-nome { font-size: calc(26px * var(--u, 1)); }
