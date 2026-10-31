@@ -575,18 +575,22 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
 
       const lacuna = (c) => {
         const v = sel[c.id];
-        const semPista = !comPistaSet.has(c.id);
+        const semPista = !comPistaSet.has(c.id) && !sabidas.has(c.id);
         return `<button type="button" class="lacuna${v ? ' preenchida' : ''}${semPista ? ' sem-pista' : ''}${ultima === c.id ? ' treme' : ''}" data-lacuna="${esc(c.id)}" aria-expanded="${aberta === c.id}" aria-haspopup="listbox">${icone(semPista ? 'cadeado' : ICONE_CAT[c.id] || 'lupa', { tam: 16 })}<span>${esc(v ? nome(c.id, v) : c.nome.toLowerCase())}</span><i aria-hidden="true">▾</i></button>`;
       };
 
       const painelDa = (c) => {
         const ditas = pistas.filter((x) => x.categoria === c.id);
         const ler = indiretas.filter((x) => x.categoria === c.id && !sabidas.has(c.id));
+        // O traço que se sabe sem pista ouvida (o relato da Xerife no começo da noite) também entra na lista.
+        const daXerife = conhecidos.filter((t) => t.split('=')[0] === c.id && !ditas.some((x) => x.sobre === t)).map((t) => nome(c.id, t.split('=')[1]));
+        // O resumo da pista começa com o tipo de traço ("Sinal particular: …"): aqui, só o que foi dito e quem disse.
+        const semTipo = (t) => String(t || '').replace(/^[^:]{2,32}:\s*/, '');
         return `<div class="lacuna-painel" role="listbox" aria-label="${esc(c.nome)}">
           <ul class="lacuna-valores">${c.valores.map((v) => `<li><button type="button" role="option" data-cat="${esc(c.id)}" data-val="${esc(v.id)}" aria-selected="${sel[c.id] === v.id}">${icone(sel[c.id] === v.id ? 'feito' : ICONE_CAT[c.id] || 'lupa', { tam: 16 })}${esc(v.nome)}</button></li>`).join('')}
             ${sel[c.id] ? `<li><button type="button" class="lacuna-limpar" data-cat="${esc(c.id)}" data-val="">Deixar em branco</button></li>` : ''}</ul>
           <div class="lacuna-pistas"><small>O que as pistas disseram</small>
-            ${ditas.length ? `<ul>${ditas.map((x) => `<li><q>${esc(x.texto || x.titulo || '')}</q>${ler.some((y) => y.id === x.id) ? ` <button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>` : ''}</li>`).join('')}</ul>`
+            ${ditas.length || daXerife.length ? `<ul>${daXerife.map((v) => `<li><q>A Xerife contou: ${esc(v)}</q><cite>Relato do começo da noite</cite></li>`).join('')}${ditas.map((x) => `<li><q>${esc(semTipo(x.texto || x.titulo))}</q>${x.fonte ? `<cite>${esc(x.fonte)}</cite>` : ''}${ler.some((y) => y.id === x.id) ? ` <button type="button" class="btn" data-ler="${esc(x.id)}">Pedir à Xerife que leia <small class="etiqueta-tempo">20 min</small></button>` : ''}</li>`).join('')}</ul>`
               : `<p class="lacuna-cadeado">${icone('cadeado', { tam: 16 })} Nenhuma pista falou disso.</p>`}
           </div>
         </div>`;
@@ -607,7 +611,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
               <p class="arquivo-conta">${Math.min(nTipos, 3)} de 3 tipos de traço com pista</p></div>
           </div>
           <div class="arquivo-frase">${frase}${outras}</div>
-          ${sobrou && !lic ? `<ol class="arquivo-sobrou">${ficha(sobrou, vivos, ' sozinha')}</ol>` : ''}
+          ${sobrou && !lic ? `<ol class="arquivo-sobrou">${ficha(sobrou, vivos, ' sozinha deitada')}</ol>` : ''}
           ${lic ? `<p class="arquivo-licenca">Licença de Caça contra <b>${esc(lic.apelido || lic.nome)}</b>. Vá ao esconderijo e cerque.</p>` : ''}
           <div class="arquivo-pe">
             <p class="arquivo-restam-mini">${restamTexto(vivos)}</p>

@@ -692,4 +692,27 @@ body.celular .carmen .ficha-ciranda.descartada { width: 104px; }
 body.celular .carmen .ficha-nome { font-size: 21px; }
 body.celular .carmen .ficha-ciranda .ficha-foto { width: 84px; }
 body.celular .carmen .ficha-ciranda.descartada .ficha-foto { width: 56px; }
-body:not(.celular) .arquivo-pe { position: sticky; bottom: -22px; z-index: 4; margin: auto -22px -22px; padding: 12px 22px 16px; background: linear-gradient(transparent, var(--c-noite-1) 30%); }
+body:not(.celular) .arquivo-pe { position: sticky; bottom: -22px; z-index: 4; margin: auto -22px -22px; padding: 12px 22px 28px; background: linear-gradient(transparent, var(--c-noite-1) 30%); }
+
+/* ============ Etapa 3, ajustes da Avaliação (31/10) ============ */
+/* 1. A ficha que sobra fica deitada (foto à esquerda, traços à direita), para caber inteira acima do botão. */
+.carmen .ficha-ciranda.deitada {
+  width: 100%; min-height: 0; display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 12px;
+  padding: 12px; box-shadow: 0 0 0 3px var(--c-rastro), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+.carmen .ficha-ciranda.deitada .ficha-foto { grid-row: 1 / span 3; width: 96px; margin: 0; }
+.carmen .ficha-ciranda.deitada .ficha-cla { margin-bottom: 4px; }
+.carmen .ficha-ciranda.deitada .ficha-tracos { font-size: 13px; gap: 2px; }
+body:not(.celular) .arquivo-esq { gap: 12px; }
+body:not(.celular) .arquivo-frase { line-height: 1.85; }
+/* 2. O FORA legível: apaga o papel e a foto, não o carimbo. */
+.carmen .ficha-ciranda.descartada { opacity: 1; filter: none; background: color-mix(in srgb, var(--c-papel) 38%, var(--c-noite-1)); box-shadow: none; }
+.carmen .ficha-ciranda.descartada > :not(.carimbo) { opacity: 0.45; filter: grayscale(1); }
+.carmen .ficha-ciranda.descartada > .carimbo { font-size: 18px; opacity: 0.9; color: var(--c-carimbo); border-color: var(--c-carimbo); mix-blend-mode: normal; background: rgba(236, 228, 210, 0.75); }
+/* 4. Quem disse cada pista, em 11 px, como no mapa. */
+.lacuna-pistas cite { display: block; margin-top: 2px; font: 600 11px/1.2 var(--f-ui); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-texto-suave); }
+/* 5. Celular: lacunas e opções com 44 px; as fichas de fora só com a foto e o codinome. */
+body.celular .lacuna, body.celular .lacuna-valores button { min-height: 44px; }
+body.celular .carmen .ficha-ciranda.descartada { min-height: 0; padding: 6px; }
+body.celular .carmen .ficha-ciranda.descartada .ficha-nome { font-size: 14px; }
+body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
