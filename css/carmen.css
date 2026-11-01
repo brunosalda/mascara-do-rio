@@ -808,7 +808,14 @@ body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, b
 .cerco-botoes .btn { min-height: 48px; }
 .cerco-botoes .btn.destaque { flex: 1; }
 /* "Ainda não" sem Licença: discreto, só texto, depois das duas escolhas. */
-.tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil { flex: none; padding-inline: 10px; background: transparent; border-color: transparent; color: var(--c-texto-suave); }
+/* No computador, as duas escolhas dividem a linha sem quebrar, e o "Ainda não" fica embaixo, numa linha só dele. */
+.cerco-botoes { flex-wrap: wrap; }
+.cerco-botoes .btn { flex: 1 1 0; white-space: nowrap; padding-inline: 16px; }
+body:not(.celular) .cartao-cerco:has(.btn.sutil) { width: min(600px, calc(100% - 32px)); }
+/* No celular, os três em coluna, cada um na sua altura. */
+body.celular .tela-jogo.bg2.tela-caso.carmen .cerco-botoes { flex-wrap: nowrap; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn { flex: none; }
+.tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil { flex: 1 0 100%; min-height: 36px; padding-inline: 10px; background: transparent; border-color: transparent; color: var(--c-texto-suave); }
 .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:hover, .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:focus-visible { color: var(--c-texto); text-decoration: underline; }
 /* O custo de cercar sem Licença, na pílula sódio dos tempos ("−30 MIN"). */
 .cerco-botoes small.etiqueta-tempo {

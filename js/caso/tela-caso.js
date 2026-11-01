@@ -49,7 +49,7 @@ function personagemDoCaso(estadoApp) {
 const doisDigitos = (n) => String(n).padStart(2, '0');
 // Minutos desde a meia-noite da véspera → "22h", "0h30", "2h05".
 export const hora = (min) => { const h = Math.floor(min / 60) % 24; const m = min % 60; return `${h}h${m ? doisDigitos(m) : ''}`; };
-const duracao = (min) => { const h = Math.floor(min / 60); const m = min % 60; return h ? `${h}h${m ? doisDigitos(m) : ''}` : `${m} min`; };
+const duracao = (min) => { const h = Math.floor(min / 60); const m = min % 60; return h ? `${h}h${m ? doisDigitos(m) : ''}` : `${m} min`; }; // espaço sem quebra: "30 min" não se separa
 
 const CANTO = '<svg viewBox="0 0 64 64" aria-hidden="true"><path class="placa" d="M4 36 L28 60 L4 84 L-20 60 Z"/><path class="placa-dentro" d="M4 47 L17 60 L4 73 L-9 60 Z"/><path class="galho" d="M4 60 C10 40 18 26 34 18 S56 8 60 4"/><path class="galho" d="M4 60 C22 54 36 46 46 30"/><path class="galho fino" d="M18 34 C24 30 28 24 26 16"/><path class="galho fino" d="M34 46 C40 44 46 40 50 34"/><path class="espinho" d="M30 21 l-5 -7 l8 4 z"/><path class="espinho" d="M42 34 l7 -2 l-4 6 z"/><circle class="no" cx="4" cy="60" r="3.2"/></svg>';
 
@@ -1308,7 +1308,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       <section class="cartao-cerco" role="dialog" aria-label="O esconderijo">
         <h3>Está aqui.</h3>
         ${st.avistamento ? `<p>${esc(st.avistamento)}</p>` : ''}
-        ${lic ? '' : `<p class="cerco-risco">Sem a Licença de Caça, a presa foge, e você perde ${duracao(semLicenca)} até achar o rastro de novo.</p>`}
+        ${lic ? '' : `<p class="cerco-risco">Sem a Licença de Caça, a presa foge, e você perde ${duracao(semLicenca)} até achar o rastro de novo.</p>`}
         <div class="cerco-botoes">${lic
           ? '<button type="button" class="btn destaque" data-cerco="cercar">Cercar</button><button type="button" class="btn" data-cerco="nao">Ainda não</button>'
           : `<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença <small class="etiqueta-tempo">−${duracao(semLicenca)}</small></button><button type="button" class="btn sutil" data-cerco="nao">Ainda não</button>`}</div>
