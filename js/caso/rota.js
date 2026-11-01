@@ -278,7 +278,8 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
       }
 
       // São Paulo sem pintura (decisão do Bruno de 30/10: nenhuma imagem nova): uma trama de ruas em SVG nas cores da
-      // pintura do Rio. Quarteirões escuros com janelas acesas, as ruas em sódio apagado, o Centro com a trama em
+      // pintura do Rio, com cara de pintura: o brilho de sódio borrado ao longo das avenidas, o clarão em volta da Sé e
+      // um grão leve por cima de tudo. Quarteirões escuros com janelas acesas, as ruas em sódio apagado, o Centro com a trama em
       // outro ângulo, as avenidas mais fortes com o nome e a Marginal ao longo do Tietê.
       function fundoSP() {
         const P = pos.sp;
@@ -294,17 +295,19 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           // O nome vai a 72% da avenida, longe do meio, onde costuma ficar um lugar; se ali sair do quadro, tenta
           // 50%, 28% e 85% (nomesAvenidas, depois da medida).
           const vagas = [0.72, 0.5, 0.28, 0.85].map((t) => [0, 1].map((k) => (1 - t) ** 2 * pts[0][k] + 2 * (1 - t) * t * pts[1][k] + t ** 2 * pts[2][k]).map((v) => v.toFixed(0)).join(' '));
-          return `<path class="sp-avenida-brilho" d="${d}"/><path class="sp-avenida" d="${d}"/>
+          return `<path class="sp-avenida-halo" d="${d}" filter="url(#sp-borrao)"/><path class="sp-avenida-brilho" d="${d}"/><path class="sp-avenida" d="${d}"/>
             <text class="sp-avenida-nome" data-vagas="${vagas.join(';')}" data-giro="${giro.toFixed(0)}" transform="translate(${vagas[0]}) rotate(${giro.toFixed(0)})" y="-14">${esc(av.nome)}</text>`;
         }).join('');
         const tiete = `M${vb.x - 200} ${vb.y + 70} C ${vb.x + vb.w * 0.25} ${vb.y + 10}, ${vb.x + vb.w * 0.45} ${vb.y + 130}, ${vb.x + vb.w * 0.6} ${vb.y + 60} S ${vb.x + vb.w * 0.9} ${vb.y + 30}, ${vb.x + vb.w + 200} ${vb.y + 100}`;
         return `<rect class="rota-fundo-sp" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}"/>
           <rect x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}" fill="url(#sp-quadras-a)"/>
           <circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="300" fill="url(#sp-quadras-b)"/>
+          <circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="420" fill="url(#sp-clarao)"/>
           <path class="rota-tiete" d="${tiete}"/><path class="sp-marginal" d="${tiete}" transform="translate(0 26)"/>
           <text class="rota-agua-nome" x="${vb.x + vb.w * 0.62}" y="${vb.y + 40}">rio Tietê</text>
           ${avenidas}
-          <rect class="sp-escuro" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}" fill="url(#sp-vinheta)"/>`;
+          <rect class="sp-escuro" x="-600" y="-600" width="${LARGURA + 1200}" height="${ALTURA + 1200}" fill="url(#sp-vinheta)"/>
+          <rect class="sp-grao" x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" filter="url(#sp-grao)"/>`;
       }
       const projSP = projecaoSP(caso);
 
@@ -368,7 +371,10 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
                     <radialGradient id="vivo-brilho"><stop offset="0" stop-color="#fff3d0"/><stop offset="0.3" stop-color="#ffd27a" stop-opacity="0.85"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
                     ${cidade === 'sp' ? `<radialGradient id="vivo-nevoa"><stop offset="0" stop-color="#9fb4d8" stop-opacity="0.14"/><stop offset="1" stop-color="#9fb4d8" stop-opacity="0"/></radialGradient>
                     <radialGradient id="sp-vinheta" cx="0.5" cy="0.5" r="0.75"><stop offset="0.55" stop-color="#0a0f1c" stop-opacity="0"/><stop offset="1" stop-color="#0a0f1c" stop-opacity="0.85"/></radialGradient>
-                    ${tramaSP()}` : ''}
+                    ${tramaSP()}
+                    <filter id="sp-borrao" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+                    <filter id="sp-grao" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 0.94  0 0 0 0 0.82  0.12 0 0 0 0"/></filter>
+                    <radialGradient id="sp-clarao"><stop offset="0" stop-color="#ffb347" stop-opacity="0.2"/><stop offset="0.45" stop-color="#f2a33a" stop-opacity="0.08"/><stop offset="1" stop-color="#f2a33a" stop-opacity="0"/></radialGradient>` : ''}
                   </defs>
                   ${fundo}
                   ${vivo(P)}

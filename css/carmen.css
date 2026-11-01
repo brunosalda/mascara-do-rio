@@ -1319,6 +1319,8 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .sp-quadra.praca { fill: #131c1b; }
 .sp-janela { fill: #f0c068; opacity: 0.55; }
 .sp-janela.fraca { opacity: 0.25; }
+.sp-avenida-halo { fill: none; stroke: #f2a33a; stroke-width: 60; stroke-linecap: round; opacity: 0.12; }
+.sp-grao { pointer-events: none; }
 .sp-avenida-brilho { fill: none; stroke: #ffb347; stroke-width: 34; stroke-linecap: round; opacity: 0.08; }
 .sp-avenida { fill: none; stroke: #c99a4c; stroke-width: 8; stroke-linecap: round; opacity: 0.55; }
 .sp-marginal { fill: none; stroke: #c99a4c; stroke-width: 10; stroke-linecap: round; opacity: 0.45; }
