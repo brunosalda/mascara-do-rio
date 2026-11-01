@@ -1629,7 +1629,7 @@ export function montarCena(raiz, {
         const angulo = (Math.atan2((pos.x - fonte.x) * mw, -(pos.y - fonte.y) * mh * 0.35) * 180) / Math.PI;
         projetada.style.transform = `rotate(${angulo.toFixed(1)}deg) scaleY(${(0.8 + proj).toFixed(2)}) scaleX(var(--virar, 1))`;
       }
-      projetada.style.opacity = (proj > 0 ? 0.15 + proj * 0.2 : 0).toFixed(2);
+      projetada.style.opacity = (proj > 0 ? 0.15 + proj * 0.3 : 0).toFixed(2);
     }
   }
 
