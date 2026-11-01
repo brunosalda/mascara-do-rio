@@ -52,6 +52,7 @@ function htmlBoneco(sprite) {
   return `
     <div class="personagem com-sprite${sprite.respira?.url ? ' com-respiracao' : ''}${sprite.frente?.url && sprite.costas?.url ? '' : ' sem-folhas'}" style="${vars}">
       <span class="sombra-pe"></span>
+      <span class="sprite sombra-projetada" style="${mascara}"></span>
       <span class="circulo-escolhido" aria-hidden="true"></span>
       <span class="sprite reflexo" style="${folha}"></span>
       <span class="sprite corpo-sprite" style="${folha}"></span>
@@ -156,6 +157,7 @@ export function montarCena(raiz, {
   const tinta = boneco.querySelector('.tinta');
   const reflexo = boneco.querySelector('.reflexo');
   const sombra = boneco.querySelector('.sombra-pe');
+  const projetada = boneco.querySelector('.sombra-projetada');
 
   const balao = cena.querySelector('.balao-voz');
   const camadaContornos = cena.querySelector('.contornos');
@@ -1611,6 +1613,24 @@ export function montarCena(raiz, {
     const forca = comLuz ? Math.min(1, maior * 1.6) : 0;
     sombra.style.transform = `translateX(${(-lado * forca * 22).toFixed(1)}%) scaleX(${(1 + forca * 0.5).toFixed(2)})`;
     sombra.style.opacity = (0.8 - forca * 0.2).toFixed(2);
+    // Vista do alto: a sombra projetada, com a forma da figura, deitada no chão a partir dos pés e apontando para
+    // longe do poste mais forte por perto. A luz marcada fica no alto do poste, então a distância conta pouco na
+    // vertical, e a direção fica mais de lado do que para cima ou para baixo. Mais longa e mais escura quanto mais
+    // forte a luz; os postes comuns já contam.
+    if (projetada && geo.alto) {
+      let proj = 0; let fonte = null;
+      for (const [n, l] of geo.luzes.entries()) {
+        if (n === vida.falhando || l.y > pos.y - 0.03) continue; // só luz no alto (poste); brilho no chão não deita sombra
+        const v = Math.max(0, 1 - Math.hypot(pos.x - l.x, (pos.y - l.y) * 0.5) / (l.raio * 1.5)) * Math.min(1, l.forca * 1.5) * 1.6;
+        if (v > proj) { proj = v; fonte = l; }
+      }
+      proj = Math.min(1, proj);
+      if (fonte) {
+        const angulo = (Math.atan2((pos.x - fonte.x) * mw, -(pos.y - fonte.y) * mh * 0.35) * 180) / Math.PI;
+        projetada.style.transform = `rotate(${angulo.toFixed(1)}deg) scaleY(${(0.8 + proj).toFixed(2)}) scaleX(var(--virar, 1))`;
+      }
+      projetada.style.opacity = (proj > 0 ? 0.15 + proj * 0.2 : 0).toFixed(2);
+    }
   }
 
   // Passo em chão molhado: um respingo pequeno sob o pé e uma onda curta no reflexo.
@@ -1775,6 +1795,7 @@ export function montarCena(raiz, {
     reflexo.style.backgroundImage = `url('${nova.url}')`;
     tinta.style.webkitMaskImage = `url('${nova.url}')`;
     tinta.style.maskImage = `url('${nova.url}')`;
+    if (projetada) { projetada.style.webkitMaskImage = `url('${nova.url}')`; projetada.style.maskImage = `url('${nova.url}')`; }
     boneco.style.setProperty('--quadros', nova.quadros);
     boneco.style.setProperty('--proporcao', nova.largura / nova.altura);
   }
@@ -1790,6 +1811,7 @@ export function montarCena(raiz, {
     reflexo.style.backgroundPosition = p;
     tinta.style.webkitMaskPosition = p;
     tinta.style.maskPosition = p;
+    if (projetada) { projetada.style.webkitMaskPosition = p; projetada.style.maskPosition = p; }
   }
 
   // --- Câmera --------------------------------------------------------------------------------------

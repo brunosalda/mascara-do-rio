@@ -1168,6 +1168,21 @@ body[data-tempo='tempestade'] .pintura, body[data-tempo='tempestade'] .pintura-f
 .personagem.parado .corpo-sprite, .personagem.parado .tinta { animation: respirar-figura 3.5s ease-in-out infinite, peso 7.3s ease-in-out infinite; }
 @keyframes respirar-figura { 0%, 100% { scale: 1 1; } 50% { scale: 1.004 1.012; } }
 @keyframes peso { 0%, 100% { translate: 0 0; } 50% { translate: 0.8% 0; } }
+/* Sombra projetada (vista do alto): a mesma figura em preto, desfocada, girando em volta dos pés para o lado
+   oposto à luz. O ângulo, o comprimento e a opacidade vêm de iluminar() em cena.js. */
+.sombra-projetada {
+  top: 0;
+  background: #000;
+  -webkit-mask-size: calc(var(--quadros, 6) * 100%) 100%;
+  mask-size: calc(var(--quadros, 6) * 100%) 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  transform-origin: 50% 100%;
+  filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.personagem.manto .sombra-projetada { opacity: 0 !important; }
 /* Reflexo no chão molhado: a mesma figura, virada de cabeça para baixo e esmaecendo. */
 .reflexo {
   top: 100%;
