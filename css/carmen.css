@@ -234,6 +234,10 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
 /* No HUD da cena: o arco no lugar do disco de bronze. */
 .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco { gap: 0; }
 .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { transform: scale(0.72); transform-origin: center bottom; }
+/* Com a escala de 0,72, o "faltam" de 17 px sai com 12,2 px na tela. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco small { font-size: 17px; }
+/* A letra do rosto das vozes (a inicial da voz interior) na fonte dos títulos, não na Cormorant. */
+.tela-jogo.bg2.tela-caso.carmen .rosto { font-family: var(--f-titulo); font-weight: 800; }
 
 /* A coluna "Para onde foi?". */
 .mapa-coluna { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--c-linha); background: var(--c-noite-0); padding: 14px 16px 0; }
@@ -250,7 +254,8 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
   display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; min-height: 48px; padding: 8px 6px; border: 0; border-radius: 6px;
   background: transparent; color: var(--c-texto); text-align: left; cursor: pointer;
 }
-.carmen .rota-lista button:hover, .carmen .rota-lista button:focus-visible { background: var(--c-noite-2); outline: none; }
+.carmen .rota-lista button:hover, .carmen .rota-lista button:focus-visible { background: var(--c-noite-2); }
+.carmen .rota-lista button:focus-visible { outline: 2px solid var(--c-sodio); outline-offset: -2px; }
 .carmen .rota-lista button[aria-pressed='true'] { background: var(--c-noite-2); box-shadow: inset 3px 0 0 #f2a33a; }
 .carmen .rota-lista b { font: 600 15px var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; }
 .carmen .rota-lista small { grid-row: 1; grid-column: 2; display: inline-flex; align-items: center; gap: 4px; color: #f2a33a; font: 700 13px var(--f-ui); text-transform: uppercase; }
@@ -405,7 +410,7 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-bo
   position: static; translate: none; font: 600 15px/1 var(--f-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-texto);
 }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-nome kbd {
-  margin-left: 6px; padding: 2px 5px; border: 1px solid var(--c-linha-forte); border-radius: 4px; font: 600 11px/1 var(--f-ui); color: var(--c-texto-suave); text-shadow: none;
+  margin-left: 6px; padding: 2px 5px; border: 1px solid var(--c-linha-forte); border-radius: 4px; font: 600 12px/1 var(--f-ui); color: var(--c-texto-suave); text-shadow: none;
 }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes [data-hud="menu"] .hud-nome { display: none; }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-botoes .hud-contador { top: -6px; right: -4px; }
@@ -476,7 +481,7 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .faixa-demo { top: calc(var(--topo) + 4px); padding: 3px 10px; font-size: 10px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo { top: calc(var(--topo) + 30px); left: 14px; max-width: calc(100% - 110px); }
 body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo b { font-size: 34px; }
-body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font-size: 11px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font-size: 12px; letter-spacing: 0.06em; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite.com-arco { top: calc(var(--topo) + 26px); right: 8px; left: auto; width: 76px; height: auto; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 0.62; }
 /* O retrato: redondo, 44 px, embaixo à esquerda, acima da pílula do caso, com as gotas de Fome. */
@@ -548,7 +553,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noit
 body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 1; transform: none; position: relative; width: 72px; height: 64px; margin: 0 auto; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite .relogio-arco svg { width: 72px; height: 50px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco b { top: 19px; font-size: 20px; }
-body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco small { display: block; top: 50px; left: -8px; right: -8px; font-size: 11px !important; white-space: nowrap; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco small { display: block; top: 50px; left: -8px; right: -8px; font-size: 12px !important; letter-spacing: 0.02em; white-space: nowrap; }
 
 /* 5. A faixa de baixo do celular: retrato, gotas e a pílula do caso numa fileira só, de 44 px, sobre a barra.
    Tocar na pílula abre a folha (o quadro do caso e o registro). */
@@ -610,7 +615,8 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
   width: 100%; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 0; border-radius: 8px;
   background: none; color: var(--c-texto); font: 500 16px/1.2 var(--f-ui); text-align: left; cursor: pointer;
 }
-.lacuna-valores button:hover, .lacuna-valores button:focus-visible { background: rgba(200, 214, 240, 0.12); outline: none; }
+.lacuna-valores button:hover, .lacuna-valores button:focus-visible { background: rgba(200, 214, 240, 0.12); }
+.lacuna-valores button:focus-visible { outline: 2px solid var(--c-sodio); outline-offset: -2px; }
 .lacuna-valores button[aria-selected='true'] { color: var(--c-sodio); background: var(--c-sodio-fraco); }
 .lacuna-valores .icone { flex: none; color: var(--c-texto-suave); }
 .lacuna-valores button[aria-selected='true'] .icone { color: var(--c-sodio); }
@@ -741,7 +747,7 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .licenca-num { font: 700 16px/1 'Courier Prime', ui-monospace, monospace; color: var(--c-tinta-suave); white-space: nowrap; }
 .licenca-quem { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; }
 .licenca-quem .ficha-foto { width: 112px; rotate: -2deg; }
-.licenca-quem small, .licenca-campos dt { display: block; font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
+.licenca-quem small, .licenca-campos dt { display: block; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
 .licenca-quem b { display: block; margin: 2px 0 8px; font: 800 34px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; }
 .licenca-quem p { margin: 0; }
 .datilo { font: 400 16px/1.3 'Courier Prime', ui-monospace, monospace; color: #241d17; }
@@ -751,7 +757,7 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .licenca-autorizo { margin: 6px 0 0; }
 .licenca-assina { margin: 0; display: grid; justify-items: start; }
 .licenca-assina span { font: 700 40px/1 var(--f-mao); color: #1d2a55; rotate: -4deg; }
-.licenca-assina small { padding-top: 2px; min-width: 160px; border-top: 1px solid var(--c-tinta); font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
+.licenca-assina small { padding-top: 2px; min-width: 160px; border-top: 1px solid var(--c-tinta); font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
 /* O carimbo G cai sobre a assinatura; até lá, não aparece. Reaberta pelo Arquivo, já está no papel. */
 .carmen .licenca-doc .licenca-carimbo { position: absolute; right: 40px; bottom: 112px; rotate: -10deg; opacity: 0; animation: none; mix-blend-mode: multiply; background: none; }
 .carmen .licenca-doc.carimbando .licenca-carimbo { opacity: 0.92; animation: carmen-carimbar 420ms var(--curva-mola) both; }
