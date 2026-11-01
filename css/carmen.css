@@ -992,11 +992,12 @@ body.celular .tela-jogo .placar-selos small { font-size: 14px; }
   display: block; width: 168px; height: 210px; background-color: #1a1410;
   background-repeat: no-repeat; background-size: 250% auto; background-position: 50% 3%;
 }
-/* Sem figura pintada: uma silhueta contra a luz do lugar. */
+/* Sem figura pintada (a Xerife, na abertura): uma silhueta própria em SVG, de chapéu de aba, cabelo nos ombros e gola
+   levantada, contra a luz do lugar, com um fio de luz de sódio do lado direito. Não é o boneco genérico de perfil. */
 .cartao-testemunha.sem-figura .ct-foto {
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 50'%3E%3Cpath fill='%23090a0e' d='M20 9a7 7 0 1 1 0 14a7 7 0 0 1 0-14zM5 50c0-13 5-23 15-23s15 10 15 23z'/%3E%3C/svg%3E") 50% 100% / 86% auto no-repeat,
-    radial-gradient(circle at 50% 35%, #c98a4a, #5a3a24 55%, #1a1410 90%);
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2050'%3E%3Cpath%20fill='%23f2a33a'%20fill-opacity='0.85'%20transform='translate%280.7%200%29'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3Cpath%20fill='%23090a0e'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3C/svg%3E") 50% 100% / 92% auto no-repeat,
+    radial-gradient(circle at 50% 30%, #c98a4a, #5a3a24 55%, #1a1410 90%);
 }
 .cartao-testemunha figcaption { position: absolute; left: 6px; right: 6px; bottom: 2px; overflow: hidden; text-align: center; white-space: nowrap; text-overflow: ellipsis; font: 700 22px/1.1 var(--f-mao); color: #1d2a55; }
 .cartao-testemunha small { position: absolute; top: calc(100% + 8px); left: -4px; right: -4px; text-align: center; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); rotate: 2deg; }
