@@ -532,6 +532,20 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         // O nome de um lugar que virou indicador sai da vista (ficaria cortado na borda).
         const livres = [];
         const nomesVista = [];
+        const nomesMapa = [];
+        // Em São Paulo, o Tietê, a Marginal (26 abaixo) e o nome do rio também são obstáculos: caixas a cada 20 do
+        // traçado, cobrindo o rio e a Marginal, e a caixa do nome.
+        const rio = corpo.querySelector('.rota-tiete');
+        const agua = [];
+        if (rio?.getTotalLength) {
+          const total = rio.getTotalLength();
+          for (let l = 0; l <= total; l += 20) {
+            const pt = rio.getPointAtLength(l);
+            agua.push({ x: pt.x - 10, y: pt.y - 8, w: 20, h: 26 + 16 });
+          }
+        }
+        const nomeRio = corpo.querySelector('.rota-agua-nome')?.getBBox?.();
+        if (nomeRio?.width) agua.push({ x: nomeRio.x - 4, y: nomeRio.y - 2, w: nomeRio.width + 8, h: nomeRio.height + 4 });
         for (const id of ids) {
           const g = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`);
           const rot = g?.querySelector('.rota-rotulo');
@@ -569,7 +583,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
             }, 0) + nomesVista.reduce((soma, n) => {
               const [ex, ey] = tela(x0, y0);
               return soma + areaComum({ x: ex, y: ey, w: lw, h: lh }, n) / 20;
-            }, 0);
+            }, 0) + (agua.some((a) => areaComum({ x: x0, y: y0, w: bb.width, h: bb.height }, a)) ? 6 : 0);
             if (!melhor || entra < melhor.entra) melhor = { vx, vy, dv, entra };
             if (!entra) break;
           }
@@ -584,7 +598,10 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           if (melhor.entra > 8) { rot.style.visibility = 'hidden'; continue; }
           livres.push({ x: esq + desvio, y: topo, w: lw, h: lh });
           nomesVista.push({ x: esq + desvio, y: topo, w: lw, h: lh });
+          nomesMapa.push({ x: P[id][0] + tx + bb.x + desvio / kx, y: P[id][1] + ty + bb.y, w: bb.width, h: bb.height });
         }
+        // Os nomes das avenidas fogem dos nomes de lugar onde eles ficaram agora, não onde estavam antes.
+        nomesAvenidas(P, ids, nomesMapa);
         // Dois ou mais lugares na mesma borda viram um indicador só ("‹ 3 lugares"), que abre a lista deles
         // (item 4): as pílulas não cobrem o mapa.
         const itens = ['esq', 'dir'].map((lado) => fora.filter((f) => f.lado === lado)).filter((l) => l.length)
