@@ -956,7 +956,11 @@ body.celular .placar-selos { display: grid; grid-template-columns: repeat(5, min
 body.celular .placar-selos li { width: auto; }
 body.celular .placar-selos svg { width: 44px; height: 44px; }
 body.celular .placar-tela { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-body.celular .carmen .janela-placar .fechar-camada { background: var(--c-vidro); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+/* O "×" do Placar no celular fica sobre a tabela ao rolar: fundo opaco (a regra geral do ✕ é transparente e
+   mais forte; por isso o seletor longo). */
+body.celular .tela-jogo.bg2.tela-caso.carmen .janela-placar .fechar-camada { background: var(--c-noite-1); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
+/* E os números da tabela e do ranking terminam antes da faixa do "×" (x 316 a 360), em qualquer rolagem. */
+body.celular .carmen .janela-placar :is(.placar-contas, .placar-ranking) { width: calc(100% - 44px); margin-right: 44px; box-sizing: border-box; }
 /* Placar, ajustes da Avaliação (31/10): selos com rótulo de 12 px e 2 linhas; ranking longo mais baixo; o carimbo
    desce para não cobrir a linha do capítulo. */
 .placar-selos { align-items: start; }
