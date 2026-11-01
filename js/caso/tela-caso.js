@@ -1278,6 +1278,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function momentoCerco() {
     if (tela.querySelector('.cartao-cerco')) return;
     const lic = !!banco.estado.licenca;
+    // O que o relógio desconta se cercar sem Licença: a mesma tabela de custos do capítulo que o banco usa.
+    const semLicenca = caso.custo.semLicenca ?? 30;
     // A câmera aproxima no ponto do esconderijo, que ganha um anel fino: o alvo fica marcado.
     const palcoEl = tela.querySelector('.palco');
     const alvo = tela.querySelector('[data-ponto="cercar"]');
@@ -1306,16 +1308,19 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       <section class="cartao-cerco" role="dialog" aria-label="O esconderijo">
         <h3>Está aqui.</h3>
         ${st.avistamento ? `<p>${esc(st.avistamento)}</p>` : ''}
-        ${lic ? '' : '<p class="cerco-risco">Sem a Licença de Caça, a presa foge e você perde tempo até achar o rastro de novo.</p>'}
+        ${lic ? '' : `<p class="cerco-risco">Sem a Licença de Caça, a presa foge, e você perde ${duracao(semLicenca)} até achar o rastro de novo.</p>`}
         <div class="cerco-botoes">${lic
           ? '<button type="button" class="btn destaque" data-cerco="cercar">Cercar</button><button type="button" class="btn" data-cerco="nao">Ainda não</button>'
-          : '<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença</button>'}</div>
+          : `<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença <small class="etiqueta-tempo">−${duracao(semLicenca)}</small></button><button type="button" class="btn sutil" data-cerco="nao">Ainda não</button>`}</div>
       </section>`;
     tela.appendChild(el);
-    const sair = () => { el.remove(); tela.classList.remove('cercando'); alvo?.classList.remove('alvo-cerco'); };
+    // Sair sem decidir: "Ainda não", Esc ou um toque fora do cartão. A personagem fica onde está, e o relógio não anda.
+    const tecla = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); sair(); } };
+    document.addEventListener('keydown', tecla, true);
+    const sair = () => { el.remove(); document.removeEventListener('keydown', tecla, true); tela.classList.remove('cercando'); alvo?.classList.remove('alvo-cerco'); };
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-cerco]');
-      if (!b) return;
+      if (!b) { if (!ev.target.closest('.cartao-cerco')) sair(); return; }
       sair();
       if (b.dataset.cerco === 'cercar') cercar();
       if (b.dataset.cerco === 'arquivo') abrirOArquivo();

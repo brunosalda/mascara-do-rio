@@ -807,6 +807,14 @@ body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, b
 .cerco-botoes { display: flex; gap: 10px; margin-top: 6px; }
 .cerco-botoes .btn { min-height: 48px; }
 .cerco-botoes .btn.destaque { flex: 1; }
+/* "Ainda não" sem Licença: discreto, só texto, depois das duas escolhas. */
+.tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil { flex: none; padding-inline: 10px; background: transparent; border-color: transparent; color: var(--c-texto-suave); }
+.tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:hover, .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:focus-visible { color: var(--c-texto); text-decoration: underline; }
+/* O custo de cercar sem Licença, na pílula sódio dos tempos ("−30 MIN"). */
+.cerco-botoes small.etiqueta-tempo {
+  display: inline-block; margin-left: 6px; padding: 3px 8px 2px; border-radius: 999px; vertical-align: 2px;
+  background: var(--c-sodio); color: #1a1206; font: 700 12px/1 var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
 /* Preso: clarão branco de 80 ms e a cena em preto e branco com o carimbo G. Fugiu: a cena escurece e leva FUGIU. */
 .cerco-fim { position: absolute; inset: 0; z-index: 720; display: grid; place-items: center; pointer-events: none; }
 .cerco-clarao { position: absolute; inset: 0; background: #fff; opacity: 0; }
