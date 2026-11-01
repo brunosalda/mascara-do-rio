@@ -2142,7 +2142,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       // já mostram a cena, e o cartão fica de fora.
       if (paineis) cam.el.classList.add('com-tira');
       const foto = document.createElement('figure');
-      foto.className = 'cartao-testemunha sem-figura';
+      foto.className = 'cartao-testemunha sem-figura xerife';
       foto.setAttribute('aria-hidden', 'true');
       foto.innerHTML = '<span class="ct-foto"></span><figcaption>Iolanda</figcaption><small>Xerife</small>';
       if (!paineis) { cam.el.prepend(foto); cam.el.classList.add('com-cartao'); }

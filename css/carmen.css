@@ -992,11 +992,17 @@ body.celular .tela-jogo .placar-selos small { font-size: 14px; }
   display: block; width: 168px; height: 210px; background-color: #1a1410;
   background-repeat: no-repeat; background-size: 250% auto; background-position: 50% 3%;
 }
-/* Sem figura pintada (a Xerife, na abertura): uma silhueta própria em SVG, de chapéu de aba, cabelo nos ombros e gola
-   levantada, contra a luz do lugar, com um fio de luz de sódio do lado direito. Não é o boneco genérico de perfil. */
+/* Sem figura pintada: uma silhueta neutra (cabeça e ombros de casaco), contra a luz do lugar, com um fio de luz de
+   sódio do lado direito. */
 .cartao-testemunha.sem-figura .ct-foto {
   background:
-    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2050'%3E%3Cpath%20fill='%23f2a33a'%20fill-opacity='0.85'%20transform='translate%280.7%200%29'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3Cpath%20fill='%23090a0e'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3C/svg%3E") 50% 100% / 92% auto no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2050'%3E%3Cpath%20fill='%23f2a33a'%20fill-opacity='0.85'%20transform='translate(0.7%200)'%20d='M20%208.5Q26%208.5%2026%2016Q26%2023.5%2020%2024.5Q14%2023.5%2014%2016Q14%208.5%2020%208.5ZM17.5%2023h5v6h-5zM4%2050Q5%2036%2014%2033L17.5%2028.5L20%2033L22.5%2028.5L26%2033Q35%2036%2036%2050Z'/%3E%3Cpath%20fill='%23090a0e'%20d='M20%208.5Q26%208.5%2026%2016Q26%2023.5%2020%2024.5Q14%2023.5%2014%2016Q14%208.5%2020%208.5ZM17.5%2023h5v6h-5zM4%2050Q5%2036%2014%2033L17.5%2028.5L20%2033L22.5%2028.5L26%2033Q35%2036%2036%2050Z'/%3E%3C/svg%3E") 50% 100% / 92% auto no-repeat,
+    radial-gradient(circle at 50% 30%, #c98a4a, #5a3a24 55%, #1a1410 90%);
+}
+/* A Xerife, na abertura: silhueta própria, de chapéu de aba, cabelo nos ombros e gola levantada. */
+.cartao-testemunha.sem-figura.xerife .ct-foto {
+  background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2050'%3E%3Cpath%20fill='%23f2a33a'%20fill-opacity='0.85'%20transform='translate%280.7%200%29'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3Cpath%20fill='%23090a0e'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3C/svg%3E"),
     radial-gradient(circle at 50% 30%, #c98a4a, #5a3a24 55%, #1a1410 90%);
 }
 .cartao-testemunha figcaption { position: absolute; left: 6px; right: 6px; bottom: 2px; overflow: hidden; text-align: center; white-space: nowrap; text-overflow: ellipsis; font: 700 22px/1.1 var(--f-mao); color: #1d2a55; }
@@ -1318,14 +1324,15 @@ body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto
 .vivo-barca .vivo-cabine { fill: #ffd27a; opacity: 0.9; }
 .vivo-barca .vivo-esteira { fill: none; stroke: #cfe3f2; stroke-width: 2; stroke-linecap: round; opacity: 0.35; }
 /* Item 4: São Paulo em trama de ruas, nas cores da pintura do Rio. */
-.sp-rua { fill: #1d1c18; }
-.sp-quadra { fill: #0f1729; }
-.sp-quadra.centro { fill: #121828; }
-.sp-quadra.praca { fill: #131c1b; }
+.sp-rua { fill: #10121a; }
+.sp-quadra { fill: #0a0f1e; }
+.sp-quadra.centro { fill: #0d111c; }
+.sp-quadra.praca { fill: #0d1413; }
 .sp-janela { fill: #f0c068; opacity: 0.55; }
 .sp-janela.fraca { opacity: 0.25; }
 .sp-avenida-halo { fill: none; stroke: #f2a33a; stroke-width: 60; stroke-linecap: round; opacity: 0.12; }
-.sp-grao { pointer-events: none; }
+/* O grão é ruído cinza em overlay: textura sem somar luz nem tirar a cor da noite. */
+.sp-grao { pointer-events: none; mix-blend-mode: overlay; }
 .sp-avenida-brilho { fill: none; stroke: #ffb347; stroke-width: 34; stroke-linecap: round; opacity: 0.08; }
 .sp-avenida { fill: none; stroke: #c99a4c; stroke-width: 8; stroke-linecap: round; opacity: 0.55; }
 .sp-marginal { fill: none; stroke: #c99a4c; stroke-width: 10; stroke-linecap: round; opacity: 0.45; }

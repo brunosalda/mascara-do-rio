@@ -373,7 +373,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
                     <radialGradient id="sp-vinheta" cx="0.5" cy="0.5" r="0.75"><stop offset="0.55" stop-color="#0a0f1c" stop-opacity="0"/><stop offset="1" stop-color="#0a0f1c" stop-opacity="0.85"/></radialGradient>
                     ${tramaSP()}
                     <filter id="sp-borrao" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
-                    <filter id="sp-grao" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 0.94  0 0 0 0 0.82  0.12 0 0 0 0"/></filter>
+                    <filter id="sp-grao" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feColorMatrix values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 0.10"/></filter>
                     <radialGradient id="sp-clarao"><stop offset="0" stop-color="#ffb347" stop-opacity="0.2"/><stop offset="0.45" stop-color="#f2a33a" stop-opacity="0.08"/><stop offset="1" stop-color="#f2a33a" stop-opacity="0"/></radialGradient>` : ''}
                   </defs>
                   ${fundo}
