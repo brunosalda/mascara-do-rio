@@ -622,7 +622,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 .lacuna-valores button[aria-selected='true'] .icone { color: var(--c-sodio); }
 .lacuna-valores .lacuna-limpar { color: var(--c-texto-suave); font-size: 14px; }
 .lacuna-pistas { padding-top: 8px; border-top: 1px solid var(--c-linha); }
-.lacuna-pistas > small { display: block; margin-bottom: 6px; font: 600 11px/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); }
+.lacuna-pistas > small { display: block; margin-bottom: 6px; font: 600 12px/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); }
 .lacuna-pistas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .lacuna-pistas q { color: var(--c-texto); font-style: italic; }
 .lacuna-pistas .btn { margin-top: 4px; }
@@ -662,7 +662,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 .ficha-clipe::after { content: ""; position: absolute; left: 2px; top: 4px; width: 4px; height: 14px; border: 2px solid #8c96a8; border-radius: 3px; }
 .carmen .ficha-nome { display: block; font: 800 24px/1 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-tinta); }
 .carmen .ficha-cla { margin: 2px 0 6px; font: 600 15px/1.2 var(--f-ui); color: var(--c-tinta); }
-.carmen .ficha-cla small { display: block; font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-tinta-suave); }
+.carmen .ficha-cla small { display: block; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-tinta-suave); }
 .carmen .ficha-tracos { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font: 500 14px/1.2 var(--f-ui); }
 .carmen .ficha-tracos li { display: flex; gap: 6px; align-items: flex-start; }
 .carmen .ficha-tracos .icone { flex: none; color: var(--c-tinta-suave); margin-top: 1px; }
@@ -717,7 +717,7 @@ body:not(.celular) .arquivo-frase { line-height: 1.85; }
 .carmen .ficha-ciranda.descartada > :not(.carimbo) { opacity: 0.45; filter: grayscale(1); }
 .carmen .ficha-ciranda.descartada > .carimbo { font-size: 18px; opacity: 0.9; color: var(--c-carimbo); border-color: var(--c-carimbo); mix-blend-mode: normal; background: rgba(236, 228, 210, 0.75); }
 /* 4. Quem disse cada pista, em 11 px, como no mapa. */
-.lacuna-pistas cite { display: block; margin-top: 2px; font: 600 11px/1.2 var(--f-ui); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-texto-suave); }
+.lacuna-pistas cite { display: block; margin-top: 2px; font: 600 12px/1.2 var(--f-ui); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-texto-suave); }
 /* 5. Celular: lacunas e opções com 44 px; as fichas de fora só com a foto e o codinome. */
 body.celular .lacuna, body.celular .lacuna-valores button { min-height: 44px; }
 body.celular .carmen .ficha-ciranda.descartada { min-height: 0; padding: 6px; }
