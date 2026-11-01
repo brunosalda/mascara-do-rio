@@ -815,6 +815,7 @@ body:not(.celular) .cartao-cerco:has(.btn.sutil) { width: min(600px, calc(100% -
 /* No celular, os três em coluna, cada um na sua altura. */
 body.celular .tela-jogo.bg2.tela-caso.carmen .cerco-botoes { flex-wrap: nowrap; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn { flex: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil { min-height: 44px; }
 .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil { flex: 1 0 100%; min-height: 36px; padding-inline: 10px; background: transparent; border-color: transparent; color: var(--c-texto-suave); }
 .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:hover, .tela-jogo.bg2.tela-caso.carmen .cerco-botoes .btn.sutil:focus-visible { color: var(--c-texto); text-decoration: underline; }
 /* O custo de cercar sem Licença, na pílula sódio dos tempos ("−30 MIN"). */
