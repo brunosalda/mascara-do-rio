@@ -236,7 +236,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
 
       // A trama de São Paulo em 3 × 3 células de 200 × 132 (600 × 396 até repetir, em vez de 200 × 132): cada célula
       // tem uma das quatro divisões de quarteirão, diferente da vizinha da esquerda, às vezes uma praça, e janelas em
-      // lugares sorteados. Algumas janelas piscam devagar (sem movimento, ficam acesas). O Centro, em 2 × 2.
+      // lugares sorteados. Algumas janelas piscam devagar (sem movimento, ficam acesas). O Centro, em 4 × 4 (280 × 280).
       function tramaSP() {
         let semente = 11;
         const sorte = () => (semente = (semente * 9301 + 49297) % 233280) / 233280;
@@ -269,9 +269,12 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           }
         }
         let b = '';
-        for (const [x, y] of [[0, 0], [70, 0], [0, 70], [70, 70]]) b += `<rect class="sp-quadra centro" x="${x + 5}" y="${y + 5}" width="60" height="60" rx="2"/>${janelas(x + 5, y + 5, 60, 60, 2 + Math.floor(sorte() * 3))}`;
+        for (let i = 0; i < 16; i++) {
+          const [x, y] = [(i % 4) * 70, Math.floor(i / 4) * 70];
+          b += `<rect class="sp-quadra centro" x="${x + 5}" y="${y + 5}" width="60" height="60" rx="2"/>${janelas(x + 5, y + 5, 60, 60, 1 + Math.floor(sorte() * 4))}`;
+        }
         return `<pattern id="sp-quadras-a" width="600" height="396" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect class="sp-rua" width="600" height="396"/>${a}</pattern>
-                    <pattern id="sp-quadras-b" width="140" height="140" patternUnits="userSpaceOnUse" patternTransform="rotate(9)"><rect class="sp-rua" width="140" height="140"/>${b}</pattern>`;
+                    <pattern id="sp-quadras-b" width="280" height="280" patternUnits="userSpaceOnUse" patternTransform="rotate(9)"><rect class="sp-rua" width="280" height="280"/>${b}</pattern>`;
       }
 
       // São Paulo sem pintura (decisão do Bruno de 30/10: nenhuma imagem nova): uma trama de ruas em SVG nas cores da
