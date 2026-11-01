@@ -189,7 +189,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .janela h2 { font-size: 32px; }
 .rota-voce-tag { fill: #fff; font: 800 24px var(--f-titulo); letter-spacing: 0.12em; text-anchor: middle; paint-order: stroke; stroke: #e0263f; stroke-width: 10px; stroke-linejoin: round; }
 .rota-selo-aviao { fill: rgba(7, 10, 18, 0.8); }
 .rota-aviao { color: #f2a33a; }
-.carmen .rota-nome { fill: #e8e4dc; font: 600 27px var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 8px; stroke-linejoin: round; }
+.carmen .rota-nome { fill: #e8e4dc; font: 600 27px var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 11px; stroke-linejoin: round; }
 .rota-pilula rect { fill: rgba(7, 10, 18, 0.85); stroke: rgba(242, 163, 58, 0.45); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .rota-pilula text { fill: #f2a33a; font: 700 20px var(--f-ui); letter-spacing: 0.06em; text-anchor: middle; }
 .carmen .rota-marcas { fill: #9ba5b8; font: italic 500 21px var(--f-ui); text-anchor: middle; paint-order: stroke; stroke: #070a12; stroke-width: 7px; opacity: 0; transition: opacity 120ms; }
