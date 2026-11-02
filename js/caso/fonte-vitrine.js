@@ -67,6 +67,13 @@ function rerrolar(res) {
 }
 const ok = (res) => ['sucesso', 'critico', 'critico-sangrento'].includes(res?.resultado);
 const parada = (pool) => Math.max(1, (numeros?.atributos?.[pool[0]] || 0) + (numeros?.habilidades?.[pool[1]] || 0));
+// _cap_insistir: a aposta de insistir no pedido comum (a maior entre Carisma e Manipulação, mais Persuasão).
+function apostaInsistir() {
+  if (!numeros?.atributos) return { pool: null, parada: 1, dif: 1 };
+  const c = parada(['carisma', 'persuasao']);
+  const m = parada(['manipulacao', 'persuasao']);
+  return { pool: m > c ? ['manipulacao', 'persuasao'] : ['carisma', 'persuasao'], parada: Math.max(c, m), dif: 2 + (pr.fome >= 4 ? 1 : 0) };
+}
 
 // --- estado (_cap_tracos, _cap_presos, _cap_estado, _cap_amanheceu)
 function tracos() {
@@ -147,7 +154,7 @@ function topicos(pessoa) {
     })
     .map((ct) => {
       const estado = pr.feitos[ct.chave] || 'novo';
-      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.pedido && estado === 'novo' ? { pedido: ct.dados.pedido.fala, divida: !!ct.dados.pedido.divida, botao: ct.dados.pedido.botao || null } : {}) };
+      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.pedido && estado === 'novo' ? { pedido: ct.dados.pedido.fala, divida: !!ct.dados.pedido.divida, botao: ct.dados.pedido.botao || null, ...(ct.dados.pedido.divida ? {} : { insistir: apostaInsistir() }) } : {}) };
     });
 }
 function situacao(a, chaveI) {
@@ -369,17 +376,29 @@ export async function pedido(capitulo, personagem, chaveC, recusar) {
     if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pe.id)) throw erro('conteudo-inexistente'); // como no banco: não diz se o tópico existe noutro lugar
     if (!topicos(ct.pessoa).some((t) => t.chave === chaveC && t.estado === 'novo')) throw erro('conteudo-inexistente');
     if (amanheceu()) throw erro('amanheceu');
-    const min = recusar ? 25 : d.min;
+    const f = d.pedido;
+    let min = recusar ? 25 : d.min;
+    let frase = recusar ? f.recusa : f.aceito;
+    let teste = null;
+    let acertou = null;
+    // Insistir no pedido comum: a rolagem decide entre 5 e 25 minutos (o favor de vampiro continua em 25).
+    if (recusar && !f.divida) {
+      const ins = apostaInsistir();
+      const res = ins.pool ? rolar(ins.parada, pr.fome, ins.dif) : rolar(1, 0, 1);
+      acertou = ['sucesso', 'critico', 'critico-sangrento'].includes(res.resultado);
+      teste = { pool: ins.pool, dif: ins.dif, res };
+      min = acertou ? 5 : 25;
+      frase = acertou ? f.acerto || `Você insiste com jeito, e ${f.quem || 'a testemunha'} acaba falando sem cobrar nada.` : f.falha || f.recusa;
+    }
     const ev = tempo(min);
     const novas = aplicar([...(d.pistas || []), ...(d.marcas || [])]);
-    const f = d.pedido;
     if (!recusar && f.divida && !(pr.dividas ||= []).some((x) => x.pessoa === pe.id)) {
       pr.dividas.push({ pessoa: pe.id, quem: f.quem, lugar: ct.lugar, hora: pr.hora, pedido: f.fala });
     }
-    const lido = { texto: [recusar ? f.recusa : f.aceito, d.texto].filter(Boolean).join('\n\n') };
+    const lido = { texto: [frase, d.texto].filter(Boolean).join('\n\n') };
     pr.feitos[chaveC] = 'ok';
     pr.lidos[chaveC] = lido;
-    return copia({ ...lido, ok: true, min, recusou: !!recusar, pedido: recusar ? null : f.fala, divida: !recusar && !!f.divida, novas, eventos: ev, estado: estado() });
+    return copia({ ...lido, ok: true, min, recusou: !!recusar, pedido: recusar ? null : f.fala, divida: !recusar && !!f.divida, teste, acertou, novas, eventos: ev, estado: estado() });
   } finally { salvar(); }
 }
 

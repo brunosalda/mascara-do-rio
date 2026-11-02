@@ -126,6 +126,8 @@ const pedidoDe = (f) => {
     divida: !!f.favor, fala, quem: f.nome, botao: (!f.favor && f.pedeRotulo) || null, // o botão de atender (pedeRotulo)
     aceito: `**${f.nome}** — ${fala}\n\n${(!f.favor && f.pedeAceito) || preencher(T.aceito, { quem: f.nome })}`,
     recusa: preencher(T.recusa, { quem: f.nome }),
+    // Insistir no pedido comum é uma aposta (R.INSISTIR): a frase do acerto (5 min) e a da falha (25 min).
+    ...(f.favor ? {} : { acerto: f.pedeAcerto || preencher(PEDIDO.acerto, { quem: f.nome }), falha: f.pedeFalha || preencher(PEDIDO.falha, { quem: f.nome }) }),
   };
 };
 const pessoas = [];

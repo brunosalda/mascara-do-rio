@@ -986,6 +986,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
 
   // Quem pede algo antes de falar: o pedido e duas saídas. Atender custa o tempo da pergunta (o favor do
   // vampiro ainda deixa a dívida); recusar e insistir custa 25 minutos e não deixa nada. A resposta é a mesma.
+  const POOL_INSISTIR = ['carisma', 'persuasao'];
   function pedirAntes(pid, t, pergunta) {
     const pe = caso.pessoas[pid];
     const responder = (recusar) => async (cam) => {
@@ -993,6 +994,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       try {
         const r = await noBanco(() => F.pedido(caso.id, p.id, `${pid}:${t.id}`, recusar));
         if (!r) return;
+        // Insistir no pedido comum rola os dados (sem ficha, 1 dado contra 1: a voz é a Persuasão).
+        if (r.teste?.res) {
+          r.teste.pool ||= POOL_INSISTIR;
+          r.abordagem = 'não ceder e insistir';
+          await cerimonia(r.teste.pool, r.teste.dif, r.teste.res);
+        }
         await depoisDaAcao(r);
         if (r.divida) anotar('CONVERSA', `Você ficou devendo um favor a ${pe.nome}.`);
         if (!r.novas?.length && r.texto) anotar('CONVERSA', `${pe.nome}, sobre "${t.rotulo}": ${resumoDaFala(r.texto)}`);
@@ -1004,7 +1011,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       texto: `${pergunta ? `*${pergunta}*\n\n` : ''}**${pe.nome}** — ${t.pedido}`,
       opcoes: [
         { html: `${t.divida ? 'Aceitar e ficar devendo' : esc(t.botao || 'Fazer o que pede')} <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
-        { html: `${t.divida ? 'Recusar e insistir' : 'Não ceder e insistir'} <small class="etiqueta-tempo">25 min</small>`, fn: responder(true) },
+        { html: t.insistir
+          ? `Não ceder e insistir <small class="etiqueta-teste">${R.vozDoTeste(t.insistir.pool || POOL_INSISTIR)} · ${R.palavraDaChance(R.chance(t.insistir.parada ?? 1, t.insistir.dif))} · 5 ou 25 min</small>`
+          : `${t.divida ? 'Recusar e insistir' : 'Não ceder e insistir'} <small class="etiqueta-tempo">25 min</small>`, fn: responder(true) },
         { html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); conversar(pid); } },
       ],
     });
