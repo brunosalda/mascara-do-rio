@@ -7,16 +7,16 @@
 -- Fome 4 ou mais, como em _cap_situacao). Sem ficha, 1 dado contra dificuldade 1 (metade da chance), sem Fome.
 -- Sem Força de Vontade. O favor de vampiro (divida) não muda: 25 minutos e a frase de recusa.
 
--- 1. A aposta de insistir para esta ficha e esta Fome: o par usado, a parada e a dificuldade.
+-- 1. A aposta de insistir para esta ficha e esta Fome: o par usado, a parada, a dificuldade e se a Fome assusta.
 create or replace function public._cap_insistir(p_num jsonb, p_fome int) returns jsonb
 language plpgsql immutable set search_path = '' as $$
 declare v_c int; v_m int;
 begin
-  if p_num is null or not (p_num ? 'atributos') then return jsonb_build_object('pool', null, 'parada', 1, 'dif', 1); end if;
+  if p_num is null or not (p_num ? 'atributos') then return jsonb_build_object('pool', null, 'parada', 1, 'dif', 1, 'fomeAssusta', false); end if;
   v_c := public._cap_parada(p_num, '["carisma", "persuasao"]'::jsonb);
   v_m := public._cap_parada(p_num, '["manipulacao", "persuasao"]'::jsonb);
   return jsonb_build_object('pool', case when v_m > v_c then '["manipulacao", "persuasao"]'::jsonb else '["carisma", "persuasao"]'::jsonb end,
-    'parada', greatest(v_c, v_m), 'dif', 2 + case when coalesce(p_fome, 0) >= 4 then 1 else 0 end);
+    'parada', greatest(v_c, v_m), 'dif', 2 + case when coalesce(p_fome, 0) >= 4 then 1 else 0 end, 'fomeAssusta', coalesce(p_fome, 0) >= 4);
 end $$;
 revoke all on function public._cap_insistir(jsonb, int) from public, anon, authenticated;
 

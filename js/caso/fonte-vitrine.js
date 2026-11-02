@@ -69,10 +69,10 @@ const ok = (res) => ['sucesso', 'critico', 'critico-sangrento'].includes(res?.re
 const parada = (pool) => Math.max(1, (numeros?.atributos?.[pool[0]] || 0) + (numeros?.habilidades?.[pool[1]] || 0));
 // _cap_insistir: a aposta de insistir no pedido comum (a maior entre Carisma e Manipulação, mais Persuasão).
 function apostaInsistir() {
-  if (!numeros?.atributos) return { pool: null, parada: 1, dif: 1 };
+  if (!numeros?.atributos) return { pool: null, parada: 1, dif: 1, fomeAssusta: false };
   const c = parada(['carisma', 'persuasao']);
   const m = parada(['manipulacao', 'persuasao']);
-  return { pool: m > c ? ['manipulacao', 'persuasao'] : ['carisma', 'persuasao'], parada: Math.max(c, m), dif: 2 + (pr.fome >= 4 ? 1 : 0) };
+  return { pool: m > c ? ['manipulacao', 'persuasao'] : ['carisma', 'persuasao'], parada: Math.max(c, m), dif: 2 + (pr.fome >= 4 ? 1 : 0), fomeAssusta: pr.fome >= 4 };
 }
 
 // --- estado (_cap_tracos, _cap_presos, _cap_estado, _cap_amanheceu)

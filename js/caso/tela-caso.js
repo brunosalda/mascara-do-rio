@@ -1012,7 +1012,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       opcoes: [
         { html: `${t.divida ? 'Aceitar e ficar devendo' : esc(t.botao || 'Fazer o que pede')} <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
         { html: t.insistir
-          ? `Não ceder e insistir <small class="etiqueta-teste">${R.vozDoTeste(t.insistir.pool || POOL_INSISTIR)} · ${R.palavraDaChance(R.chance(t.insistir.parada ?? 1, t.insistir.dif))} · 5 ou 25 min</small>`
+          ? `Não ceder e insistir <small class="etiqueta-teste">${R.vozDoTeste(t.insistir.pool || POOL_INSISTIR)} · ${R.palavraDaChance(R.chance(t.insistir.parada ?? 1, t.insistir.dif))}${t.insistir.fomeAssusta ? ' · a Fome assusta' : ''} · 5 ou 25 min</small>`
           : `${t.divida ? 'Recusar e insistir' : 'Não ceder e insistir'} <small class="etiqueta-tempo">25 min</small>`, fn: responder(true) },
         { html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); conversar(pid); } },
       ],
