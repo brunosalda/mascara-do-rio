@@ -144,8 +144,8 @@ for (const lugar of Object.keys(c.erradas)) {
     if (f.tipo === 'testemunha') {
       const pe = f.pessoa || {};
       pessoas.push({ id, lugar, dados: { nome: f.nome, sub: pe.ocupacao || '', tipo: 'passante', figura: pe.figura || null, x, y, saudacao: pe.jeito ? `*${pe.jeito}*` : `**${f.nome}** — Pois não?` } });
-      if (viva) conteudos.push({ chave: `${id}:viu`, tipo: 'topico', pessoa: id, lugar, requer, dados: { id: 'viu', rotulo: 'Perguntar se viu alguém passar', min: f.custo, texto: f.texto, pistas: f.pistas } });
-      if (!viva || i > 0) conteudos.push({ chave: `${id}:nada`, tipo: 'topico', pessoa: id, lugar, requer: [], dados: { id: 'nada', rotulo: 'Perguntar se viu alguém passar', min: f.custo, texto: viva ? nada : f.texto, pistas: [], ...(viva ? { escondeSe: requer } : {}) } });
+      if (viva) conteudos.push({ chave: `${id}:viu`, tipo: 'topico', pessoa: id, lugar, requer, dados: { id: 'viu', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: f.texto, pistas: f.pistas } });
+      if (!viva || i > 0) conteudos.push({ chave: `${id}:nada`, tipo: 'topico', pessoa: id, lugar, requer: [], dados: { id: 'nada', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: viva ? nada : f.texto, pistas: [], ...(viva ? { escondeSe: requer } : {}) } });
     } else {
       if (viva) conteudos.push({ chave: `x:${id}`, tipo: 'exame', pessoa: null, lugar, requer: [], dados: { min: f.custo, ponto: { x, y, rotulo: f.nome, requer }, texto: f.texto, pistas: f.pistas } });
       if (!viva || i > 0) conteudos.push({ chave: `x:${id}~e`, tipo: 'exame', pessoa: null, lugar, requer: [], dados: { min: f.custo, ponto: { x, y, rotulo: f.nome, ...(viva ? { escondeSe: requer } : {}) }, texto: viva ? nada : f.texto, pistas: [] } });

@@ -17,6 +17,7 @@ import { rolarParada } from '../motor/dados.js';
 import { montarCena } from '../jogo/cena.js';
 import { geografia } from '../jogo/lugares.js';
 import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
+import { perguntaPor, ROTULO_PERGUNTA } from './pergunta.js';
 import { narracao, quadrinhos, esc, aviso, grupoVoz, escreverPalavras } from '../ui.js';
 import { definirTempo, definirSomDoLugar, definirClima, som, efeitos } from '../ambiente.js';
 import { retratoDe } from '../cidade.js';
@@ -916,7 +917,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       // O banco dá a saudação (ou "Mais alguma coisa?") e os tópicos já liberados; nada dos bloqueados.
       const r = await noBanco(() => F.conversa(caso.id, p.id, pid));
       if (!r) return;
-      banco.topicos[pid] = r.topicos.map((t) => ({ ...t, id: t.chave.slice(pid.length + 1) }));
+      // "Viu" e "nada" levam o rótulo novo já antes da próxima carga do banco.
+      banco.topicos[pid] = r.topicos.map((t) => { const id = t.chave.slice(pid.length + 1); return { ...t, id, ...(PERGUNTA_TOPICO.has(id) ? { rotulo: ROTULO_PERGUNTA } : {}) }; });
       aplicarBanco(r);
       textoBanco = r.texto;
     }
@@ -956,9 +958,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const frase = (limpo.match(/^.+?[.!?…](?=\s|$)/) || [limpo])[0];
     return frase.length > 140 ? `${frase.slice(0, 137).trimEnd()}…` : frase;
   }
+  const PERGUNTA_TOPICO = new Set(['viu', 'nada']);
   async function escolherTopico(pid, t) {
     const chave = `${pid}:${t.id}`;
     if (banco) {
+      // A pergunta sai com os traços de antes da resposta: a pista que ela der ainda não entra.
+      const pergunta = PERGUNTA_TOPICO.has(t.id) ? perguntaPor(banco.estado.tracos || []) : null;
       const r = await noBanco(() => F.agir(caso.id, p.id, chave));
       if (!r) return;
       await depoisDaAcao(r);
@@ -974,7 +979,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       } else {
         // Sem pista nova, a resposta também fica no registro: o jogador sabe que já perguntou e o que ouviu.
         if (!r.novas?.length && r.texto) anotar('CONVERSA', `${pe.nome}, sobre "${t.rotulo}": ${resumoDaFala(r.texto)}`);
-        conversar(pid, textoDe(r));
+        conversar(pid, pergunta ? `*${pergunta}*
+
+${textoDe(r)}` : textoDe(r));
       }
       return;
     }
