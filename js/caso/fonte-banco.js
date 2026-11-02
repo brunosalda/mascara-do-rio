@@ -71,6 +71,10 @@ export const conversa = (capitulo, personagem, pessoa) => chamar('caso_conversa'
 // há escolha; com ela: { ok, texto, teste, sangue, novas, eventos, pode_repetir, estado }.
 export const agir = (capitulo, personagem, chave, abordagem = null) =>
   chamar('caso_agir', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_usar_vontade: false });
+// O pedido de favor de um tópico: aceitar (o tempo do tópico e a dívida) ou recusar e insistir (25 minutos).
+// Devolve { ok, texto, min, recusou, favor, novas, eventos, estado }.
+export const favor = (capitulo, personagem, chave, recusar) =>
+  chamar('caso_favor', { ...base(capitulo, personagem), p_chave: chave, p_recusar: !!recusar });
 // Força de Vontade: rerrola a última falha da mesma abordagem.
 export const insistir = (capitulo, personagem, chave, abordagem) =>
   chamar('caso_agir', { ...base(capitulo, personagem), p_chave: chave, p_abordagem: abordagem, p_usar_vontade: true });

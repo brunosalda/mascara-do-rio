@@ -18,7 +18,7 @@
 //     indireta = a testemunha só descreve: o valor não vai à tela antes da leitura da Xerife) e de história.
 import { prepararCapitulo, arquivoDaXerife } from '../js/carmen/gerador.js';
 import { CAPITULO, SUSPEITOS } from '../js/carmen/caso.js';
-import { preencher } from '../js/carmen/textos.js';
+import { preencher, FAVOR } from '../js/carmen/textos.js';
 import { ALTOS } from '../js/jogo/lugares-alto.js';
 import { readFileSync } from 'node:fs';
 
@@ -112,6 +112,13 @@ const fecho = {
 };
 
 // --- pessoas, conteúdos e pistas
+// O favor de quem cobra pela pista (caso_favor): o pedido e as duas saídas, já com o nome. Na Carmen o favor
+// some se o rival falou antes; o banco não tem o rival, então aqui o pedido vale até a conversa.
+const favorDe = (f) => ({
+  pedido: f.favor, quem: f.nome,
+  aceito: `**${f.nome}** — ${f.favor}\n\n${preencher(FAVOR.aceito, { quem: f.nome })}`,
+  recusa: preencher(FAVOR.recusa, { quem: f.nome }),
+});
 const pessoas = [];
 const conteudos = [];
 const pistas = new Map();
@@ -134,7 +141,7 @@ for (const lugar of Object.keys(c.erradas)) {
     if (f.tipo === 'testemunha') {
       const pe = f.pessoa || {};
       pessoas.push({ id, lugar, dados: { nome: f.nome, sub: pe.ocupacao || '', tipo: 'passante', pessoa: pe.pessoa || 'mortal', figura: pe.figura || null, x, y, saudacao: pe.jeito ? `*${pe.jeito}*` : `**${f.nome}** — Pois não?` } });
-      if (viva) conteudos.push({ chave: `${id}:viu`, tipo: 'topico', pessoa: id, lugar, requer, dados: { id: 'viu', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: f.texto, pistas: f.pistas } });
+      if (viva) conteudos.push({ chave: `${id}:viu`, tipo: 'topico', pessoa: id, lugar, requer, dados: { id: 'viu', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: f.texto, pistas: f.pistas, ...(f.favor ? { favor: favorDe(f) } : {}) } });
       if (!viva || i > 0) conteudos.push({ chave: `${id}:nada`, tipo: 'topico', pessoa: id, lugar, requer: [], dados: { id: 'nada', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: viva ? nada : f.texto, pistas: [], ...(viva ? { escondeSe: requer } : {}) } });
     } else {
       if (viva) conteudos.push({ chave: `x:${id}`, tipo: 'exame', pessoa: null, lugar, requer: [], dados: { min: f.custo, ponto: { x, y, rotulo: f.nome, requer }, texto: f.texto, pistas: f.pistas } });
