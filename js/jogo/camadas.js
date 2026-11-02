@@ -79,13 +79,22 @@ export function confirmarEscolha(botao, depois) {
 // --- Caixa de diálogo ------------------------------------------------------------------------
 // html: conteúdo (narração, escolhas). chave: se dada, revela aos poucos e marca como lida.
 // As escolhas (.escolhas) ficam presas ao pé da caixa, sempre à vista; o texto rola acima delas.
-export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodape = '', fechavel = true, aoTerminar, aoFechar, aoAvancar } = {}) {
+// sobre: uma caixa ainda aberta que vira esta, sem sair nem entrar de novo (a conversa que segue com a mesma
+// pessoa). Ela fica no lugar, guarda os filhos .manter (o cartão da testemunha) e só troca o conteúdo.
+export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodape = '', fechavel = true, aoTerminar, aoFechar, aoAvancar, sobre = null } = {}) {
   const comPaineis = raiz.closest?.('.tela-jogo.bg2:not(.paineis-ocultos)') && window.innerWidth > 760 && window.innerWidth > window.innerHeight && !document.body.classList.contains('celular');
-  const lado = cenaAtual?.lado?.() || (comPaineis ? 'baixo' : 'centro');
-  const el = document.createElement('section');
-  el.className = `dialogo-cena dialogo-${lado} surgir`;
+  const continua = !!(sobre?.el?.isConnected && pilha.includes(sobre));
+  const lado = continua ? (sobre.el.className.match(/\bdialogo-(esquerda|direita|baixo|centro)\b/)?.[1] || 'baixo') : cenaAtual?.lado?.() || (comPaineis ? 'baixo' : 'centro');
+  const el = continua ? sobre.el : document.createElement('section');
+  const mantidos = continua ? [...el.querySelectorAll(':scope > .manter')] : [];
+  if (continua) {
+    sobre.substituida = true;
+    pilha.splice(pilha.indexOf(sobre), 1);
+    el.removeAttribute('style');
+  }
+  el.className = `dialogo-cena dialogo-${lado} surgir${continua ? ' trocando' : ''}`;
   el.setAttribute('role', 'dialog');
-  el.innerHTML = `
+  const conteudo = `
     <header class="dialogo-cabeca">
       <span class="grupo-rotulo">${rotulo}</span>
       ${fechavel ? '<button type="button" class="fechar-camada" data-fechar aria-label="Fechar"><span class="so-teclado">Esc </span>✕</button>' : ''}
@@ -93,18 +102,24 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
     <div class="dialogo-corpo">${html}</div>
     <div class="dialogo-escolhas"></div>
     <footer class="dialogo-rodape">${rodape}</footer>`;
+  // Os mantidos não saem da página: tirar e pôr de volta recomeçaria a animação de entrada deles.
+  if (continua) {
+    for (const filho of [...el.children]) if (!mantidos.includes(filho)) filho.remove();
+    el.insertAdjacentHTML('beforeend', conteudo);
+  } else el.innerHTML = conteudo;
   const corpo = el.querySelector('.dialogo-corpo');
   const presas = el.querySelector('.dialogo-escolhas');
   // Só a lista de escolhas do fim (não as que estão dentro de um formulário) vai para o pé.
   const lista = [...corpo.querySelectorAll('.escolhas')].filter((ol) => !ol.closest('label')).at(-1);
   if (lista) presas.appendChild(lista);
-  raiz.appendChild(el);
+  if (!continua) raiz.appendChild(el);
   let leitura = null;
 
   const camada = empilhar({
     el,
     dialogo: true,
     fechar() {
+      if (camada.substituida) return;
       desempilhar(camada);
       if (!el.isConnected) return;
       sairDevagar(el);
@@ -133,7 +148,7 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
       return ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(k);
     },
   });
-  cenaAtual?.conversa(true);
+  if (!continua) cenaAtual?.conversa(true);
 
   el.querySelector('[data-fechar]')?.addEventListener('click', () => camada.fechar());
   if (chave) {

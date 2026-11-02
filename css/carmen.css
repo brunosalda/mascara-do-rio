@@ -112,7 +112,13 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 .tela-jogo.bg2.tela-caso.carmen .janela-fundo.saindo { animation: carmen-sumir 160ms var(--curva-entra) forwards; pointer-events: none; }
 .tela-jogo.bg2.tela-caso.carmen .janela-fundo.saindo .janela { animation: carmen-sair 160ms var(--curva-entra) forwards; }
 @keyframes carmen-sair { to { opacity: 0; transform: translateY(6px); } }
+/* A cópia nasce de novo na página: sem isto, o cartão, as palavras e o texto da cópia refariam a entrada enquanto ela sai. */
+.tela-jogo.bg2.tela-caso.carmen .saindo :is(.cartao-testemunha, .dialogo-corpo, .dialogo-corpo *, .dialogo-escolhas, .dialogo-cabeca *, .dialogo-rodape) { animation: none !important; }
 @keyframes carmen-sumir { to { opacity: 0; } }
+/* Conversa (item 3): enquanto a resposta não chega, a caixa fica e as escolhas esperam, apagadas; quando ela chega,
+   só o texto e as escolhas trocam, num esmaecer de 160 ms. A caixa e o cartão da testemunha não entram de novo. */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena.esperando .dialogo-escolhas { opacity: 0.45; pointer-events: none; transition: opacity 160ms var(--curva-sai); }
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena.trocando :is(.dialogo-cabeca .grupo-rotulo, .dialogo-corpo, .dialogo-escolhas, .dialogo-rodape) { animation: carmen-esmaecer 160ms var(--curva-sai) backwards; }
 body.cerimonias-curtas .carmen *, .carmen.cerimonias-curtas * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 @media (prefers-reduced-motion: reduce) {
   body:not(.movimento-forcado) .carmen *, body:not(.movimento-forcado) .carmen *::before, body:not(.movimento-forcado) .carmen *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }

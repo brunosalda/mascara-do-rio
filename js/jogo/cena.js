@@ -244,8 +244,10 @@ export function montarCena(raiz, {
   const feitosAntes = new Set();
 
   // --- Pontos ----------------------------------------------------------------------------------
+  // Só refaz os botões quando algo mudou neles: refazer reinicia os anéis que pulsam (movimento, item 7).
+  let pontosDesenhados = null;
   function desenharPontos(recemFeitos = new Set()) {
-    camadaPontos.innerHTML = lista.map((p) => `
+    const html = lista.map((p) => `
       <button type="button" class="ponto ponto-${p.tipo || 'acao'}${p.feito ? ' feito' : ''}${p.discreto ? ' discreto' : ''}${p.visto ? ' visto' : ''}${p.alternativa ? ' alternativa' : ''}${p.falta ? ' falta' : ''}${recemFeitos.has(p.id) ? ' recem-feito' : ''}${p.vantagem ? ' vantagem' : ''}${p.brasa ? ` brasa-${p.brasa}` : ''}${p.porta ? ' ponto-porta' : ''}"${p.temperamento ? ` data-temperamento="${p.temperamento}"` : ''} data-ponto="${esc(p.id)}"
         style="left:${pct(p.x)};top:${pct(p.y)};--escala:${escalaPonto(p.y)}">
         <span class="ponto-luz" aria-hidden="true"></span>
@@ -253,8 +255,12 @@ export function montarCena(raiz, {
         <span class="ponto-contorno" aria-hidden="true"></span>
         <span class="ponto-rotulo">${/^\d$/.test(p.icone || '') ? `${p.icone} · ` : ''}${esc(p.rotulo)}${p.estado ? `<small class="ponto-estado">${esc(p.estado)}</small>` : ''}</span>
       </button>`).join('');
-    camadaContornos.innerHTML = lista.filter((p) => p.contorno?.length).map((p) =>
+    const contornos = lista.filter((p) => p.contorno?.length).map((p) =>
       `<polygon data-contorno="${esc(p.id)}" points="${p.contorno.map(([x, y]) => `${x},${y}`).join(' ')}"/>`).join('');
+    if (pontosDesenhados === html + contornos && camadaPontos.childElementCount === lista.length) return;
+    pontosDesenhados = html + contornos;
+    camadaPontos.innerHTML = html;
+    camadaContornos.innerHTML = contornos;
     perto = null;
     dica.hidden = true; // senão o aviso "E — …" fica preso no último alvo (avaliação da vitrine)
     proximaChecagem = 0;

@@ -708,13 +708,28 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
     novasDaFala = [];
   }
+  // A conversa que segue com a mesma pessoa (formato rota): a caixa da pergunta fica aberta, à espera da resposta,
+  // e a próxima caixa dessa pessoa toma o lugar dela sem sair nem entrar (movimento, item 3).
+  let conversaMantida = null;
+  function manterConversa(cam, pid) {
+    conversaMantida = { cam, pid };
+    cam.el.classList.add('esperando');
+  }
+  // Se a resposta não abriu outra caixa da mesma pessoa, a caixa mantida fecha como sempre.
+  function soltarConversa(cam) {
+    if (conversaMantida?.cam !== cam) return;
+    conversaMantida = null;
+    cam.fechar();
+  }
   // opcoes: [{ html, fn, desligada, classe }]. revelar: fala por fala, com "Continuar".
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
+    const sobre = conversaMantida && falante && conversaMantida.pid === falante ? conversaMantida.cam : null;
+    if (conversaMantida) { const velha = conversaMantida.cam; conversaMantida = null; if (velha !== sobre) velha.fechar(); }
     const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
     const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
     revelando = !!chave;
     const camada = abrirDialogo(tela, {
-      rotulo, chave, fechavel,
+      rotulo, chave, fechavel, sobre,
       html: `${html}${texto ? `<div class="texto-narracao sem-dois-tempos">${narracao(texto)}</div>` : ''}${lista}`,
       aoTerminar: () => {
         if (chave) try { localStorage.removeItem(`mascara.lido.${chave}`); } catch { /* sem armazenamento */ }
@@ -740,12 +755,19 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
     // Formato rota (direção de arte, 5.4): o retrato vira uma foto de papel, com o nome à mão na borda de baixo e o
     // ofício embaixo. Sem figura pintada, uma silhueta, nunca um quadrado vazio.
-    if (falante && rota && caso.pessoas[falante]) {
+    const cartaoAntes = camada.el.querySelector(`:scope > .cartao-testemunha[data-pessoa="${CSS.escape(falante || '')}"]`);
+    if (cartaoAntes) {
+      camada.el.classList.add('com-cartao');
+      marcarPistas(camada.el);
+      digitarFala(camada.el);
+    } else if (falante && rota && caso.pessoas[falante]) {
+      camada.el.querySelector(':scope > .cartao-testemunha')?.remove();
       const pe = caso.pessoas[falante];
       const src = figuraDe(falante);
       const url = src ? esc(new URL(src, location.href).href) : '';
       const cartao = document.createElement('figure');
-      cartao.className = `cartao-testemunha${pe.figura && src ? '' : ' sem-figura'}`;
+      cartao.className = `cartao-testemunha manter${pe.figura && src ? '' : ' sem-figura'}`;
+      cartao.dataset.pessoa = falante;
       cartao.setAttribute('aria-hidden', 'true');
       const foto = !src ? '<span class="ct-foto"></span>'
         : pe.figura ? `<span class="ct-foto" style="background-image:url('${url}')"></span>`
@@ -931,7 +953,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const opcoes = tops.map((t) => ({
       html: `${esc(t.rotulo)}${t.estado === 'ok' ? ' <small class="etiqueta-feito">✓ já perguntou</small>' : t.estado === 'tentado' ? ' <small class="etiqueta-teste">tentar de outro jeito</small>' : t.min ? ` <small class="etiqueta-tempo">${t.min} min</small>` : ''}`,
       classe: t.estado === 'ok' ? 'feito' : '',
-      fn: (cam) => { cam.fechar(); escolherTopico(pid, t); },
+      fn: async (cam) => {
+        if (!rota) { cam.fechar(); escolherTopico(pid, t); return; }
+        manterConversa(cam, pid);
+        try { await escolherTopico(pid, t); } finally { soltarConversa(cam); }
+      },
     }));
     opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() });
     caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160, falante: pid });
@@ -979,7 +1005,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       } else {
         // Sem pista nova, a resposta também fica no registro: o jogador sabe que já perguntou e o que ouviu.
         if (!r.novas?.length && r.texto) anotar('CONVERSA', `${pe.nome}, sobre "${t.rotulo}": ${resumoDaFala(r.texto)}`);
-        conversar(pid, pergunta ? `*${pergunta}*
+        // Com await: a caixa da pergunta fica aberta até a resposta tomar o lugar dela (movimento, item 3).
+        await conversar(pid, pergunta ? `*${pergunta}*
 
 ${textoDe(r)}` : textoDe(r));
       }
