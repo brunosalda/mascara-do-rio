@@ -325,7 +325,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const titulo = tela.querySelector('[data-lugar-titulo]');
     if (titulo) {
       titulo.textContent = lugar.nome;
-      tela.querySelector('[data-lugar-marcas]').textContent = (lugar.marcas || []).join(' · ');
+      const marcasEl = tela.querySelector('[data-lugar-marcas]');
+      const todas = lugar.marcas || [];
+      marcasEl.textContent = todas.join(' · ');
+      // No celular, só as marcas que cabem numa linha; a lista inteira fica no mapa (avaliação, 02/11).
+      if (document.body.classList.contains('celular') && marcasEl.clientWidth) {
+        for (let n = todas.length - 1; n > 0 && marcasEl.scrollWidth > marcasEl.clientWidth + 1; n--) marcasEl.textContent = todas.slice(0, n).join(' · ');
+      }
     }
     const gotas = Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < st.fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('');
     tela.querySelectorAll('.gotas').forEach((g) => { g.innerHTML = gotas; });

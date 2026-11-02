@@ -117,6 +117,16 @@ const R_MED = 62;
 const FOLGA = 8;
 const areaComum = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
 const meioDe = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+// As marcas de um lugar em linhas de até ~26 letras (no máximo 2 com 3 ou 4 marcas), para não ficarem mais largas que o vizinho.
+function linhasDasMarcas(marcas) {
+  const linhas = [];
+  for (const m of marcas) {
+    const ult = linhas.at(-1);
+    if (ult && `${ult} · ${m}`.length <= 26) linhas[linhas.length - 1] = `${ult} · ${m}`;
+    else linhas.push(m);
+  }
+  return linhas;
+}
 const veiculo = (de, para, t) => (t?.voo ? 'aviao' : [de, para].includes('niteroi') ? 'barca' : 'carro');
 
 export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], fora = null, relogio = null, restante = null, aoViajar, aoEscolher }) {
@@ -159,7 +169,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           <g class="rota-rotulo" transform="translate(0 ${R_MED + FOLGA + 2})"><g class="rota-rotulo-esc">
             <text class="rota-nome" y="24">${esc(l.nome)}</text>
             ${tempo ? `<g class="rota-pilula"><rect x="${-largura / 2}" y="34" width="${largura}" height="30" rx="15"/><text y="56">${esc(tempo)}</text></g>` : ''}
-            ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 94 : 62}">${esc(l.marcas.join(' · '))}</text>` : ''}
+            ${l.marcas?.length ? `<text class="rota-marcas" y="${tempo ? 94 : 62}">${linhasDasMarcas(l.marcas).map((t, i) => `<tspan x="0"${i ? ' dy="1.15em"' : ''}>${esc(t)}</tspan>`).join('')}</text>` : ''}
           </g></g>
         </g>`;
       }
@@ -485,6 +495,48 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         if (faltou && tentativa < 20) requestAnimationFrame(() => { if (corpo.isConnected && pos[cidade] === P) posicionarRotulos(P, ids, tentativa + 1); });
         // Os indicadores de borda dependem de onde os nomes ficaram.
         else if (corpo.querySelector('.mapa-bordas')) bordas(P, ids);
+        posicionarMarcas(P, ids);
+      }
+
+      // As marcas (no mouse, no foco e no escolhido) não saem da vista nem cruzam um medalhão: ficam embaixo do nome,
+      // em cima do medalhão ou de um lado, a vaga que entrar menos, deslizada para dentro da vista (avaliação, 02/11).
+      function posicionarMarcas(P, ids) {
+        const caixa = corpo.querySelector('.rota-mapa');
+        if (!caixa || !vb) return;
+        const k = caixa.scrollWidth / vb.w || 1;
+        const [x0v, x1v] = [vb.x + (caixa.scrollLeft + 6) / k, vb.x + (caixa.scrollLeft + caixa.clientWidth - 6) / k];
+        const vistos = ids.filter((id) => P[id] && corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`)?.style.opacity !== '0');
+        for (const id of vistos) {
+          const rot = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"] .rota-rotulo`);
+          const marcas = rot?.querySelector('.rota-marcas');
+          if (!marcas) continue;
+          marcas.removeAttribute('transform');
+          const mb = marcas.getBBox();
+          if (!mb.width) continue;
+          // Onde o nome ficou: a soma dos translate do rótulo.
+          const nums = (rot.getAttribute('transform') || '').match(/-?[\d.]+/g)?.map(Number) || [];
+          const [ox, oy] = [P[id][0] + nums.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0), P[id][1] + nums.filter((_, i) => i % 2).reduce((a, b) => a + b, 0)];
+          const [bx, by] = [ox + mb.x, oy + mb.y];
+          const vagas = [[0, 0], [0, P[id][1] - R_MED - FOLGA - 8 - (id === atual ? 44 : 0) - mb.height - by],
+            [P[id][0] + R_MED + FOLGA + 8 - bx, P[id][1] - mb.height / 2 - by], [P[id][0] - R_MED - FOLGA - 8 - mb.width - bx, P[id][1] - mb.height / 2 - by],
+            [0, 40], [0, -40], [0, 80], [0, -80]];
+          // E as mesmas, puxadas meia largura para cada lado, para fugir do aro do vizinho.
+          for (const [dx, dy] of vagas.slice(0, 8)) vagas.push([dx + mb.width / 2 + R_MED, dy], [dx - mb.width / 2 - R_MED, dy]);
+          let boa = null;
+          for (const [dx, dy] of vagas) {
+            const e = bx + dx;
+            const dv = e < x0v ? x0v - e : e + mb.width > x1v ? x1v - (e + mb.width) : 0;
+            const [x, y] = [e + dv, by + dy];
+            const entra = vistos.reduce((soma, o) => {
+              const [cx, cy] = P[o];
+              const d = Math.hypot(Math.max(x - cx, 0, cx - x - mb.width), Math.max(y - cy, 0, cy - y - mb.height));
+              return soma + Math.max(0, R_MED + 6 - d);
+            }, 0);
+            if (!boa || entra < boa.entra) boa = { dx: dx + dv, dy, entra };
+            if (!entra) break;
+          }
+          if (boa.dx || boa.dy) marcas.setAttribute('transform', `translate(${boa.dx.toFixed(1)} ${boa.dy.toFixed(1)})`);
+        }
       }
 
       // Cada nome de avenida fica na primeira vaga em que cabe inteiro no quadro (com 30 de folga), longe dos
@@ -612,6 +664,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         }
         // Os nomes das avenidas fogem dos nomes de lugar onde eles ficaram agora, não onde estavam antes.
         nomesAvenidas(P, ids, nomesMapa);
+        posicionarMarcas(P, ids);
         // Dois ou mais lugares na mesma borda viram um indicador só ("‹ 3 lugares"), que abre a lista deles
         // (item 4): as pílulas não cobrem o mapa.
         const itens = ['esq', 'dir'].map((lado) => fora.filter((f) => f.lado === lado)).filter((l) => l.length)
