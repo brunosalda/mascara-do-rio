@@ -1410,7 +1410,8 @@ ${textoDe(r)}` : textoDe(r));
       // Leva o alvo para o alto da tela, acima do cartão, sem passar da folga que o zoom de 15% dá nas bordas.
       const entre = (v, min, max) => Math.max(min, Math.min(max, v));
       palcoEl.style.setProperty('--cerco-dx', `${entre(b.width / 2 - ox, -0.15 * (b.width - ox), 0.15 * ox)}px`);
-      const dy = entre(b.height * 0.4 - oy, -0.15 * (b.height - oy), 0.15 * oy);
+      // No celular, o alvo sobe 16 px a mais, para o anel terminar acima do cartão.
+      const dy = entre(b.height * 0.4 - (document.body.classList.contains('celular') ? 16 : 0) - oy, -0.15 * (b.height - oy), 0.15 * oy);
       palcoEl.style.setProperty('--cerco-dy', `${dy}px`);
       // Se nem assim o alvo sobe o bastante, no computador o cartão vai para o alto (no celular fica embaixo, perto do polegar).
       alvoEmBaixo = oy + dy > b.height * 0.5;
@@ -1423,6 +1424,7 @@ ${textoDe(r)}` : textoDe(r));
     el.innerHTML = `<span class="faixa-cerco cima" aria-hidden="true"></span><span class="faixa-cerco baixo" aria-hidden="true"></span>
       <section class="cartao-cerco" role="dialog" aria-label="O esconderijo">
         <h3>Está aqui.</h3>
+        ${lic ? `<p class="cerco-licenca">Nº ${String(serieLicenca() + (banco.estado.acusacoes_erradas || 0)).padStart(4, '0')} · ${esc(caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca)?.apelido || caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca)?.nome || '')}</p>` : ''}
         ${st.avistamento ? `<p>${esc(st.avistamento)}</p>` : ''}
         ${lic ? '' : `<p class="cerco-risco">Sem a Licença de Caça, a presa foge, e você perde ${duracao(semLicenca)} até achar o rastro de novo.</p>`}
         <div class="cerco-botoes">${lic
@@ -1433,18 +1435,39 @@ ${textoDe(r)}` : textoDe(r));
     // Sair sem decidir: "Ainda não", Esc ou um toque fora do cartão. A personagem fica onde está, e o relógio não anda.
     const tecla = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); sair(); } };
     document.addEventListener('keydown', tecla, true);
-    const sair = () => { el.remove(); document.removeEventListener('keydown', tecla, true); tela.classList.remove('cercando'); alvo?.classList.remove('alvo-cerco'); };
+    // O cartão esmaece em 160 ms. Ao cercar, as faixas, a câmera e o HUD apagado ficam até o fim da cerimônia;
+    // nos outros casos, as faixas recolhem em 240 ms e a cena volta.
+    let saiu = false;
+    const sair = (ficar) => {
+      if (saiu) return;
+      saiu = true;
+      document.removeEventListener('keydown', tecla, true);
+      el.style.pointerEvents = 'none';
+      el.querySelector('.cartao-cerco')?.classList.add('saindo');
+      if (ficar) return;
+      alvo?.classList.remove('alvo-cerco');
+      recolherCerco(el);
+    };
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-cerco]');
       if (!b) { if (!ev.target.closest('.cartao-cerco')) sair(); return; }
-      sair();
-      if (b.dataset.cerco === 'cercar') cercar();
+      const cerca = b.dataset.cerco === 'cercar';
+      sair(cerca);
+      if (cerca) cercar(el);
       if (b.dataset.cerco === 'arquivo') abrirOArquivo();
     });
     el.querySelector('.btn')?.focus({ preventScroll: true });
   }
+  // Tira a moldura do cerco: as faixas recolhem e o escuro some em 240 ms, e a câmera e o HUD voltam.
+  function recolherCerco(camada) {
+    tela.classList.remove('cercando');
+    if (!camada?.isConnected) return;
+    camada.style.pointerEvents = 'none';
+    camada.classList.add('recolhendo');
+    setTimeout(() => camada.remove(), cerimoniasCurtas() ? 0 : 240);
+  }
   // A cerimônia do fim do cerco (6.2): PRESO/PRESA com clarão e a cena em preto e branco, ou FUGIU com a cena escurecendo.
-  function cerimoniaCerco(preso) {
+  function cerimoniaCerco(preso, camada) {
     return new Promise((ok) => {
       const s = caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca);
       const texto = preso ? (s?.genero === 'f' ? 'Presa' : 'Preso') : 'Fugiu';
@@ -1462,17 +1485,48 @@ ${textoDe(r)}` : textoDe(r));
       }
       tela.classList.add(preso ? 'cena-preso' : 'cena-fugiu');
       tela.appendChild(el);
+      // O carimbo fica acima do anel do alvo, sem cobrir a figura, e dentro da tela.
+      const car = el.querySelector('.carimbo');
+      const ra = alvo?.getBoundingClientRect();
+      if (car && ra?.width) {
+        const rt = el.getBoundingClientRect();
+        const rc = { width: car.offsetWidth, height: car.offsetHeight }; // sem a escala da batida
+        const folga = document.body.classList.contains('celular') ? 16 : 24;
+        const meiaL = rc.width / 2 + 8;
+        const x = Math.max(meiaL, Math.min(rt.width - meiaL, ra.left + ra.width / 2 - rt.left));
+        // O giro de -8 graus aumenta a caixa em cerca de 7% da largura, para cima e para baixo.
+        const giro = Math.ceil(rc.width * 0.07);
+        let base = ra.top - rt.top - folga - giro;
+        // Sem espaço acima, ele vai para baixo do anel.
+        if (base - rc.height < 8) base = Math.min(rt.height - 8, ra.bottom - rt.top + folga + giro + rc.height);
+        car.classList.add('no-alvo');
+        car.style.left = `${Math.round(x)}px`;
+        car.style.top = `${Math.round(base)}px`;
+      }
       // Com "menos movimento", o carimbo já aparece assentado e fica 1,5 s (ou até o clique).
       const dur = cerimoniasCurtas() ? 1500 : preso ? 1800 : 1500;
       let foi = false;
-      const fim = () => { if (foi) return; foi = true; el.remove(); alvo?.classList.remove('alvo-cerco'); alvo?.querySelector('.alvo-fugindo')?.remove(); tela.classList.remove('cena-preso', 'cena-fugiu'); ok(); };
+      // No fim, o carimbo esmaece em 240 ms junto com a volta da cor, e a moldura do cerco sai junto.
+      const fim = () => {
+        if (foi) return;
+        foi = true;
+        el.style.pointerEvents = 'none';
+        el.classList.add('saindo');
+        setTimeout(() => el.remove(), cerimoniasCurtas() ? 0 : 240);
+        alvo?.classList.remove('alvo-cerco');
+        alvo?.querySelector('.alvo-fugindo')?.remove();
+        tela.classList.remove('cena-preso', 'cena-fugiu');
+        recolherCerco(camada);
+        ok();
+      };
       el.style.pointerEvents = 'auto';
       el.addEventListener('click', fim);
       setTimeout(fim, dur);
     });
   }
-  async function cercar() {
+  async function cercar(camada) {
     const r = await noBanco(() => F.cercar(caso.id, p.id));
+    if (!r || !rota) recolherCerco(camada);
     if (!r) return;
     aplicarBanco(r);
     if (r.preso) {
@@ -1480,12 +1534,12 @@ ${textoDe(r)}` : textoDe(r));
       banco.fecho = r.fecho || null;
       banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
       som.carmen?.('preso');
-      if (rota) await cerimoniaCerco(true);
+      if (rota) await cerimoniaCerco(true, camada);
       setTimeout(fecho, rota ? 0 : 350);
       return;
     }
     som.carmen?.('fugiu');
-    if (rota) await cerimoniaCerco(false);
+    if (rota) await cerimoniaCerco(false, camada);
     const texto = r.motivo === 'sem-licenca'
       ? `Sem a Licença da Xerife, você não tem como segurar a presa. Ela some na noite, e você perde ${duracao(r.minutos)} até achar o rastro de novo. Abra o Arquivo.`
       : `A Licença era contra a pessoa errada. A Xerife cancela a Licença, e você perde ${duracao(r.minutos)}. Volte ao Arquivo.`;

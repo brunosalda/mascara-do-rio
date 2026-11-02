@@ -1256,6 +1256,8 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         const reserva = setTimeout(() => voo.finish(), 780);
         voo.onfinish = () => {
           clearTimeout(reserva);
+          // O papel já chegou à miniatura: a janela sai de uma vez, sem a cópia que esmaece no meio da tela.
+          camada.el.classList.add('sem-saida');
           camada.fechar();
           mini.classList.remove('recebe');
           void mini.offsetWidth;
@@ -1263,7 +1265,7 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
           som.carmen?.('papel');
         };
       });
-      if (jaEmitida) return;
+      if (jaEmitida) { doc.classList.add('guardavel'); return; }
       // A cerimônia (guia, 6.2): os valores se datilografam (25 ms por letra, uma tecla a cada 3), a assinatura
       // se desenha (500 ms) e o carimbo cai, com som e um tremor de 2 px. Um clique no papel completa tudo;
       // com "menos movimento", vai direto ao fim.
@@ -1275,12 +1277,12 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         if (caiu) return;
         caiu = true;
         doc.classList.add('carimbando');
-        depois(cerimoniasCurtas() ? 0 : 180, () => { som.carmen?.('carimbo'); doc.classList.add('tremor'); depois(140, () => doc.classList.remove('tremor')); });
+        depois(cerimoniasCurtas() ? 0 : 180, () => { som.carmen?.('carimbo'); doc.classList.add('tremor', 'guardavel'); depois(140, () => doc.classList.remove('tremor')); });
       };
       const completar = () => {
         timers.splice(0).forEach(clearTimeout);
         campos.forEach(({ el, txt }) => { el.textContent = txt; });
-        doc.classList.add('assinada');
+        doc.classList.add('assinada', 'guardavel');
         carimbar();
       };
       if (cerimoniasCurtas()) { completar(); return; }

@@ -114,6 +114,8 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 @keyframes carmen-sair { to { opacity: 0; transform: translateY(6px); } }
 /* A cópia nasce de novo na página: sem isto, o cartão, as palavras e o texto da cópia refariam a entrada enquanto ela sai. */
 .tela-jogo.bg2.tela-caso.carmen .saindo :is(.cartao-testemunha, .dialogo-corpo, .dialogo-corpo *, .dialogo-escolhas, .dialogo-cabeca *, .dialogo-rodape) { animation: none !important; }
+/* O mesmo nas janelas (Licença, Mapa, Arquivo, Placar): a cópia fica no último quadro e só esmaece. */
+.tela-jogo.bg2.tela-caso.carmen .janela-fundo.saindo .janela-corpo * { animation: none !important; }
 @keyframes carmen-sumir { to { opacity: 0; } }
 /* Texto revelado com "Continuar" (item 10): só esmaece, em 240 ms, sem o .surgir antigo (10 px em 550 ms) por cima das palavras. */
 .tela-jogo.bg2.tela-caso.carmen .dialogo-corpo .surgir { animation: carmen-esmaecer 240ms var(--curva-sai) backwards; }
@@ -766,7 +768,8 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
   animation: licenca-entra 420ms var(--curva-sai) both;
 }
 @keyframes licenca-entra { from { opacity: 0; translate: 0 24px; rotate: -3deg; } }
-.licenca-doc.tremor { animation: licenca-tremor 140ms linear; }
+/* O tremor soma à entrada, sem trocá-la: trocar faria a licenca-entra recomeçar do zero quando ele sai. */
+.licenca-doc.tremor { animation: licenca-entra 420ms var(--curva-sai) both, licenca-tremor 140ms linear; }
 @keyframes licenca-tremor { 25% { translate: -2px 1px; } 50% { translate: 2px -1px; } 75% { translate: -1px 2px; } }
 .licenca-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 2px solid var(--c-tinta); }
 .licenca-cabeca h3 { margin: 0; font: 800 40px/1 var(--f-titulo); letter-spacing: 0.03em; text-transform: uppercase; color: var(--c-tinta); }
@@ -788,7 +791,9 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .carmen .licenca-doc .licenca-carimbo { position: absolute; right: 40px; bottom: 112px; rotate: -10deg; opacity: 0; animation: none; mix-blend-mode: multiply; background: none; }
 .carmen .licenca-doc.carimbando .licenca-carimbo { opacity: 0.92; animation: carmen-carimbar 420ms var(--curva-mola) both; }
 .carmen .licenca-doc.emitida .licenca-carimbo { opacity: 0.92; }
-.licenca-guardar { margin-top: auto; min-height: 48px; }
+.licenca-guardar { margin-top: auto; min-height: 48px; transition: opacity 160ms var(--curva-sai); }
+/* Guardar só aparece quando o carimbo assenta (ou na hora, com um clique no papel ou na reabertura). */
+.licenca-doc:not(.guardavel) .licenca-guardar { opacity: 0; pointer-events: none; }
 
 /* A Licença depois de emitida: menor, no alto da coluna esquerda do Arquivo. */
 .carmen .licenca-mini {
@@ -811,7 +816,10 @@ body.celular .licenca-quem { grid-template-columns: 88px minmax(0, 1fr); gap: 12
 body.celular .licenca-quem .ficha-foto { width: 88px; }
 body.celular .licenca-quem b { font-size: 28px; }
 body.celular .licenca-campos div { grid-template-columns: 1fr; gap: 2px; }
-body.celular .carmen .licenca-doc .licenca-carimbo { right: 18px; bottom: 150px; }
+/* No celular, o carimbo fica ao lado da assinatura, entre a autorização e o botão, sem cobrir nenhum dos dois. */
+body.celular .carmen .licenca-doc .licenca-carimbo { right: 14px; bottom: 92px; font-size: 32px; }
+/* A linha reserva a altura antes da datilografia: o papel não cresce e o botão não desce. */
+body.celular .licenca-campos dd, body.celular .licenca-autorizo { min-height: 1lh; }
 body.celular .licenca-guardar { position: fixed; z-index: 5; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); min-height: 52px; }
 /* A assinatura se desenha da esquerda para a direita (500 ms) antes do carimbo; os rótulos sobem a 12 px. */
 .licenca-doc:not(.emitida):not(.assinada) .licenca-assina span { clip-path: inset(0 100% 0 0); }
@@ -833,6 +841,16 @@ body:not(.celular) .licenca-quem small, body:not(.celular) .licenca-campos dt, b
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); animation: cerco-cartao 500ms var(--curva-sai) 400ms both;
 }
 @keyframes cerco-cartao { from { opacity: 0; translate: 0 24px; } }
+/* Saídas do cerco sem estalo: o cartão esmaece em 160 ms; as faixas recolhem e o escuro some em 240 ms. */
+.cartao-cerco.saindo { animation: carmen-sumir 160ms var(--curva-entra) forwards; }
+.cerco-camada.recolhendo { animation: carmen-sumir 240ms var(--curva-entra) forwards; }
+.cerco-camada.recolhendo .faixa-cerco { animation: cerco-faixa-sai 240ms var(--curva-entra) forwards; }
+@keyframes cerco-faixa-sai { to { transform: scaleY(0); } }
+.cerco-fim.saindo { animation: carmen-sumir 240ms var(--curva-entra) forwards; }
+/* O carimbo do fim fica acima do anel do alvo (posição pelo JS). */
+.cerco-fim .carimbo.no-alvo { position: absolute; translate: -50% -100%; }
+/* Com a Licença, o número e o codinome, como na miniatura do Arquivo. */
+.cartao-cerco .cerco-licenca { font: 700 15px/1.2 'Courier Prime', ui-monospace, monospace; color: var(--c-texto-suave, var(--c-texto)); letter-spacing: 0.02em; }
 .cartao-cerco h3 { margin: 0; font: 800 56px/0.95 var(--f-titulo); letter-spacing: 0.02em; text-transform: uppercase; color: var(--c-texto); }
 .cartao-cerco p { margin: 0; font: 500 17px/1.4 var(--f-ui); color: var(--c-texto); }
 .cartao-cerco .cerco-risco { color: var(--c-rastro-texto); font-size: 15px; }
@@ -872,6 +890,8 @@ body.celular .cerco-botoes { flex-direction: column; }
 body.celular .cerco-botoes .btn { min-height: 52px; }
 /* No cerco, o HUD some: só a cena, as faixas e o cartão. */
 .tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo, .faixa-demo, .dica-acao, .ponto-dica, .dica) { opacity: 0; pointer-events: none; transition: opacity 300ms; }
+/* O HUD também volta em 300 ms, e não de uma vez, quando o cerco acaba. */
+.tela-jogo.bg2.tela-caso.carmen :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo) { transition: opacity 300ms; }
 /* Cerco, ajustes da Avaliação: sem marcadores na cena (rostos, lupas, setas da borda), menos o alvo com anel fino. */
 .tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.cena-pontos > :not(.alvo-cerco), .rosto-testemunha, .dica-interagir, .contornos, .seta-borda, .borda-mais, .marca-destino, .balao-voz) { opacity: 0 !important; pointer-events: none; }
 .tela-caso.carmen .ponto.alvo-cerco::before { border-color: var(--c-rastro); background-image: none; box-shadow: 0 0 0 2px rgba(224, 38, 63, 0.35), 0 0 18px rgba(224, 38, 63, 0.5); }
