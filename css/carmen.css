@@ -115,6 +115,8 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 /* A cópia nasce de novo na página: sem isto, o cartão, as palavras e o texto da cópia refariam a entrada enquanto ela sai. */
 .tela-jogo.bg2.tela-caso.carmen .saindo :is(.cartao-testemunha, .dialogo-corpo, .dialogo-corpo *, .dialogo-escolhas, .dialogo-cabeca *, .dialogo-rodape) { animation: none !important; }
 @keyframes carmen-sumir { to { opacity: 0; } }
+/* Texto revelado com "Continuar" (item 10): só esmaece, em 240 ms, sem o .surgir antigo (10 px em 550 ms) por cima das palavras. */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-corpo .surgir { animation: carmen-esmaecer 240ms var(--curva-sai) backwards; }
 /* Chegada (item 5): o véu escurece por cima do mapa (que fecha embaixo dele) e sai esmaecendo junto com a íris. */
 .tela-jogo.bg2.tela-caso.carmen .passagem-caso { z-index: 900; animation: carmen-esmaecer 240ms var(--curva-sai) backwards; }
 /* Com from explícito: o .saindo de estilo.css já põe a opacidade em 0, e o esmaecer partiria de 0. */

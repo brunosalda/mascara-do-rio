@@ -2098,15 +2098,25 @@ export function montarCena(raiz, {
     const fator = limitar(altura(pos.y) / aumento / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1) * ritmo;
     let desejadoX = (dx / norma) * VEL_X * fator;
     let desejadoY = (dy / norma) * VEL_Y * fator;
-    // Freio na chegada: perto do destino, a velocidade pedida cai com a distância que falta, sem passar do ponto.
+    // Freio na chegada: desaceleração constante, que para do passo normal em 0,18 s. A velocidade não passa de
+    // √(2·a·d), d o que falta; assim a freada é curta e não passa do ponto. Distâncias na medida da cena (com ASPECTO).
+    const medida = (x, y) => Math.hypot(x * ASPECTO, y);
     if (freio) {
-      const quer = Math.hypot(desejadoX / VEL_X, desejadoY / VEL_Y);
-      const resta = Math.hypot(freio.x / VEL_X, freio.y / VEL_Y) * (ACELERACAO / 4);
-      if (quer > resta && quer > 0) { desejadoX *= resta / quer; desejadoY *= resta / quer; }
+      const quer = medida(desejadoX, desejadoY);
+      freio.resta = medida(freio.x, freio.y);
+      freio.max = Math.sqrt(2 * (quer / 0.18) * freio.resta);
+      if (quer > freio.max) { desejadoX *= freio.max / quer; desejadoY *= freio.max / quer; }
     }
     const k = Math.min(1, dt * ACELERACAO);
     vel.x += (desejadoX - vel.x) * k;
     vel.y += (desejadoY - vel.y) * k;
+    // No trecho final, o freio vale direto na velocidade, apontada para o destino: a suavização acima atrasaria a
+    // freada e deixaria a direção para trás. Nenhum passo vai além do destino (antes, passava uns 7 px e voltava).
+    if (freio && freio.resta > 0) {
+      const v = medida(vel.x, vel.y);
+      if (v > freio.max) { vel.x = (freio.x / freio.resta) * freio.max; vel.y = (freio.y / freio.resta) * freio.max; }
+      if (dt > 0 && Math.min(v, freio.max) * dt >= freio.resta) { vel.x = freio.x / dt; vel.y = freio.y / dt; }
+    }
     if (caca) atualizarCaca(agora, dt, correndo);
     // A pergunta presa a um lugar some se o personagem se afastar dele.
     if (balaoEscolha?.pertoDe && dist(balaoEscolha.pertoDe.x, balaoEscolha.pertoDe.y, pos.x, pos.y) > balaoEscolha.pertoDe.raio) cancelarBalao('longe');
