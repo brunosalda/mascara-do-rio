@@ -366,7 +366,7 @@ export async function pedido(capitulo, personagem, chaveC, recusar) {
     if (!ct || !ct.dados.pedido) throw erro('conteudo-inexistente');
     const d = ct.dados;
     const pe = dados.pessoas.find((p) => p.id === ct.pessoa);
-    if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pe.id)) throw erro('fora-do-lugar');
+    if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pe.id)) throw erro('conteudo-inexistente'); // como no banco: não diz se o tópico existe noutro lugar
     if (!topicos(ct.pessoa).some((t) => t.chave === chaveC && t.estado === 'novo')) throw erro('conteudo-inexistente');
     if (amanheceu()) throw erro('amanheceu');
     const min = recusar ? 25 : d.min;

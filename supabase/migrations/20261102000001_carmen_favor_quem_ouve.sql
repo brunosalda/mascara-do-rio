@@ -121,7 +121,7 @@ begin
   if not found or not (v_row.dados ? 'pedido') then raise exception 'conteudo-inexistente'; end if;
   v_d := v_row.dados;
   v_f := v_d -> 'pedido';
-  if not exists (select 1 from public.cap_pessoas cp where cp.capitulo_id = p_capitulo and cp.id = v_row.pessoa and cp.lugar = v_pr.lugar and not (cp.id = any (v_pr.escondidos))) then raise exception 'fora-do-lugar'; end if;
+  if not exists (select 1 from public.cap_pessoas cp where cp.capitulo_id = p_capitulo and cp.id = v_row.pessoa and cp.lugar = v_pr.lugar and not (cp.id = any (v_pr.escondidos))) then raise exception 'conteudo-inexistente'; end if; -- o mesmo erro: não diz se o tópico existe noutro lugar
   if not exists (select 1 from jsonb_array_elements(public._cap_topicos(p_personagem, p_capitulo, v_row.pessoa)) t where t ->> 'chave' = p_chave and t ->> 'estado' = 'novo') then raise exception 'conteudo-inexistente'; end if;
   if public._cap_amanheceu(p_personagem, p_capitulo) then raise exception 'amanheceu'; end if;
 
@@ -147,18 +147,22 @@ grant execute on function public.caso_pedido(text, uuid, text, boolean) to authe
 
 -- 5. caso_agir não deixa pular o pedido: um tópico com pedido, ainda novo, só se responde por caso_pedido
 -- (pedido da avaliação, 02/11, 16h00). A função atual (já alterada no banco pelas etapas C) passa a se chamar
--- _caso_agir_base, sem acesso direto, e o caso_agir novo confere o pedido antes de chamá-la.
+-- _caso_agir_base, sem acesso direto, e o caso_agir novo confere o pedido antes de chamá-la. A conferência vem
+-- depois do acesso (_cap_progresso: a personagem é de quem chama) e só vale para o pedido à vista (a pessoa no
+-- lugar e o tópico novo em _cap_topicos); o resto, inclusive os erros, fica com a função de sempre.
 alter function public.caso_agir(text, uuid, text, integer, boolean) rename to _caso_agir_base;
 revoke all on function public._caso_agir_base(text, uuid, text, integer, boolean) from public, anon, authenticated;
 
 create or replace function public.caso_agir(p_capitulo text, p_personagem uuid, p_chave text, p_abordagem int default null, p_usar_vontade boolean default false) returns jsonb
 language plpgsql security definer set search_path = '' as $$
+declare v_pr public.progresso; v_pessoa text;
 begin
-  if exists (
-    select 1 from public.cap_conteudos cc
-    where cc.capitulo_id = p_capitulo and cc.chave = p_chave and cc.tipo = 'topico' and cc.dados ? 'pedido'
-      and not exists (select 1 from public.progresso pr where pr.personagem_id = p_personagem and pr.capitulo_id = p_capitulo and pr.feitos ? p_chave)
-  ) then
+  v_pr := public._cap_progresso(p_capitulo, p_personagem);
+  select cc.pessoa into v_pessoa from public.cap_conteudos cc
+    where cc.capitulo_id = p_capitulo and cc.chave = p_chave and cc.tipo = 'topico' and cc.dados ? 'pedido';
+  if v_pessoa is not null
+     and exists (select 1 from public.cap_pessoas cp where cp.capitulo_id = p_capitulo and cp.id = v_pessoa and cp.lugar = v_pr.lugar and not (cp.id = any (v_pr.escondidos)))
+     and exists (select 1 from jsonb_array_elements(public._cap_topicos(p_personagem, p_capitulo, v_pessoa)) t where t ->> 'chave' = p_chave and t ? 'pedido') then
     raise exception 'use-caso-pedido';
   end if;
   return public._caso_agir_base(p_capitulo, p_personagem, p_chave, p_abordagem, p_usar_vontade);
