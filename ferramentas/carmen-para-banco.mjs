@@ -91,6 +91,7 @@ const publico = {
   ],
   novidade: c.publico.novidade, extras: c.publico.extras, mecanicas: c.publico.mecanicas, reliquia: c.publico.reliquia,
   rival: c.publico.rival, lugarInicial: c.publico.lugarInicial, tamanhoRota: rota.length,
+  tempo: c.publico.tempo || null, // o tempo da noite: { id, nome, chegadas[lugar] }, a chegada já com a frase do tempo
   ordem: c.publico.lugares.map((l) => l.id), lugares, tempos: c.publico.tempos,
   tracoInicial: c.segredo.tracos.abertura,
   arquivo: { categorias: arq.categorias, suspeitos: arq.suspeitos, nomes: arq.nomesDosTracos },

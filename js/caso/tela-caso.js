@@ -73,6 +73,7 @@ function casoDoBanco(cap) {
     formato: pub.formato || 'caso', ordem: pub.ordem || Object.keys(pub.lugares || {}), tempos: pub.tempos || [],
     arquivo: pub.arquivo || null, tamanhoRota: pub.tamanhoRota || 0, reliquia: pub.reliquia || null,
     mecanicas: pub.mecanicas || {}, novidades: [pub.novidade, ...(pub.extras || [])].filter(Boolean),
+    tempo: pub.tempo || null,
   };
 }
 
@@ -1252,7 +1253,9 @@ ${textoDe(r)}` : textoDe(r));
       }
       montarLugar();
       const l = caso.lugares[id];
-      anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.`);
+      // O que se vê ao chegar, com o tempo da noite (chuva, calor, garoa ou seco), quando o capítulo traz.
+      const chegada = caso.tempo?.chegadas?.[id];
+      anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.${chegada ? ` ${chegada}` : ''}`);
       if (rota) {
         // Carmen 2026 (6.2): a cena nova abre em íris, e o cartão de chegada encolhe até virar o título. O véu
         // esmaece junto com a íris, em vez de sumir de estalo.
@@ -2222,6 +2225,8 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         ...(paineis ? { html: quadrinhos(paineis).replace('class="hq ', 'class="hq hq-tira tira-rota ').replaceAll(' loading="lazy"', '') } : { texto: caso.abertura.texto }),
         opcoes: [{ html: '<b>Começar a investigar</b>', fn: (c) => {
           st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
+          const chegada = caso.tempo?.chegadas?.[st.lugar];
+          if (chegada) anotar('VOCÊ', chegada);
           dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`);
         } }],
       });
