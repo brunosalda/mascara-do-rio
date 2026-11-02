@@ -147,7 +147,7 @@ function topicos(pessoa) {
     })
     .map((ct) => {
       const estado = pr.feitos[ct.chave] || 'novo';
-      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.pedido && estado === 'novo' ? { pedido: ct.dados.pedido.fala, divida: !!ct.dados.pedido.divida } : {}) };
+      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.pedido && estado === 'novo' ? { pedido: ct.dados.pedido.fala, divida: !!ct.dados.pedido.divida, botao: ct.dados.pedido.botao || null } : {}) };
     });
 }
 function situacao(a, chaveI) {

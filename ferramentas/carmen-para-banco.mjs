@@ -120,8 +120,8 @@ const pedidoDe = (f) => {
   const fala = f.favor || f.pede;
   const T = f.favor ? FAVOR : PEDIDO;
   return {
-    divida: !!f.favor, fala, quem: f.nome,
-    aceito: `**${f.nome}** — ${fala}\n\n${preencher(T.aceito, { quem: f.nome })}`,
+    divida: !!f.favor, fala, quem: f.nome, botao: (!f.favor && f.pedeRotulo) || null, // o botão de atender (pedeRotulo)
+    aceito: `**${f.nome}** — ${fala}\n\n${(!f.favor && f.pedeAceito) || preencher(T.aceito, { quem: f.nome })}`,
     recusa: preencher(T.recusa, { quem: f.nome }),
   };
 };

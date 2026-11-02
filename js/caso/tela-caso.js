@@ -994,7 +994,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       rotulo: `${pe.nome} · ${pe.sub}`, falante: pid,
       texto: `${pergunta ? `*${pergunta}*\n\n` : ''}**${pe.nome}** — ${t.pedido}`,
       opcoes: [
-        { html: `${t.divida ? 'Aceitar e ficar devendo' : 'Fazer o que pede'} <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
+        { html: `${t.divida ? 'Aceitar e ficar devendo' : esc(t.botao || 'Fazer o que pede')} <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
         { html: `${t.divida ? 'Recusar e insistir' : 'Não ceder e insistir'} <small class="etiqueta-tempo">25 min</small>`, fn: responder(true) },
         { html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); conversar(pid); } },
       ],

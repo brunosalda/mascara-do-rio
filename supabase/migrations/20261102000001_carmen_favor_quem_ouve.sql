@@ -3,12 +3,13 @@
 --
 -- 1. caso_lugar devolve o tipo da pessoa (mortal, carnical ou vampiro), para a tela montar a pergunta.
 -- 2. _cap_topicos devolve, enquanto o tópico é novo, o que a testemunha pede antes de falar ("pedido", a fala)
---    e se isso deixa dívida ("divida": o favor do vampiro deixa; o pedido de uma testemunha comum, não).
+--    e se isso deixa dívida ("divida": o favor do vampiro deixa; o pedido de uma testemunha comum, não),
+--    com o botão de atender ("botao", o pedeRotulo da testemunha comum).
 -- 3. caso_pedido: o jogador atende (o tempo normal; no favor, a dívida) ou recusa e insiste (25 minutos, sem dívida).
 -- 4. cap_dividas: as dívidas de cada personagem, para o Narrador cobrar numa noite qualquer.
 --
 -- Os textos vêm prontos da carga (ferramentas/carmen-para-banco.mjs) em dados.pedido: { divida, fala, quem,
--- aceito, recusa }, com o nome já preenchido.
+-- botao, aceito, recusa }, com o nome já preenchido.
 
 -- 4. As dívidas. Uma por pessoa e capítulo: aceitar de novo, depois de recomeçar, não duplica.
 create table public.cap_dividas (
@@ -50,7 +51,7 @@ begin
     if public._cap_algum(v_d -> 'escondeSe', v_ach) and v_estado <> 'ok' then continue; end if;
     if v_d ->> 'acao' = 'perseguicao' and (v_pub -> 'perseguicao' ->> 'marca') = any (v_ach) then continue; end if;
     v_saida := v_saida || jsonb_build_array(jsonb_build_object('chave', v_r.chave, 'rotulo', v_d ->> 'rotulo', 'min', v_d -> 'min', 'estado', v_estado)
-      || case when v_d ? 'pedido' and v_estado = 'novo' then jsonb_build_object('pedido', v_d -> 'pedido' -> 'fala', 'divida', v_d -> 'pedido' -> 'divida') else '{}'::jsonb end);
+      || case when v_d ? 'pedido' and v_estado = 'novo' then jsonb_build_object('pedido', v_d -> 'pedido' -> 'fala', 'divida', v_d -> 'pedido' -> 'divida', 'botao', v_d -> 'pedido' -> 'botao') else '{}'::jsonb end);
   end loop;
   return v_saida;
 end $$;
