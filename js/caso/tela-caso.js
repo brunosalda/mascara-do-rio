@@ -247,15 +247,24 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     listaRegistro.insertAdjacentHTML('beforeend', linhaHtml({ voz, texto }));
     listaRegistro.scrollTop = listaRegistro.scrollHeight;
     salvar();
-    // Carmen 2026 (7.2): as últimas linhas aparecem embaixo à esquerda e somem depois de 6 s.
+    // Carmen 2026 (7.2): as últimas linhas aparecem embaixo à esquerda e somem depois de 6 s. No computador, a linha
+    // longa fica o tempo de ler: 2,5 s mais 45 ms por letra (a chegada, uns 16 s); o primeiro clique na cena encurta.
     if (rota) {
       tela.classList.remove('registro-quieto');
       clearTimeout(anotar.quieto);
-      anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), 6000);
+      const ms = document.body.classList.contains('celular') ? 6000 : Math.max(6000, 2500 + 45 * texto.length);
+      anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), ms);
+      anotar.longo = ms > 6000;
     }
   }
   listaRegistro.innerHTML = st.registro.map(linhaHtml).join('');
   if (rota) anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), 6000);
+  if (rota) palco.addEventListener('pointerdown', () => {
+    if (!anotar.longo) return;
+    anotar.longo = false;
+    clearTimeout(anotar.quieto);
+    anotar.quieto = setTimeout(() => tela.classList.add('registro-quieto'), 2000);
+  });
 
   function faixa(classe, rotulo, texto) {
     const el = document.createElement('div');
@@ -1267,7 +1276,7 @@ ${textoDe(r)}` : textoDe(r));
           palco.classList.add('iris');
           setTimeout(() => palco.classList.remove('iris'), 700);
         }
-        cartaoChegada(l, viagem);
+        cartaoChegada(l, viagem, caso.tempo?.frases?.[id]);
       } else {
         veu.classList.add('saindo');
         setTimeout(() => veu.remove(), 450);
@@ -1279,13 +1288,14 @@ ${textoDe(r)}` : textoDe(r));
   }
 
   // Carmen 2026 (6.2): o cartão de chegada no alto à esquerda (nome grande, hora e marcas). Na viagem errada,
-  // leva o carimbo NINGUÉM VIU. Depois de 2,2 s, encolhe até o título do lugar. Um clique encurta.
-  function cartaoChegada(l, v) {
+  // leva o carimbo NINGUÉM VIU. Depois de 2,2 s, encolhe até o título do lugar. Um clique encurta. Com a frase do
+  // tempo da noite (até 12 palavras, numa linha abaixo da hora), fica 4 s. `depois` roda quando ele já encolheu.
+  function cartaoChegada(l, v, frase, depois) {
     tela.querySelectorAll('.cartao-chegada').forEach((x) => x.remove());
     const el = document.createElement('div');
     el.className = 'cartao-chegada';
     el.setAttribute('role', 'status');
-    el.innerHTML = `<b>${esc(l.nome)}</b><small><span class="hora-cartao">${hora(st.hora)}</span>${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${v?.tipo === 'errada' ? `<span class="carimbo carimbo-p">Ninguém viu</span><em class="cartao-volta">Ninguém ${esc(l.em)} viu quem você procura. Volte ao mapa.</em>` : ''}`;
+    el.innerHTML = `<b>${esc(l.nome)}</b><small><span class="hora-cartao">${hora(st.hora)}</span>${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${frase ? `<i class="cartao-tempo">${esc(frase)}</i>` : ''}${v?.tipo === 'errada' ? `<span class="carimbo carimbo-p">Ninguém viu</span><em class="cartao-volta">Ninguém ${esc(l.em)} viu quem você procura. Volte ao mapa.</em>` : ''}`;
     tela.appendChild(el);
     tela.classList.add('chegando');
     if (v?.tipo === 'errada') setTimeout(() => som.carmen?.('carimbo'), cerimoniasCurtas() ? 0 : 420);
@@ -1301,10 +1311,10 @@ ${textoDe(r)}` : textoDe(r));
         el.style.transform = `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${(b.height / a.height).toFixed(3)})`;
       }
       el.classList.add('saindo');
-      setTimeout(() => { el.remove(); tela.classList.remove('chegando'); }, 420);
+      setTimeout(() => { el.remove(); tela.classList.remove('chegando'); depois?.(); }, 420);
     };
     el.addEventListener('click', encolher);
-    setTimeout(encolher, cerimoniasCurtas() ? 1200 : 2200);
+    setTimeout(encolher, frase ? 4000 : cerimoniasCurtas() ? 1200 : 2200);
   }
 
   // Formato rota: o que a chegada conta. Viagem errada: ninguém viu. Esconderijo: o ladrão está aqui.
@@ -2227,7 +2237,9 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
           st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
           const chegada = caso.tempo?.chegadas?.[st.lugar];
           if (chegada) anotar('VOCÊ', chegada);
-          dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`);
+          // O capítulo também abre com o cartão de chegada; a dica entra 1 s depois de ele encolher.
+          cartaoChegada(caso.lugares[st.lugar], null, caso.tempo?.frases?.[st.lugar], () => setTimeout(() =>
+            dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`), 1000));
         } }],
       });
       cam.el.classList.add('abertura-rota');

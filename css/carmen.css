@@ -477,6 +477,9 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialog
 .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .carimbo { position: absolute; right: -14px; bottom: -16px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada { top: calc(var(--topo) + 10px); left: 12px; right: 12px; max-width: none; padding: 12px 16px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada b { font-size: 44px; }
+/* A frase do tempo da noite, abaixo da hora (Avaliação, 16h19). */
+.tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-tempo { font: italic 400 16px/1.35 var(--f-texto); color: var(--c-texto); }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-tempo { font-size: 15px; }
 
 /* O carimbo (5.3): borda dupla, Big Shoulders, girado −8°, tinta falhada; bate com mola. */
 .carmen .carimbo {
@@ -1215,6 +1218,9 @@ body.celular .tela-caso.carmen .tira-rota .balao { max-width: 56%; font-size: 13
 /* As setas da borda da cena na fonte da interface (a Cormorant saiu das telas do Carmen). */
 .tela-jogo.bg2.tela-caso.carmen :is(.seta-borda, .borda-mais) { font-family: var(--f-ui); }
 .faixa-caso.faixa-dica.saindo { translate: -50% 0.6rem; }
+/* No computador, a dica fica à direita do registro, a 24 px dele, sem cobrir a chegada (Avaliação, 16h19). */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .faixa-caso.faixa-dica { left: calc(92px + min(520px, 42vw) + 24px); right: auto; bottom: 18px; translate: none; max-width: calc(100vw - 92px - min(520px, 42vw) - 48px); animation-name: dica-sobe; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .faixa-caso.faixa-dica.saindo { translate: 0 0.6rem; }
 /* O retrato emprestado (a mulher de guarda-chuva usa a silhueta da mulher do celular) vem espelhado. */
 :is(.tela-caso.carmen .pessoa .rosto-testemunha.silhueta, .cartao-testemunha .ct-foto.com-silhueta) > i { scale: var(--espelho, 1) 1; }
 
