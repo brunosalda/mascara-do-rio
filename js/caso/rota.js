@@ -117,12 +117,12 @@ const R_MED = 62;
 const FOLGA = 8;
 const areaComum = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
 const meioDe = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-// As marcas de um lugar em linhas de até ~26 letras (no máximo 2 com 3 ou 4 marcas), para não ficarem mais largas que o vizinho.
+// As marcas de um lugar em linhas de até ~32 letras (cerca de 140 px; no máximo 3 com 3 ou 4 marcas), para não ficarem mais largas que o vizinho.
 function linhasDasMarcas(marcas) {
   const linhas = [];
   for (const m of marcas) {
     const ult = linhas.at(-1);
-    if (ult && `${ult} · ${m}`.length <= 26) linhas[linhas.length - 1] = `${ult} · ${m}`;
+    if (ult && `${ult} · ${m}`.length <= 32) linhas[linhas.length - 1] = `${ult} · ${m}`;
     else linhas.push(m);
   }
   return linhas;
@@ -498,45 +498,47 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         posicionarMarcas(P, ids);
       }
 
-      // As marcas (no mouse, no foco e no escolhido) não saem da vista nem cruzam um medalhão: ficam embaixo do nome,
-      // em cima do medalhão ou de um lado, a vaga que entrar menos, deslizada para dentro da vista (avaliação, 02/11).
+      // As marcas (no mouse, no foco e no escolhido) não saem da vista nem cobrem um medalhão, um nome, uma pílula de
+      // tempo ou o VOCÊ: ficam embaixo do nome, em cima do medalhão ou de um lado, na vaga que menos cobre, deslizada
+      // para dentro da vista (avaliação, 02/11). As contas são na tela, pelo que já está desenhado.
       function posicionarMarcas(P, ids) {
         const caixa = corpo.querySelector('.rota-mapa');
-        if (!caixa || !vb) return;
-        const k = caixa.scrollWidth / vb.w || 1;
-        const [x0v, x1v] = [vb.x + (caixa.scrollLeft + 6) / k, vb.x + (caixa.scrollLeft + caixa.clientWidth - 6) / k];
-        const vistos = ids.filter((id) => P[id] && corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`)?.style.opacity !== '0');
-        for (const id of vistos) {
-          const rot = corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"] .rota-rotulo`);
-          const marcas = rot?.querySelector('.rota-marcas');
-          if (!marcas) continue;
+        if (!caixa) return;
+        const vista = caixa.getBoundingClientRect();
+        const grupos = ids.map((id) => corpo.querySelector(`.rota-lugar[data-lugar="${CSS.escape(id)}"]`)).filter((g) => g && g.style.opacity !== '0');
+        const aros = grupos.map((g) => g.querySelector('.rota-aro').getBoundingClientRect());
+        if (!aros[0]?.width) return;
+        const k = aros[0].width / (2 * R_MED);
+        const textos = grupos.flatMap((g) => [...g.querySelectorAll('.rota-nome, .rota-pilula, .rota-voce-tag')])
+          .filter((e) => getComputedStyle(e).visibility !== 'hidden').map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+        grupos.forEach((g, n) => {
+          const marcas = g.querySelector('.rota-marcas');
+          if (!marcas) return;
           marcas.removeAttribute('transform');
-          const mb = marcas.getBBox();
-          if (!mb.width) continue;
-          // Onde o nome ficou: a soma dos translate do rótulo.
-          const nums = (rot.getAttribute('transform') || '').match(/-?[\d.]+/g)?.map(Number) || [];
-          const [ox, oy] = [P[id][0] + nums.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0), P[id][1] + nums.filter((_, i) => i % 2).reduce((a, b) => a + b, 0)];
-          const [bx, by] = [ox + mb.x, oy + mb.y];
-          const vagas = [[0, 0], [0, P[id][1] - R_MED - FOLGA - 8 - (id === atual ? 44 : 0) - mb.height - by],
-            [P[id][0] + R_MED + FOLGA + 8 - bx, P[id][1] - mb.height / 2 - by], [P[id][0] - R_MED - FOLGA - 8 - mb.width - bx, P[id][1] - mb.height / 2 - by],
-            [0, 40], [0, -40], [0, 80], [0, -80]];
-          // E as mesmas, puxadas meia largura para cada lado, para fugir do aro do vizinho.
-          for (const [dx, dy] of vagas.slice(0, 8)) vagas.push([dx + mb.width / 2 + R_MED, dy], [dx - mb.width / 2 - R_MED, dy]);
+          const r = marcas.getBoundingClientRect();
+          if (!r.width) return;
+          const aro = aros[n];
+          const [cx, cy] = [aro.left + aro.width / 2, aro.top + aro.height / 2];
+          const topo = g.querySelector('.rota-voce-tag')?.getBoundingClientRect().top || aro.top;
+          const vagas = [[0, 0], [0, topo - 8 - r.height - r.top], [aro.right + 8 - r.left, cy - r.height / 2 - r.top], [aro.left - 8 - r.width - r.left, cy - r.height / 2 - r.top]];
+          for (const mais of [40, 80]) vagas.push([0, mais * k], [0, -mais * k], [0, topo - 8 - r.height - r.top - mais * k]);
+          for (const [dx, dy] of vagas.slice()) vagas.push([dx + r.width / 2 + aro.width / 2, dy], [dx - r.width / 2 - aro.width / 2, dy]);
           let boa = null;
           for (const [dx, dy] of vagas) {
-            const e = bx + dx;
-            const dv = e < x0v ? x0v - e : e + mb.width > x1v ? x1v - (e + mb.width) : 0;
-            const [x, y] = [e + dv, by + dy];
-            const entra = vistos.reduce((soma, o) => {
-              const [cx, cy] = P[o];
-              const d = Math.hypot(Math.max(x - cx, 0, cx - x - mb.width), Math.max(y - cy, 0, cy - y - mb.height));
-              return soma + Math.max(0, R_MED + 6 - d);
-            }, 0);
-            if (!boa || entra < boa.entra) boa = { dx: dx + dv, dy, entra };
-            if (!entra) break;
+            const [x0, y0] = [r.left + dx, r.top + dy];
+            const ex = x0 < vista.left + 6 ? vista.left + 6 - x0 : x0 + r.width > vista.right - 6 ? vista.right - 6 - (x0 + r.width) : 0;
+            const ey = y0 < vista.top + 6 ? vista.top + 6 - y0 : y0 + r.height > vista.bottom - 6 ? vista.bottom - 6 - (y0 + r.height) : 0;
+            const c = { x: x0 + ex, y: y0 + ey, w: r.width, h: r.height };
+            const custo = aros.reduce((soma, a) => {
+              const [ax, ay, ar] = [a.left + a.width / 2, a.top + a.height / 2, a.width / 2 + 4];
+              const d = Math.hypot(Math.max(c.x - ax, 0, ax - c.x - c.w), Math.max(c.y - ay, 0, ay - c.y - c.h));
+              return soma + Math.max(0, ar - d) * 4;
+            }, 0) + textos.reduce((soma, t) => soma + areaComum(c, { x: t.left - 3, y: t.top - 2, w: t.width + 6, h: t.height + 4 }), 0);
+            if (!boa || custo < boa.custo) boa = { dx: dx + ex, dy: dy + ey, custo };
+            if (!custo) break;
           }
-          if (boa.dx || boa.dy) marcas.setAttribute('transform', `translate(${boa.dx.toFixed(1)} ${boa.dy.toFixed(1)})`);
-        }
+          if (boa.dx || boa.dy) marcas.setAttribute('transform', `translate(${(boa.dx / k).toFixed(1)} ${(boa.dy / k).toFixed(1)})`);
+        });
       }
 
       // Cada nome de avenida fica na primeira vaga em que cabe inteiro no quadro (com 30 de folga), longe dos

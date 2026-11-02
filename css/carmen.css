@@ -504,7 +504,7 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .quadro
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .faixa-demo { top: calc(var(--topo) + 4px); padding: 3px 10px; font-size: 10px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo { top: calc(var(--topo) + 30px); left: 14px; max-width: calc(100% - 110px); }
 body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo b { font-size: 34px; }
-body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font-size: 12px; letter-spacing: 0.06em; display: block; white-space: nowrap; overflow: hidden; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .lugar-titulo small { font-size: 12px; letter-spacing: 0.06em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .relogio-noite.com-arco { top: calc(var(--topo) + 26px); right: 8px; left: auto; width: 76px; height: auto; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-arco { zoom: 0.62; }
 /* O retrato: redondo, 44 px, embaixo à esquerda, acima da pílula do caso, com as gotas de Fome. */

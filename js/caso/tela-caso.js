@@ -318,6 +318,17 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }, 720);
   }
 
+  // No celular, só as marcas que cabem numa linha no título; a lista inteira fica no mapa (avaliação, 02/11). Com os
+  // painéis escondidos, o título não tem largura: a conta se refaz quando eles voltam.
+  function marcasDoTitulo() {
+    const marcasEl = tela.querySelector('[data-lugar-marcas]');
+    if (!marcasEl) return;
+    const todas = caso.lugares[st.lugar]?.marcas || [];
+    marcasEl.textContent = todas.join(' · ');
+    if (document.body.classList.contains('celular') && marcasEl.clientWidth) {
+      for (let n = todas.length - 1; n > 0 && marcasEl.scrollWidth > marcasEl.clientWidth + 1; n--) marcasEl.textContent = todas.slice(0, n).join(' · ');
+    }
+  }
   function desenharHud() {
     const lugar = caso.lugares[st.lugar];
     tela.querySelector('[data-lugar-nome]').textContent = lugar.nome;
@@ -325,13 +336,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const titulo = tela.querySelector('[data-lugar-titulo]');
     if (titulo) {
       titulo.textContent = lugar.nome;
-      const marcasEl = tela.querySelector('[data-lugar-marcas]');
-      const todas = lugar.marcas || [];
-      marcasEl.textContent = todas.join(' · ');
-      // No celular, só as marcas que cabem numa linha; a lista inteira fica no mapa (avaliação, 02/11).
-      if (document.body.classList.contains('celular') && marcasEl.clientWidth) {
-        for (let n = todas.length - 1; n > 0 && marcasEl.scrollWidth > marcasEl.clientWidth + 1; n--) marcasEl.textContent = todas.slice(0, n).join(' · ');
-      }
+      marcasDoTitulo();
     }
     const gotas = Array.from({ length: 5 }, (_, i) => `<svg class="gota ${i < st.fome ? 'cheia' : ''}" viewBox="0 0 12 16"><path d="M6 1C8 5 11 7.5 11 10.5A5 5 0 0 1 1 10.5C1 7.5 4 5 6 1z"/></svg>`).join('');
     tela.querySelectorAll('.gotas').forEach((g) => { g.innerHTML = gotas; });
@@ -2292,6 +2297,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
     paineisOcultos = !paineisOcultos;
     tela.classList.toggle('paineis-ocultos', paineisOcultos);
     try { localStorage.setItem('mascara.paineis', paineisOcultos ? 'ocultos' : 'visiveis'); } catch { /* sem armazenamento */ }
+    if (!paineisOcultos && rota) marcasDoTitulo();
     window.dispatchEvent(new Event('resize'));
   }
   function corrida() {
