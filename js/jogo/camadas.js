@@ -45,7 +45,7 @@ function empilhar(camada) {
 // Saída sem estalo no Carmen (guia de movimento, regra 1): uma cópia só visual esmaece e desce 6 px em 160 ms,
 // e o original sai da página na hora, como antes, para nenhum código achar uma caixa que já fechou.
 function sairDevagar(el) {
-  if (!el.closest('.carmen') || cerimoniasCurtas()) { el.remove(); return; }
+  if (!el.closest('.carmen') || el.classList.contains('sem-saida') || cerimoniasCurtas()) { el.remove(); return; }
   const rolagens = [...el.querySelectorAll('.dialogo-corpo, .janela-corpo')].map((c) => c.scrollTop);
   const copia = el.cloneNode(true);
   // Sem o .surgir: uma regra antiga de estilo.css prende a duração dele em 260 ms com !important.

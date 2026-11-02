@@ -110,7 +110,8 @@ export function relogioArco({ inicio, fim, hora, custo = 0 }) {
 // "Para onde foi?" com as pistas de destino ouvidas aqui e a lista dos lugares; a viagem é animada.
 // percurso: os lugares do rastro já seguidos, na ordem. visitados: onde o jogador já esteve, na ordem da visita.
 // destinos: as pistas de destino ouvidas no lugar atual ({ titulo, fonte }). relogio: { inicio, fim, hora }.
-// aoViajar(id) só é chamado depois de escolher o lugar, tocar em "Viajar" e ver a viagem.
+// aoViajar(id, fechar) só é chamado depois de escolher o lugar, tocar em "Viajar" e ver a viagem; quem chama fecha
+// o mapa com fechar(), quando já o cobriu. aoEscolher(id) é chamado no toque em "Viajar", antes da viagem.
 // Sem aoViajar (o capítulo já resolvido), o mapa só mostra o rastro: nada de viagem nem de lista.
 const R_MED = 62;
 const FOLGA = 8;
@@ -118,7 +119,7 @@ const areaComum = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.ma
 const meioDe = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 const veiculo = (de, para, t) => (t?.voo ? 'aviao' : [de, para].includes('niteroi') ? 'barca' : 'carro');
 
-export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], fora = null, relogio = null, restante = null, aoViajar }) {
+export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = [], destinos = [], fora = null, relogio = null, restante = null, aoViajar, aoEscolher }) {
   const voos = caso.tempos.filter((t) => t.voo);
   const temSP = caso.ordem.some((id) => caso.lugares[id].cidade === 'sp');
   const pos = { rio: POS_RIO, sp: posicoesSP(caso) };
@@ -738,9 +739,14 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
           const id = b.dataset.viajar;
           viajando = true;
           corpo.classList.add('viajando');
+          // Depois do toque em "Viajar", o mapa só fecha pela chegada: Esc ou um toque fora não interrompem a viagem.
+          const fechar = camada.fechar;
+          camada.fechar = () => {};
+          aoEscolher?.(id);
           await animarViagem(id);
-          camada.fechar();
-          aoViajar?.(id);
+          // O véu da chegada cobre o mapa: ele fecha embaixo, sem esmaecer por cima do lugar novo.
+          camada.el.classList.add('sem-saida');
+          if (aoViajar) aoViajar(id, fechar); else fechar();
           return;
         }
         const gr = ev.target.closest('[data-grupo]');

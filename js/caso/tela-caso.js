@@ -1161,7 +1161,9 @@ ${textoDe(r)}` : textoDe(r));
       abrirMapaRota(tela, {
         caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])],
         destinos: (e.pistas || []).filter((x) => x.tipo === 'destino' && daqui(x)), fora: fora ? (aqui.em || `em ${aqui.nome}`) : null,
-        relogio: { inicio: caso.relogio.inicio, fim: caso.relogio.fim, hora: st.hora }, aoViajar: (id) => irPara(id),
+        relogio: { inicio: caso.relogio.inicio, fim: caso.relogio.fim, hora: st.hora }, aoViajar: (id, fechar) => irPara(id, fechar),
+        // A leitura do lugar novo no banco começa no toque em "Viajar", junto com a viagem (direção de arte, 6.2).
+        aoEscolher: (id) => { if (banco) leituraAntecipada = { id, r: lerLugar(id) }; },
       });
       return;
     }
@@ -1180,15 +1182,20 @@ ${textoDe(r)}` : textoDe(r));
     const e = banco.estado;
     abrirMapaRota(tela, { caso, atual: st.lugar, percurso: e.percurso || [], visitados: [...new Set([...(st.visitados || []), ...(e.percurso || [])])] });
   }
-  function irPara(id) {
+  let leituraAntecipada = null;
+  // fecharMapa: o mapa da viagem, que fecha só depois de o véu escurecer por cima dele (o lugar antigo não volta).
+  function irPara(id, fecharMapa = null) {
     if (cena) st.posicoes[st.lugar] = [cena.posicao().x, cena.posicao().y];
     const veu = document.createElement('div');
     veu.className = 'passagem-caso';
     tela.appendChild(veu);
     let viagem = null;
     setTimeout(async () => {
+      fecharMapa?.();
       if (banco) {
-        const r = await lerLugar(id);
+        const antes = leituraAntecipada?.id === id ? leituraAntecipada.r : null;
+        leituraAntecipada = null;
+        const r = await (antes || lerLugar(id));
         if (!r) { veu.remove(); return; }
         aplicarBanco(r);
         viagem = r.viagem || null;
@@ -1207,8 +1214,10 @@ ${textoDe(r)}` : textoDe(r));
       const l = caso.lugares[id];
       anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.`);
       if (rota) {
-        // Carmen 2026 (6.2): a cena nova abre em íris, e o cartão de chegada encolhe até virar o título.
-        veu.remove();
+        // Carmen 2026 (6.2): a cena nova abre em íris, e o cartão de chegada encolhe até virar o título. O véu
+        // esmaece junto com a íris, em vez de sumir de estalo.
+        veu.classList.add('saindo');
+        setTimeout(() => veu.remove(), 300);
         if (!cerimoniasCurtas()) {
           palco.classList.remove('iris');
           void palco.offsetWidth;

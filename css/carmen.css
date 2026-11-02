@@ -115,6 +115,11 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 /* A cópia nasce de novo na página: sem isto, o cartão, as palavras e o texto da cópia refariam a entrada enquanto ela sai. */
 .tela-jogo.bg2.tela-caso.carmen .saindo :is(.cartao-testemunha, .dialogo-corpo, .dialogo-corpo *, .dialogo-escolhas, .dialogo-cabeca *, .dialogo-rodape) { animation: none !important; }
 @keyframes carmen-sumir { to { opacity: 0; } }
+/* Chegada (item 5): o véu escurece por cima do mapa (que fecha embaixo dele) e sai esmaecendo junto com a íris. */
+.tela-jogo.bg2.tela-caso.carmen .passagem-caso { z-index: 900; animation: carmen-esmaecer 240ms var(--curva-sai) backwards; }
+/* Com from explícito: o .saindo de estilo.css já põe a opacidade em 0, e o esmaecer partiria de 0. */
+.tela-jogo.bg2.tela-caso.carmen .passagem-caso.saindo { animation: carmen-veu-sai 240ms var(--curva-sai) forwards; }
+@keyframes carmen-veu-sai { from { opacity: 1; } to { opacity: 0; } }
 /* Conversa (item 3): enquanto a resposta não chega, a caixa fica e as escolhas esperam, apagadas; quando ela chega,
    só o texto e as escolhas trocam, num esmaecer de 160 ms. A caixa e o cartão da testemunha não entram de novo. */
 .tela-jogo.bg2.tela-caso.carmen .dialogo-cena.esperando .dialogo-escolhas { opacity: 0.45; pointer-events: none; transition: opacity 160ms var(--curva-sai); }
