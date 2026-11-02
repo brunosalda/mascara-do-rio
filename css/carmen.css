@@ -103,6 +103,16 @@ body.celular .tela-jogo.bg2.tela-caso.carmen :is(.btn, .plano-enviar) { min-heig
 /* --- Movimento (seção 6.1): nada aparece de estalo. */
 .tela-jogo.bg2.tela-caso.carmen :is(.dialogo-cena, .painel-pergunta.com-pergunta) { animation: carmen-surgir var(--t-medio) var(--curva-sai) both; }
 @keyframes carmen-surgir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Painéis (Mapa, Arquivo, Licença, Placar): o fundo esmaece e a janela sobe em 240 ms, no tempo do guia. */
+.tela-jogo.bg2.tela-caso.carmen .janela-fundo { animation: carmen-esmaecer 240ms var(--curva-sai) backwards; }
+.tela-jogo.bg2.tela-caso.carmen .janela-fundo .janela.surgir { animation: carmen-surgir 240ms var(--curva-sai) backwards; }
+@keyframes carmen-esmaecer { from { opacity: 0; } }
+/* Saída (regra 1): a cópia que camadas.js deixa na tela esmaece e desce 6 px em 160 ms; o fundo esmaece junto. */
+.tela-jogo.bg2.tela-caso.carmen .dialogo-cena.saindo { animation: carmen-sair 160ms var(--curva-entra) forwards; pointer-events: none; }
+.tela-jogo.bg2.tela-caso.carmen .janela-fundo.saindo { animation: carmen-sumir 160ms var(--curva-entra) forwards; pointer-events: none; }
+.tela-jogo.bg2.tela-caso.carmen .janela-fundo.saindo .janela { animation: carmen-sair 160ms var(--curva-entra) forwards; }
+@keyframes carmen-sair { to { opacity: 0; transform: translateY(6px); } }
+@keyframes carmen-sumir { to { opacity: 0; } }
 body.cerimonias-curtas .carmen *, .carmen.cerimonias-curtas * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 @media (prefers-reduced-motion: reduce) {
   body:not(.movimento-forcado) .carmen *, body:not(.movimento-forcado) .carmen *::before, body:not(.movimento-forcado) .carmen *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }

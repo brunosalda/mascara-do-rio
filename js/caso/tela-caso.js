@@ -661,7 +661,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   // A voz (régua do 10, conversa, item 5): a fala entra palavra por palavra, com um tique baixo, e um clique completa.
   // O marca-texto espera as palavras dele aparecerem.
   function digitarFala(raiz) {
-    const p = raiz.querySelector('.dialogo-corpo p');
+    const p = raiz.querySelector('.dialogo-cena:not(.saindo) .dialogo-corpo p');
     if (!p || cerimoniasCurtas() || p.classList.contains('oculto')) return;
     p.classList.remove('pronto');
     const dur = escreverPalavras(p);
@@ -670,11 +670,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const tique = setInterval(() => som.carmen?.('tecla'), 110);
     const completar = () => { if (feito) return; feito = true; clearInterval(tique); p.classList.add('pronto'); p.querySelectorAll('mark.marca-pista').forEach((m) => { m.style.animationDelay = '0ms'; }); };
     setTimeout(completar, dur);
-    raiz.querySelector('.dialogo-corpo').addEventListener('click', completar, { once: true });
+    raiz.querySelector('.dialogo-cena:not(.saindo) .dialogo-corpo').addEventListener('click', completar, { once: true });
   }
   // Acha na fala a frase (ou o par de frases seguidas) que mais se parece com cada pista nova e a envolve num <mark>.
   function marcarPistas(raiz) {
-    const falas = [...raiz.querySelectorAll('.dialogo-corpo p')];
+    const falas = [...raiz.querySelectorAll('.dialogo-cena:not(.saindo) .dialogo-corpo p')];
     for (const pista of novasDaFala) {
       // O rótulo do tipo ("Sinal particular:") não está na fala: sai antes de comparar.
       const alvo = palavrasDe(String(pista.texto || pista.titulo || '').replace(/^[^:]{1,20}:\s*/, ''));

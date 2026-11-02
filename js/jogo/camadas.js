@@ -42,6 +42,25 @@ function empilhar(camada) {
   return camada;
 }
 
+// Saída sem estalo no Carmen (guia de movimento, regra 1): uma cópia só visual esmaece e desce 6 px em 160 ms,
+// e o original sai da página na hora, como antes, para nenhum código achar uma caixa que já fechou.
+function sairDevagar(el) {
+  if (!el.closest('.carmen') || cerimoniasCurtas()) { el.remove(); return; }
+  const rolagens = [...el.querySelectorAll('.dialogo-corpo, .janela-corpo')].map((c) => c.scrollTop);
+  const copia = el.cloneNode(true);
+  // Sem o .surgir: uma regra antiga de estilo.css prende a duração dele em 260 ms com !important.
+  copia.classList.remove('surgir');
+  copia.classList.add('saindo');
+  copia.removeAttribute('role');
+  copia.setAttribute('aria-hidden', 'true');
+  copia.inert = true;
+  el.replaceWith(copia);
+  copia.querySelectorAll('.dialogo-corpo, .janela-corpo').forEach((c, i) => { c.scrollTop = rolagens[i] || 0; });
+  const tirar = () => copia.remove();
+  copia.addEventListener('animationend', (ev) => { if (ev.target === copia) tirar(); });
+  setTimeout(tirar, 200);
+}
+
 function desempilhar(camada) {
   const i = pilha.indexOf(camada);
   if (i >= 0) pilha.splice(i, 1);
@@ -88,7 +107,7 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
     fechar() {
       desempilhar(camada);
       if (!el.isConnected) return;
-      el.remove();
+      sairDevagar(el);
       aoFechar?.();
     },
     tecla(ev) {
@@ -189,7 +208,7 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
     fechar() {
       desempilhar(camada);
       if (!fundo.isConnected) return;
-      fundo.remove();
+      sairDevagar(fundo);
     },
     tecla(ev) {
       if (ev.key === 'Escape') { camada.fechar(); return true; }
