@@ -1000,11 +1000,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const chave = `${pid}:${t.id}`;
     if (banco) {
       // A pergunta sai com os traços de antes da resposta: a pista que ela der ainda não entra.
-      const pergunta = PERGUNTA_TOPICO.has(t.id) ? perguntaPor(banco.estado.tracos || []) : null;
+      // Quem ouve muda a pergunta; o id sem o lugar é o do gerador, para o mesmo pretexto da simulação.
+      const pe = caso.pessoas[pid];
+      const quem = pe.pessoa ? { pessoa: pe.pessoa, id: pid.slice(pid.indexOf('.') + 1) } : null;
+      const pergunta = PERGUNTA_TOPICO.has(t.id) ? perguntaPor(banco.estado.tracos || [], quem) : null;
       const r = await noBanco(() => F.agir(caso.id, p.id, chave));
       if (!r) return;
       await depoisDaAcao(r);
-      const pe = caso.pessoas[pid];
       if (r.acao === 'perseguicao' || r.acao === 'confronto') {
         const confronto = r.acao === 'confronto';
         caixa({

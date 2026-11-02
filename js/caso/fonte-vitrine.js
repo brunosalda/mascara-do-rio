@@ -251,7 +251,7 @@ export async function lugar(capitulo, personagem, id) {
   }
   const pessoas = dados.pessoas.filter((p) => p.lugar === id && !pr.escondidos.includes(p.id)).sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((p) => ({
-      id: p.id, nome: p.dados.nome, sub: p.dados.sub, tipo: p.dados.tipo, figura: p.dados.figura, x: p.dados.x, y: p.dados.y, falas: p.dados.falas,
+      id: p.id, nome: p.dados.nome, sub: p.dados.sub, tipo: p.dados.tipo, pessoa: p.dados.pessoa, figura: p.dados.figura, x: p.dados.x, y: p.dados.y, falas: p.dados.falas,
       conhecida: pr.marcas.includes(`conheceu-${p.id}`), assunto_novo: topicos(p.id).some((t) => t.estado === 'novo'),
     }));
   const pontos = dados.conteudos.filter((ct) => ct.tipo === 'exame' && ct.lugar === id && visivel(ct)).sort((a, b) => a.ordem - b.ordem)
