@@ -974,27 +974,27 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     caixa({ rotulo: `${pe.nome} · ${pe.sub}`, texto, opcoes, revelar: !!intro && intro.length > 160, falante: pid });
   }
 
-  // Quem cobra pela pista: o pedido e duas saídas. Aceitar custa o tempo da pergunta e deixa a dívida;
-  // recusar e insistir custa 25 minutos e não deixa nada. A resposta vem igual nos dois casos.
-  function pedirFavor(pid, t, pergunta) {
+  // Quem pede algo antes de falar: o pedido e duas saídas. Atender custa o tempo da pergunta (o favor do
+  // vampiro ainda deixa a dívida); recusar e insistir custa 25 minutos e não deixa nada. A resposta é a mesma.
+  function pedirAntes(pid, t, pergunta) {
     const pe = caso.pessoas[pid];
     const responder = (recusar) => async (cam) => {
       if (rota) manterConversa(cam, pid); else cam.fechar();
       try {
-        const r = await noBanco(() => F.favor(caso.id, p.id, `${pid}:${t.id}`, recusar));
+        const r = await noBanco(() => F.pedido(caso.id, p.id, `${pid}:${t.id}`, recusar));
         if (!r) return;
         await depoisDaAcao(r);
-        if (r.favor) anotar('CONVERSA', `Você ficou devendo um favor a ${pe.nome}.`);
+        if (r.divida) anotar('CONVERSA', `Você ficou devendo um favor a ${pe.nome}.`);
         if (!r.novas?.length && r.texto) anotar('CONVERSA', `${pe.nome}, sobre "${t.rotulo}": ${resumoDaFala(r.texto)}`);
         await conversar(pid, textoDe(r));
       } finally { if (rota) soltarConversa(cam); }
     };
     caixa({
       rotulo: `${pe.nome} · ${pe.sub}`, falante: pid,
-      texto: `${pergunta ? `*${pergunta}*\n\n` : ''}**${pe.nome}** — ${t.favor}`,
+      texto: `${pergunta ? `*${pergunta}*\n\n` : ''}**${pe.nome}** — ${t.pedido}`,
       opcoes: [
-        { html: `Aceitar e ficar devendo <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
-        { html: 'Recusar e insistir <small class="etiqueta-tempo">25 min</small>', fn: responder(true) },
+        { html: `${t.divida ? 'Aceitar e ficar devendo' : 'Fazer o que pede'} <small class="etiqueta-tempo">${t.min} min</small>`, fn: responder(false) },
+        { html: `${t.divida ? 'Recusar e insistir' : 'Não ceder e insistir'} <small class="etiqueta-tempo">25 min</small>`, fn: responder(true) },
         { html: 'Voltar', classe: 'sair', fn: (cam) => { cam.fechar(); conversar(pid); } },
       ],
     });
@@ -1030,7 +1030,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const pe = caso.pessoas[pid];
       const quem = pe.pessoa ? { pessoa: pe.pessoa, id: pid.slice(pid.indexOf('.') + 1) } : null;
       const pergunta = PERGUNTA_TOPICO.has(t.id) ? perguntaPor(banco.estado.tracos || [], quem) : null;
-      if (t.favor && t.estado === 'novo' && F.favor) { pedirFavor(pid, t, pergunta); return; }
+      if (t.pedido && t.estado === 'novo' && F.pedido) { pedirAntes(pid, t, pergunta); return; }
       const r = await noBanco(() => F.agir(caso.id, p.id, chave));
       if (!r) return;
       await depoisDaAcao(r);

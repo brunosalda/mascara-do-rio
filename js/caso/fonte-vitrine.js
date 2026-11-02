@@ -147,7 +147,7 @@ function topicos(pessoa) {
     })
     .map((ct) => {
       const estado = pr.feitos[ct.chave] || 'novo';
-      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.favor && estado === 'novo' ? { favor: ct.dados.favor.pedido } : {}) };
+      return { chave: ct.chave, rotulo: ct.dados.rotulo, min: ct.dados.min, estado, ...(ct.dados.pedido && estado === 'novo' ? { pedido: ct.dados.pedido.fala, divida: !!ct.dados.pedido.divida } : {}) };
     });
 }
 function situacao(a, chaveI) {
@@ -214,7 +214,7 @@ async function avancar(passo) {
   await abrir(cap().id); // sem &zerar nem &ate: o estado novo
   const varrer = async () => {
     const l = await lugar(null, null, pr.lugar);
-    for (const pe of l.pessoas) for (const t of (await conversa(null, null, pe.id)).topicos) await agir(null, null, t.chave);
+    for (const pe of l.pessoas) for (const t of (await conversa(null, null, pe.id)).topicos) await (t.pedido ? pedido(null, null, t.chave, false) : agir(null, null, t.chave));
     for (const pt of l.pontos) await agir(null, null, pt.chave);
   };
   const rota = seg().rota.lugares;
@@ -302,6 +302,7 @@ function agirCom(chaveC, abordagem, usarVontade) {
     return { ...lido, ok: deu, novas, eventos: [], pode_repetir: false, estado: estado() };
   }
   if (pr.feitos[chaveC] === 'ok' && pr.lidos[chaveC]) return { ...pr.lidos[chaveC], ok: true, repetido: true, novas: [], eventos: [], estado: estado() };
+  if (d.pedido && !(chaveC in pr.feitos)) throw erro('use-caso-pedido'); // como o caso_agir do banco
   if (amanheceu()) throw erro('amanheceu');
   if (d.acao === 'perseguicao' || d.acao === 'confronto') throw erro('acao-indisponivel'); // fora do formato rota
   if (!d.abordagens) {
@@ -357,12 +358,12 @@ export async function insistir(capitulo, personagem, chaveC, abordagem) {
   try { return copia(agirCom(chaveC, abordagem, true)); } finally { salvar(); }
 }
 
-// caso_favor: aceitar (o tempo do tópico e a dívida) ou recusar e insistir (25 minutos, sem dívida).
-export async function favor(capitulo, personagem, chaveC, recusar) {
+// caso_pedido: atender (o tempo do tópico; no favor, a dívida) ou recusar e insistir (25 minutos, sem dívida).
+export async function pedido(capitulo, personagem, chaveC, recusar) {
   try {
     progresso();
     const ct = dados.conteudos.find((x) => x.chave === chaveC && x.tipo === 'topico');
-    if (!ct || !ct.dados.favor) throw erro('conteudo-inexistente');
+    if (!ct || !ct.dados.pedido) throw erro('conteudo-inexistente');
     const d = ct.dados;
     const pe = dados.pessoas.find((p) => p.id === ct.pessoa);
     if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pe.id)) throw erro('fora-do-lugar');
@@ -371,13 +372,14 @@ export async function favor(capitulo, personagem, chaveC, recusar) {
     const min = recusar ? 25 : d.min;
     const ev = tempo(min);
     const novas = aplicar([...(d.pistas || []), ...(d.marcas || [])]);
-    if (!recusar && !(pr.dividas ||= []).some((x) => x.pessoa === pe.id)) {
-      pr.dividas.push({ pessoa: pe.id, quem: d.favor.quem, lugar: ct.lugar, hora: pr.hora, pedido: d.favor.pedido });
+    const f = d.pedido;
+    if (!recusar && f.divida && !(pr.dividas ||= []).some((x) => x.pessoa === pe.id)) {
+      pr.dividas.push({ pessoa: pe.id, quem: f.quem, lugar: ct.lugar, hora: pr.hora, pedido: f.fala });
     }
-    const lido = { texto: [recusar ? d.favor.recusa : d.favor.aceito, d.texto].filter(Boolean).join('\n\n') };
+    const lido = { texto: [recusar ? f.recusa : f.aceito, d.texto].filter(Boolean).join('\n\n') };
     pr.feitos[chaveC] = 'ok';
     pr.lidos[chaveC] = lido;
-    return copia({ ...lido, ok: true, min, recusou: !!recusar, favor: recusar ? null : d.favor.pedido, novas, eventos: ev, estado: estado() });
+    return copia({ ...lido, ok: true, min, recusou: !!recusar, pedido: recusar ? null : f.fala, divida: !recusar && !!f.divida, novas, eventos: ev, estado: estado() });
   } finally { salvar(); }
 }
 

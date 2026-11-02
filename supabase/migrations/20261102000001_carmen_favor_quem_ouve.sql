@@ -1,12 +1,14 @@
--- Carmen 2026: o favor das testemunhas e a pergunta conforme quem ouve.
+-- Carmen 2026: o favor e o pedido das testemunhas, e a pergunta conforme quem ouve.
 -- NÃO APLICADA: vai junto da carga única dos textos, com a permissão do Bruno (pedido da coordenação, 02/11).
 --
 -- 1. caso_lugar devolve o tipo da pessoa (mortal, carnical ou vampiro), para a tela montar a pergunta.
--- 2. _cap_topicos devolve o pedido de favor do tópico ("favor": { pedido, aceito, recusa }), enquanto ele é novo.
--- 3. caso_favor: o jogador aceita o favor (o tempo normal e a dívida) ou recusa e insiste (25 minutos, sem dívida).
+-- 2. _cap_topicos devolve, enquanto o tópico é novo, o que a testemunha pede antes de falar ("pedido", a fala)
+--    e se isso deixa dívida ("divida": o favor do vampiro deixa; o pedido de uma testemunha comum, não).
+-- 3. caso_pedido: o jogador atende (o tempo normal; no favor, a dívida) ou recusa e insiste (25 minutos, sem dívida).
 -- 4. cap_dividas: as dívidas de cada personagem, para o Narrador cobrar numa noite qualquer.
 --
--- O texto do favor vem pronto da carga (ferramentas/carmen-para-banco.mjs), com o nome já preenchido.
+-- Os textos vêm prontos da carga (ferramentas/carmen-para-banco.mjs) em dados.pedido: { divida, fala, quem,
+-- aceito, recusa }, com o nome já preenchido.
 
 -- 4. As dívidas. Uma por pessoa e capítulo: aceitar de novo, depois de recomeçar, não duplica.
 create table public.cap_dividas (
@@ -27,7 +29,7 @@ create policy "ver as próprias dívidas" on public.cap_dividas
   for select to authenticated
   using (exists (select 1 from public.personagens p where p.id = cap_dividas.personagem_id and p.user_id = auth.uid()));
 
--- 2. Os tópicos à vista, agora com o pedido de favor enquanto o tópico é novo.
+-- 2. Os tópicos à vista, agora com o pedido da testemunha enquanto o tópico é novo.
 create or replace function public._cap_topicos(p_pers uuid, p_cap text, p_pessoa text) returns jsonb
 language plpgsql stable set search_path = '' as $$
 declare
@@ -48,7 +50,7 @@ begin
     if public._cap_algum(v_d -> 'escondeSe', v_ach) and v_estado <> 'ok' then continue; end if;
     if v_d ->> 'acao' = 'perseguicao' and (v_pub -> 'perseguicao' ->> 'marca') = any (v_ach) then continue; end if;
     v_saida := v_saida || jsonb_build_array(jsonb_build_object('chave', v_r.chave, 'rotulo', v_d ->> 'rotulo', 'min', v_d -> 'min', 'estado', v_estado)
-      || case when v_d ? 'favor' and v_estado = 'novo' then jsonb_build_object('favor', v_d -> 'favor' -> 'pedido') else '{}'::jsonb end);
+      || case when v_d ? 'pedido' and v_estado = 'novo' then jsonb_build_object('pedido', v_d -> 'pedido' -> 'fala', 'divida', v_d -> 'pedido' -> 'divida') else '{}'::jsonb end);
   end loop;
   return v_saida;
 end $$;
@@ -107,18 +109,18 @@ begin
   return jsonb_build_object('lugar', p_lugar, 'minutos', v_min, 'viagem', v_viagem, 'pessoas', v_pessoas, 'pontos', v_pontos, 'eventos', v_ev, 'estado', public._cap_estado(p_personagem, p_capitulo));
 end $$;
 
--- 3. A resposta ao pedido de favor. Aceitar: o tempo do tópico, as pistas e a dívida. Recusar e insistir:
--- 25 minutos, as mesmas pistas e nenhuma dívida. Só vale para um tópico com favor, à vista e ainda novo.
-create or replace function public.caso_favor(p_capitulo text, p_personagem uuid, p_chave text, p_recusar boolean)
+-- 3. A resposta ao pedido. Atender: o tempo do tópico, as pistas e, se for favor, a dívida. Recusar e insistir:
+-- 25 minutos, as mesmas pistas e nenhuma dívida. Só vale para um tópico com pedido, à vista e ainda novo.
+create or replace function public.caso_pedido(p_capitulo text, p_personagem uuid, p_chave text, p_recusar boolean)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_pr public.progresso; v_row public.cap_conteudos; v_d jsonb; v_f jsonb; v_ev jsonb; v_novas jsonb; v_texto text; v_lido jsonb; v_min int;
 begin
   v_pr := public._cap_progresso(p_capitulo, p_personagem);
   perform public._cap_sinal(p_personagem, p_capitulo);
   select * into v_row from public.cap_conteudos cc where cc.capitulo_id = p_capitulo and cc.chave = p_chave and cc.tipo = 'topico';
-  if not found or not (v_row.dados ? 'favor') then raise exception 'conteudo-inexistente'; end if;
+  if not found or not (v_row.dados ? 'pedido') then raise exception 'conteudo-inexistente'; end if;
   v_d := v_row.dados;
-  v_f := v_d -> 'favor';
+  v_f := v_d -> 'pedido';
   if not exists (select 1 from public.cap_pessoas cp where cp.capitulo_id = p_capitulo and cp.id = v_row.pessoa and cp.lugar = v_pr.lugar and not (cp.id = any (v_pr.escondidos))) then raise exception 'fora-do-lugar'; end if;
   if not exists (select 1 from jsonb_array_elements(public._cap_topicos(p_personagem, p_capitulo, v_row.pessoa)) t where t ->> 'chave' = p_chave and t ->> 'estado' = 'novo') then raise exception 'conteudo-inexistente'; end if;
   if public._cap_amanheceu(p_personagem, p_capitulo) then raise exception 'amanheceu'; end if;
@@ -126,20 +128,40 @@ begin
   v_min := case when p_recusar then 25 else (v_d ->> 'min')::int end;
   v_ev := public._cap_tempo(p_personagem, p_capitulo, v_min);
   v_novas := public._cap_aplicar(p_personagem, p_capitulo, coalesce(v_d -> 'pistas', '[]'::jsonb) || coalesce(v_d -> 'marcas', '[]'::jsonb));
-  if p_recusar then
-    v_texto := concat_ws(E'\n\n', v_f ->> 'recusa', v_d ->> 'texto');
-  else
+  v_texto := concat_ws(E'\n\n', v_f ->> case when p_recusar then 'recusa' else 'aceito' end, v_d ->> 'texto');
+  if not p_recusar and (v_f ->> 'divida')::boolean then
     select * into v_pr from public.progresso pr where pr.personagem_id = p_personagem and pr.capitulo_id = p_capitulo;
     insert into public.cap_dividas (personagem_id, capitulo_id, pessoa, quem, lugar, hora, pedido)
-    values (p_personagem, p_capitulo, v_row.pessoa, v_f ->> 'quem', v_row.lugar, v_pr.hora, v_f ->> 'pedido')
+    values (p_personagem, p_capitulo, v_row.pessoa, v_f ->> 'quem', v_row.lugar, v_pr.hora, v_f ->> 'fala')
     on conflict (personagem_id, capitulo_id, pessoa) do nothing;
-    v_texto := concat_ws(E'\n\n', v_f ->> 'aceito', v_d ->> 'texto');
   end if;
   v_lido := jsonb_build_object('texto', v_texto);
   update public.progresso pr set feitos = pr.feitos || jsonb_build_object(p_chave, 'ok'), lidos = pr.lidos || jsonb_build_object(p_chave, v_lido)
   where pr.personagem_id = p_personagem and pr.capitulo_id = p_capitulo;
-  return v_lido || jsonb_build_object('ok', true, 'min', v_min, 'recusou', p_recusar, 'favor', case when p_recusar then null else v_f -> 'pedido' end,
+  return v_lido || jsonb_build_object('ok', true, 'min', v_min, 'recusou', p_recusar, 'pedido', case when p_recusar then null else v_f -> 'fala' end,
+    'divida', not p_recusar and (v_f ->> 'divida')::boolean,
     'novas', v_novas, 'eventos', v_ev, 'estado', public._cap_estado(p_personagem, p_capitulo));
 end $$;
-revoke all on function public.caso_favor(text, uuid, text, boolean) from public, anon;
-grant execute on function public.caso_favor(text, uuid, text, boolean) to authenticated;
+revoke all on function public.caso_pedido(text, uuid, text, boolean) from public, anon;
+grant execute on function public.caso_pedido(text, uuid, text, boolean) to authenticated;
+
+-- 5. caso_agir não deixa pular o pedido: um tópico com pedido, ainda novo, só se responde por caso_pedido
+-- (pedido da avaliação, 02/11, 16h00). A função atual (já alterada no banco pelas etapas C) passa a se chamar
+-- _caso_agir_base, sem acesso direto, e o caso_agir novo confere o pedido antes de chamá-la.
+alter function public.caso_agir(text, uuid, text, integer, boolean) rename to _caso_agir_base;
+revoke all on function public._caso_agir_base(text, uuid, text, integer, boolean) from public, anon, authenticated;
+
+create or replace function public.caso_agir(p_capitulo text, p_personagem uuid, p_chave text, p_abordagem int default null, p_usar_vontade boolean default false) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+begin
+  if exists (
+    select 1 from public.cap_conteudos cc
+    where cc.capitulo_id = p_capitulo and cc.chave = p_chave and cc.tipo = 'topico' and cc.dados ? 'pedido'
+      and not exists (select 1 from public.progresso pr where pr.personagem_id = p_personagem and pr.capitulo_id = p_capitulo and pr.feitos ? p_chave)
+  ) then
+    raise exception 'use-caso-pedido';
+  end if;
+  return public._caso_agir_base(p_capitulo, p_personagem, p_chave, p_abordagem, p_usar_vontade);
+end $$;
+revoke all on function public.caso_agir(text, uuid, text, integer, boolean) from public, anon;
+grant execute on function public.caso_agir(text, uuid, text, integer, boolean) to authenticated;
