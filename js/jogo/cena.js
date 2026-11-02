@@ -2063,6 +2063,7 @@ export function montarCena(raiz, {
     if (!camadaAberta() && !semPersonagem) for (const k of teclas) { const v = TECLAS[k]; if (v) { dx += v[0]; dy += v[1]; } }
     if (dx || dy) alvo = null;
     let correndo = teclas.has('shift') || correrSempre;
+    let freio = null;
     if (alvo && !alvo.via) alvo.via = caminho([pos.x, pos.y], [alvo.x, alvo.y]);
     if (alvo?.via?.length && dist(alvo.via[0][0], alvo.via[0][1], pos.x, pos.y) < 0.015) alvo.via.shift();
     if (alvo) {
@@ -2072,9 +2073,13 @@ export function montarCena(raiz, {
       const ay = ty - pos.y;
       const d = alvo.via?.length ? 1 : dist(alvo.x, alvo.y, pos.x, pos.y);
       const chegouPerto = alvo.ponto && !alvo.ponto.parada && !alvo.aproximar && dist(alvo.ponto.x, alvo.ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 0.8;
-      if (d < 0.008 || chegouPerto || semProgresso > 0.5) {
+      // Toque ou clique no chão: os pés param onde o dedo tocou (movimento, item 6). A personagem freia no fim
+      // e chega bem perto, em vez de parar a uns 10 px e ainda escorregar.
+      const noChao = !alvo.ponto && !alvo.via?.length;
+      if (d < (noChao ? 0.0015 : 0.008) || chegouPerto || semProgresso > 0.5) {
         const ponto = alvo.ponto;
         const travou = semProgresso > 0.5;
+        if (noChao && !travou) { vel.x = 0; vel.y = 0; }
         alvo = null;
         semProgresso = 0;
         if (ponto && (!travou || chegouPerto || dist(ponto.x, ponto.y, pos.x, pos.y) <= alcanceEm(pos.y) * 1.6)) interagir(ponto);
@@ -2084,14 +2089,21 @@ export function montarCena(raiz, {
           dx = (ax * ASPECTO) / n;
           dy = ay / n;
         }
+        if (noChao) freio = { x: ax, y: ay };
       }
     }
     if (camadaAberta()) { dx = 0; dy = 0; }
     const norma = Math.hypot(dx, dy) || 1;
     // A velocidade não cresce com o aumento das figuras do caso (rodada 46), para a perseguição não mudar.
     const fator = limitar(altura(pos.y) / aumento / ALTURA_REF, geo.alto ? 0.6 : 0.45, 1.3) * (correndo ? CORRIDA * (caca?.ligeireza ? 1.55 : 1) : 1) * ritmo;
-    const desejadoX = (dx / norma) * VEL_X * fator;
-    const desejadoY = (dy / norma) * VEL_Y * fator;
+    let desejadoX = (dx / norma) * VEL_X * fator;
+    let desejadoY = (dy / norma) * VEL_Y * fator;
+    // Freio na chegada: perto do destino, a velocidade pedida cai com a distância que falta, sem passar do ponto.
+    if (freio) {
+      const quer = Math.hypot(desejadoX / VEL_X, desejadoY / VEL_Y);
+      const resta = Math.hypot(freio.x / VEL_X, freio.y / VEL_Y) * (ACELERACAO / 4);
+      if (quer > resta && quer > 0) { desejadoX *= resta / quer; desejadoY *= resta / quer; }
+    }
     const k = Math.min(1, dt * ACELERACAO);
     vel.x += (desejadoX - vel.x) * k;
     vel.y += (desejadoY - vel.y) * k;
