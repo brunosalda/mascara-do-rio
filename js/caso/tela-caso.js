@@ -1263,7 +1263,7 @@ ${textoDe(r)}` : textoDe(r));
       montarLugar();
       const l = caso.lugares[id];
       // O que se vê ao chegar, com o tempo da noite (chuva, calor, garoa ou seco), quando o capítulo traz.
-      const chegada = caso.tempo?.chegadas?.[id];
+      const chegada = chegadaSemFrase(id);
       anotar('VOCÊ', `Chega ${destinoEm(l)}, às ${hora(st.hora)}.${chegada ? ` ${chegada}` : ''}`);
       if (rota) {
         // Carmen 2026 (6.2): a cena nova abre em íris, e o cartão de chegada encolhe até virar o título. O véu
@@ -1285,6 +1285,13 @@ ${textoDe(r)}` : textoDe(r));
       setTimeout(olharInicial, 120);
       setTimeout(checarAmanhecer, 600);
     }, 260);
+  }
+
+  // A chegada no registro. Quando a frase do tempo vai no cartão, o registro leva só o resto, sem repetir a frase.
+  function chegadaSemFrase(id) {
+    const chegada = caso.tempo?.chegadas?.[id];
+    const frase = caso.tempo?.frases?.[id];
+    return frase && chegada?.startsWith(frase) ? chegada.slice(frase.length).trim() : chegada;
   }
 
   // Carmen 2026 (6.2): o cartão de chegada no alto à esquerda (nome grande, hora e marcas). Na viagem errada,
@@ -1311,7 +1318,11 @@ ${textoDe(r)}` : textoDe(r));
         el.style.transform = `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${(b.height / a.height).toFixed(3)})`;
       }
       el.classList.add('saindo');
-      setTimeout(() => { el.remove(); tela.classList.remove('chegando'); depois?.(); }, 420);
+      setTimeout(() => {
+        el.remove();
+        if (!tela.querySelector('.cartao-chegada')) tela.classList.remove('chegando');
+        depois?.();
+      }, 420);
     };
     el.addEventListener('click', encolher);
     setTimeout(encolher, frase ? 4000 : cerimoniasCurtas() ? 1200 : 2200);
@@ -2235,7 +2246,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         ...(paineis ? { html: quadrinhos(paineis).replace('class="hq ', 'class="hq hq-tira tira-rota ').replaceAll(' loading="lazy"', '') } : { texto: caso.abertura.texto }),
         opcoes: [{ html: '<b>Começar a investigar</b>', fn: (c) => {
           st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
-          const chegada = caso.tempo?.chegadas?.[st.lugar];
+          const chegada = chegadaSemFrase(st.lugar);
           if (chegada) anotar('VOCÊ', chegada);
           // O capítulo também abre com o cartão de chegada; a dica entra 1 s depois de ele encolher.
           cartaoChegada(caso.lugares[st.lugar], null, caso.tempo?.frases?.[st.lugar], () => setTimeout(() =>
