@@ -37,6 +37,9 @@ function quadrosDaAbertura(cap) {
 const args = process.argv.slice(2);
 const n = Number(args.find((a) => /^\d+$/.test(a)) || 1);
 const teste = args.includes('--teste');
+// --manter-progresso: troca o conteúdo sem apagar o progresso de ninguém (o capítulo é atualizado no lugar, não
+// apagado e recriado, porque apagar o capítulo apaga o progresso em cascata).
+const manter = args.includes('--manter-progresso');
 const TEMPORADA = teste ? 'teste-carmen' : 'carmen-1';
 const CAP = teste ? `teste-carmen-${n}` : `carmen-${n}`;
 const VISIVEL = ['5d94ebb2-3baa-4244-a2c1-d44e48d82ca5', '5557b3b9-c5c1-4b34-9356-015a87e956bb'];
@@ -164,8 +167,10 @@ const minimas = c.visitas.filter((v) => v.fontes.length).length * 2;
 
 // --vitrine (só com --teste): o capítulo inteiro em JSON, para o modo vitrine local (js/caso/fonte-vitrine.js),
 // que joga sem login no localhost. Grave em vitrine/teste-carmen-<n>.json: a pasta vitrine/ fica fora do git.
-if (args.includes('--vitrine')) {
-  if (!teste) { process.stderr.write('A vitrine só aceita o capítulo de teste (--teste).\n'); process.exit(1); }
+// --carga: o mesmo JSON, para qualquer capítulo, que ferramentas/carregar-carmen.mjs manda à função de carga
+// (só pelo cano do script: nunca gravar nem mostrar, porque tem o culpado e a rota).
+if (args.includes('--vitrine') || args.includes('--carga')) {
+  if (!teste && !args.includes('--carga')) { process.stderr.write('A vitrine só aceita o capítulo de teste (--teste).\n'); process.exit(1); }
   process.stdout.write(JSON.stringify({
     capitulo: { id: CAP, temporada: TEMPORADA, ordem: n, titulo: c.publico.titulo, pergunta: 'Para onde foi? Quem é?', relogio: c.publico.relogio,
       custos: { cacar: 45, dados: 35, semLicenca: 30, acusacaoErrada: 60 }, publico, tempo_referencia_min: 40, pistas_minimas: minimas, formato: 'rota' },
@@ -178,12 +183,12 @@ const sql = [];
 sql.push('begin;');
 // A temporada 1 entra como 'teste' (só a conta de teste e o Bruno veem); abrir para todos é decisão do Bruno.
 sql.push(`insert into public.temporadas (id, titulo, situacao, visivel_para) values (${q(TEMPORADA)}, ${q(teste ? 'Temporada de teste da fuga' : 'A fuga pela cidade · temporada 1')}, 'teste', ${arr(VISIVEL).replace('::text[]', '::uuid[]')}) on conflict (id) do nothing;`);
-sql.push(`delete from public.progresso where capitulo_id = ${q(CAP)};`);
+if (!manter) sql.push(`delete from public.progresso where capitulo_id = ${q(CAP)};`);
 for (const t of ['cap_conteudos', 'cap_pessoas', 'cap_pistas', 'capitulo_segredo']) sql.push(`delete from public.${t} where capitulo_id = ${q(CAP)};`);
-sql.push(`delete from public.capitulos where id = ${q(CAP)};`);
+if (!manter) sql.push(`delete from public.capitulos where id = ${q(CAP)};`);
 const pares = publico.tempos.filter((t, i) => i % 2 === 0).map((t) => `${t.de}|${t.para}|${t.minutos}|${t.voo ? 1 : 0}`).join(',');
 const semTempos = { ...publico, tempos: [] };
-sql.push(`insert into public.capitulos (id, temporada_id, ordem, titulo, pergunta, relogio_inicio, relogio_fim, custos, publico, tempo_referencia_min, pistas_minimas, formato) values (${q(CAP)}, ${q(TEMPORADA)}, ${n}, ${q(c.publico.titulo)}, 'Para onde foi? Quem é?', ${c.publico.relogio.inicio}, ${c.publico.relogio.fim}, ${j({ cacar: 45, dados: 35, semLicenca: 30, acusacaoErrada: 60 })}, ${j(semTempos)} || jsonb_build_object('tempos', (select jsonb_agg(t order by k, d) from (select k, d, jsonb_build_object('de', case d when 0 then x[1] else x[2] end, 'para', case d when 0 then x[2] else x[1] end, 'minutos', x[3]::int, 'voo', x[4] = '1') t from unnest(string_to_array(${q(pares)}, ',')) with ordinality u(p, k), lateral (select string_to_array(u.p, '|') x) y, (values (0), (1)) v(d)) z)), 40, ${minimas}, 'rota');`);
+sql.push(`insert into public.capitulos (id, temporada_id, ordem, titulo, pergunta, relogio_inicio, relogio_fim, custos, publico, tempo_referencia_min, pistas_minimas, formato) values (${q(CAP)}, ${q(TEMPORADA)}, ${n}, ${q(c.publico.titulo)}, 'Para onde foi? Quem é?', ${c.publico.relogio.inicio}, ${c.publico.relogio.fim}, ${j({ cacar: 45, dados: 35, semLicenca: 30, acusacaoErrada: 60 })}, ${j(semTempos)} || jsonb_build_object('tempos', (select jsonb_agg(t order by k, d) from (select k, d, jsonb_build_object('de', case d when 0 then x[1] else x[2] end, 'para', case d when 0 then x[2] else x[1] end, 'minutos', x[3]::int, 'voo', x[4] = '1') t from unnest(string_to_array(${q(pares)}, ',')) with ordinality u(p, k), lateral (select string_to_array(u.p, '|') x) y, (values (0), (1)) v(d)) z)), 40, ${minimas}, 'rota')${manter ? ' on conflict (id) do update set temporada_id = excluded.temporada_id, ordem = excluded.ordem, titulo = excluded.titulo, pergunta = excluded.pergunta, relogio_inicio = excluded.relogio_inicio, relogio_fim = excluded.relogio_fim, custos = excluded.custos, publico = excluded.publico, tempo_referencia_min = excluded.tempo_referencia_min, pistas_minimas = excluded.pistas_minimas, formato = excluded.formato' : ''};`);
 sql.push(`insert into public.capitulo_segredo (capitulo_id, resposta, eventos, fecho, palavras_por, rota, culpado) values (${q(CAP)}, '{}'::jsonb, '[]'::jsonb, ${j(fecho)}, '{}'::jsonb, ${j({ lugares: rota, avistamento: c.segredo.avistamento, acao: { pool: ['destreza', 'atletismo'], dif: 3 } })}, ${q(c.segredo.culpado)});`);
 // Uma inserção por tabela, a partir de uma lista JSON (menos texto repetido na carga). Os conteúdos vão em
 // blocos de até 40, para cada comando caber numa chamada.

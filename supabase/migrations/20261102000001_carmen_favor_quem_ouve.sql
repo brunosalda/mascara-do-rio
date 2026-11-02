@@ -1,5 +1,5 @@
 -- Carmen 2026: o favor e o pedido das testemunhas, e a pergunta conforme quem ouve.
--- NÃO APLICADA: vai junto da carga única dos textos, com a permissão do Bruno (pedido da coordenação, 02/11).
+-- Aplicada em 02/11/2026, com a permissão do Bruno, antes da carga única dos textos (20261102000002).
 --
 -- 1. caso_lugar devolve o tipo da pessoa (mortal, carnical ou vampiro), para a tela montar a pergunta.
 -- 2. _cap_topicos devolve, enquanto o tópico é novo, o que a testemunha pede antes de falar ("pedido", a fala)
