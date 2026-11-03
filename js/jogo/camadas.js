@@ -129,6 +129,8 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
       const k = ev.key;
       if (k === 'Escape' && fechavel) { camada.fechar(); return true; }
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return false;
+      // Quem segura o Enter para pular o texto não escolhe sem querer quando o foco chega a uma escolha.
+      if ((k === 'Enter' || k === ' ') && ev.repeat && presas.contains(document.activeElement)) return true;
       if ((k === ' ' || k === 'Enter' || k === 'e' || k === 'E') && leitura && !leitura.terminou()) {
         if (document.activeElement?.tagName === 'BUTTON' && k !== 'e' && k !== 'E') return false;
         leitura.avancar();
@@ -223,7 +225,7 @@ export function perguntar(raiz, { rotulo = '', texto = '', opcoes = [] } = {}) {
 
 // --- Janelas (ficha, diário, plano da noite) ----------------------------------------------------
 // O que recebe o Tab dentro da janela, na ordem da página.
-const focaveis = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+const focaveis = (el) => [...el.querySelectorAll('button, a[href], area[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
   .filter((e) => !e.disabled && !e.closest('[inert]') && e.getClientRects().length);
 
 // foco(corpo): o elemento que recebe o foco ao abrir; sem ele, o 1º focável do corpo.
@@ -264,7 +266,7 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar, foco } = {
         const i = fs.indexOf(document.activeElement);
         const dentro = fundo.contains(document.activeElement);
         if (!fs.length) return true;
-        if (ev.shiftKey ? i === 0 || !dentro : i === fs.length - 1 || !dentro) {
+        if (i < 0 || !dentro || (ev.shiftKey ? i === 0 : i === fs.length - 1)) {
           (ev.shiftKey ? fs.at(-1) : fs[0]).focus({ preventScroll: true });
           return true;
         }

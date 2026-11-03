@@ -820,7 +820,11 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
         const g = ev.target.closest('[data-lugar]');
         if (g) {
           selecionar(g.dataset.lugar);
-          if (g.closest('.rota-lista')) corpo.querySelector('.mapa-acao')?.scrollIntoView?.({ block: 'nearest' });
+          if (g.closest('.rota-lista')) {
+            corpo.querySelector('.mapa-acao')?.scrollIntoView?.({ block: 'nearest' });
+            // Pelo teclado (clique sem ponteiro), o foco salta para o Viajar.
+            if (ev.detail === 0) corpo.querySelector('[data-viajar]')?.focus({ preventScroll: true });
+          }
         }
       });
       corpo.addEventListener('keydown', (ev) => {

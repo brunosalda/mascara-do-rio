@@ -559,6 +559,9 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .relogio-noite.com-arco .relogio-ar
 }
 .tela-caso.carmen .ponto:is(.feito, .visto):not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo::after { content: none; }
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):is(:hover, .perto, :focus-visible)::before { transform: scale(1.08); opacity: 1; filter: none; }
+/* Foco do teclado no ponto: um anel sódio que segue o círculo, no lugar do retângulo geral. */
+.tela-caso.carmen .cena .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):focus-visible { outline: none !important; box-shadow: none !important; }
+.tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta):focus-visible::before { outline: calc(3px / var(--escala, 1)) solid #f0d590; outline-offset: calc(3px / var(--escala, 1)); }
 .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) .ponto-rotulo { left: calc(50% + 26px / var(--escala, 1)); }
 body.celular .tela-caso.carmen .ponto:not(.ponto-saida, .ponto-presa, .ponto-porta) { --lado: 44px; }
 @media (prefers-reduced-motion: reduce) { body:not(.movimento-forcado) .tela-caso.carmen .ponto:not(.feito, .visto)::after { animation: none; opacity: 0.6; transform: scale(1.25); } }
