@@ -1217,7 +1217,7 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
     classe: 'janela-licenca',
     montar: (corpo, camada) => {
       corpo.innerHTML = `
-        <article class="licenca-doc${jaEmitida ? ' emitida' : ''}">
+        <article class="licenca-doc${jaEmitida ? ' emitida' : ''}" tabindex="-1">
           <header class="licenca-cabeca"><h3>Licença de Caça</h3><span class="licenca-num">Nº ${numeroLicenca(numero)}</span></header>
           <div class="licenca-quem">
             <div class="ficha-foto"><span class="ficha-clipe" aria-hidden="true"></span>${retratoFalado(suspeito.tracos, { genero: suspeito.genero, semente: suspeito.id })}</div>
@@ -1227,9 +1227,17 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
           <p class="licenca-autorizo datilo">${portador ? `Autorizo ${esc(portador)} a caçar` : 'Autorizo a caça'}. ${esc(cidade)}${hora ? `, ${esc(hora)}` : ''}.</p>
           <p class="licenca-assina"><span>Iolanda</span><small>Xerife</small></p>
           <span class="carimbo carimbo-g licenca-carimbo" aria-hidden="true">Licença</span>
-          <button type="button" class="btn destaque licenca-guardar" data-guardar>Guardar a Licença</button>
+          <button type="button" class="btn destaque licenca-guardar" data-guardar inert>Guardar a Licença</button>
         </article>`;
       const doc = corpo.querySelector('.licenca-doc');
+      const botaoGuardar = corpo.querySelector('[data-guardar]');
+      // O Guardar fica fora do Tab até o carimbo cair; aí aparece e recebe o foco. O foco abre no papel.
+      const liberarGuardar = (focar) => {
+        doc.classList.add('guardavel');
+        botaoGuardar.inert = false;
+        if (focar) botaoGuardar.focus({ preventScroll: true });
+      };
+      setTimeout(() => doc.focus({ preventScroll: true }), 0);
       // Guardar: o papel encolhe e voa até a miniatura no alto do Arquivo (400 ms), que pisca ao receber.
       let guardando = false;
       corpo.querySelector('[data-guardar]').addEventListener('click', () => {
@@ -1265,7 +1273,7 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
           som.carmen?.('papel');
         };
       });
-      if (jaEmitida) { doc.classList.add('guardavel'); return; }
+      if (jaEmitida) { liberarGuardar(false); return; }
       // A cerimônia (guia, 6.2): os valores se datilografam (25 ms por letra, uma tecla a cada 3), a assinatura
       // se desenha (500 ms) e o carimbo cai, com som e um tremor de 2 px. Um clique no papel completa tudo;
       // com "menos movimento", vai direto ao fim.
@@ -1277,12 +1285,13 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         if (caiu) return;
         caiu = true;
         doc.classList.add('carimbando');
-        depois(cerimoniasCurtas() ? 0 : 180, () => { som.carmen?.('carimbo'); doc.classList.add('tremor', 'guardavel'); depois(140, () => doc.classList.remove('tremor')); });
+        depois(cerimoniasCurtas() ? 0 : 180, () => { som.carmen?.('carimbo'); doc.classList.add('tremor'); liberarGuardar(true); depois(140, () => doc.classList.remove('tremor')); });
       };
       const completar = () => {
         timers.splice(0).forEach(clearTimeout);
         campos.forEach(({ el, txt }) => { el.textContent = txt; });
-        doc.classList.add('assinada', 'guardavel');
+        doc.classList.add('assinada');
+        liberarGuardar(true);
         carimbar();
       };
       if (cerimoniasCurtas()) { completar(); return; }
@@ -1306,6 +1315,10 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
       depois(t, () => doc.classList.add('assinando'));
       depois(t + 560, () => { doc.classList.add('assinada'); carimbar(); });
       doc.addEventListener('click', (ev) => { if (!ev.target.closest('[data-guardar]') && !caiu) completar(); });
+      // Enter ou espaço no papel completam a cerimônia, como o clique.
+      doc.addEventListener('keydown', (ev) => {
+        if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === doc && !caiu) { ev.preventDefault(); completar(); }
+      });
     },
   });
 }

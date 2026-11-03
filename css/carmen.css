@@ -797,6 +797,8 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .tela-jogo.bg2.tela-caso.carmen .licenca-guardar { transition: opacity 160ms var(--curva-sai), transform var(--t-rapido) var(--curva-sai), background var(--t-rapido), border-color var(--t-rapido); }
 /* O clã datilografado é um bloco, para guardar a altura (min-height não vale em linha). */
 .licenca-quem .datilo { display: block; }
+/* A linha ainda vazia tem a mesma base de uma linha com texto: a assinatura não sobe. */
+.licenca-doc .datilo:empty::before { content: "\200b"; }
 
 /* A Licença depois de emitida: menor, no alto da coluna esquerda do Arquivo. */
 .carmen .licenca-mini {
