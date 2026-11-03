@@ -204,7 +204,13 @@ export function perguntar(raiz, { rotulo = '', texto = '', opcoes = [] } = {}) {
 }
 
 // --- Janelas (ficha, diário, plano da noite) ----------------------------------------------------
+// O que recebe o Tab dentro da janela, na ordem da página.
+const focaveis = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+  .filter((e) => !e.disabled && !e.closest('[inert]') && e.getClientRects().length);
+
 export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
+  // Ao fechar, o foco volta a quem o tinha (ou ao que camada.voltarFoco() indicar), senão ao 1º botão da janela de baixo.
+  const focoAntes = document.activeElement;
   const fundo = document.createElement('div');
   fundo.className = `janela-fundo ${classe}`;
   fundo.innerHTML = `
@@ -223,10 +229,28 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
     fechar() {
       desempilhar(camada);
       if (!fundo.isConnected) return;
+      const tinhaFoco = fundo.contains(document.activeElement) || document.activeElement === document.body;
       sairDevagar(fundo);
+      if (!tinhaFoco) return;
+      const volta = camada.voltarFoco?.()
+        || (focoAntes?.isConnected && focoAntes !== document.body ? focoAntes : null)
+        || (pilha.at(-1)?.el && focaveis(pilha.at(-1).el).find((e) => e.tagName === 'BUTTON'));
+      volta?.focus({ preventScroll: true });
     },
     tecla(ev) {
       if (ev.key === 'Escape') { camada.fechar(); return true; }
+      // O Tab circula dentro da janela: do último volta ao primeiro, e o Shift+Tab ao contrário.
+      if (ev.key === 'Tab') {
+        const fs = focaveis(fundo);
+        const i = fs.indexOf(document.activeElement);
+        const dentro = fundo.contains(document.activeElement);
+        if (!fs.length) return true;
+        if (ev.shiftKey ? i === 0 || !dentro : i === fs.length - 1 || !dentro) {
+          (ev.shiftKey ? fs.at(-1) : fs[0]).focus({ preventScroll: true });
+          return true;
+        }
+        return false;
+      }
       return !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)
         && ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'e', 'E'].includes(ev.key);
     },

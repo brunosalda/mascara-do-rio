@@ -1432,21 +1432,45 @@ ${textoDe(r)}` : textoDe(r));
           : `<button type="button" class="btn destaque" data-cerco="arquivo">Abrir o Arquivo</button><button type="button" class="btn" data-cerco="cercar">Cercar sem Licença <small class="etiqueta-tempo">−${duracao(semLicenca)}</small></button><button type="button" class="btn sutil" data-cerco="nao">Ainda não</button>`}</div>
       </section>`;
     tela.appendChild(el);
-    // Sair sem decidir: "Ainda não", Esc ou um toque fora do cartão. A personagem fica onde está, e o relógio não anda.
-    const tecla = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); sair(); } };
+    // O teclado fica com o cerco da abertura do cartão até a moldura sair, cerimônia incluída: nada chega à cena.
+    // No cartão, Tab e setas circulam entre os botões, Enter e espaço apertam o botão em foco e Esc sai.
+    // Na cerimônia (el.fimCerco), Enter, espaço e Esc encerram. As outras teclas não fazem nada.
+    const tecla = (ev) => {
+      if (!el.isConnected) { document.removeEventListener('keydown', tecla, true); return; }
+      ev.stopPropagation();
+      const k = ev.key;
+      const fecha = k === 'Enter' || k === ' ' || k === 'Escape';
+      if (el.fimCerco || saiu) {
+        if (fecha || k === 'Tab' || k.startsWith('Arrow')) ev.preventDefault();
+        if (fecha) el.fimCerco?.();
+        return;
+      }
+      if (k === 'Escape') { ev.preventDefault(); sair(); return; }
+      if (k === 'Tab' || k.startsWith('Arrow')) {
+        ev.preventDefault();
+        const bs = [...el.querySelectorAll('.cartao-cerco .btn')];
+        if (!bs.length) return;
+        const volta = (k === 'Tab' && ev.shiftKey) || k === 'ArrowLeft' || k === 'ArrowUp';
+        const i = bs.indexOf(document.activeElement);
+        bs[i < 0 ? 0 : (i + (volta ? -1 : 1) + bs.length) % bs.length].focus({ preventScroll: true });
+      }
+    };
     document.addEventListener('keydown', tecla, true);
+    el.soltarTeclas = () => document.removeEventListener('keydown', tecla, true);
+    // Sair sem decidir: "Ainda não", Esc ou um toque fora do cartão. A personagem fica onde está, e o relógio não anda.
     // O cartão esmaece em 160 ms. Ao cercar, as faixas, a câmera e o HUD apagado ficam até o fim da cerimônia;
     // nos outros casos, as faixas recolhem em 240 ms e a cena volta.
     let saiu = false;
     const sair = (ficar) => {
       if (saiu) return;
       saiu = true;
-      document.removeEventListener('keydown', tecla, true);
       el.style.pointerEvents = 'none';
       el.querySelector('.cartao-cerco')?.classList.add('saindo');
       if (ficar) return;
       alvo?.classList.remove('alvo-cerco');
       recolherCerco(el);
+      // O foco volta ao alvo, se ele ainda está na cena (no Arquivo, a janela toma o foco).
+      if (alvo?.isConnected) alvo.focus({ preventScroll: true });
     };
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-cerco]');
@@ -1461,10 +1485,10 @@ ${textoDe(r)}` : textoDe(r));
   // Tira a moldura do cerco: as faixas recolhem e o escuro some em 240 ms, e a câmera e o HUD voltam.
   function recolherCerco(camada) {
     tela.classList.remove('cercando');
-    if (!camada?.isConnected) return;
+    if (!camada?.isConnected) { camada?.soltarTeclas?.(); return; }
     camada.style.pointerEvents = 'none';
     camada.classList.add('recolhendo');
-    setTimeout(() => camada.remove(), cerimoniasCurtas() ? 0 : 240);
+    setTimeout(() => { camada.remove(); camada.soltarTeclas?.(); }, cerimoniasCurtas() ? 0 : 240);
   }
   // A cerimônia do fim do cerco (6.2): PRESO/PRESA com clarão e a cena em preto e branco, ou FUGIU com a cena escurecendo.
   // O topo do anel do alvo na tela: o anel (::before) passa acima da caixa do ponto, e o palco está com zoom.
@@ -1529,6 +1553,7 @@ ${textoDe(r)}` : textoDe(r));
       const fim = () => {
         if (foi) return;
         foi = true;
+        if (camada) camada.fimCerco = null;
         el.style.pointerEvents = 'none';
         el.classList.add('saindo');
         setTimeout(() => el.remove(), cerimoniasCurtas() ? 0 : 240);
@@ -1536,8 +1561,11 @@ ${textoDe(r)}` : textoDe(r));
         alvo?.querySelector('.alvo-fugindo')?.remove();
         tela.classList.remove('cena-preso', 'cena-fugiu');
         recolherCerco(camada);
+        // No FUGIU, o foco volta ao alvo, que continua na cena.
+        if (!preso && alvo?.isConnected) alvo.focus({ preventScroll: true });
         ok();
       };
+      if (camada) camada.fimCerco = fim;
       el.style.pointerEvents = 'auto';
       el.addEventListener('click', fim);
       setTimeout(fim, dur);

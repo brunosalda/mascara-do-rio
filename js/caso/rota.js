@@ -1231,6 +1231,8 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         </article>`;
       const doc = corpo.querySelector('.licenca-doc');
       const botaoGuardar = corpo.querySelector('[data-guardar]');
+      // Ao fechar (depois do voo ou com Esc), o foco vai para a miniatura da Licença no Arquivo.
+      camada.voltarFoco = () => raiz.querySelector('.licenca-mini');
       // O Guardar fica fora do Tab até o carimbo cair; aí aparece e recebe o foco. O foco abre no papel.
       const liberarGuardar = (focar) => {
         doc.classList.add('guardavel');
@@ -1291,7 +1293,6 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         timers.splice(0).forEach(clearTimeout);
         campos.forEach(({ el, txt }) => { el.textContent = txt; });
         doc.classList.add('assinada');
-        liberarGuardar(true);
         carimbar();
       };
       if (cerimoniasCurtas()) { completar(); return; }
