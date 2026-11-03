@@ -2153,6 +2153,16 @@ ${textoDe(r)}` : textoDe(r));
             </section>
           </div>`;
         const telaP = corpo.querySelector('.placar-tela');
+        // No computador, o carimbo fica no canto de cima à direita do mapa do rastro, um terço acima da borda dele.
+        const carimbo = corpo.querySelector('.placar-carimbo');
+        const mapa = corpo.querySelector('.placar-rastro');
+        const prenderCarimbo = () => {
+          if (!telaP.isConnected) { window.removeEventListener('resize', prenderCarimbo); return; }
+          if (!carimbo || !mapa || document.body.classList.contains('celular')) { carimbo?.style.removeProperty('top'); return; }
+          carimbo.style.top = `${Math.round(mapa.offsetTop - carimbo.offsetHeight / 3)}px`;
+        };
+        requestAnimationFrame(prenderCarimbo);
+        window.addEventListener('resize', prenderCarimbo);
         const numero = corpo.querySelector('[data-nota]');
         const voce = corpo.querySelector('.placar-ranking .voce');
         // A sua linha começa no fim da lista e sobe até a posição.

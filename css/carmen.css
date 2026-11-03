@@ -992,9 +992,9 @@ body:not(.celular) .placar-tela { padding-top: 24px; padding-bottom: 20px; }
 body:not(.celular) .placar-nota { justify-content: space-evenly; }
 body:not(.celular) .placar-lado > :first-child, body:not(.celular) .placar-lado > h4:nth-of-type(2) { margin-top: auto; }
 body:not(.celular) .placar-lado > .placar-botoes { margin-bottom: auto; }
-/* O carimbo cai ao lado da foto, pegando a borda dela, fora do fluxo: a coluna cabe em 720 px e nada cobre o título. */
+/* O carimbo cai no canto de cima do mapa do rastro (o topo vem do JS), fora do fluxo: a coluna cabe em 720 px e nada cobre o título. */
 body:not(.celular) .placar-caso { position: relative; justify-content: space-evenly; }
-body:not(.celular) .carmen .placar-carimbo { position: absolute; z-index: 1; left: 190px; top: 64px; margin: 0; font-size: 26px; }
+body:not(.celular) .carmen .placar-carimbo { position: absolute; z-index: 1; left: auto; right: 12px; top: 64px; margin: 0; font-size: 26px; }
 body:not(.celular) .placar-arquivo { margin-top: 0; }
 .placar-botoes .btn { min-height: 48px; }
 
