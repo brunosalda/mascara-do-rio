@@ -1,6 +1,6 @@
 -- Carmen 2026: insistir no pedido de uma testemunha comum vira uma aposta de tempo (desenho do Replanejamento,
 -- 02/11, 18h50, em gerencia/carmen-2026/diagnostico-realismo.md, seção 4; decisão da coordenação, 16h25).
--- NÃO APLICADA: entra no banco só com a permissão do Bruno.
+-- Aplicada em 03/11/2026 com a permissão do Bruno.
 --
 -- Acerto: 5 minutos. Falha: 25. Nos dois casos a testemunha fala e entrega as mesmas pistas. Com a ficha em
 -- números, a parada é a maior entre Carisma + Persuasão e Manipulação + Persuasão, contra dificuldade 2 (3 com
