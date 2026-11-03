@@ -145,10 +145,26 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
         const principal = el.querySelector('[data-principal]');
         if (principal) { principal.click(); return true; }
       }
+      // Seta para cima e para baixo, Tab e Shift+Tab andam entre as escolhas.
+      if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'Tab') {
+        const bs = escolhasVivas();
+        if (bs.length) {
+          const volta = k === 'ArrowUp' || (k === 'Tab' && ev.shiftKey);
+          const i = bs.indexOf(document.activeElement);
+          bs[i < 0 ? (volta ? bs.length - 1 : 0) : (i + (volta ? -1 : 1) + bs.length) % bs.length].focus({ preventScroll: true });
+        }
+        return true;
+      }
       return ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(k);
     },
   });
   if (!continua) cenaAtual?.conversa(true);
+  const escolhasVivas = () => [...presas.querySelectorAll('button')].filter((b) => !b.disabled && !b.closest('.oculto') && b.getClientRects().length);
+  // Quando as escolhas aparecem, a primeira recebe o foco: o Enter já escolhe.
+  const focarEscolha = () => setTimeout(() => {
+    if (!el.isConnected || camada.substituida || el.contains(document.activeElement)) return;
+    escolhasVivas()[0]?.focus({ preventScroll: true });
+  }, 0);
 
   el.querySelector('[data-fechar]')?.addEventListener('click', () => camada.fechar());
   if (chave) {
@@ -157,6 +173,7 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
       aoTerminar: () => {
         el.classList.add('lido');
         aoTerminar?.(camada);
+        focarEscolha();
         // As opções aparecem embaixo: o fim do texto continua à vista, logo acima delas.
         requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
         setTimeout(() => { corpo.scrollTop = corpo.scrollHeight; }, 350);
@@ -164,6 +181,7 @@ export function abrirDialogo(raiz, { rotulo = '', html = '', chave = null, rodap
     });
   } else {
     aoTerminar?.(camada);
+    focarEscolha();
     // Com escolhas embaixo, o fim do texto fica à vista logo acima delas.
     if (presas.childElementCount) requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
   }
@@ -208,7 +226,8 @@ export function perguntar(raiz, { rotulo = '', texto = '', opcoes = [] } = {}) {
 const focaveis = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
   .filter((e) => !e.disabled && !e.closest('[inert]') && e.getClientRects().length);
 
-export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
+// foco(corpo): o elemento que recebe o foco ao abrir; sem ele, o 1º focável do corpo.
+export function abrirJanela(raiz, { titulo = '', classe = '', montar, foco } = {}) {
   // Ao fechar, o foco volta a quem o tinha (ou ao que camada.voltarFoco() indicar), senão ao 1º botão da janela de baixo.
   const focoAntes = document.activeElement;
   const fundo = document.createElement('div');
@@ -259,6 +278,10 @@ export function abrirJanela(raiz, { titulo = '', classe = '', montar } = {}) {
   fundo.addEventListener('click', (ev) => { if (ev.target === fundo) camada.fechar(); });
   Promise.resolve(montar?.(corpo, camada)).catch((err) => {
     corpo.innerHTML = `<p class="nota">${err.message || 'Não foi possível abrir.'}</p>`;
+  }).then(() => {
+    // Ao abrir, o foco entra na janela (se a montagem já não o pôs lá dentro).
+    if (!fundo.isConnected || fundo.contains(document.activeElement)) return;
+    (foco?.(corpo) || focaveis(corpo)[0] || fundo.querySelector('[data-fechar]'))?.focus({ preventScroll: true });
   });
   return camada;
 }

@@ -167,7 +167,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         <div class="hud-noite"><b data-hora></b><small>o sol nasce às ${hora(caso.relogio.fim)}</small></div>
         <nav class="hud-botoes">
           <button type="button" class="hud-com-icone" data-hud="viajar" title="Lugares do caso (M)" aria-label="Lugares do caso"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">${rota ? 'Mapa' : 'Lugares'} <kbd>M</kbd></span></button>
-          ${rota ? `<button type="button" class="hud-com-icone" data-hud="arquivo" title="Arquivo dos suspeitos" aria-label="Arquivo">${icone('arquivo', { classe: 'hud-svg' })}<span class="hud-nome">Arquivo</span></button>` : ''}
+          ${rota ? `<button type="button" class="hud-com-icone" data-hud="arquivo" title="Arquivo dos suspeitos (R)" aria-label="Arquivo">${icone('arquivo', { classe: 'hud-svg' })}<span class="hud-nome">Arquivo <kbd>R</kbd></span></button>` : ''}
           <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="${rota ? 'Pistas e registro (Q)' : 'Quadro de pistas (Q)'}" aria-label="${rota ? 'Pistas' : 'Quadro de pistas'}"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">${rota ? 'Pistas' : 'Quadro'} <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
           <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente" aria-label="Som ambiente"><span class="icone-texto">♪</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="hud-nome">Som</span></button>
@@ -746,7 +746,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
     const sobre = conversaMantida && falante && conversaMantida.pid === falante ? conversaMantida.cam : null;
     if (conversaMantida) { const velha = conversaMantida.cam; conversaMantida = null; if (velha !== sobre) velha.fechar(); }
-    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
+    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.principal ? ' data-principal' : ''}${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
     const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
     revelando = !!chave;
     const camada = abrirDialogo(tela, {
@@ -1721,7 +1721,7 @@ ${textoDe(r)}` : textoDe(r));
       aoTecla: (ev) => {
         if (fuga) return;
         const k = ev.key.toLowerCase();
-        if (k === 'q') { ev.preventDefault(); abrirOQuadro(); } else if (k === 'm') { ev.preventDefault(); viajar(); } else if (k === 'f') { ev.preventDefault(); verFicha(); } else if (k === 'h') { ev.preventDefault(); alternarPaineis(); } else if (k === '?') { ev.preventDefault(); ajuda(); }
+        if (k === 'q') { ev.preventDefault(); abrirOQuadro(); } else if (k === 'm') { ev.preventDefault(); viajar(); } else if (k === 'f') { ev.preventDefault(); verFicha(); } else if (k === 'h') { ev.preventDefault(); alternarPaineis(); } else if (k === 'r' && rota && !ev.ctrlKey && !ev.metaKey) { ev.preventDefault(); abrirOArquivo(); } else if (k === '?') { ev.preventDefault(); ajuda(); }
       },
     });
     desenharHud();
@@ -2358,7 +2358,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       const cam = caixa({
         rotulo: `${caso.rotulo} · ${caso.titulo}`, fechavel: false,
         ...(paineis ? { html: quadrinhos(paineis).replace('class="hq ', 'class="hq hq-tira tira-rota ').replaceAll(' loading="lazy"', '') } : { texto: caso.abertura.texto }),
-        opcoes: [{ html: '<b>Começar a investigar</b>', fn: (c) => {
+        opcoes: [{ html: '<b>Começar a investigar</b>', principal: true, fn: (c) => {
           st.viuAbertura = true; salvar(); c.fechar(); olharInicial();
           const chegada = chegadaSemFrase(st.lugar);
           if (chegada) anotar('VOCÊ', chegada);
@@ -2410,7 +2410,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       rotulo: `${caso.rotulo} · ${caso.titulo}`, revelar: true, fechavel: false,
       html: caso.abertura.paineis ? tiraAbertura() : '',
       texto: caso.abertura.texto,
-      opcoes: [{ html: '<b>Começar a investigar</b>', fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); olharInicial(); setTimeout(ajuda, 200); } }],
+      opcoes: [{ html: '<b>Começar a investigar</b>', principal: true, fn: (cam) => { st.viuAbertura = true; salvar(); cam.fechar(); olharInicial(); setTimeout(ajuda, 200); } }],
     });
   }
   function ajuda() {

@@ -137,6 +137,7 @@ export function abrirMapaRota(raiz, { caso, atual, percurso = [], visitados = []
   return abrirJanela(raiz, {
     titulo: aoViajar ? 'Mapa da fuga' : 'O rastro da fuga',
     classe: 'janela-mapa-rota mapa-tela-cheia',
+    foco: (corpo) => corpo.querySelector('.rota-lista [aria-pressed="true"]') || corpo.querySelector('.rota-lista button'),
     montar: (corpo, camada) => {
       let escolhido = null;
       let viajando = false;
@@ -1012,6 +1013,7 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
   return abrirJanela(raiz, {
     titulo: 'Arquivo da Xerife',
     classe: 'janela-arquivo mapa-tela-cheia',
+    foco: (corpo) => corpo.querySelector('[data-licenca]:not([disabled])') || corpo.querySelector('[data-lacuna]'),
     montar: (corpo, camada) => {
       const sel = { ...marcados };
       let aberta = null;
@@ -1193,6 +1195,16 @@ export function abrirArquivo(raiz, { caso, conhecidos = [], comPista = null, pis
         }
         // Clicar fora do painel aberto fecha o painel.
         if (aberta && !ev.target.closest('.lacuna-painel')) { aberta = null; desenharEsq(vivosDe()); }
+      });
+      // Esc com um painel de lacuna aberto fecha só o painel e devolve o foco à lacuna.
+      corpo.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape' || !aberta) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cat = aberta;
+        aberta = null;
+        desenharEsq(vivosDe());
+        corpo.querySelector(`[data-lacuna="${CSS.escape(cat)}"]`)?.focus({ preventScroll: true });
       });
       const vivos = vivosDe();
       desenharEsq(vivos);
