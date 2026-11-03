@@ -2153,14 +2153,21 @@ ${textoDe(r)}` : textoDe(r));
             </section>
           </div>`;
         const telaP = corpo.querySelector('.placar-tela');
-        // No computador, o carimbo fica no canto de cima à direita do mapa do rastro, um terço acima da borda dele.
+        // No computador, o carimbo fica no canto de cima à direita do mapa do rastro, um terço acima da borda dele,
+        // mas nunca sobe até a frase de cima: a ponta direita do carimbo girado sobe uns 24 px, mais 9 de folga.
         const carimbo = corpo.querySelector('.placar-carimbo');
         const mapa = corpo.querySelector('.placar-rastro');
+        const linha = corpo.querySelector('.placar-linha');
         const prenderCarimbo = () => {
-          if (!telaP.isConnected) { window.removeEventListener('resize', prenderCarimbo); return; }
+          if (!telaP.isConnected) { observarCarimbo?.disconnect(); window.removeEventListener('resize', prenderCarimbo); return; }
           if (!carimbo || !mapa || document.body.classList.contains('celular')) { carimbo?.style.removeProperty('top'); return; }
-          carimbo.style.top = `${Math.round(mapa.offsetTop - carimbo.offsetHeight / 3)}px`;
+          const piso = linha ? linha.offsetTop + linha.offsetHeight + 24 + 9 : 0;
+          carimbo.style.top = `${Math.round(Math.max(mapa.offsetTop - carimbo.offsetHeight / 3, piso))}px`;
         };
+        // A frase muda de linhas com a largura: o topo se refaz sempre que a coluna muda de tamanho.
+        const observarCarimbo = typeof ResizeObserver === 'function' && linha ? new ResizeObserver(() => prenderCarimbo()) : null;
+        observarCarimbo?.observe(linha);
+        prenderCarimbo();
         requestAnimationFrame(prenderCarimbo);
         window.addEventListener('resize', prenderCarimbo);
         const numero = corpo.querySelector('[data-nota]');
