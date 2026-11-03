@@ -8,7 +8,7 @@ import { molduraTela } from './moldura-tela.js';
 import { abrirSenhaDireto } from './senha.js';
 import { imagemDoLocal, CENARIO_ABERTURA } from './cidade.js';
 import { fecharTudo } from './jogo/camadas.js';
-import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos } from './ambiente.js';
+import { iniciarAmbiente, definirClima, definirTempo, definirSomDoLugar, som, efeitos, chuvaFora } from './ambiente.js';
 import { aplicarLeitura } from './leitura.js';
 
 const CHAVE_PERSONAGEM = 'mascara.personagem';
@@ -294,6 +294,7 @@ async function desenhar() {
   const main = document.getElementById('app');
   const tela = document.createElement('div');
   tela.className = 'tela';
+  chuvaFora();
   main.replaceChildren(tela);
   // A consulta (?editar) não faz parte da rota: #/lugar/lapa?editar abre a Lapa no modo de edição.
   const rota = location.hash.replace(/^#\/?/, '').split('?')[0];

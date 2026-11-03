@@ -1880,7 +1880,9 @@ export function montarCena(raiz, {
       alvoY = camLivre.y;
     } else if (conversa && !estreito && ladoDialogo === 'baixo') {
       // O diálogo sobe do painel de baixo: o personagem vai para o alto, no meio.
-      alvoX = vw * 0.5 - fx;
+      // No Carmen 2026, o meio é o do par: o personagem e quem fala com ele.
+      const par = cena.closest('.carmen') ? pontoDaConversa : null;
+      alvoX = vw * 0.5 - (par ? ((pos.x + par.x) / 2) * W : fx);
       alvoY = vh * 0.34 - fy;
     } else if (conversa && !estreito) {
       // A caixa de conversa fica de um lado; o personagem vai para o outro.
@@ -1907,6 +1909,16 @@ export function montarCena(raiz, {
     if (conversa && estreito && cena.closest('.carmen')) {
       const folha = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso');
       if (folha) alvoY = Math.min(0, Math.max(alvoY, folha.getBoundingClientRect().top - cena.getBoundingClientRect().top - H));
+    }
+    // No Carmen 2026, no computador, com a caixa embaixo: os pés do par ficam 24 px acima da caixa, e o pé
+    // da pintura não sobe acima dela (a mesma regra do celular).
+    if (conversa && !estreito && ladoDialogo === 'baixo' && cena.closest('.carmen')) {
+      const caixa = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso');
+      if (caixa) {
+        const topo = caixa.getBoundingClientRect().top - cena.getBoundingClientRect().top;
+        const pes = Math.max(pos.y, pontoDaConversa?.y ?? pos.y) * H;
+        alvoY = Math.min(0, Math.max(Math.min(alvoY, topo - 24 - pes), topo - H));
+      }
     }
     // Movimento reduzido (rodada 42): a câmera vai direto, sem deslizar.
     const k = !cameraPronta || reduzido() || (geo.alto && camLivre.arrastando) ? 1 : Math.min(1, dt * (geo.alto && !camLivre.suave ? 14 : 3));

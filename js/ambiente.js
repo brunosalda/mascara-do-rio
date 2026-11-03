@@ -29,9 +29,22 @@ export function definirTempo(t) {
 
 // --- Chuva -------------------------------------------------------------------------------
 
+let canvasChuva = null;
+// Uma tela pode levar a chuva para dentro dela (a chuva cai sobre a cena e sob a interface).
+export function chuvaDentro(pai, antes = null) {
+  if (canvasChuva && pai) pai.insertBefore(canvasChuva, antes);
+}
+// Na troca de tela, a chuva volta ao body, por cima de tudo.
+export function chuvaFora() {
+  if (!canvasChuva || canvasChuva.parentElement === document.body) return;
+  const relampago = document.getElementById('relampago');
+  if (relampago) relampago.before(canvasChuva); else document.body.appendChild(canvasChuva);
+}
+
 function iniciarChuva() {
   const canvas = document.getElementById('chuva');
   if (!canvas) return;
+  canvasChuva = canvas;
   const ctx = canvas.getContext('2d');
   let gotas = [];
   let largura = 0;

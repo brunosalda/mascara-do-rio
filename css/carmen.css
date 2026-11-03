@@ -349,6 +349,8 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 /* ============ Mapa: itens 3 e 4 da nota da etapa 1; o bronze que sobrou na cena ============ */
 /* A chuva da cena não passa por cima do mapa (cruzava as pistas e a lista). */
 body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
+/* A chuva dentro da tela do caso: logo acima da cena, abaixo das setas, das dicas, do HUD e das janelas. */
+.tela-caso.carmen > #chuva { position: absolute; inset: 0; z-index: 140; }
 /* As barras de Vitalidade, Força de Vontade e Fome: moldura em linha fina, rótulos em texto suave. */
 .tela-jogo.bg2.tela-caso.carmen .painel-retrato .barra i { border: 1px solid var(--c-linha-forte); border-radius: 6px; background: var(--c-noite-0); }
 .tela-jogo.bg2.tela-caso.carmen .painel-retrato .barra i::after { border-radius: 5px; }
@@ -986,6 +988,14 @@ body:not(.celular) .cerco-camada.cartao-no-alto { place-items: start center; pad
 .placar-selos .ganho small { color: var(--c-texto); }
 .placar-patente { margin: 0; font: 800 26px/1 var(--f-titulo); text-transform: uppercase; color: var(--c-sodio); }
 .placar-botoes { margin-top: auto; display: grid; gap: 8px; }
+body:not(.celular) .placar-tela { padding-top: 24px; padding-bottom: 20px; }
+body:not(.celular) .placar-nota { justify-content: space-evenly; }
+body:not(.celular) .placar-lado > :first-child, body:not(.celular) .placar-lado > h4:nth-of-type(2) { margin-top: auto; }
+body:not(.celular) .placar-lado > .placar-botoes { margin-bottom: auto; }
+/* O carimbo cai ao lado da foto, pegando a borda dela, fora do fluxo: a coluna cabe em 720 px e nada cobre o título. */
+body:not(.celular) .placar-caso { position: relative; justify-content: space-evenly; }
+body:not(.celular) .carmen .placar-carimbo { position: absolute; z-index: 1; left: 190px; top: 64px; margin: 0; font-size: 26px; }
+body:not(.celular) .placar-arquivo { margin-top: 0; }
 .placar-botoes .btn { min-height: 48px; }
 
 /* A cerimônia (6.2): a nota conta (no JS); as contagens entram uma a uma, 120 ms entre elas; a sua linha desliza;
@@ -1061,7 +1071,13 @@ body.celular .tela-jogo .placar-selos small { font-size: 14px; }
 
 /* ============ Etapa 7: a conversa (direção de arte, 5.4): o cartão da testemunha, o marca-texto e o cartãozinho ============ */
 .tela-jogo.bg2.tela-caso.carmen .dialogo-cena.dialogo-caso.com-cartao::before { display: none; }
-.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-caso.com-cartao { padding-left: 236px; min-height: 300px; }
+.tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-caso.com-cartao { padding-left: 236px; min-height: 200px; }
+/* A caixa tem a altura do conteúdo (no mínimo 200 px), e a foto sai uns 70 px pela borda de cima. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao { overflow: visible; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao .cartao-testemunha { top: -70px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao .dialogo-corpo { flex: none; min-height: 0; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao .dialogo-corpo > :last-child,
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao .dialogo-corpo > :last-child > :last-child { margin-bottom: 0; }
 .cartao-testemunha {
   position: absolute; z-index: 2; left: 28px; top: 16px; margin: 0; box-sizing: content-box; width: 168px; padding: 8px 8px 28px;
   background: #f1ead8; rotate: -2deg; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(28, 23, 19, 0.2);
@@ -1085,8 +1101,17 @@ body.celular .tela-jogo .placar-selos small { font-size: 14px; }
     url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2050'%3E%3Cpath%20fill='%23f2a33a'%20fill-opacity='0.85'%20transform='translate%280.7%200%29'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3Cpath%20fill='%23090a0e'%20d='M13%2016Q13%208%2020%207.5Q27%208%2027%2015.5ZM8%2017Q20%2013%2032%2016Q33%2017.5%2031%2018Q20%2016.5%209%2019Q7%2018.5%208%2017ZM14.5%2018Q14%2026%2020%2028Q26%2026%2025.5%2018ZM13.5%2018Q12%2027%2014%2031L17%2029Q15%2024%2015%2018ZM26.5%2018Q28%2027%2026%2031L23%2029Q25%2024%2025%2018ZM18%2027h4v4h-4zM3%2050Q4%2036%2013%2033L16%2029L20%2034L24%2029L27%2033Q36%2036%2037%2050Z'/%3E%3C/svg%3E"),
     radial-gradient(circle at 50% 30%, #c98a4a, #5a3a24 55%, #1a1410 90%);
 }
+.cartao-testemunha .ct-foto.com-lugar { position: relative; overflow: hidden; background: #1a1410; }
+.cartao-testemunha .ct-lugar {
+  position: absolute; inset: -4px; background-repeat: no-repeat; background-size: 900% auto;
+  filter: blur(1.5px) brightness(0.75) saturate(0.85);
+}
+.cartao-testemunha .ct-foto.com-lugar::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: overlay; opacity: 0.28;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' seed='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 32px 32px;
+}
+.cartao-testemunha .ct-figura { position: absolute; inset: 0; background-repeat: no-repeat; background-size: 250% auto; background-position: 50% 3%; }
 .cartao-testemunha figcaption { position: absolute; left: 6px; right: 6px; bottom: 2px; overflow: hidden; text-align: center; white-space: nowrap; text-overflow: ellipsis; font: 700 22px/1.1 var(--f-mao); color: #1d2a55; }
-.cartao-testemunha small { position: absolute; top: calc(100% + 8px); left: -4px; right: -4px; text-align: center; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-texto-suave); rotate: 2deg; }
 /* O marca-texto: a frase que é pista ganha o fundo sódio, que se desenha da esquerda para a direita. */
 .tela-caso.carmen .dialogo-corpo mark.marca-pista {
   padding: 1px 2px; border-radius: 2px; color: inherit; -webkit-box-decoration-break: clone; box-decoration-break: clone;
@@ -1113,7 +1138,6 @@ body.celular .tela-caso.carmen .dialogo-caso.com-cartao .dialogo-cabeca { paddin
 body.celular .cartao-testemunha { left: 16px; top: 10px; width: 96px; padding: 5px 5px 20px; }
 body.celular .cartao-testemunha .ct-foto { width: 96px; height: 108px; }
 body.celular .cartao-testemunha figcaption { font-size: 16px; bottom: 1px; }
-body.celular .cartao-testemunha small { display: none; }
 /* No celular, durante a conversa, o rosto redondo some da cena: o retrato já está no cartão. */
 body.celular.em-conversa .tela-caso.carmen .rosto-testemunha { display: none; }
 /* O aviso de versão nova não cobre as perguntas: durante a conversa, vai para o alto. */

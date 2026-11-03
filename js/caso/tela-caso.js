@@ -19,7 +19,7 @@ import { geografia } from '../jogo/lugares.js';
 import { abrirDialogo, abrirJanela, perguntar, confirmarEscolha, camadaAberta, fecharTudo } from '../jogo/camadas.js';
 import { perguntaPor, ROTULO_PERGUNTA } from './pergunta.js';
 import { narracao, quadrinhos, esc, aviso, grupoVoz, escreverPalavras } from '../ui.js';
-import { definirTempo, definirSomDoLugar, definirClima, som, efeitos } from '../ambiente.js';
+import { definirTempo, definirSomDoLugar, definirClima, som, efeitos, chuvaDentro } from '../ambiente.js';
 import { retratoDe } from '../cidade.js';
 import { resumoFicha } from '../ficha.js';
 import { FIGURAS_GENTE } from '../jogo/gente.js';
@@ -204,6 +204,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   const palco = tela.querySelector('.palco');
   const listaRegistro = tela.querySelector('.registro-noite');
   const caixaCaso = tela.querySelector('.hud-plano');
+  // Carmen 2026: a chuva cai sobre a cena e por baixo do HUD, da caixa e das janelas.
+  if (rota) chuvaDentro(tela, palco.nextSibling);
   let cena = null;
   let fuga = null;
 
@@ -790,10 +792,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       cartao.className = `cartao-testemunha manter${pe.figura && src ? '' : ' sem-figura'}`;
       cartao.dataset.pessoa = falante;
       cartao.setAttribute('aria-hidden', 'true');
+      // O fundo da foto é um recorte da pintura do próprio lugar, em volta de quem fala (o personagem está ao lado).
+      const pintura = palco.querySelector('.pintura');
+      const junto = palco.querySelector('.personagem');
+      let lugarFoto = '';
+      if (pintura && junto) {
+        const rp = pintura.getBoundingClientRect();
+        const rj = junto.getBoundingClientRect();
+        const lx = Math.round(Math.min(1, Math.max(0, (rj.left + rj.width / 2 - rp.left) / rp.width)) * 100);
+        const ly = Math.round(Math.min(1, Math.max(0, (rj.top + rj.height * 0.3 - rp.top) / rp.height)) * 100);
+        lugarFoto = `<b class="ct-lugar" style="background-image:${getComputedStyle(pintura).backgroundImage.replace(/"/g, "'")};background-position:${lx}% ${ly}%"></b>`;
+      }
       const foto = !src ? '<span class="ct-foto"></span>'
-        : pe.figura ? `<span class="ct-foto" style="background-image:url('${url}')"></span>`
-          : `<span class="ct-foto com-silhueta" style="--rosto:url('${url}');${enquadreDe(falante)}"><i></i></span>`;
-      cartao.innerHTML = `${foto}<figcaption>${esc(pe.nome)}</figcaption><small>${esc(pe.sub || '')}</small>`;
+        : pe.figura ? `<span class="ct-foto${lugarFoto ? ' com-lugar' : ''}">${lugarFoto}<i class="ct-figura" style="background-image:url('${url}')"></i></span>`
+          : `<span class="ct-foto com-silhueta${lugarFoto ? ' com-lugar' : ''}" style="--rosto:url('${url}');${enquadreDe(falante)}">${lugarFoto}<i></i></span>`;
+      // O ofício fica só na linha do nome, no alto da caixa.
+      cartao.innerHTML = `${foto}<figcaption>${esc(pe.nome)}</figcaption>`;
       camada.el.prepend(cartao);
       camada.el.classList.add('com-cartao');
       marcarPistas(camada.el);
