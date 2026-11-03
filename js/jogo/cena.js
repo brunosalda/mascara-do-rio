@@ -704,10 +704,31 @@ export function montarCena(raiz, {
     p.el.style.left = pct(p.x);
     p.el.style.top = pct(p.y);
     p.el.style.height = `${(altura(p.y) * 100).toFixed(2)}%`;
+    p.el.style.setProperty('--h', `${(altura(p.y) * 100).toFixed(2)}%`); // o Carmen 2026 põe um mínimo em cima disto (CSS)
     p.el.style.zIndex = String(Math.round(p.y * 1000));
     p.el.classList.toggle('vira', p.dir < 0);
   }
   gente.forEach(posicionarPessoa);
+  // Carmen 2026 (Rodada 47): falas soltas sobre a cabeça de alguém, a cada 4 a 7 s, sem abrir conversa.
+  if (cena.closest('.carmen') && gente.length) {
+    const falasDe = (q) => (q.falas || TIPOS_GENTE[q.tipoGente]?.falas || []).filter((f) => f.length <= 60);
+    const falaSolta = () => {
+      if (!vivo) return;
+      setTimeout(falaSolta, 4000 + Math.random() * 3000);
+      if (conversa || document.hidden || cena.closest('.abrindo-capitulo')) return;
+      const livres = gente.filter((q) => !q.el.querySelector('.fala-solta') && falasDe(q).length);
+      const q = livres[Math.floor(Math.random() * livres.length)];
+      if (!q) return;
+      const fs = falasDe(q);
+      const b = document.createElement('span');
+      b.className = 'fala-solta';
+      b.setAttribute('aria-hidden', 'true');
+      b.textContent = fs[Math.floor(Math.random() * fs.length)];
+      q.el.appendChild(b);
+      setTimeout(() => b.remove(), 3200);
+    };
+    setTimeout(falaSolta, 2500);
+  }
   // Amostra a pintura em volta dos pés de cada pessoa: a cor vira a tinta da figura e o brilho, o filtro.
   if (gente.some((p) => p.el.classList.contains('pessoa-pintada')) && fundoUrl) {
     const img = new Image();

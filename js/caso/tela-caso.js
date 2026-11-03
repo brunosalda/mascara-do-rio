@@ -1650,6 +1650,13 @@ ${textoDe(r)}` : textoDe(r));
       const quer = !fuga && !foraDoRastro() && temAssuntoNovo(pid);
       // Carmen 2026 (7.2): no lugar do balão, o rosto da testemunha num círculo; o ponto de sódio marca
       // assunto novo, e o rosto fica apagado depois da conversa.
+      // Rodada 47: sem medalhão. Quem tem assunto novo ganha um contorno de sódio; o nome só com o mouse ou o foco.
+      if (rota) {
+        el.querySelector('.balao-assunto')?.remove();
+        el.classList.toggle('assunto-novo', quer);
+        el.classList.toggle('ja-ouvida', !quer && st.achados.includes(`conheceu-${pid}`));
+        continue;
+      }
       if (rota) {
         let rosto = el.querySelector('.rosto-testemunha');
         const src = figuraDe(pid);
