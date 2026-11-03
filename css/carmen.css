@@ -794,6 +794,9 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .licenca-guardar { margin-top: auto; min-height: 48px; transition: opacity 160ms var(--curva-sai); }
 /* Guardar só aparece quando o carimbo assenta (ou na hora, com um clique no papel ou na reabertura). */
 .licenca-doc:not(.guardavel) .licenca-guardar { opacity: 0; pointer-events: none; }
+.tela-jogo.bg2.tela-caso.carmen .licenca-guardar { transition: opacity 160ms var(--curva-sai), transform var(--t-rapido) var(--curva-sai), background var(--t-rapido), border-color var(--t-rapido); }
+/* O clã datilografado é um bloco, para guardar a altura (min-height não vale em linha). */
+.licenca-quem .datilo { display: block; }
 
 /* A Licença depois de emitida: menor, no alto da coluna esquerda do Arquivo. */
 .carmen .licenca-mini {
@@ -890,7 +893,11 @@ body.celular .cerco-botoes { flex-direction: column; }
 body.celular .cerco-botoes .btn { min-height: 52px; }
 /* No cerco, o HUD some: só a cena, as faixas e o cartão. */
 .tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo, .faixa-demo, .dica-acao, .ponto-dica, .dica) { opacity: 0; pointer-events: none; transition: opacity 300ms; }
-/* O HUD também volta em 300 ms, e não de uma vez, quando o cerco acaba. */
+/* O HUD também volta em 300 ms, e não de uma vez, quando o cerco acaba (no celular, o painel de baixo junto). */
+body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo { transition: height 0.25s ease-out, opacity 300ms; }
+/* No celular, o cartão sem Licença fica mais baixo, para o anel do alvo terminar acima dele. */
+body.celular .cartao-cerco:has(.cerco-risco) { gap: 6px; padding: 14px 14px 12px; }
+body.celular .cartao-cerco:has(.cerco-risco) h3 { font-size: 36px; }
 .tela-jogo.bg2.tela-caso.carmen :is(.quadro-caso, .lugar-titulo, .relogio-noite, .hud-botoes, .painel-retrato, .painel-baixo) { transition: opacity 300ms; }
 /* Cerco, ajustes da Avaliação: sem marcadores na cena (rostos, lupas, setas da borda), menos o alvo com anel fino. */
 .tela-jogo.bg2.tela-caso.carmen:is(.cercando, .cena-preso, .cena-fugiu) :is(.cena-pontos > :not(.alvo-cerco), .rosto-testemunha, .dica-interagir, .contornos, .seta-borda, .borda-mais, .marca-destino, .balao-voz) { opacity: 0 !important; pointer-events: none; }

@@ -1467,7 +1467,15 @@ ${textoDe(r)}` : textoDe(r));
     setTimeout(() => camada.remove(), cerimoniasCurtas() ? 0 : 240);
   }
   // A cerimônia do fim do cerco (6.2): PRESO/PRESA com clarão e a cena em preto e branco, ou FUGIU com a cena escurecendo.
-  function cerimoniaCerco(preso, camada) {
+  // O topo do anel do alvo na tela: o anel (::before) passa acima da caixa do ponto, e o palco está com zoom.
+  function topoDoAnel(al) {
+    const r = al.getBoundingClientRect();
+    const h = parseFloat(getComputedStyle(al, '::before').height) || 0;
+    const m = getComputedStyle(tela.querySelector('.palco')).transform.match(/matrix\(([^,]+)/);
+    return Math.min(r.top, r.bottom - h * 1.08 * (m ? parseFloat(m[1]) : 1));
+  }
+  // antes: o alvo como estava antes de o banco redesenhar os pontos (no PRESO, o ponto de cercar some).
+  function cerimoniaCerco(preso, camada, antes) {
     return new Promise((ok) => {
       const s = caso.arquivo?.suspeitos.find((x) => x.id === banco.estado.licenca);
       const texto = preso ? (s?.genero === 'f' ? 'Presa' : 'Preso') : 'Fugiu';
@@ -1477,6 +1485,16 @@ ${textoDe(r)}` : textoDe(r));
       // O alvo continua no anel: preso, fica na foto; no FUGIU, a silhueta sai do anel e some.
       const alvo = tela.querySelector('[data-ponto="cercar"]');
       alvo?.classList.add('alvo-cerco');
+      // No PRESO, uma cópia parada do alvo (anel e figura) fica no mesmo lugar até o fim.
+      if (!alvo && antes?.copia) {
+        const rt = tela.getBoundingClientRect();
+        const c = antes.copia;
+        c.classList.add('alvo-cerco', 'alvo-parado');
+        c.removeAttribute('data-ponto');
+        c.setAttribute('aria-hidden', 'true');
+        Object.assign(c.style, { position: 'absolute', left: `${antes.rect.left - rt.left}px`, top: `${antes.rect.top - rt.top}px`, width: `${antes.rect.width / antes.k}px`, height: `${antes.rect.height / antes.k}px`, margin: '0', transform: 'none', translate: 'none', transformOrigin: '0 0', scale: String(antes.k), pointerEvents: 'none' });
+        el.appendChild(c);
+      }
       if (!preso && alvo && !cerimoniasCurtas()) alvo.insertAdjacentHTML('beforeend', '<span class="alvo-fugindo" aria-hidden="true"></span>');
       if (preso) {
         const lim = (v, pad) => Math.max(5, Math.min(95, v ?? pad));
@@ -1487,7 +1505,8 @@ ${textoDe(r)}` : textoDe(r));
       tela.appendChild(el);
       // O carimbo fica acima do anel do alvo, sem cobrir a figura, e dentro da tela.
       const car = el.querySelector('.carimbo');
-      const ra = alvo?.getBoundingClientRect();
+      const ra = alvo ? alvo.getBoundingClientRect() : antes?.rect;
+      const topo = alvo ? topoDoAnel(alvo) : antes?.topo;
       if (car && ra?.width) {
         const rt = el.getBoundingClientRect();
         const rc = { width: car.offsetWidth, height: car.offsetHeight }; // sem a escala da batida
@@ -1496,7 +1515,7 @@ ${textoDe(r)}` : textoDe(r));
         const x = Math.max(meiaL, Math.min(rt.width - meiaL, ra.left + ra.width / 2 - rt.left));
         // O giro de -8 graus aumenta a caixa em cerca de 7% da largura, para cima e para baixo.
         const giro = Math.ceil(rc.width * 0.07);
-        let base = ra.top - rt.top - folga - giro;
+        let base = (topo ?? ra.top) - rt.top - folga - giro;
         // Sem espaço acima, ele vai para baixo do anel.
         if (base - rc.height < 8) base = Math.min(rt.height - 8, ra.bottom - rt.top + folga + giro + rc.height);
         car.classList.add('no-alvo');
@@ -1525,6 +1544,10 @@ ${textoDe(r)}` : textoDe(r));
     });
   }
   async function cercar(camada) {
+    // O alvo antes do banco: no PRESO, aplicarBanco tira o ponto de cercar da cena.
+    const al = tela.querySelector('[data-ponto="cercar"]');
+    const mk = getComputedStyle(tela.querySelector('.palco')).transform.match(/matrix\(([^,]+)/);
+    const antes = al ? { rect: al.getBoundingClientRect(), topo: topoDoAnel(al), copia: al.cloneNode(true), k: mk ? parseFloat(mk[1]) : 1 } : null;
     const r = await noBanco(() => F.cercar(caso.id, p.id));
     if (!r || !rota) recolherCerco(camada);
     if (!r) return;
@@ -1534,12 +1557,12 @@ ${textoDe(r)}` : textoDe(r));
       banco.fecho = r.fecho || null;
       banco.ranking = await F.rankingDoCapitulo(caso.id).catch(() => banco.ranking);
       som.carmen?.('preso');
-      if (rota) await cerimoniaCerco(true, camada);
+      if (rota) await cerimoniaCerco(true, camada, antes);
       setTimeout(fecho, rota ? 0 : 350);
       return;
     }
     som.carmen?.('fugiu');
-    if (rota) await cerimoniaCerco(false, camada);
+    if (rota) await cerimoniaCerco(false, camada, antes);
     const texto = r.motivo === 'sem-licenca'
       ? `Sem a Licença da Xerife, você não tem como segurar a presa. Ela some na noite, e você perde ${duracao(r.minutos)} até achar o rastro de novo. Abra o Arquivo.`
       : `A Licença era contra a pessoa errada. A Xerife cancela a Licença, e você perde ${duracao(r.minutos)}. Volte ao Arquivo.`;

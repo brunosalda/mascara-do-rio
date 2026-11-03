@@ -1286,6 +1286,8 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
         carimbar();
       };
       if (cerimoniasCurtas()) { completar(); return; }
+      // Cada linha guarda a altura do texto inteiro antes de se apagar: o papel e a assinatura não se mexem.
+      campos.forEach(({ el }) => { el.style.minHeight = `${el.offsetHeight}px`; });
       campos.forEach(({ el }) => { el.textContent = ''; });
       // 25 ms por letra, mas a datilografia inteira cabe em 1,7 s: a assinatura começa antes de 2,5 s.
       const passo = Math.min(25, 1700 / Math.max(1, campos.reduce((n, c) => n + c.txt.length, 0)));
