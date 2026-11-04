@@ -852,6 +852,7 @@ export function montarCena(raiz, {
             const neon = !sodio && Math.max(lr, lg, lb) - Math.min(lr, lg, lb) > 120 && melhor > 0.25;
             if (neon) p.el.style.setProperty('--rim-gente', `rgba(${lr}, ${lg}, ${lb}, ${Math.min(0.6, 0.25 + melhor * 0.5).toFixed(2)})`);
             p.el.style.setProperty('--rim-x', `${forte.x < p.x ? -1 : 1}px`);
+            p.el.style.setProperty('--rim-lado', forte.x < p.x ? '-1' : '1'); // o contorno de sódio só do lado da luz
             // Luz quente de lado (do lado da luz forte) e o resto em sombra.
             p.el.style.setProperty('--lado-luz', forte.x < p.x ? '90deg' : '270deg');
             p.el.style.setProperty('--cor-luz', `rgba(${lr}, ${lg}, ${lb}, 0.55)`);

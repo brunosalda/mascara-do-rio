@@ -354,7 +354,7 @@ body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
 .tela-caso.carmen .cena .pessoa .pessoa-nome { opacity: 0 !important; }
 .tela-caso.carmen .cena .pessoa:is(:hover, :focus-visible) .pessoa-nome { opacity: 1 !important; }
 .tela-caso.carmen .cena .pessoa.pessoa-pintada .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 1.08)) saturate(var(--sat-gente, 0.85)) contrast(1.05) drop-shadow(var(--rim-x, 1px) 0 1px var(--rim-gente, transparent)); }
-.tela-caso.carmen .cena .pessoa.pessoa-pintada.assunto-novo .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 1.08)) saturate(var(--sat-gente, 0.85)) contrast(1.05) drop-shadow(0 0 2px rgba(242, 163, 58, 0.95)) drop-shadow(0 0 7px rgba(242, 163, 58, 0.5)); }
+.tela-caso.carmen .cena .pessoa.pessoa-pintada.assunto-novo .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 1.08)) saturate(var(--sat-gente, 0.85)) contrast(1.05) drop-shadow(calc(var(--rim-lado, 1) * var(--rim-sinal, 1) * 1.5px) 0 0 rgba(242, 163, 58, 0.95)) drop-shadow(calc(var(--rim-lado, 1) * var(--rim-sinal, 1) * 2px) 0 3px rgba(242, 163, 58, 0.2)); }
 .tela-caso.carmen .cena .pessoa.pessoa-pintada:is(:hover, :focus-visible) .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 1.25)) saturate(0.95) contrast(1.05) drop-shadow(0 0 3px rgba(255, 220, 150, 0.9)); }
 .tela-caso.carmen .cena .pessoa .pessoa-sombra { opacity: 1; }
 .tela-caso.carmen .cena .pessoa .pessoa-reflexo { opacity: 0.42; }
@@ -379,7 +379,7 @@ body.em-conversa .tela-caso.carmen .palco::before, body.em-conversa .tela-caso.c
 body.em-conversa .tela-caso.carmen .cena :is(.pintura, .pintura-fundo, .pintura-cinza) { filter: blur(3px) brightness(0.62); }
 body.em-conversa .tela-caso.carmen .cena :is(.pessoa:not(.falando), .cena-pontos) { filter: blur(3px) brightness(0.62); }
 /* Quem fala recebe luz de destaque (brilho de pelo menos 0,95), com o contorno de sódio: o rosto e as mãos se leem. */
-body.em-conversa .tela-caso.carmen .cena .pessoa.pessoa-pintada.falando .pessoa-figura img { filter: brightness(max(0.95, calc(var(--luz-gente, 0.8) * 1.08))) saturate(0.95) contrast(1.05) drop-shadow(0 0 2px rgba(242, 163, 58, 0.95)) drop-shadow(0 0 7px rgba(242, 163, 58, 0.5)); transition: filter 400ms ease; }
+body.em-conversa .tela-caso.carmen .cena .pessoa.pessoa-pintada.falando .pessoa-figura img { filter: brightness(max(0.95, calc(var(--luz-gente, 0.8) * 1.08))) saturate(0.95) contrast(1.05) drop-shadow(calc(var(--rim-lado, 1) * var(--rim-sinal, 1) * 1.5px) 0 0 rgba(242, 163, 58, 0.95)) drop-shadow(calc(var(--rim-lado, 1) * var(--rim-sinal, 1) * 2px) 0 3px rgba(242, 163, 58, 0.2)); transition: filter 400ms ease; }
 body.em-conversa .tela-caso.carmen .cena .fala-solta { display: none; }
 /* A chuva dentro da tela do caso: logo acima da cena, abaixo das setas, das dicas, do HUD e das janelas. */
 .tela-caso.carmen > #chuva { position: absolute; inset: 0; z-index: 140; }
@@ -1625,3 +1625,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { pad
 /* "Para depois" do 46b8db1: o quadro do caso abre logo acima do Caderno (8 px), e o olho não atravessa a tela. */
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-plano.quadro-caso { top: auto; bottom: var(--quadro-sobe, 74px); right: 20px; translate: 0 6px; }
 body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos):has(.hud-botoes [data-hud="quadro"]:is(:hover, :focus-visible)) .hud-plano.quadro-caso { translate: 0 0; }
+
+/* Avaliação, contorno de sódio (04/11): a luz vem só do lado do poste (--rim-x, que a cena mede), num filete de 1,5 px
+   e um brilho fraco de 0,2; o outro lado da figura fica sem contorno. A figura virada espelha o filtro: o lado inverte. */
+.tela-caso.carmen .cena .pessoa.pessoa-pintada.vira { --rim-sinal: -1; }
