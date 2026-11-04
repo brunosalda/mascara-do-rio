@@ -359,8 +359,13 @@ async function desenhar() {
       return await telaTemporada(tela, estado);
     }
     if (rota.startsWith('temporada/')) {
+      const capitulo = decodeURIComponent(rota.slice(10));
+      // Um jogo só (pedido da avaliação, 04/11): um capítulo que não é do formato rota (o caso antigo da
+      // demonstração, por um link guardado no navegador) volta para a temporada do Carmen.
+      const { data: cap } = await banco.sb.from('capitulos').select('formato').eq('id', capitulo).maybeSingle();
+      if (cap?.formato !== 'rota') { location.replace('#/temporada'); return; }
       const { telaCaso } = await import('./caso/tela-caso.js');
-      return await telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(10)) });
+      return await telaCaso(tela, estado, { capitulo });
     }
     // Criação: por conversa (padrão) ou pela ficha detalhada.
     if (rota === 'detalhado') return await telaCriacao(tela, null);
