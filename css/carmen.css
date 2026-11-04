@@ -1174,6 +1174,8 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao .dia
 /* No celular: o retrato encolhe para uns 96 px no alto da folha, ao lado do nome; o texto e as perguntas ocupam a largura toda. */
 body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .dialogo-cena.dialogo-caso.com-cartao { padding-left: 0; min-height: 0; }
 body.celular .tela-caso.carmen .dialogo-caso.com-cartao .dialogo-cabeca { padding-left: 132px; min-height: 146px; box-sizing: border-box; }
+/* Ajuste 3 do 46b8db1: fora da abertura, a polaroide sai da caixa no celular, e a cabeça perde o recuo dela. */
+body.celular .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao:not(.abertura-rota) .dialogo-cabeca { padding-left: 17px; min-height: 0; }
 body.celular .cartao-testemunha { left: 16px; top: 10px; width: 96px; padding: 5px 5px 20px; }
 body.celular .cartao-testemunha .ct-foto { width: 96px; height: 108px; }
 body.celular .cartao-testemunha figcaption { font-size: 16px; bottom: 1px; }
@@ -1544,7 +1546,10 @@ body.celular .carmen .janela-licenca .janela-corpo { padding-top: 50px; }
 .tela-jogo.bg2.tela-caso.carmen .hud-plano.quadro-caso { opacity: 0; pointer-events: none; translate: 0 -6px; transition: opacity 180ms ease, translate 180ms ease; }
 .tela-jogo.bg2.tela-caso.carmen:has(.hud-botoes [data-hud="quadro"]:is(:hover, :focus-visible)) .hud-plano.quadro-caso,
 .tela-jogo.bg2.tela-caso.carmen .hud-plano.quadro-caso:is(:hover, :focus-within) { opacity: 1; pointer-events: auto; translate: 0 0; }
-.tela-jogo.bg2.tela-caso.carmen .hud-botoes:not(:hover, :focus-within) > [data-hud]:not([data-hud="viajar"], [data-hud="quadro"]) { display: none; }
+/* Ajuste 1 do 46b8db1: o Arquivo e o Menu entram à esquerda do Mapa; a barra fica presa pela direita, e o Mapa e o
+   Caderno não andam sob o mouse. Ajuste 2: no celular, sem mouse, os quatro ficam à vista. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .hud-botoes:not(:hover, :focus-within) > [data-hud]:not([data-hud="viajar"], [data-hud="quadro"]) { display: none; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen .hud-botoes > [data-hud]:not([data-hud="viajar"], [data-hud="quadro"]) { order: -1; }
 .tela-caso.carmen .pista-voa { transition: transform 1s cubic-bezier(0.5, 0, 0.3, 1), opacity 1s ease-in; }
 .tela-caso.carmen .hud-botoes .recebeu { animation: caderno-pula 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
 @keyframes caderno-pula { 0% { translate: 0 0; } 35% { translate: 0 -10px; scale: 1.08; } 100% { translate: 0 0; scale: 1; } }

@@ -476,7 +476,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     }
     if (novas.length) {
       anotar('PISTA NOVA', novas.join(' · '));
-      const lugarDasPistas = rota ? 'em Pistas' : 'no quadro';
+      const lugarDasPistas = rota ? 'no Caderno' : 'no quadro';
       avisar('faixa-pista', `${novas.length > 1 ? 'Pistas novas' : 'Pista nova'} ${lugarDasPistas}`, novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(); });
     }
     const depois = palavrasLiberadas(caso, achados());
@@ -511,7 +511,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       anotar('PISTA NOVA', novas.join(' · '));
       const tipo = r.novas?.[0]?.tipo;
       // No Carmen não há quadro: o lugar das pistas se chama Pistas (avaliação, etapa 7).
-      const faixa = rota ? (novas.length > 1 ? 'Pistas novas em Pistas' : 'Pista nova em Pistas') : novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro';
+      const faixa = rota ? (novas.length > 1 ? 'Pistas novas no Caderno' : 'Pista nova no Caderno') : novas.length > 1 ? 'Pistas novas no quadro' : 'Pista nova no quadro';
       avisar('faixa-pista', faixa, novas.join(' · '), () => { if (rota) som.carmen?.('pista'); else som.reacao?.('pista', 0); voarPista(tipo); });
       if (r.novas.some((x) => x.tipo === 'destino')) dica('mapa', 'Essa pista fala do próximo lugar. Abra o Mapa e viaje para lá.');
       if (r.novas.some((x) => x.tipo === 'traco')) dica('arquivo', 'Essa pista diz como a presa é. No Arquivo, marque o traço: as fichas que não batem saem.');
