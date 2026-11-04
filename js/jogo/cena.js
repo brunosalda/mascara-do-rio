@@ -1923,7 +1923,11 @@ export function montarCena(raiz, {
     // A figura cabe entre a faixa do alto (72 px) e a caixa da conversa, para a leitura ver a pessoa inteira (rodada 47).
     const FOLGA_PES = 14; // na conversa, os pés ficam 14 px acima da caixa
     const topoCaixaConversa = camConversa ? (() => { const cx = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso'); return cx ? cx.getBoundingClientRect().top - cena.getBoundingClientRect().top : vh * 0.62; })() : 0;
-    const zConversa = camConversa ? limitar(Math.min((estreito ? 0.33 : 0.6) * vh, topoCaixaConversa - FOLGA_PES - 70) / Math.max(40, (pontoDaConversa.el.querySelector('.pessoa-figura') || pontoDaConversa.el).offsetHeight), nivelZoom(), 4.5)
+    // Forma A (a cena em luz, só na vitrine): a pessoa é uma luz, sem figura para medir. A câmera chega um pouco mais
+    // perto e põe a luz no meio da pintura que fica à vista, ao lado da coluna (no celular, acima da folha).
+    const emLuz = camConversa && !!cena.closest('.forma-luz');
+    const colunaLuz = emLuz && !estreito ? cena.closest('.tela-jogo')?.querySelector('.dialogo-caso.com-dossie') : null;
+    const zConversa = emLuz ? limitar(nivelZoom() * 1.25, nivelZoom(), 4.5) : camConversa ? limitar(Math.min((estreito ? 0.33 : 0.6) * vh, topoCaixaConversa - FOLGA_PES - 70) / Math.max(40, (pontoDaConversa.el.querySelector('.pessoa-figura') || pontoDaConversa.el).offsetHeight), nivelZoom(), 4.5)
       : geo.alto && cena.closest('.carmen') ? Math.max(ZOOM_CONVERSA, nivelZoom()) : ZOOM_CONVERSA;
     const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? zConversa : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * (camConversa ? 6 : 4)) : 1);
@@ -1980,6 +1984,9 @@ export function montarCena(raiz, {
       bordaMais.dir.hidden = camLivre.x < vw - W + 4 || !setaDir.hidden;
       alvoX = camLivre.x;
       alvoY = camLivre.y;
+    } else if (colunaLuz) {
+      alvoX = (colunaLuz.getBoundingClientRect().left - cena.getBoundingClientRect().left) * 0.5 - pontoDaConversa.x * W;
+      alvoY = vh * 0.5 - pontoDaConversa.y * H;
     } else if (camConversa) {
       alvoX = vw * 0.5 - pontoDaConversa.x * W;
       alvoY = topoCaixaConversa - FOLGA_PES - pontoDaConversa.y * H;

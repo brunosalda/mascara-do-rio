@@ -203,6 +203,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     </div>`;
   const tela = raiz.querySelector('.tela-jogo');
   const palco = tela.querySelector('.palco');
+  // Protótipo da forma A, "a cena em luz" (avaliação de 04/11, 15h13; gerencia/carmen-2026/nova-investigacao.md):
+  // só na vitrine, por enquanto. As figuras recortadas saem da pintura; cada pessoa é uma luz quente na altura do
+  // peito, e a conversa abre numa coluna à direita, com o retrato de dossiê de corpo inteiro. ?figuras volta ao antigo.
+  const formaLuz = !!opcoes.vitrine && rota && !/[?&]figuras\b/.test(location.hash);
+  tela.classList.toggle('forma-luz', formaLuz);
+  const apagadas = new Set(); // quem se fechou com o jeito errado: a luz apaga e o nome fica riscado
   const listaRegistro = tela.querySelector('.registro-noite');
   const caixaCaso = tela.querySelector('.hud-plano');
   // Carmen 2026: a chuva cai sobre a cena e por baixo do HUD, da caixa e das janelas.
@@ -787,6 +793,22 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const cartaoAntes = camada.el.querySelector(`:scope > .cartao-testemunha[data-pessoa="${CSS.escape(falante || '')}"]`);
     if (cartaoAntes) {
       camada.el.classList.add('com-cartao');
+      if (cartaoAntes.classList.contains('cartao-dossie')) camada.el.classList.add('com-dossie');
+      marcarPistas(camada.el);
+      digitarFala(camada.el);
+    } else if (falante && formaLuz && caso.pessoas[falante]) {
+      // Forma A: o retrato de dossiê, a figura inteira (com os pés) sobre papel escuro, com o nome e o ofício à
+      // máquina de escrever. Os círculos da leitura ficam nele (mostrarCirculos).
+      camada.el.querySelector(':scope > .cartao-testemunha')?.remove();
+      const pe = caso.pessoas[falante];
+      const src = figuraDe(falante);
+      const cartao = document.createElement('figure');
+      cartao.className = 'cartao-testemunha cartao-dossie manter';
+      cartao.dataset.pessoa = falante;
+      cartao.innerHTML = `<span class="ct-dossie">${src ? `<img class="ct-corpo" src="${esc(src)}" alt="">` : ''}</span><figcaption class="datilo"><b>${esc(pe.nome)}</b><small>${esc(pe.sub || '')}</small></figcaption>`;
+      cartao.setAttribute('aria-hidden', 'true');
+      camada.el.prepend(cartao);
+      camada.el.classList.add('com-cartao', 'com-dossie');
       marcarPistas(camada.el);
       digitarFala(camada.el);
     } else if (falante && rota && caso.pessoas[falante]) {
@@ -1017,9 +1039,69 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   };
   // Os círculos ficam numa camada irmã da pessoa, no mesmo lugar dela (dentro do botão da pessoa o clique não chega).
   let circulosVivos = null;
-  function tirarCirculos() { circulosVivos = null; for (const c of palco.querySelectorAll('.ler-circulos')) c.remove(); }
+  function tirarCirculos() { circulosVivos = null; for (const c of tela.querySelectorAll('.ler-circulos')) c.remove(); }
+  // Forma A: os círculos ficam no retrato de dossiê, ao lado do corpo, com o fio até a parte.
+  function circulosNoCartao(pid, ler, aoObservar) {
+    const dossie = [...tela.querySelectorAll(`.dialogo-caso:not(.saindo) .cartao-dossie[data-pessoa="${CSS.escape(pid)}"] .ct-dossie`)].pop();
+    const img = dossie?.querySelector('img');
+    if (!img) return;
+    const arquivo = (img.getAttribute('src') || '').split('/').pop().replace(/\.(png|webp).*$/, '');
+    const tabela = NO_CORPO_FIGURA[arquivo] || {};
+    const camada = document.createElement('div');
+    camada.className = 'ler-circulos no-cartao';
+    const toque = document.body.classList.contains('celular') ? 44 : 32;
+    const circulos = ler.detalhes.map((d, n) => {
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = `ler-circulo${d.ve ? ' visto' : ''}`;
+      const nome = `${maiuscula(PARTE[d.em] || d.em)}`;
+      c.setAttribute('aria-label', d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 minutos)`);
+      c.title = d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 min)`;
+      c.innerHTML = `<span class="ler-rotulo">${esc(PARTE[d.em] || d.em)}</span>`;
+      c.style.setProperty('--toque', `${toque}px`);
+      c.addEventListener('click', (ev) => { ev.stopPropagation(); if (!d.ve && ler.estado === 'nova') aoObservar(n); });
+      camada.appendChild(c);
+      return { c, xy: tabela[d.em] || NO_CORPO[d.em] || [0, 0.4] };
+    });
+    const cont = { 1: 0, '-1': 0 };
+    for (const o of circulos) {
+      const [x] = o.xy;
+      o.lado = x > 0.05 ? 1 : x < -0.05 ? -1 : (cont[1] <= cont[-1] ? 1 : -1);
+      cont[o.lado] += 1;
+    }
+    dossie.appendChild(camada);
+    const vivo = {};
+    circulosVivos = vivo;
+    const posicionar = () => {
+      if (circulosVivos !== vivo || !camada.isConnected) return;
+      const W = dossie.clientWidth || 1;
+      const iw = img.offsetWidth; const ih = img.offsetHeight;
+      const x0 = img.offsetLeft; const y0 = img.offsetTop;
+      const meio = x0 + 0.5 * iw;
+      const pos = circulos.map((o) => {
+        const [x, y] = o.xy;
+        const px = x0 + (0.5 + x) * iw;
+        const cx = Math.min(W - toque / 2, Math.max(toque / 2, meio + o.lado * (0.26 * iw + 22)));
+        return { o, px, py: y0 + y * ih, cx, cy: y0 + y * ih };
+      });
+      for (const s of [1, -1]) {
+        const doLado = pos.filter((q) => q.o.lado === s).sort((a, b) => a.cy - b.cy);
+        for (let i = 1; i < doLado.length; i += 1) doLado[i].cy = Math.max(doLado[i].cy, doLado[i - 1].cy + toque + 4);
+      }
+      for (const { o, px, py, cx, cy } of pos) {
+        o.c.style.left = `${cx}px`;
+        o.c.style.top = `${cy}px`;
+        o.c.classList.toggle('lado-esq', o.lado < 0);
+        o.c.style.setProperty('--fio', `${Math.max(0, Math.hypot(px - cx, py - cy) - 9)}px`);
+        o.c.style.setProperty('--fio-ang', `${Math.atan2(py - cy, px - cx)}rad`);
+      }
+    };
+    if (img.complete) posicionar(); else img.addEventListener('load', posicionar, { once: true });
+    new ResizeObserver(posicionar).observe(dossie);
+  }
   function mostrarCirculos(pid, ler, aoObservar) {
     tirarCirculos();
+    if (formaLuz) { circulosNoCartao(pid, ler, aoObservar); return; }
     const pe = palco.querySelector(`.pessoa[data-pid="${CSS.escape(pid)}"]`);
     const fig = pe?.querySelector('.pessoa-figura');
     const img = fig?.querySelector('img');
@@ -1107,7 +1189,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     // No celular, depois do primeiro detalhe observado, a apresentação (já lida) sai, e a figura ganha altura (ajuste 2).
     const jaObservou = ler.estado === 'nova' && ler.detalhes.some((d) => d.ve);
     if (intro && !(jaObservou && document.body.classList.contains('celular'))) partes.push(intro);
-    if (ler.estado === 'fechada') partes.push(`*${nome} não quer mais conversa com você esta noite.*`);
+    if (ler.estado === 'fechada') { partes.push(`*${nome} não quer mais conversa com você esta noite.*`); if (!apagadas.has(pid)) { apagadas.add(pid); marcarApagadas(); } }
     else if (ler.estado === 'nova' && !ler.detalhes.some((d) => d.ve) && !jaAvisouLeitura()) {
       // Ajuste 1 do 3f489f6: a dica aparece só na primeira conversa com leitura; o que se observa fica na própria célula.
       partes.push('*Repare antes de perguntar. Os círculos mostram o que dá para observar.*');
@@ -1134,6 +1216,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           await conversar(pid, `*${comQuem(j.certo, nome)}*`);
         } else {
           anotar('CONVERSA', `${nome} se fechou: o jeito de perguntar não combinou. Esta noite, não fala mais.`);
+          apagadas.add(pid);
+          marcarApagadas();
           lerPessoa(pid, `*${comQuem(j.errado, nome)}*`, { ...ler, estado: 'fechada' }, extras);
         }
       } finally { soltarConversa(cam); }
@@ -2123,8 +2207,33 @@ ${textoDe(r)}` : textoDe(r));
     });
   }
   const subDe = (pid) => `${caso.pessoas[pid].sub}${!foraDoRastro() && temAssuntoNovo(pid) && st.achados.includes(`conheceu-${pid}`) ? ' · assunto novo' : ''}`;
+  // Forma A: quem está no lugar, com nome e ofício; tocar num nome é tocar na luz da pessoa.
+  function desenharQuemAqui() {
+    tela.querySelector('.quem-aqui')?.remove();
+    if (!formaLuz || !cena) return;
+    const gente = genteDo(st.lugar);
+    if (!gente.length) return;
+    const fila = document.createElement('nav');
+    fila.className = 'quem-aqui';
+    fila.dataset.lugar = st.lugar;
+    fila.setAttribute('aria-label', 'Quem está aqui');
+    fila.innerHTML = `<small>Quem está aqui</small><ul>${gente.map((g) => `<li><button type="button" data-pid="${esc(g.id)}"><b>${esc(g.nome)}</b><span>${esc(caso.pessoas[g.id].sub || '')}</span></button></li>`).join('')}</ul>`;
+    fila.querySelectorAll('button').forEach((b) => { b.onclick = () => cena.pessoa(b.dataset.pid)?.el.click(); });
+    palco.after(fila);
+    gente.forEach((g, i) => cena.pessoa(g.id)?.el.style.setProperty('--ordem', String(i)));
+    marcarApagadas();
+  }
+  function marcarApagadas() {
+    if (!formaLuz) return;
+    for (const pid of apagadas) {
+      cena?.pessoa(pid)?.el.classList.add('apagada');
+      const b = tela.querySelector(`.quem-aqui button[data-pid="${CSS.escape(pid)}"]`);
+      if (b) { b.classList.add('riscado'); b.setAttribute('aria-label', `${caso.pessoas[pid].nome}, não fala mais esta noite`); }
+    }
+  }
   function atualizarCena() {
     if (!cena) return;
+    if (formaLuz && tela.querySelector('.quem-aqui')?.dataset.lugar !== st.lugar) desenharQuemAqui();
     cena.atualizarPontos(pontosDo(st.lugar));
     for (const pid of caso.lugares[st.lugar].pessoas) {
       const el = cena.pessoa(pid)?.el;
