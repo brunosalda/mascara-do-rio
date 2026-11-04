@@ -28,6 +28,8 @@ const PASSADA = 0.9;            // uma passada completa anda 0,9 altura do bonec
 const ZOOM = 1.06;
 // Figuras com um segundo quadro (Rodada 47): a troca é seca, sem esmaecer (esmaecer mostra duas mãos).
 const QUADRO_2 = { 'lapa-sambista': 'lapa-sambista-2' };
+// Figuras sentadas ficam cerca de 10% mais baixas que quem está de pé na mesma profundidade.
+const ESCALA_FIGURA = { 'se-engraxate': 0.9 };
 // Uma batida: o quadro 2 por 150 a 200 ms e a volta ao 1. Duas ou três batidas seguidas, e uma pausa de 3 a 6 s.
 // A figura, o reflexo e as quatro máscaras de luz trocam juntos, no mesmo quadro.
 function animarQuadros(el, a, b) {
@@ -688,7 +690,7 @@ export function montarCena(raiz, {
     }
     mundo.appendChild(el);
     if (figura && QUADRO_2[figura]) animarQuadros(el, src, figuraLeve(`img/gente/${QUADRO_2[figura]}.png`));
-    const p = { id: g.id ? `pessoa-${g.id}` : `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: nomeP, acao: `Falar com: ${nomeP}`, anda: figura ? null : g.anda, dir: g.dir || ((i % 2) ? -1 : 1), el, parado: 0, caso: genteDoCaso ? g : null, falas: g.falas || null };
+    const p = { id: g.id ? `pessoa-${g.id}` : `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: nomeP, acao: `Falar com: ${nomeP}`, anda: figura ? null : g.anda, dir: g.dir || ((i % 2) ? -1 : 1), el, parado: 0, caso: genteDoCaso ? g : null, falas: g.falas || null, escala: ESCALA_FIGURA[figura] || 1 };
     return p;
   });
   // Rodada 39: rastros de quem passou por aqui nesta noite (só o nome das ruas e o clã aparente) e
@@ -757,7 +759,7 @@ export function montarCena(raiz, {
   function posicionarPessoa(p) {
     p.el.style.left = pct(p.x);
     p.el.style.top = pct(p.y);
-    p.el.style.height = `${(alturaGente(p.y) * 100).toFixed(2)}%`;
+    p.el.style.height = `${(alturaGente(p.y) * (p.escala || 1) * 100).toFixed(2)}%`;
     p.el.style.zIndex = String(Math.round(p.y * 1000));
     p.el.classList.toggle('vira', p.dir < 0);
   }
