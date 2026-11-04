@@ -1405,6 +1405,7 @@ body.celular .placar-selos li:nth-child(3n) .selo-como { left: auto; right: 0; t
 .placar-caso { position: relative; }
 .placar-foto { position: absolute; z-index: 1; top: 22px; right: 0; width: 138px; }
 body.celular .placar-foto { position: relative; order: 2; top: auto; right: auto; width: 72%; align-self: center; margin: 4px 0 6px; }
+.lista-capitulos .btn { display: inline-block; max-width: 100%; white-space: normal; text-align: left; line-height: 1.3; }
 .lista-capitulos li.com-foto { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 14px; align-items: start; }
 .lista-capitulos li.com-foto > :not(.temporada-foto) { grid-column: 2; }
 .temporada-foto { grid-row: 1 / span 3; width: 112px; rotate: -2deg; }

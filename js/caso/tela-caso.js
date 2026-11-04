@@ -93,7 +93,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   if (F) {
     const atual = estadoApp?.atual;
     if (atual?.status !== 'ativo') {
-      raiz.innerHTML = '<div class="cartao"><p>Para jogar a temporada, seu personagem precisa estar aprovado pelo Narrador.</p><a class="btn" href="#/">Voltar</a></div>';
+      raiz.innerHTML = '<div class="cartao"><p>Para jogar, entre como agente da Xerife na temporada.</p><a class="btn" href="#/temporada">Ir para a temporada</a></div>';
       return;
     }
     try {
@@ -2786,7 +2786,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       const certeza = await perguntar(tela, { rotulo: 'Recomeçar', texto: '<p>Você perde as pistas e o tempo deste caso e começa às 22h, de novo.</p>', opcoes: ['Recomeçar do zero', 'Não'] });
       if (certeza === 0) recomecar();
     }
-    if (r === 1) { cena?.desmontar(); location.hash = '#/noite'; }
+    if (r === 1) { cena?.desmontar(); location.hash = '#/temporada'; }
   }
   function alternarPaineis() {
     paineisOcultos = !paineisOcultos;

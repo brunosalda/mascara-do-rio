@@ -108,6 +108,16 @@ export async function sair() {
 
 // --- Personagens -----------------------------------------------------------
 
+// Carmen, um jogo só: o agente de quem entrou (caso_agente). Sem nome, só consulta: { personagem } ou { precisa_nome }.
+export async function agenteDoCarmen(nome = null, cla = null) {
+  const { data, error } = await sb.rpc('caso_agente', { p_nome: nome, p_cla: cla });
+  if (error) {
+    const m = error.message || '';
+    throw new Error(/nome-longo/.test(m) ? 'Use um nome de até 40 letras.' : /cla-invalido/.test(m) ? 'Esse clã não está na lista.' : 'Não deu para entrar agora. Tente de novo em instantes.');
+  }
+  return data;
+}
+
 export async function meusPersonagens() {
   const { data, error } = await sb
     .from('personagens')

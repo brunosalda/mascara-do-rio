@@ -49,11 +49,12 @@ function desenharCabecalho(rota) {
   const opcoes = estado.personagens
     .map((x) => `<option value="${x.id}" ${x.id === p?.id ? 'selected' : ''}>${esc(x.nome || 'Sem nome')}</option>`)
     .join('');
+  // Um jogo só (pedido do Bruno, 04/11): o cabeçalho leva só à temporada do Carmen. Os links do formato antigo
+  // (Noite, Ficha, Diário, troca de personagem e Novo personagem) saem; o código deles fica, para dar para voltar.
+  void ativo; void opcoes;
   nav.innerHTML = `
-    ${ativo ? `<div class="nav-links">${link('noite', 'Noite')}${link('ficha', 'Ficha')}${link('diario', 'Diário')}</div>` : ''}
+    <div class="nav-links">${link('temporada', 'Temporada')}</div>
     <div class="nav-conta">
-      ${estado.personagens.length > 1 ? `<select id="trocar-personagem" aria-label="Personagem">${opcoes}</select>` : ''}
-      ${ativo ? '<a href="#/novo" class="btn-texto" title="Criar outro personagem">Novo personagem</a>' : ''}
       <button class="btn-texto" id="sair">Sair</button>
     </div>`;
   nav.querySelector('#sair').onclick = async () => { await banco.sair(); };
@@ -74,10 +75,10 @@ export function telaLogin(raiz, { demo = false } = {}) {
       <div class="titulo-entrada">
         <p class="sobretitulo">Rio de Janeiro, depois da meia-noite</p>
         <h1 class="titulo-grande">A Máscara do Rio</h1>
-        <p class="lead">Uma crônica de Vampiro: A Máscara para poucos convidados.</p>
+        <p class="lead">Uma caçada pela cidade antes do sol, no mundo de Vampiro: A Máscara, para poucos convidados.</p>
       </div>
       <section class="dialogo-cena dialogo-direita caixa-entrada login">
-        <header class="dialogo-cabeca"><span class="grupo-rotulo">Entrar na crônica</span></header>
+        <header class="dialogo-cabeca"><span class="grupo-rotulo">Entrar</span></header>
         <div class="dialogo-corpo">
           <p class="nota">Entre com o e-mail que recebeu o convite.</p>
           <form id="form-login" novalidate>
@@ -327,7 +328,7 @@ async function desenhar() {
 
   // Caso de demonstração do formato v3 (etapa A): sem banco; funciona com ou sem login. Com login,
   // usa o personagem ativo; sem login, uma vampira fictícia.
-  if (rota === 'caso') {
+  if (rota === 'caso' && depurar) {
     const { telaCaso } = await import('./caso/tela-caso.js');
     return telaCaso(tela, estado);
   }
@@ -339,10 +340,20 @@ async function desenhar() {
     return telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(8)), vitrine: true });
   }
 
+  // Vitrine do passo de entrada do agente (só local, sem login e sem gravar nada).
+  if (rota === 'vitrine-agente' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+    const { telaAgente } = await import('./caso/tela-agente.js');
+    return telaAgente(tela, { aoEntrar: async ({ nome, cla }) => { tela.insertAdjacentHTML('beforeend', `<p class="cartao nota">Vitrine: o banco criaria o agente ${esc(nome)}${cla ? ` (${esc(cla)})` : ''} e abriria a temporada.</p>`); } });
+  }
+
   if (!estado.sessao) return telaLogin(tela);
 
   try {
-    // Formato v3, etapa B: a temporada (só com login), jogada pelo banco. A demonstração continua em #/caso.
+    // Um jogo só (pedido do Bruno, 04/11): todas as rotas levam ao Carmen. As do formato antigo (#/noite,
+    // #/mapa, #/lugar/*, #/ficha, #/diario, #/novo, #/detalhado e a criação) só redirecionam; o código fica.
+    if (rota !== 'temporada' && !rota.startsWith('temporada/')) { location.replace('#/temporada'); return; }
+    if (!(await garantirAgente(tela))) return;
+    // Formato v3, etapa B: a temporada (só com login), jogada pelo banco.
     if (rota === 'temporada') {
       const { telaTemporada } = await import('./caso/tela-temporada.js');
       return await telaTemporada(tela, estado);
@@ -374,6 +385,34 @@ async function desenhar() {
     console.error(err);
     tela.innerHTML = `<div class="cartao erro"><p>${esc(err.message || 'Algo deu errado.')}</p><button class="btn" onclick="location.reload()">Tentar de novo</button></div>`;
   }
+}
+
+// O agente do Carmen de quem entrou (caso_agente): o que já existe, o personagem antigo com progresso no Carmen
+// ou, na primeira vez, o passo de entrada (nome e clã). Antes da migração 20261104000002 a função não existe no
+// banco, e o site segue com o personagem ativo, como antes. Devolve true quando dá para abrir a temporada.
+async function garantirAgente(tela) {
+  let r = null;
+  try { r = await banco.agenteDoCarmen(); } catch { r = null; }
+  if (r?.personagem) {
+    if (estado.atual?.id !== r.personagem) await recarregarPersonagens(r.personagem);
+    return true;
+  }
+  if (r?.precisa_nome) {
+    const { telaAgente } = await import('./caso/tela-agente.js');
+    telaAgente(tela, {
+      aoEntrar: async ({ nome, cla }) => {
+        const novo = await banco.agenteDoCarmen(nome, cla);
+        await recarregarPersonagens(novo.personagem);
+        desenhar();
+      },
+    });
+    return false;
+  }
+  const ativo = estado.atual?.status === 'ativo' ? estado.atual : estado.personagens.find((x) => x.status === 'ativo');
+  if (ativo) { if (ativo !== estado.atual) definirAtual(ativo.id); return true; }
+  document.body.dataset.tela = 'pagina';
+  tela.innerHTML = '<div class="cartao"><h2>A Xerife ainda não chamou você</h2><p>A entrada de agentes abre em breve. Volte daqui a pouco.</p></div>';
+  return false;
 }
 
 async function aoMudarSessao(sessao) {

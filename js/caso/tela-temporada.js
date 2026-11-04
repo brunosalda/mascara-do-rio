@@ -14,7 +14,7 @@ export async function telaTemporada(raiz, estadoApp) {
   const p = estadoApp?.atual;
   const [{ data: temporadas, error: e1 }, { data: capitulos, error: e2 }, { data: progresso }] = await Promise.all([
     sb.from('temporadas').select('id, titulo, situacao, abre_em, fecha_em').order('criado_em'),
-    sb.from('capitulos').select('id, temporada_id, ordem, titulo, pergunta').order('ordem'),
+    sb.from('capitulos').select('id, temporada_id, ordem, titulo, pergunta, formato').order('ordem'),
     p ? sb.from('progresso').select('capitulo_id, resolvido_em, nota, selos, acusacoes_erradas').eq('personagem_id', p.id) : Promise.resolve({ data: [] }),
   ]);
   if (e1 || e2) {
@@ -22,12 +22,22 @@ export async function telaTemporada(raiz, estadoApp) {
     return;
   }
   if (!temporadas?.length) {
-    raiz.innerHTML = '<div class="cartao"><h2>Temporada</h2><p>Nenhuma temporada aberta ainda. Quando abrir, os capítulos aparecem aqui.</p><a class="btn" href="#/">Voltar</a></div>';
+    raiz.innerHTML = '<div class="cartao"><h2>Temporada</h2><p>Nenhuma temporada aberta ainda. Quando abrir, os capítulos aparecem aqui.</p></div>';
+    return;
+  }
+  // Um jogo só (04/11): só as temporadas do Carmen (capítulos no formato rota). As outras ficam no banco, escondidas.
+  const soCarmen = (capitulos || []).filter((c) => c.formato === 'rota');
+  // Uma temporada só na tela: a de teste, para quem a vê (o Bruno e a conta de teste); senão, a mais recente.
+  const comCarmen = temporadas.filter((t) => soCarmen.some((c) => c.temporada_id === t.id));
+  const umaSo = comCarmen.find((t) => t.situacao === 'teste') || comCarmen[comCarmen.length - 1];
+  const temporadasCarmen = umaSo ? [umaSo] : [];
+  if (!temporadasCarmen.length) {
+    raiz.innerHTML = '<div class="cartao"><h2>Temporada</h2><p>Nenhuma temporada aberta ainda. Quando abrir, os capítulos aparecem aqui.</p></div>';
     return;
   }
   const meu = Object.fromEntries((progresso || []).map((x) => [x.capitulo_id, x]));
-  const blocos = await Promise.all(temporadas.map(async (t) => {
-    const caps = (capitulos || []).filter((c) => c.temporada_id === t.id);
+  const blocos = await Promise.all(temporadasCarmen.map(async (t) => {
+    const caps = soCarmen.filter((c) => c.temporada_id === t.id);
     const rk = await ranking(t.id).catch(() => null);
     const linhasCap = caps.map((c) => {
       const pr = meu[c.id];
@@ -40,7 +50,6 @@ export async function telaTemporada(raiz, estadoApp) {
     const linhasRk = (rk?.ranking || []).map((x, i) => `<li class="${x.voce ? 'voce' : ''}"><span class="placar-pos">${i + 1}º</span><b>${esc(x.nome)}</b><small>${x.media != null ? `média ${x.media}` : 'sem capítulo resolvido'} · ${x.resolvidos} ${x.resolvidos === 1 ? 'capítulo' : 'capítulos'}${x.erros ? ` · ${x.erros} ${x.erros > 1 ? 'erros' : 'erro'}` : ''}</small></li>`).join('');
     return `<section class="cartao temporada">
       <h2>${esc(t.titulo)}</h2>
-      ${p?.status === 'ativo' ? '' : '<p class="nota">Para jogar, seu personagem precisa estar aprovado pelo Narrador.</p>'}
       <ol class="lista-capitulos">${linhasCap || '<li>Nenhum capítulo liberado ainda.</li>'}</ol>
       <section class="placar" aria-label="Ranking da temporada"><h3>Ranking ${rk?.temporada?.fechada ? 'final (soma das notas)' : 'da temporada (média das notas)'}</h3>
         <ol>${linhasRk || '<li>Ninguém jogou ainda.</li>'}</ol></section>
