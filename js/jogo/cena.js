@@ -347,7 +347,7 @@ export function montarCena(raiz, {
       // Outra caixa abriu antes (a tira de abertura, no mesmo clique): a câmera não mira esta pessoa.
       else if (pontoDaConversa === p) { p.el?.classList.remove('falando'); pontoDaConversa = null; }
       // Sem caixa de conversa (detalhe em balão): endireita logo, sem esperar.
-      setTimeout(() => { if (!conversa && pontoDaConversa === p) { boneco.classList.remove('inclinado'); pontoDaConversa = null; } }, 600);
+      setTimeout(() => { if (!conversa && pontoDaConversa === p) { boneco.classList.remove('inclinado'); p.el?.classList.remove('falando'); pontoDaConversa = null; } }, 600);
     };
     // Carmen 2026, sem personagem: a conversa abre no próximo quadro (meta: menos de 100 ms do clique).
     // O quadro de espera deixa o mesmo clique abrir antes a tira de abertura, se for o caso.
@@ -1923,7 +1923,7 @@ export function montarCena(raiz, {
     // A figura cabe entre a faixa do alto (72 px) e a caixa da conversa, para a leitura ver a pessoa inteira (rodada 47).
     const FOLGA_PES = 14; // na conversa, os pés ficam 14 px acima da caixa
     const topoCaixaConversa = camConversa ? (() => { const cx = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso'); return cx ? cx.getBoundingClientRect().top - cena.getBoundingClientRect().top : vh * 0.62; })() : 0;
-    const zConversa = camConversa ? limitar(Math.min((estreito ? 0.33 : 0.6) * vh, topoCaixaConversa - FOLGA_PES - 70) / Math.max(40, (pontoDaConversa.el.querySelector('.pessoa-figura') || pontoDaConversa.el).getBoundingClientRect().height / Math.max(0.1, cam.z)), nivelZoom(), 4.5)
+    const zConversa = camConversa ? limitar(Math.min((estreito ? 0.33 : 0.6) * vh, topoCaixaConversa - FOLGA_PES - 70) / Math.max(40, (pontoDaConversa.el.querySelector('.pessoa-figura') || pontoDaConversa.el).offsetHeight), nivelZoom(), 4.5)
       : geo.alto && cena.closest('.carmen') ? Math.max(ZOOM_CONVERSA, nivelZoom()) : ZOOM_CONVERSA;
     const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? zConversa : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * (camConversa ? 6 : 4)) : 1);
@@ -2573,6 +2573,8 @@ export function montarCena(raiz, {
         const dx = (pontoDaConversa.x < pos.x ? 1 : -1) * 0.012;
         recuo = { dx, feito: 0, t0: performance.now() };
         boneco.classList.remove('inclinado');
+        // A marca de quem fala sai antes de esquecer a pessoa (antes, a primeira ficava "falando" para sempre).
+        pontoDaConversa.el?.classList.remove('falando');
         pontoDaConversa = null;
         linha.classList.remove('visivel');
         for (const el of camadaContornos.children) el.classList.remove('aceso');
