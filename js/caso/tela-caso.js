@@ -754,7 +754,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
     const sobre = conversaMantida && falante && conversaMantida.pid === falante ? conversaMantida.cam : null;
     if (conversaMantida) { const velha = conversaMantida.cam; conversaMantida = null; if (velha !== sobre) velha.fechar(); }
-    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.principal ? ' data-principal' : ''}${o.desligada ? ' disabled aria-disabled="true"' : ''}>${o.chip ? '' : `<span class="escolha-num">${i + 1}.</span> — `}${o.html}</button></li>`).join('')}</ol>` : '';
+    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.principal ? ' data-principal' : ''}${o.desligada ? ' disabled aria-disabled="true"' : ''}>${o.chip ? '' : `<span class="escolha-num">${o.num ?? i + 1}.</span> — `}${o.html}</button></li>`).join('')}</ol>` : '';
     const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
     revelando = !!chave;
     const camada = abrirDialogo(tela, {
@@ -985,6 +985,10 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       certo: 'Você fala firme, como quem tem autoridade, e não aceita enrolação.', errado: '{quem} não gosta do tom e encerra a conversa.' },
   ];
   const comQuem = (t, nome) => t.replaceAll('{quem}', nome);
+  const CHAVE_AVISO_LEITURA = 'mascara.carmen.aviso-leitura';
+  let avisoLeituraMemoria = false;
+  const jaAvisouLeitura = () => { if (avisoLeituraMemoria) return true; try { return localStorage.getItem(CHAVE_AVISO_LEITURA) === '1'; } catch { return false; } };
+  const marcarAvisoLeitura = () => { avisoLeituraMemoria = true; try { localStorage.setItem(CHAVE_AVISO_LEITURA, '1'); } catch { /* sem armazenamento */ } };
   const maiuscula = (t) => `${String(t).charAt(0).toUpperCase()}${String(t).slice(1)}`;
   // Onde fica cada círculo, em fração da figura: x a partir do centro (largura), y a partir do alto (altura).
   // Figuras sentadas ou curvadas têm a sua tabela.
@@ -1021,10 +1025,20 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const nome = `${maiuscula(PARTE[d.em] || d.em)}`;
       c.setAttribute('aria-label', d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 minutos)`);
       c.title = d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 min)`;
+      c.innerHTML = `<span class="ler-rotulo">${esc(PARTE[d.em] || d.em)}</span>`;
       c.addEventListener('click', (ev) => { ev.stopPropagation(); if (!d.ve && ler.estado === 'nova') aoObservar(n); });
       camada.appendChild(c);
       return { c, xy: tabela[d.em] || NO_CORPO[d.em] || [0, 0.4] };
     });
+    // Ajuste 4 do 3f489f6: o anel fica ao lado do corpo, nunca em cima (nem do rosto), com um fio até a parte.
+    // O lado segue a parte (mão direita, à direita); o que fica no meio vai para o lado com menos anéis.
+    const cont = { 1: 0, '-1': 0 };
+    for (const o of circulos) {
+      const [x] = o.xy;
+      o.lado = x > 0.05 ? 1 : x < -0.05 ? -1 : (cont[1] <= cont[-1] ? 1 : -1);
+      cont[o.lado] += 1;
+    }
+    const mundo = palco.querySelector('.mundo');
     pe.after(camada);
     const vivo = {};
     circulosVivos = vivo;
@@ -1038,11 +1052,37 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const x0 = fig.offsetLeft + img.offsetLeft;
       const y0 = fig.offsetTop + img.offsetTop;
       const vira = pe.classList.contains('vira');
-      for (const { c, xy: [x, y] } of circulos) {
-        let px = x0 + (0.5 + x) * img.offsetWidth;
-        if (vira) px = W - px;
-        c.style.left = `${(px / W) * 100}%`;
-        c.style.top = `${((y0 + y * img.offsetHeight) / H) * 100}%`;
+      // Tamanhos em pixels da tela: a camada está dentro do mundo, que a câmera aumenta (z).
+      const z = parseFloat((mundo?.style.transform || '').split('scale(')[1] || '1') || 1;
+      camada.style.setProperty('--z', String(z));
+      const toque = (document.body.classList.contains('celular') ? 44 : 32) / z;
+      const iw = img.offsetWidth;
+      const ih = img.offsetHeight;
+      const meio = x0 + 0.5 * iw;
+      const posicoes = circulos.map((o) => {
+        const [x, y] = o.xy;
+        const lado = vira ? -o.lado : o.lado;
+        let px = x0 + (0.5 + x) * iw;
+        let cx = meio + o.lado * (0.3 * iw + 26 / z);
+        if (vira) { px = W - px; cx = W - cx; }
+        return { o, lado, px, cx, cy: y0 + y * ih, py: y0 + y * ih };
+      });
+      // Do mesmo lado, um anel não encosta no outro: desce o de baixo.
+      for (const s of [1, -1]) {
+        const doLado = posicoes.filter((q) => q.lado === s).sort((a, b) => a.cy - b.cy);
+        for (let i = 1; i < doLado.length; i += 1) doLado[i].cy = Math.max(doLado[i].cy, doLado[i - 1].cy + toque + 4 / z);
+      }
+      for (const { o, lado, px, cx, cy, py } of posicoes) {
+        const { c } = o;
+        c.style.left = `${(cx / W) * 100}%`;
+        c.style.top = `${(cy / H) * 100}%`;
+        c.style.setProperty('--toque', `${toque}px`);
+        c.classList.toggle('lado-esq', lado < 0);
+        // O fio vai do anel até a parte do corpo.
+        const dx = px - cx;
+        const dy = py - cy;
+        c.style.setProperty('--fio', `${Math.max(0, Math.hypot(dx, dy) - 9 / z)}px`);
+        c.style.setProperty('--fio-ang', `${Math.atan2(dy, dx)}rad`);
       }
       requestAnimationFrame(acompanhar);
     };
@@ -1053,13 +1093,14 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const pe = caso.pessoas[pid];
     const nome = pe.nome;
     const partes = [];
-    if (intro) partes.push(intro);
+    // No celular, depois do primeiro detalhe observado, a apresentação (já lida) sai, e a figura ganha altura (ajuste 2).
+    const jaObservou = ler.estado === 'nova' && ler.detalhes.some((d) => d.ve);
+    if (intro && !(jaObservou && document.body.classList.contains('celular'))) partes.push(intro);
     if (ler.estado === 'fechada') partes.push(`*${nome} não quer mais conversa com você esta noite.*`);
-    else {
-      const vistos = ler.detalhes.filter((d) => d.ve).map((d) => `*${maiuscula(PARTE[d.em] || d.em)}:* ${d.ve}`);
-      if (vistos.length) partes.push(vistos.join('\n'));
-      if (ler.notou) partes.push(`*Você notou algo: isso diz como falar com ${nome}.*`);
-      else if (!vistos.length) partes.push('*Repare antes de perguntar. Os círculos mostram o que dá para observar.*');
+    else if (ler.estado === 'nova' && !ler.detalhes.some((d) => d.ve) && !jaAvisouLeitura()) {
+      // Ajuste 1 do 3f489f6: a dica aparece só na primeira conversa com leitura; o que se observa fica na própria célula.
+      partes.push('*Repare antes de perguntar. Os círculos mostram o que dá para observar.*');
+      marcarAvisoLeitura();
     }
     const observar = (n) => async (cam) => {
       manterConversa(cam, pid);
@@ -1088,18 +1129,21 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     };
     const opcoes = [];
     if (ler.estado === 'nova') {
-      ler.detalhes.forEach((d, n) => { if (!d.ve) opcoes.push({ html: `Observar ${esc(PARTE[d.em] || d.em)} <small class="etiqueta-tempo">2 min</small>`, classe: 'observar', chip: true, n, fn: observar(n) }); });
-      for (const j of JEITOS) {
+      ler.detalhes.forEach((d, n) => {
+        if (d.ve) opcoes.push({ html: `<b>${esc(maiuscula(PARTE[d.em] || d.em))}:</b> ${esc(d.ve)}`, classe: 'observado', chip: true, desligada: true, fn: () => {} });
+        else opcoes.push({ html: `Observar ${esc(PARTE[d.em] || d.em)} <small class="etiqueta-tempo">2 min</small>`, classe: 'observar', chip: true, n, fn: observar(n) });
+      });
+      JEITOS.forEach((j, k) => {
         opcoes.push({
-          html: `Perguntar ${esc(j.rotulo.toLowerCase())} <small class="etiqueta-jeito">${esc(j.resumo)}</small>${ler.notou === j.id ? ' <small class="etiqueta-notou">você notou algo</small>' : ''}`,
-          classe: `jeito${ler.notou === j.id ? ' notou' : ''}`, fn: perguntar(j),
+          html: `<b class="jeito-nome">Perguntar ${esc(j.rotulo.toLowerCase())}</b><small class="etiqueta-jeito">${esc(j.resumo)}</small>${ler.notou === j.id ? '<small class="etiqueta-notou">você notou algo</small>' : ''}`,
+          classe: `jeito${ler.notou === j.id ? ' notou' : ''}`, chip: true, fn: perguntar(j),
         });
-      }
+      });
     }
     for (const t of extras) {
       opcoes.push({ html: `${esc(t.rotulo)}${t.min ? ` <small class="etiqueta-tempo">${t.min} min</small>` : ''}`, fn: async (cam) => { tirarCirculos(); manterConversa(cam, pid); try { await escolherTopico(pid, t); } finally { soltarConversa(cam); } } });
     }
-    opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() });
+    opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', chip: ler.estado === 'nova', fn: (cam) => cam.fechar() });
     cena?.virarPessoaPara(`pessoa-${pid}`);
     caixa({ rotulo: `${nome} · ${pe.sub}`, texto: partes.join('\n\n'), opcoes, falante: pid, aoFechar: tirarCirculos });
     if (ler.estado === 'nova') mostrarCirculos(pid, ler, (n) => { const i = opcoes.findIndex((o) => o.n === n); const bs = document.querySelectorAll(`.dialogo-caso .escolhas-caso [data-escolha="${i}"]`); bs[bs.length - 1]?.click(); });
@@ -1143,25 +1187,71 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const geo = geografia(caso.lugares[st.lugar].geo);
     const pontos = (geo.pontosLivres || []).length >= r.vozes.length ? geo.pontosLivres : [[0.3, 0.7], [0.5, 0.75], [0.7, 0.7]];
     const guardadas = new Set(r.guardadas || []);
+    // Ajuste 3 do 3f489f6: o ponto de onde vem a voz fica no mundo (anda com a câmera); o balão fica numa camada da
+    // tela, sempre inteiro e a 12 px ou mais da borda, com uma pontinha para o ponto (ou uma seta, se ele sair da tela).
+    const ancoras = document.createElement('div');
+    ancoras.className = 'escuta-ancoras';
     const camada = document.createElement('div');
-    camada.className = 'escuta-vozes';
+    camada.className = 'escuta-vozes na-tela';
     const vozes = r.vozes.map((v, i) => {
       const [x, y] = pontos[i % pontos.length];
+      const ancora = document.createElement('span');
+      ancora.className = 'voz-ancora';
+      ancora.style.left = `${x * 100}%`;
+      ancora.style.top = `${Math.max(0.08, y - 0.07) * 100}%`; // acima da cabeça de quem estaria ali (e da lupa de um exame)
+      ancoras.appendChild(ancora);
       const el = document.createElement('div');
       el.className = `voz-borrada${guardadas.has(v.id) ? ' guardada' : ''}`;
-      el.style.left = `${x * 100}%`;
-      el.style.top = `${Math.max(0.08, y - 0.07) * 100}%`; // acima da cabeça de quem estaria ali (e da lupa de um exame)
       el.innerHTML = `<span class="voz-quem" hidden></span><span class="voz-texto"></span><button type="button" class="voz-guardar" hidden>Guardar esta frase</button>`;
       el.querySelector('.voz-texto').textContent = `“${v.texto}”`;
       camada.appendChild(el);
-      return { v, el, perto: 0, travada: guardadas.has(v.id) };
+      return { v, el, ancora, perto: 0, travada: guardadas.has(v.id) };
     });
-    mundo.appendChild(camada);
+    mundo.appendChild(ancoras);
+    palco.appendChild(camada);
+    const BORDA = 12;
+    const posicionarVozes = () => {
+      const b = palco.getBoundingClientRect();
+      const rb = barra.getBoundingClientRect();
+      const topoMin = Math.max(BORDA, rb.bottom - b.top + 10);
+      const caixas = vozes.map((o) => {
+        const a = o.ancora.getBoundingClientRect();
+        const ax = a.left - b.left;
+        const ay = a.top - b.top;
+        const w = o.el.offsetWidth;
+        const h = o.el.offsetHeight;
+        const left = Math.min(Math.max(BORDA, ax - w / 2), b.width - BORDA - w);
+        const top = Math.min(Math.max(topoMin, ay - h - 10), b.height - BORDA - h);
+        return { o, ax, ay, w, h, left, top };
+      });
+      // Dois balões não se cobrem: o de baixo desce (ou sobe, se não couber embaixo).
+      caixas.sort((p1, p2) => p1.top - p2.top);
+      for (let i = 1; i < caixas.length; i += 1) {
+        const c = caixas[i];
+        for (let k = 0; k < i; k += 1) {
+          const q = caixas[k];
+          const cobreX = c.left < q.left + q.w + 6 && q.left < c.left + c.w + 6;
+          const cobreY = c.top < q.top + q.h + 6 && q.top < c.top + c.h + 6;
+          if (cobreX && cobreY) c.top = q.top + q.h + 8;
+        }
+        c.top = Math.min(c.top, b.height - BORDA - c.h);
+      }
+      for (const { o, ax, ay, w, h, left, top } of caixas) {
+        o.el.style.left = `${Math.round(left)}px`;
+        o.el.style.top = `${Math.round(top)}px`;
+        const fora = ax < 0 ? 'esq' : ax > b.width ? 'dir' : '';
+        o.el.dataset.fora = fora;
+        // A pontinha sai de baixo do balão, na direção do ponto; se o ponto ficar acima, ela some.
+        o.el.style.setProperty('--ponta-x', `${Math.round(Math.min(Math.max(ax - left, 14), w - 14))}px`);
+        o.el.classList.toggle('sem-ponta', !!fora || ay < top + h - 2);
+      }
+    };
     tela.classList.add('escutando');
     const barra = document.createElement('div');
     barra.className = 'escuta-barra';
     barra.innerHTML = `<p>Leve o ouvido até as vozes. A frase fica nítida quando ele chega perto e trava depois de ${String(r.trava).replace('.', ',')} s.${r.auspicio ? ' <b>Auspícios:</b> o seu ouvido alcança mais longe.' : ''}</p><button type="button" class="btn">Parar de ouvir</button>`;
     tela.appendChild(barra);
+    posicionarVozes();
     const raio = OUVIDO_PX * (r.raio || 1);
     let ouvido = null;
     let ultimo = performance.now();
@@ -1187,8 +1277,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       const dt = Math.min(0.1, (agora - ultimo) / 1000);
       ultimo = agora;
       const b = palco.getBoundingClientRect();
-      // As vozes ficam no mundo (andam com a câmera), mas no tamanho da tela.
-      camada.style.setProperty('--zoom-cena', String(parseFloat((mundo.style.transform.split('scale(')[1] || '1')) || 1));
+      posicionarVozes();
       for (const o of vozes) {
         if (o.travada) continue;
         const e = o.el.getBoundingClientRect();
@@ -1236,6 +1325,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         palco.removeEventListener('pointerleave', sair);
         document.removeEventListener('keydown', tecla, true);
         camada.remove();
+        ancoras.remove();
         barra.remove();
         tela.classList.remove('escutando');
       },
