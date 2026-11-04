@@ -168,7 +168,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         <nav class="hud-botoes">
           <button type="button" class="hud-com-icone" data-hud="viajar" title="Lugares do caso (M)" aria-label="Lugares do caso"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="hud-nome">${rota ? 'Mapa' : 'Lugares'} <kbd>M</kbd></span></button>
           ${rota ? `<button type="button" class="hud-com-icone" data-hud="arquivo" title="Arquivo dos suspeitos (R)" aria-label="Arquivo">${icone('arquivo', { classe: 'hud-svg' })}<span class="hud-nome">Arquivo <kbd>R</kbd></span></button>` : ''}
-          <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="${rota ? 'Pistas e registro (Q)' : 'Quadro de pistas (Q)'}" aria-label="${rota ? 'Pistas' : 'Quadro de pistas'}"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">${rota ? 'Pistas' : 'Quadro'} <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
+          <button type="button" class="hud-com-icone hud-quadro" data-hud="quadro" title="${rota ? 'Caderno: pistas, registro e o caso (Q)' : 'Quadro de pistas (Q)'}" aria-label="${rota ? 'Caderno' : 'Quadro de pistas'}"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7 8h4v4H7zM14 8h3M14 11h3M8 15l4-3 5 3"/></svg><span class="hud-nome">${rota ? 'Caderno' : 'Quadro'} <kbd>Q</kbd></span><span class="hud-contador" data-contador hidden></span></button>
           <button type="button" class="hud-com-icone" data-hud="ficha" title="Ficha (F)" aria-label="Ficha"><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 13h8M8 16.5h6"/></svg><span class="hud-nome">Ficha <kbd>F</kbd></span></button>
           <button type="button" data-hud="som" class="hud-icone" aria-pressed="${som.ligado()}" title="Som ambiente" aria-label="Som ambiente"><span class="icone-texto">♪</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="hud-nome">Som</span></button>
           <button type="button" data-hud="ajuda" class="hud-icone" title="Como jogar" aria-label="Como jogar"><span class="icone-texto">?</span><svg class="hud-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17v.5"/></svg><span class="hud-nome">Ajuda</span></button>
@@ -307,8 +307,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     if (!alvo || cerimoniasCurtas()) return;
     const rt = tela.getBoundingClientRect();
     const ra = alvo.getBoundingClientRect();
-    const x0 = rt.width / 2;
-    const y0 = rt.height * 0.32;
+    // Rodada 47 (item 5): a pista sai da fala (o fim do texto da caixa aberta) e voa em 1 s até o Caderno.
+    const fala = [...tela.querySelectorAll('.dialogo-caso .texto-narracao > *, .dialogo-caso .dialogo-corpo p')].filter((e) => e.offsetParent).at(-1);
+    const rf = fala?.getBoundingClientRect();
+    const x0 = rf ? rf.left - rt.left + Math.min(rf.width / 2, 160) : rt.width / 2;
+    const y0 = rf ? rf.top - rt.top + rf.height / 2 : rt.height * 0.32;
     const el = document.createElement('span');
     el.className = 'pista-voa';
     el.setAttribute('aria-hidden', 'true');
@@ -328,7 +331,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       alvo.classList.remove('recebeu');
       void alvo.offsetWidth;
       alvo.classList.add('recebeu');
-    }, 720);
+    }, 1000);
   }
 
   // No celular, só as marcas que cabem numa linha no título; a lista inteira fica no mapa (avaliação, 02/11). Com os
@@ -336,7 +339,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function marcasDoTitulo() {
     const marcasEl = tela.querySelector('[data-lugar-marcas]');
     if (!marcasEl) return;
-    const todas = caso.lugares[st.lugar]?.marcas || [];
+    const todas = (caso.lugares[st.lugar]?.marcas || []).map((m) => m.replace(/ (\d)/g, ' $1')); // "Posto 9" não quebra
     marcasEl.textContent = todas.join(' · ');
     if (document.body.classList.contains('celular') && marcasEl.clientWidth) {
       for (let n = todas.length - 1; n > 0 && marcasEl.scrollWidth > marcasEl.clientWidth + 1; n--) marcasEl.textContent = todas.slice(0, n).join(' · ');
@@ -1326,7 +1329,7 @@ ${textoDe(r)}` : textoDe(r));
     const el = document.createElement('div');
     el.className = 'cartao-chegada';
     el.setAttribute('role', 'status');
-    el.innerHTML = `<b>${esc(l.nome)}</b><small><span class="hora-cartao">${hora(st.hora)}</span>${l.marcas?.length ? ` · ${esc(l.marcas.join(' · '))}` : ''}</small>${frase ? `<i class="cartao-tempo">${esc(frase)}</i>` : ''}${v?.tipo === 'errada' ? `<span class="carimbo carimbo-p">Ninguém viu</span><em class="cartao-volta">Ninguém ${esc(l.em)} viu quem você procura. Volte ao mapa.</em>` : ''}`;
+    el.innerHTML = `<b>${esc(l.nome)}</b><small><span class="hora-cartao">${hora(st.hora)}</span>${l.marcas?.length ? ` · ${esc(l.marcas.map((m) => m.replace(/ (\d)/g, ' $1')).join(' · '))}` : ''}</small>${frase ? `<i class="cartao-tempo">${esc(frase)}</i>` : ''}${v?.tipo === 'errada' ? `<span class="carimbo carimbo-p">Ninguém viu</span><em class="cartao-volta">Ninguém ${esc(l.em)} viu quem você procura. Volte ao mapa.</em>` : ''}`;
     tela.appendChild(el);
     tela.classList.add('chegando');
     if (v?.tipo === 'errada') setTimeout(() => som.carmen?.('carimbo'), cerimoniasCurtas() ? 0 : 420);

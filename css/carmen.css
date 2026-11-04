@@ -1536,3 +1536,21 @@ body.celular .carmen .janela-licenca .janela-corpo { padding-top: 50px; }
    animado). Os espaços ficam fora dos spans, então o inline-block não cola as palavras. */
 .tela-jogo.bg2.tela-caso.carmen .palavra { display: inline-block; animation-name: carmen-palavra; }
 @keyframes carmen-palavra { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+/* Rodada 47, item 5: HUD mínimo no Lugar. Ficam o nome do lugar, o relógio, as gotas de Fome e dois botões
+   (Mapa e Caderno). O quadro do caso aparece ao passar no Caderno; os outros botões, ao passar na barra
+   (os atalhos de teclado continuam). A pista nova voa da fala até o Caderno em 1 s, e o botão pula. */
+.tela-jogo.bg2.tela-caso.carmen .hud-dicas { display: none; }
+.tela-jogo.bg2.tela-caso.carmen .hud-plano.quadro-caso { opacity: 0; pointer-events: none; translate: 0 -6px; transition: opacity 180ms ease, translate 180ms ease; }
+.tela-jogo.bg2.tela-caso.carmen:has(.hud-botoes [data-hud="quadro"]:is(:hover, :focus-visible)) .hud-plano.quadro-caso,
+.tela-jogo.bg2.tela-caso.carmen .hud-plano.quadro-caso:is(:hover, :focus-within) { opacity: 1; pointer-events: auto; translate: 0 0; }
+.tela-jogo.bg2.tela-caso.carmen .hud-botoes:not(:hover, :focus-within) > [data-hud]:not([data-hud="viajar"], [data-hud="quadro"]) { display: none; }
+.tela-caso.carmen .pista-voa { transition: transform 1s cubic-bezier(0.5, 0, 0.3, 1), opacity 1s ease-in; }
+.tela-caso.carmen .hud-botoes .recebeu { animation: caderno-pula 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes caderno-pula { 0% { translate: 0 0; } 35% { translate: 0 -10px; scale: 1.08; } 100% { translate: 0 0; scale: 1; } }
+/* No celular, a figura grande da conversa já mostra quem fala: a polaroide sai da caixa (a da Xerife, na abertura, fica). */
+body.celular .tela-jogo.bg2.tela-caso.carmen .dialogo-caso:not(.abertura-rota) > .cartao-testemunha { display: none; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao:not(.abertura-rota) { padding-left: revert-layer; }
+/* "Ninguém viu" no celular: o carimbo fica dentro da tela e a frase de volta abre espaço para ele. */
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .carimbo { right: 6px; }
+body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { padding-right: 128px; }
