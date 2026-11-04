@@ -21,7 +21,7 @@ SAIDA = Path(sys.argv[1]) if len(sys.argv) > 1 else RAIZ / 'img' / 'gente'
 LIMITE_KB = 150
 
 
-def recortar(caminho: Path) -> Image.Image:
+def recortar(caminho: Path, caixa=None) -> Image.Image:
     rgb = np.asarray(Image.open(caminho).convert('RGB')).astype(np.float32)
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     verde = g - np.maximum(r, b)
@@ -32,7 +32,7 @@ def recortar(caminho: Path) -> Image.Image:
     g2 = np.where(borda & (verde > 0), np.maximum(r, b), g)
     saida = np.dstack([r, g2, b, alfa * 255]).clip(0, 255).astype(np.uint8)
     im = Image.fromarray(saida, 'RGBA')
-    caixa = Image.fromarray((alfa > 0.5).astype(np.uint8) * 255).getbbox()
+    caixa = caixa or Image.fromarray((alfa > 0.5).astype(np.uint8) * 255).getbbox()
     return im.crop(caixa)
 
 
@@ -42,6 +42,45 @@ def gravar_webp(im: Image.Image, destino: Path):
         if destino.stat().st_size <= LIMITE_KB * 1024:
             return q
     return q
+
+
+def avulsa(origem: Path, nome: str, trocas=()):
+    """Uma figura nova: recorta origem e grava img/gente/<nome>.webp e .png. trocas: [(x0, y0, x1, y1)] de
+    pixels verdes na pessoa (uma pulseira verde) que viram laranja antes do recorte, para não abrir buraco."""
+    im = Image.open(origem).convert('RGB')
+    if trocas:
+        a = np.asarray(im).astype(np.int16).copy()
+        for x0, y0, x1, y1 in trocas:
+            q = a[y0:y1, x0:x1]
+            verde = (q[..., 1] - np.maximum(q[..., 0], q[..., 2])) > 18
+            # Laranja com o mesmo brilho: troca R e G e baixa o azul.
+            r, g, b = q[..., 0].copy(), q[..., 1].copy(), q[..., 2].copy()
+            q[..., 0] = np.where(verde, g, r)
+            q[..., 1] = np.where(verde, (g * 0.55).astype(np.int16), g)
+            q[..., 2] = np.where(verde, (b * 0.4).astype(np.int16), b)
+        im = Image.fromarray(a.clip(0, 255).astype(np.uint8))
+    tmp = SAIDA / f'_{nome}.png'
+    im.save(tmp)
+    fig = recortar(tmp)
+    tmp.unlink()
+    q = gravar_webp(fig, SAIDA / f'{nome}.webp')
+    fig.resize((max(1, round(fig.width * 360 / fig.height)), 360), Image.LANCZOS).save(SAIDA / f'{nome}.png', optimize=True)
+    print(f'{nome}: {fig.width}x{fig.height}, webp q{q}, {(SAIDA / f"{nome}.webp").stat().st_size // 1024} KB')
+
+
+def segundo_quadro(base: Path, quadro2: Path, nome: str):
+    """O quadro 2 de uma figura animada (o sambista batendo no pandeiro): reduzido ao tamanho do original e
+    recortado com a MESMA caixa do quadro 1, para a troca seca não mexer o corpo. Grava <nome>.webp."""
+    rgb = np.asarray(Image.open(base).convert('RGB')).astype(np.float32)
+    verde = rgb[..., 1] - np.maximum(rgb[..., 0], rgb[..., 2])
+    caixa = Image.fromarray((np.clip(1 - (verde - 18) / 42, 0, 1) > 0.5).astype(np.uint8) * 255).getbbox()
+    tmp = SAIDA / f'_{nome}.png'
+    Image.open(quadro2).convert('RGB').resize(Image.open(base).size, Image.LANCZOS).save(tmp)
+    fig = recortar(tmp, caixa)
+    tmp.unlink()
+    q = gravar_webp(fig, SAIDA / f'{nome}.webp')
+    fig.resize((max(1, round(fig.width * 360 / fig.height)), 360), Image.LANCZOS).save(SAIDA / f'{nome}.png', optimize=True)
+    print(f'{nome}: {fig.width}x{fig.height}, webp q{q}, {(SAIDA / f"{nome}.webp").stat().st_size // 1024} KB')
 
 
 def main():

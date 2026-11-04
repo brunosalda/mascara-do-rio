@@ -821,7 +821,14 @@ body.celular .carmen .ficha-ciranda.deitada { width: 100%; min-height: 0; }
 .licenca-campos div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; align-items: baseline; padding-bottom: 4px; border-bottom: 1px dotted rgba(28, 23, 19, 0.4); }
 .licenca-campos dd { margin: 0; }
 .licenca-autorizo { margin: 6px 0 0; }
-.licenca-assina { margin: 0; display: grid; justify-items: start; }
+.licenca-assina { margin: 0; display: grid; justify-items: start; grid-template-columns: auto 1fr; column-gap: 12px; align-items: end; }
+.licenca-assina .xerife-rosto { grid-row: span 2; align-self: center; }
+.licenca-assina :is(span, small) { grid-column: 2; }
+/* O rosto da Xerife: círculo de 56 px (Licença e mensagens do caso). */
+.xerife-rosto { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px rgba(242, 163, 58, 0.6), 0 3px 8px rgba(0, 0, 0, 0.5); }
+li.reg-xerife { display: grid; grid-template-columns: 56px 1fr; column-gap: 10px; align-items: center; }
+li.reg-xerife > .xerife-rosto { grid-row: span 2; }
+.cartao-testemunha.xerife .ct-foto { background: #1a1410 url('../img/carmen/xerife-retrato.webp') 50% 40% / cover no-repeat; }
 .licenca-assina span { font: 700 40px/1 var(--f-mao); color: #1d2a55; rotate: -4deg; }
 .licenca-assina small { padding-top: 2px; min-width: 160px; border-top: 1px solid var(--c-tinta); font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-tinta-suave); }
 /* O carimbo G cai sobre a assinatura; até lá, não aparece. Reaberta pelo Arquivo, já está no papel. */

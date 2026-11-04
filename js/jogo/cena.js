@@ -26,6 +26,31 @@ const VULTO = '<svg viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy=
 const FIGURA = 0.94;            // a figura ocupa 94% da altura do quadro da folha
 const PASSADA = 0.9;            // uma passada completa anda 0,9 altura do boneco
 const ZOOM = 1.06;
+// Figuras com um segundo quadro (Rodada 47): a troca é seca, sem esmaecer (esmaecer mostra duas mãos).
+const QUADRO_2 = { 'lapa-sambista': 'lapa-sambista-2' };
+// Uma batida: o quadro 2 por 150 a 200 ms e a volta ao 1. Duas ou três batidas seguidas, e uma pausa de 3 a 6 s.
+// A figura, o reflexo e as quatro máscaras de luz trocam juntos, no mesmo quadro.
+function animarQuadros(el, a, b) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches && !document.body.classList.contains('movimento-forcado')) return;
+  new Image().src = b;
+  const trocar = (url) => {
+    for (const i of el.querySelectorAll('img')) i.src = url;
+    for (const s of el.querySelectorAll('.pessoa-figura > span[style*="mask"]')) { s.style.webkitMaskImage = `url('${url}')`; s.style.maskImage = `url('${url}')`; }
+  };
+  const ciclo = () => {
+    if (!el.isConnected) return;
+    const n = 2 + Math.floor(Math.random() * 2);
+    let t = 0;
+    for (let k = 0; k < n; k++) {
+      const dur = 150 + Math.random() * 50;
+      setTimeout(() => trocar(b), t);
+      setTimeout(() => trocar(a), t + dur);
+      t += dur + 160 + Math.random() * 90;
+    }
+    setTimeout(ciclo, t + 3000 + Math.random() * 3000);
+  };
+  setTimeout(ciclo, 1500 + Math.random() * 3000);
+}
 const ZOOM_ALTO = 1.55;          // vista do alto: a área é maior que a tela e a câmera rola por ela
 const ZOOM_ALTO_CELULAR = 1.15;
 const VEL_CAMERA = 900;          // px por segundo, com setas ou na borda da tela
@@ -662,6 +687,7 @@ export function montarCena(raiz, {
       el.style.setProperty('--luz-gente', (0.72 + Math.min(1, luz) * 0.5).toFixed(2));
     }
     mundo.appendChild(el);
+    if (figura && QUADRO_2[figura]) animarQuadros(el, src, figuraLeve(`img/gente/${QUADRO_2[figura]}.png`));
     const p = { id: g.id ? `pessoa-${g.id}` : `pessoa-${i}`, tipo: 'pessoa', tipoGente: g.tipo, x: g.x, y: g.y, rotulo: nomeP, acao: `Falar com: ${nomeP}`, anda: figura ? null : g.anda, dir: g.dir || ((i % 2) ? -1 : 1), el, parado: 0, caso: genteDoCaso ? g : null, falas: g.falas || null };
     return p;
   });

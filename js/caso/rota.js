@@ -1241,7 +1241,7 @@ export function documentoLicenca(raiz, { caso, suspeito, numero = 1, hora = '', 
           </div>
           <dl class="licenca-campos">${CAMPOS_LICENCA.map(([k, r]) => `<div><dt>${esc(r)}</dt><dd class="datilo">${esc(nome(k, suspeito.tracos[k]))}</dd></div>`).join('')}</dl>
           <p class="licenca-autorizo datilo">${portador ? `Autorizo ${esc(portador)} a caçar` : 'Autorizo a caça'}. ${esc(cidade)}${hora ? `, ${esc(hora)}` : ''}.</p>
-          <p class="licenca-assina"><span>Iolanda</span><small>Xerife</small></p>
+          <p class="licenca-assina"><img class="xerife-rosto" src="img/carmen/xerife-rosto.webp" alt="" width="56" height="56"><span>Iolanda</span><small>Xerife</small></p>
           <span class="carimbo carimbo-g licenca-carimbo" aria-hidden="true">Licença</span>
           <button type="button" class="btn destaque licenca-guardar" data-guardar inert>Guardar a Licença</button>
         </article>`;

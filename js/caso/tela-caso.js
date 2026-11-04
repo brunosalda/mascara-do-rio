@@ -241,7 +241,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const g = grupoVoz(voz);
     return g === 'besta' ? 'fome' : g === 'alma' ? 'humanidade' : g === 'outra' ? 'voce' : 'habilidade';
   };
-  const linhaHtml = ({ voz, texto }) => `<li class="reg-${classeReg(voz)}"><b>${esc(voz)}</b> ${esc(texto)}</li>`;
+  // As mensagens da Xerife levam o rosto dela num círculo (Rodada 47, imagem gerada de graça e aprovada).
+  const linhaHtml = ({ voz, texto }) => `<li class="reg-${classeReg(voz)}${/XERIFE/.test(voz) ? ' reg-xerife' : ''}">${/XERIFE/.test(voz) ? '<img class="xerife-rosto" src="img/carmen/xerife-rosto.webp" alt="" width="56" height="56">' : ''}<b>${esc(voz)}</b> ${esc(texto)}</li>`;
   function anotar(voz, texto) {
     const ultima = st.registro.at(-1);
     if (ultima && ultima.voz === voz && ultima.texto === texto) return;
@@ -2407,11 +2408,11 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
         } }],
       });
       cam.el.classList.add('abertura-rota');
-      // Quem liga é a Xerife: o mesmo cartão de foto da conversa (sem retrato pintado, a silhueta). Na tira, os quadros
+      // Quem liga é a Xerife: o mesmo cartão de foto da conversa, com o retrato dela. Na tira, os quadros
       // já mostram a cena, e o cartão fica de fora.
       if (paineis) cam.el.classList.add('com-tira');
       const foto = document.createElement('figure');
-      foto.className = 'cartao-testemunha sem-figura xerife';
+      foto.className = 'cartao-testemunha xerife';
       foto.setAttribute('aria-hidden', 'true');
       foto.innerHTML = '<span class="ct-foto"></span><figcaption>Iolanda</figcaption><small>Xerife</small>';
       if (!paineis) { cam.el.prepend(foto); cam.el.classList.add('com-cartao'); }
