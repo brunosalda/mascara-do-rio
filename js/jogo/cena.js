@@ -314,14 +314,18 @@ export function montarCena(raiz, {
     const el = camadaPontos.querySelector(`[data-ponto="${CSS.escape(p.id)}"]`);
     if (el) { el.classList.remove('acionado'); void el.offsetWidth; el.classList.add('acionado'); }
     som.anel?.();
-    setTimeout(() => {
+    const seguir = () => {
       interagindo = false;
       if (vivo && !camadaAberta()) aoInteragir?.(p);
       // Outra caixa abriu antes (a tira de abertura, no mesmo clique): a câmera não mira esta pessoa.
       else if (pontoDaConversa === p) { p.el?.classList.remove('falando'); pontoDaConversa = null; }
       // Sem caixa de conversa (detalhe em balão): endireita logo, sem esperar.
       setTimeout(() => { if (!conversa && pontoDaConversa === p) { boneco.classList.remove('inclinado'); pontoDaConversa = null; } }, 600);
-    }, reduzido() ? 100 : semPersonagem && cena.closest('.carmen') ? 40 : 150);
+    };
+    // Carmen 2026, sem personagem: a conversa abre no próximo quadro (meta: menos de 100 ms do clique).
+    // O quadro de espera deixa o mesmo clique abrir antes a tira de abertura, se for o caso.
+    if (semPersonagem && cena.closest('.carmen') && !reduzido()) requestAnimationFrame(seguir);
+    else setTimeout(seguir, reduzido() ? 100 : 150);
   }
 
   // --- Voz interior que comenta ao passar perto -------------------------------------------------
@@ -707,9 +711,13 @@ export function montarCena(raiz, {
   // encolhem por igual (h' = hMin' + (h - hMin) × k). Quem está mais longe continua sempre menor.
   const gentePerto = cena.closest('.carmen') && gente.length;
   let alturaGente = altura;
-  function escalarGente() {
+  let zGente = 0;
+  // z: o zoom em que a cena fica parada. Por padrão, o da chegada (nível do meio); se a câmera repousa mais
+  // longe (a primeira cena, em alguns casos), vale o zoom real, para a mais distante não cair abaixo de 120 px.
+  function escalarGente(z = niveisZoom()[1]) {
     if (!gentePerto) return;
-    const px = mh * niveisZoom()[1];
+    zGente = z;
+    const px = mh * z;
     if (!px) return;
     const hs = gente.map((q) => altura(q.y));
     const hMin = Math.min(...hs); const hMax = Math.max(...hs);
@@ -719,7 +727,7 @@ export function montarCena(raiz, {
     alturaGente = (y) => hMin * f + (altura(y) - hMin) * f * k;
   }
   escalarGente();
-  if (gentePerto) window.addEventListener('resize', () => { escalarGente(); gente.forEach(posicionarPessoa); });
+  if (gentePerto) window.addEventListener('resize', () => { escalarGente(Math.min(niveisZoom()[1], zGente || 9)); gente.forEach(posicionarPessoa); });
   function posicionarPessoa(p) {
     p.el.style.left = pct(p.x);
     p.el.style.top = pct(p.y);
@@ -1886,6 +1894,10 @@ export function montarCena(raiz, {
       : geo.alto && cena.closest('.carmen') ? Math.max(ZOOM_CONVERSA, nivelZoom()) : ZOOM_CONVERSA;
     const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? zConversa : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * (camConversa ? 6 : 4)) : 1);
+    if (gentePerto && !conversa && Math.abs(zAlvo - cam.z) < 0.01) {
+      const zr = Math.min(niveisZoom()[1], zAlvo);
+      if (Math.abs(zr - zGente) > 0.02) { escalarGente(zr); gente.forEach(posicionarPessoa); }
+    }
     const W = mw * cam.z;
     const H = mh * cam.z;
     const h = altura(pos.y);
@@ -1966,9 +1978,12 @@ export function montarCena(raiz, {
     }
     if (!camConversa) alvoX = limitar(alvoX, vw - W, 0);
     const folgaPeCam = geo.alto && document.body.classList.contains('celular') && !document.body.classList.contains('deitado') && !cena.closest('.carmen') ? 72 : 0;
-    alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H - folgaPeCam, 0);
+    // Conversa pela câmera: o Y fica livre como o X. A pintura pode subir até o pé dela ficar a 58% da tela
+    // (a caixa e a faixa de baixo cobrem a borda), para os pés de quem fala ficarem sempre acima da caixa.
+    if (camConversa) alvoY = limitar(alvoY, vh * 0.58 - H, 0);
+    else alvoY = conversa && estreito ? Math.min(0, alvoY) : limitar(alvoY, vh - H - folgaPeCam, 0);
     // No Carmen 2026, o pé da pintura não sobe acima da folha da conversa: sem faixa vazia entre a cena e a fala.
-    if (conversa && estreito && cena.closest('.carmen')) {
+    if (conversa && estreito && !camConversa && cena.closest('.carmen')) {
       const folha = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso');
       if (folha) alvoY = Math.min(0, Math.max(alvoY, folha.getBoundingClientRect().top - cena.getBoundingClientRect().top - H));
     }

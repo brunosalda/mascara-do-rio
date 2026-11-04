@@ -378,6 +378,8 @@ body.em-conversa .tela-caso.carmen .palco::before, body.em-conversa .tela-caso.c
 .tela-caso.carmen .cena :is(.pintura, .pintura-fundo, .pintura-cinza, .pessoa:not(.falando), .cena-pontos) { transition: filter 600ms ease; }
 body.em-conversa .tela-caso.carmen .cena :is(.pintura, .pintura-fundo, .pintura-cinza) { filter: blur(3px) brightness(0.62); }
 body.em-conversa .tela-caso.carmen .cena :is(.pessoa:not(.falando), .cena-pontos) { filter: blur(3px) brightness(0.62); }
+/* Quem fala recebe luz de destaque (brilho de pelo menos 0,95), com o contorno de sódio: o rosto e as mãos se leem. */
+body.em-conversa .tela-caso.carmen .cena .pessoa.pessoa-pintada.falando .pessoa-figura img { filter: brightness(max(0.95, calc(var(--luz-gente, 0.8) * 1.08))) saturate(0.95) contrast(1.05) drop-shadow(0 0 2px rgba(242, 163, 58, 0.95)) drop-shadow(0 0 7px rgba(242, 163, 58, 0.5)); transition: filter 400ms ease; }
 body.em-conversa .tela-caso.carmen .cena .fala-solta { display: none; }
 /* A chuva dentro da tela do caso: logo acima da cena, abaixo das setas, das dicas, do HUD e das janelas. */
 .tela-caso.carmen > #chuva { position: absolute; inset: 0; z-index: 140; }
