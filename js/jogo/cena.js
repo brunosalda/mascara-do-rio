@@ -668,6 +668,7 @@ export function montarCena(raiz, {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = `pessoa pessoa-${g.tipo}`;
+    if (g.id) el.dataset.pid = g.id; // Rodada 47: a tela da leitura acha a figura pela pessoa
     el.setAttribute('aria-label', g.nome ? `${g.nome}${g.sub ? `, ${g.sub}` : ''}` : (t?.rotulo || g.tipo));
     el.title = nomeP;
     const figuras = FIGURAS_GENTE[g.tipo];
@@ -1918,7 +1919,9 @@ export function montarCena(raiz, {
     // Carmen 2026 (Rodada 47): a conversa é pela câmera. Ela chega perto de quem fala até a figura ter 60% da
     // altura da tela no computador (27% no celular) e põe os pés dela logo acima da caixa.
     const camConversa = conversa && semPersonagem && pontoDaConversa?.el && cena.closest('.carmen');
-    const zConversa = camConversa ? limitar(((estreito ? 0.33 : 0.6) * vh) / Math.max(40, pontoDaConversa.el.offsetHeight), nivelZoom(), 3.2)
+    // A figura cabe entre a faixa do alto (72 px) e a caixa da conversa, para a leitura ver a pessoa inteira (rodada 47).
+    const topoCaixaConversa = camConversa ? (() => { const cx = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso'); return cx ? cx.getBoundingClientRect().top - cena.getBoundingClientRect().top : vh * 0.62; })() : 0;
+    const zConversa = camConversa ? limitar(Math.min((estreito ? 0.33 : 0.6) * vh, topoCaixaConversa - 24 - 72) / Math.max(40, pontoDaConversa.el.offsetHeight), nivelZoom(), 3.2)
       : geo.alto && cena.closest('.carmen') ? Math.max(ZOOM_CONVERSA, nivelZoom()) : ZOOM_CONVERSA;
     const zAlvo = geo.alto && !foco && !conversa ? nivelZoom() : focoBeijo ? 1.25 : foco ? Math.max(ZOOM, 1.12) : conversa ? zConversa : marcado && !estreito ? Math.max(ZOOM, 1.1) : (estreito ? 1 : ZOOM);
     cam.z += (zAlvo - cam.z) * (cameraPronta ? Math.min(1, dt * (camConversa ? 6 : 4)) : 1);
@@ -1976,10 +1979,8 @@ export function montarCena(raiz, {
       alvoX = camLivre.x;
       alvoY = camLivre.y;
     } else if (camConversa) {
-      const caixa = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso');
-      const topo = caixa ? caixa.getBoundingClientRect().top - cena.getBoundingClientRect().top : vh * 0.62;
       alvoX = vw * 0.5 - pontoDaConversa.x * W;
-      alvoY = topo - 24 - pontoDaConversa.y * H;
+      alvoY = topoCaixaConversa - 24 - pontoDaConversa.y * H;
     } else if (conversa && !estreito && ladoDialogo === 'baixo') {
       // O diálogo sobe do painel de baixo: o personagem vai para o alto, no meio.
       // No Carmen 2026, o meio é o do par: o personagem e quem fala com ele.

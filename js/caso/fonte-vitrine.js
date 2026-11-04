@@ -141,10 +141,12 @@ function aplicar(ids) {
 const visivel = (ct) => todos(ct.dados.ponto?.requer, ach()) && !(algum(ct.dados.ponto?.escondeSe, ach()) && pr.feitos[ct.chave] !== 'ok');
 function topicos(pessoa) {
   const a = ach();
+  const fechada = !!lerDe(pessoa) && (pr.jeitos || {})[pessoa] !== 'aberta'; // Rodada 47: antes do jeito certo, só a Dominação
   return dados.conteudos.filter((ct) => ct.tipo === 'topico' && ct.pessoa === pessoa).sort((x, y) => x.ordem - y.ordem)
     .filter((ct) => {
       const d = ct.dados;
       const est = pr.feitos[ct.chave] || 'novo';
+      if (fechada && !d.poderTopico) return false;
       if (!todos(ct.requer, a)) return false;
       if (d.requerAlgum && !algum(d.requerAlgum, a)) return false;
       if (d.requerQuantos && d.requerQuantos.de.filter((x) => a.includes(x)).length < d.requerQuantos.n) return false;
@@ -178,6 +180,89 @@ function situacao(a, chaveI) {
   }
   return { pode: true };
 }
+// --- Rodada 47: Ler a pessoa e Apurar os ouvidos (caso_ler, caso_observar, caso_jeito, caso_ouvidos, caso_escutar, caso_guardar_voz)
+const lerDe = (pessoa) => dados.conteudos.find((ct) => ct.tipo === 'ler' && ct.pessoa === pessoa)?.dados || null;
+const naCena = (pessoa) => { const pe = dados.pessoas.find((p) => p.id === pessoa); if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pessoa)) throw erro('conteudo-inexistente'); };
+function leitura(pessoa) {
+  const l = lerDe(pessoa);
+  if (!l) return { ok: true, ler: null };
+  const vistos = (pr.observados || {})[pessoa] || [];
+  let notou = false;
+  const detalhes = l.detalhes.map((d, i) => { if (!vistos.includes(i)) return { em: d.em }; if (d.indica) notou = true; return { em: d.em, ve: d.ve }; });
+  return { ok: true, ler: { detalhes, notou: notou ? l.certo : null, estado: (pr.jeitos || {})[pessoa] || 'nova' } };
+}
+function escutaAqui() {
+  const a = ach();
+  return dados.conteudos.filter((ct) => ct.tipo === 'escuta' && ct.lugar === pr.lugar).sort((x, y) => (x.chave < y.chave ? -1 : 1))
+    .find((ct) => todos(ct.requer, a) && !algum(ct.dados.escondeSe, a)) || null;
+}
+export async function ler(capitulo, personagem, pessoa) { progresso(); return copia(leitura(pessoa)); }
+export async function observar(capitulo, personagem, pessoa, n) {
+  progresso(); naCena(pessoa);
+  const l = lerDe(pessoa);
+  if (!l || n < 0 || n >= l.detalhes.length) throw erro('conteudo-inexistente');
+  const obs = (pr.observados ||= {});
+  const vistos = (obs[pessoa] ||= []);
+  let min = 0; let ev = [];
+  if (!vistos.includes(n)) { if (amanheceu()) throw erro('amanheceu'); min = 2; ev = tempo(min); vistos.push(n); }
+  salvar();
+  return copia({ ...leitura(pessoa), min, eventos: ev, estado: estado() });
+}
+export async function jeito(capitulo, personagem, pessoa, j) {
+  progresso();
+  if (!['calma', 'direto', 'firme'].includes(j)) throw erro('jeito-invalido');
+  naCena(pessoa);
+  const l = lerDe(pessoa);
+  if (!l) throw erro('conteudo-inexistente');
+  const jeitos = (pr.jeitos ||= {});
+  if (jeitos[pessoa]) return { ok: true, estado: jeitos[pessoa], min: 0, repetido: true };
+  if (amanheceu()) throw erro('amanheceu');
+  if (j === l.certo) { jeitos[pessoa] = 'aberta'; salvar(); return { ok: true, estado: 'aberta', fechou: false, min: 0 }; }
+  const mins = dados.conteudos.filter((ct) => ct.tipo === 'topico' && ct.pessoa === pessoa && ['viu', 'nada'].includes(ct.dados.id)).map((ct) => ct.dados.min || 0);
+  const min = mins.length ? Math.max(...mins) : 10;
+  const ev = tempo(min);
+  jeitos[pessoa] = 'fechada';
+  salvar();
+  return copia({ ok: true, estado: 'fechada', fechou: true, min, eventos: ev, estado_caso: estado() });
+}
+export async function ouvidos() {
+  progresso();
+  const esc = escutaAqui();
+  if (!esc) return { tem: false };
+  const est = (pr.escutas || {})[esc.chave]?.estado || 'nova';
+  return { tem: true, estado: est, custo: est === 'nova' ? 5 : 0 };
+}
+export async function escutar() {
+  progresso();
+  const esc = escutaAqui();
+  if (!esc) throw erro('conteudo-inexistente');
+  const escutas = (pr.escutas ||= {});
+  let est = escutas[esc.chave];
+  if (est?.estado === 'feita') return { ok: true, estado: 'feita', min: 0 };
+  let min = 0; let ev = [];
+  if (!est) { if (amanheceu()) throw erro('amanheceu'); min = 5; ev = tempo(min); est = escutas[esc.chave] = { estado: 'aberta', inuteis: [] }; }
+  const ausp = (numeros?.disciplinas?.auspicios || 0) >= 1 || (numeros?.poderes || []).includes('sentidos-agucados');
+  salvar();
+  return copia({ ok: true, estado: 'aberta', min, eventos: ev, guardadas: est.inuteis, auspicio: ausp, trava: ausp ? 0.6 : 1.1, raio: ausp ? 1.6 : 1,
+    vozes: esc.dados.vozes.map((v) => ({ id: v.id, quem: v.quem, texto: v.texto })), estado_caso: estado() });
+}
+export async function guardarVoz(capitulo, personagem, voz) {
+  progresso();
+  const esc = escutaAqui();
+  if (!esc) throw erro('conteudo-inexistente');
+  const est = (pr.escutas || {})[esc.chave];
+  if (!est) throw erro('escute-antes');
+  if (est.estado === 'feita') return { ok: true, estado: 'feita', min: 0 };
+  const v = esc.dados.vozes.find((x) => x.id === voz);
+  if (!v) throw erro('conteudo-inexistente');
+  const util = (v.pistas || []).length > 0;
+  let min = 0; let ev = []; let novas = [];
+  if (util) { novas = aplicar(v.pistas); est.estado = 'feita'; }
+  else if (!est.inuteis.includes(voz)) { if (amanheceu()) throw erro('amanheceu'); min = 3; ev = tempo(min); est.inuteis.push(voz); }
+  salvar();
+  return copia({ ok: true, util, estado: est.estado, min, novas, eventos: ev, estado_caso: estado() });
+}
+
 const resultadosDe = (ct) => (ct.tipo === 'exame' ? ct.dados.resultados : dados.pessoas.find((p) => p.id === ct.pessoa)?.dados.resultados) || {};
 
 // --- as funções do caso (mesmos nomes e respostas de fonte-banco.js)
@@ -291,6 +376,7 @@ function agirCom(chaveC, abordagem, usarVontade) {
   } else {
     const pe = dados.pessoas.find((p) => p.id === ct.pessoa);
     if (!pe || pe.lugar !== pr.lugar || pr.escondidos.includes(pe.id)) throw erro('fora-do-lugar');
+    if (lerDe(ct.pessoa) && !d.poderTopico && (pr.jeitos || {})[ct.pessoa] !== 'aberta') throw erro('escolha-o-jeito');
     if (!topicos(ct.pessoa).some((t) => t.chave === chaveC)) throw erro('conteudo-inexistente');
   }
   const resultados = resultadosDe(ct);
@@ -346,6 +432,7 @@ function agirCom(chaveC, abordagem, usarVontade) {
   } else if (a.poder || a.disciplina) {
     const sobe = d10() < 6;
     if (sobe) pr.fome = Math.min(5, pr.fome + 1);
+    if (d.poderTopico && lerDe(ct.pessoa)) (pr.jeitos ||= {})[ct.pessoa] = 'aberta'; // a Dominação abre quem foi fechado
     sangue = { poder: a.poder ?? null, disciplina: a.disciplina ?? null, fomeSobe: sobe };
   }
   const r = resultados[deu ? a.sucesso : a.falha] || {};

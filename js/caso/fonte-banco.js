@@ -36,6 +36,9 @@ const ERROS = {
   'sem-pista': 'Você ainda não tem essa pista.',
   'revanche-usada': 'A revanche deste capítulo já foi usada.',
   'ainda-e-noite': 'A revanche só vale depois do amanhecer.',
+  'escolha-o-jeito': 'Escolha antes o jeito de perguntar.',
+  'jeito-invalido': 'Esse jeito de perguntar não existe.',
+  'escute-antes': 'Apure os ouvidos antes de guardar uma frase.',
 };
 
 export class ErroDoCaso extends Error {
@@ -111,6 +114,17 @@ export const xerife = (capitulo, personagem, pista) => chamar('caso_xerife', { .
 // A revanche depois do amanhecer (uma por capítulo): { revanche, estado }.
 export const recomecar = (capitulo, personagem) => chamar('caso_recomecar', base(capitulo, personagem));
 export const cercar = (capitulo, personagem) => chamar('caso_cercar', base(capitulo, personagem));
+// Rodada 47, Ler a pessoa: { ler: { detalhes: [{ em, ve? }], notou, estado } } (ler null para quem não tem leitura).
+export const ler = (capitulo, personagem, pessoa) => chamar('caso_ler', { ...base(capitulo, personagem), p_pessoa: pessoa });
+// Observar o detalhe n (2 minutos na primeira vez): a leitura de novo, mais { min, eventos, estado }.
+export const observar = (capitulo, personagem, pessoa, n) => chamar('caso_observar', { ...base(capitulo, personagem), p_pessoa: pessoa, p_n: n });
+// O jeito de perguntar ('calma', 'direto', 'firme'): { estado: 'aberta' | 'fechada', fechou, min, eventos, estado_caso }.
+export const jeito = (capitulo, personagem, pessoa, j) => chamar('caso_jeito', { ...base(capitulo, personagem), p_pessoa: pessoa, p_jeito: j });
+// Apurar os ouvidos: o botão ({ tem, estado, custo }), escutar ({ vozes, trava, raio, guardadas, min, eventos, estado_caso })
+// e guardar uma frase ({ util, estado, min, novas, eventos, estado_caso }).
+export const ouvidos = (capitulo, personagem) => chamar('caso_ouvidos', base(capitulo, personagem));
+export const escutar = (capitulo, personagem) => chamar('caso_escutar', base(capitulo, personagem));
+export const guardarVoz = (capitulo, personagem, voz) => chamar('caso_guardar_voz', { ...base(capitulo, personagem), p_voz: voz });
 export const rankingDoCapitulo = (capitulo) => chamar('caso_ranking_capitulo', { p_capitulo: capitulo });
 
 // Pulso do tempo ativo: a cada 60 s, só com a aba visível. Devolve a função que para o pulso.

@@ -1554,3 +1554,66 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .dialogo-caso.com-cartao:not(.abert
 /* "Ninguém viu" no celular: o carimbo fica dentro da tela e a frase de volta abre espaço para ele. */
 body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .carimbo { right: 6px; }
 body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { padding-right: 128px; }
+
+/* Rodada 47, item 3: Ler a pessoa. Círculos no corpo de quem fala (antes do jeito de perguntar), que pulsam até
+   serem observados; o visto fica cheio e parado. Na caixa, o jeito marcado por "você notou algo" ganha a cor da pista. */
+.tela-caso.carmen .cena .ler-circulos { position: absolute; translate: -50% -100%; pointer-events: none; }
+.tela-caso.carmen .cena .ler-circulo {
+  position: absolute; padding: 0; background: transparent; width: 15%; min-width: 4px; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  border: 2px solid rgba(255, 226, 170, 0.95); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 0 10px rgba(242, 163, 58, 0.55);
+  pointer-events: auto; cursor: zoom-in; animation: ler-pulsa 1.6s ease-in-out infinite;
+}
+.tela-caso.carmen .cena .ler-circulo.visto { animation: none; cursor: default; background: rgba(242, 163, 58, 0.28); border-color: rgba(242, 163, 58, 0.9); }
+.tela-caso.carmen .cena .ler-circulo:is(:hover, :focus-visible) { border-color: #fff; }
+@keyframes ler-pulsa { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tela-caso.carmen .cena .ler-circulo { animation: none; } }
+.dialogo-caso .escolhas-caso .etiqueta-jeito { opacity: 0.7; font-style: italic; }
+.dialogo-caso .escolhas-caso .etiqueta-notou { color: #f2a33a; font-weight: 600; }
+.dialogo-caso .escolhas-caso li.notou button { border-color: rgba(242, 163, 58, 0.7); }
+
+/* Rodada 47, item 4: Apurar os ouvidos. O botão do ouvido na cena; na escuta, a cena perde a cor e as vozes ficam
+   borradas até o ouvido chegar perto (--borrao, --nitidez); o anel em volta enche enquanto trava (--trava). */
+.tela-caso.carmen .botao-ouvidos {
+  position: absolute; left: 16px; bottom: 76px; z-index: 6; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px;
+  border: 1px solid rgba(242, 163, 58, 0.55); border-radius: 999px; background: rgba(14, 10, 8, 0.82); color: #f6e6c0;
+  font: 600 0.85rem/1 var(--fonte-ui, system-ui, sans-serif); cursor: pointer;
+}
+.tela-caso.carmen .botao-ouvidos[hidden] { display: none; }
+.tela-caso.carmen .botao-ouvidos svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.tela-caso.carmen .botao-ouvidos small { padding: 2px 6px; border-radius: 6px; background: #f2a33a; color: #1a1208; font-size: 0.7rem; }
+.tela-caso.carmen .botao-ouvidos small:empty { display: none; }
+.tela-caso.carmen .botao-ouvidos:is(:hover, :focus-visible) { border-color: #f2a33a; color: #fff; }
+.tela-caso.carmen .botao-ouvidos:disabled { opacity: 0.5; cursor: default; }
+.tela-caso.carmen.escutando .botao-ouvidos, body.em-conversa .tela-caso.carmen .botao-ouvidos { display: none; }
+.tela-caso.carmen.escutando .cena .pintura, .tela-caso.carmen.escutando .cena .pessoa { filter: grayscale(1) brightness(0.6); transition: filter 600ms ease; }
+.tela-caso.carmen.escutando .cena .pessoa { pointer-events: none; }
+.tela-caso.carmen.escutando .palco { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%23120c08' fill-opacity='0.6' stroke='%23f2a33a' stroke-width='1'/%3E%3Cpath d='M7 9.5a5 5 0 0 1 10 0c0 2.6-1.6 3.6-2.6 4.6-.9.9-1 2-1.4 3.2A2.8 2.8 0 0 1 10.3 19c-1.3 0-2.3-.8-2.3-2M10 10a2 2 0 0 1 4 0c0 1-.7 1.5-1.4 2' fill='none' stroke='%23f6e6c0' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") 18 18, crosshair; }
+.tela-caso.carmen .escuta-vozes { position: absolute; inset: 0; pointer-events: none; z-index: 2000; }
+.tela-caso.carmen .voz-borrada {
+  position: absolute; translate: -50% -100%; width: max-content; max-width: 260px; padding: 8px 12px; border-radius: 12px;
+  background: rgba(14, 10, 8, 0.78); border: 1px solid rgba(242, 163, 58, calc(0.25 + 0.5 * var(--nitidez, 0))); color: #f6e6c0; text-align: center;
+  scale: calc(1 / var(--zoom-cena, 1)); transform-origin: 50% 100%; font: italic 0.95rem/1.35 var(--fonte-texto, Georgia, serif);
+  box-shadow: 0 0 0 calc(3px * var(--trava, 0)) rgba(242, 163, 58, 0.9), 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+.tela-caso.carmen .voz-borrada::after { content: ''; position: absolute; left: 50%; top: 100%; translate: -50% 0; border: 7px solid transparent; border-top-color: rgba(14, 10, 8, 0.78); }
+.tela-caso.carmen .voz-borrada .voz-texto { display: block; filter: blur(var(--borrao, 4.5px)); opacity: calc(0.8 + 0.2 * var(--nitidez, 0)); }
+.tela-caso.carmen.escutando .fala-solta { display: none; }
+.tela-caso.carmen .voz-borrada.travada .voz-texto { filter: none; opacity: 1; }
+.tela-caso.carmen .voz-borrada .voz-quem { display: block; font: 600 0.72rem/1.2 var(--fonte-ui, system-ui, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; color: #f2a33a; font-style: normal; margin-bottom: 4px; }
+.tela-caso.carmen .voz-borrada .voz-quem[hidden], .tela-caso.carmen .voz-borrada .voz-guardar[hidden] { display: none; }
+.tela-caso.carmen .voz-borrada.travada { background: rgba(14, 10, 8, 0.92); box-shadow: 0 0 0 2px rgba(242, 163, 58, 0.9), 0 4px 14px rgba(0, 0, 0, 0.6); }
+.tela-caso.carmen .voz-borrada.guardada { opacity: 0.55; box-shadow: none; }
+.tela-caso.carmen .voz-borrada .voz-guardar { display: block; margin: 8px auto 0; padding: 6px 12px; border: 0; border-radius: 999px; background: #f2a33a; color: #1a1208; font: 600 0.8rem/1 var(--fonte-ui, system-ui, sans-serif); cursor: pointer; pointer-events: auto; }
+.tela-caso.carmen .escuta-barra {
+  position: absolute; left: 50%; top: 76px; translate: -50% 0; z-index: 30; display: flex; align-items: center; gap: 14px; max-width: min(92vw, 720px);
+  padding: 10px 14px; border-radius: 12px; background: rgba(14, 10, 8, 0.9); border: 1px solid rgba(242, 163, 58, 0.4); color: #f6e6c0; font-size: 0.9rem;
+}
+.tela-caso.carmen .escuta-barra p { margin: 0; }
+/* A leitura cabe em menos linhas: os detalhes por observar viram fichas lado a lado. */
+.dialogo-caso .escolhas-caso li.observar { display: inline-block; margin: 0 6px 6px 0; }
+.dialogo-caso .escolhas-caso li.observar button { width: auto; padding: 6px 12px; border: 1px solid rgba(242, 163, 58, 0.45); border-radius: 999px; font-size: 0.92em; }
+@media (max-width: 640px) {
+  .dialogo-caso .escolhas-caso .etiqueta-jeito { display: none; }
+  .tela-caso.carmen .escuta-barra { width: calc(100vw - 32px); flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
+  .tela-caso.carmen .botao-ouvidos { left: 12px; bottom: 132px; }
+}

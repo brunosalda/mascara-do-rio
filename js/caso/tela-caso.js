@@ -192,6 +192,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         <ol class="registro-noite" aria-live="polite"></ol>
         <div class="painel-pergunta"></div>
       </section>
+      ${rota ? `<button type="button" class="botao-ouvidos" data-hud="ouvidos" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9.5a5 5 0 0 1 10 0c0 2.6-1.6 3.6-2.6 4.6-.9.9-1 2-1.4 3.2A2.8 2.8 0 0 1 10.3 19c-1.3 0-2.3-.8-2.3-2"/><path d="M10 10a2 2 0 0 1 4 0c0 1-.7 1.5-1.4 2"/></svg><span>Apurar os ouvidos</span><small></small></button>` : ''}
       <button type="button" class="botao-visao" data-hud="visao" title="Visão geral: a cena inteira (V)" aria-label="Visão geral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4"/><rect x="8" y="9" width="8" height="6" rx="1"/></svg></button>
       <button type="button" class="botao-centrar" data-hud="centrar" title="Centralizar no personagem (C)" aria-label="Centralizar no personagem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
       <button type="button" class="botao-pausa" data-hud="pausa" aria-pressed="false" title="Pausar (espaço)" aria-label="Pausa"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icone-pausar" d="M8 5v14M16 5v14"/><path class="icone-soltar" d="M8 5l11 7-11 7z"/></svg></button>
@@ -544,6 +545,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       banco.assunto[x.id] = x.assunto_novo;
     }
     l.pontos = [...l.fixos, ...r.pontos.map((x) => ({ id: x.id, rotulo: x.rotulo, x: x.x, y: x.y }))];
+    atualizarOuvidos();
     return r;
   }
   // Depois de cada ação: o estado e o lugar de novo (tópicos e pontos podem ter aberto).
@@ -752,7 +754,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
   function caixa({ rotulo, html = '', texto = '', opcoes = [], revelar = false, fechavel = true, aoFechar, falante = null }) {
     const sobre = conversaMantida && falante && conversaMantida.pid === falante ? conversaMantida.cam : null;
     if (conversaMantida) { const velha = conversaMantida.cam; conversaMantida = null; if (velha !== sobre) velha.fechar(); }
-    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.principal ? ' data-principal' : ''}${o.desligada ? ' disabled aria-disabled="true"' : ''}><span class="escolha-num">${i + 1}.</span> — ${o.html}</button></li>`).join('')}</ol>` : '';
+    const lista = opcoes.length ? `<ol class="escolhas escolhas-caso">${opcoes.map((o, i) => `<li${o.classe ? ` class="${o.classe}"` : ''}><button type="button" data-escolha="${i}"${o.principal ? ' data-principal' : ''}${o.desligada ? ' disabled aria-disabled="true"' : ''}>${o.chip ? '' : `<span class="escolha-num">${i + 1}.</span> — `}${o.html}</button></li>`).join('')}</ol>` : '';
     const chave = revelar ? `caso-${caso.id}-${Date.now()}-${numCaixa++}` : null;
     revelando = !!chave;
     const camada = abrirDialogo(tela, {
@@ -969,6 +971,277 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       return true;
     }).map((t) => ({ ...t, estado: st.feitos[`${pid}:${t.id}`] || 'novo' }));
   }
+  // --- Rodada 47, item 3: Ler a pessoa ----------------------------------------------------------------
+  // Antes do primeiro contato, círculos no corpo mostram o que dá para observar (2 minutos cada). O jogador escolhe
+  // um de três jeitos de perguntar: o certo abre a conversa; o errado fecha a pessoa até o fim do capítulo.
+  // O banco guarda o jeito certo e o que cada detalhe indica; a tela só recebe a parte do corpo até observar.
+  const PARTE = { olhar: 'o olhar', maos: 'as mãos', roupa: 'a roupa', pes: 'os pés', objeto: 'o que leva consigo', voz: 'a voz' };
+  const JEITOS = [
+    { id: 'calma', rotulo: 'Com calma', resumo: 'deixar falar no próprio ritmo',
+      certo: 'Você não tem pressa e deixa {quem} falar no próprio ritmo.', errado: '{quem} não tem paciência para tanto rodeio e encerra a conversa.' },
+    { id: 'direto', rotulo: 'Direto ao ponto', resumo: 'uma pergunta curta, sem tomar tempo',
+      certo: 'Você vai direto ao ponto, sem tomar o tempo de {quem}.', errado: 'A pergunta seca não cai bem, e {quem} encerra a conversa.' },
+    { id: 'firme', rotulo: 'Com firmeza', resumo: 'deixar claro que é sério',
+      certo: 'Você fala firme, como quem tem autoridade, e não aceita enrolação.', errado: '{quem} não gosta do tom e encerra a conversa.' },
+  ];
+  const comQuem = (t, nome) => t.replaceAll('{quem}', nome);
+  const maiuscula = (t) => `${String(t).charAt(0).toUpperCase()}${String(t).slice(1)}`;
+  // Onde fica cada círculo, em fração da figura: x a partir do centro (largura), y a partir do alto (altura).
+  // Figuras sentadas ou curvadas têm a sua tabela.
+  const NO_CORPO = { olhar: [0, 0.1], voz: [0, 0.16], roupa: [0, 0.3], maos: [0.25, 0.45], objeto: [-0.25, 0.5], pes: [0.08, 0.95] };
+  // Figuras sentadas, de guarda-chuva ou na moto (pelo nome do arquivo em img/gente).
+  const NO_CORPO_FIGURA = {
+    'mulher-guarda-chuva': { olhar: [0, 0.24], voz: [0, 0.29], roupa: [-0.12, 0.58], maos: [0.14, 0.4], objeto: [-0.2, 0.08] },
+    'idoso-banco': { olhar: [0, 0.38], voz: [0, 0.43], roupa: [0, 0.55], maos: [0.1, 0.62], objeto: [0.05, 0.72] },
+    bebado: { olhar: [0, 0.37], voz: [0, 0.43], roupa: [0, 0.55], maos: [0.15, 0.62], objeto: [-0.08, 0.8], pes: [0.1, 0.93] },
+    'se-engraxate': { olhar: [0, 0.2], voz: [0, 0.27], roupa: [0, 0.42], maos: [0.25, 0.55], objeto: [0, 0.86], pes: [0.2, 0.97] },
+    entregador: { olhar: [0, 0.33], voz: [0, 0.38], roupa: [0, 0.48], maos: [0.2, 0.55], objeto: [0.25, 0.12] },
+    'morro-mototaxista': { olhar: [0.1, 0.07], voz: [0.1, 0.12], roupa: [0.1, 0.25], maos: [-0.2, 0.3], objeto: [0, 0.6] },
+    'lapa-sambista': { olhar: [0, 0.14], voz: [0, 0.19], objeto: [0, 0.38] },
+    'lapa-sambista-2': { olhar: [0, 0.14], voz: [0, 0.19], objeto: [0, 0.38] },
+  };
+  // Os círculos ficam numa camada irmã da pessoa, no mesmo lugar dela (dentro do botão da pessoa o clique não chega).
+  let circulosVivos = null;
+  function tirarCirculos() { circulosVivos = null; for (const c of palco.querySelectorAll('.ler-circulos')) c.remove(); }
+  function mostrarCirculos(pid, ler, aoObservar) {
+    tirarCirculos();
+    const pe = palco.querySelector(`.pessoa[data-pid="${CSS.escape(pid)}"]`);
+    const fig = pe?.querySelector('.pessoa-figura');
+    const img = fig?.querySelector('img');
+    if (!img) return;
+    const arquivo = (img.getAttribute('src') || '').split('/').pop().replace(/\.(png|webp).*$/, '');
+    const tabela = NO_CORPO_FIGURA[arquivo] || {};
+    const camada = document.createElement('div');
+    camada.className = 'ler-circulos';
+    const circulos = ler.detalhes.map((d, n) => {
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = `ler-circulo${d.ve ? ' visto' : ''}`;
+      c.dataset.n = n;
+      const nome = `${maiuscula(PARTE[d.em] || d.em)}`;
+      c.setAttribute('aria-label', d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 minutos)`);
+      c.title = d.ve ? `${nome}: ${d.ve}` : `Observar ${PARTE[d.em] || d.em} (2 min)`;
+      c.addEventListener('click', (ev) => { ev.stopPropagation(); if (!d.ve && ler.estado === 'nova') aoObservar(n); });
+      camada.appendChild(c);
+      return { c, xy: tabela[d.em] || NO_CORPO[d.em] || [0, 0.4] };
+    });
+    pe.after(camada);
+    const vivo = {};
+    circulosVivos = vivo;
+    // Acompanha a pessoa (altura pela profundidade, virada para um lado ou outro) enquanto a leitura estiver aberta.
+    const acompanhar = () => {
+      if (circulosVivos !== vivo || !camada.isConnected) return;
+      for (const k of ['left', 'top', 'height', 'zIndex']) camada.style[k] = k === 'zIndex' ? String(Number(pe.style.zIndex || 0) + 1) : pe.style[k];
+      const W = pe.offsetWidth || 1;
+      const H = pe.offsetHeight || 1;
+      camada.style.width = `${W}px`;
+      const x0 = fig.offsetLeft + img.offsetLeft;
+      const y0 = fig.offsetTop + img.offsetTop;
+      const vira = pe.classList.contains('vira');
+      for (const { c, xy: [x, y] } of circulos) {
+        let px = x0 + (0.5 + x) * img.offsetWidth;
+        if (vira) px = W - px;
+        c.style.left = `${(px / W) * 100}%`;
+        c.style.top = `${((y0 + y * img.offsetHeight) / H) * 100}%`;
+      }
+      requestAnimationFrame(acompanhar);
+    };
+    acompanhar();
+  }
+  // A caixa da leitura: o que já se viu, os detalhes ainda por observar, os três jeitos e, se houver, a Dominação.
+  function lerPessoa(pid, intro, ler, extras = []) {
+    const pe = caso.pessoas[pid];
+    const nome = pe.nome;
+    const partes = [];
+    if (intro) partes.push(intro);
+    if (ler.estado === 'fechada') partes.push(`*${nome} não quer mais conversa com você esta noite.*`);
+    else {
+      const vistos = ler.detalhes.filter((d) => d.ve).map((d) => `*${maiuscula(PARTE[d.em] || d.em)}:* ${d.ve}`);
+      if (vistos.length) partes.push(vistos.join('\n'));
+      if (ler.notou) partes.push(`*Você notou algo: isso diz como falar com ${nome}.*`);
+      else if (!vistos.length) partes.push('*Repare antes de perguntar. Os círculos mostram o que dá para observar.*');
+    }
+    const observar = (n) => async (cam) => {
+      manterConversa(cam, pid);
+      try {
+        const r = await noBanco(() => F.observar(caso.id, p.id, pid, n));
+        if (!r) return;
+        await depoisDaAcao(r);
+        lerPessoa(pid, intro, r.ler, extras);
+      } finally { soltarConversa(cam); }
+    };
+    const perguntar = (j) => async (cam) => {
+      manterConversa(cam, pid);
+      try {
+        const r = await noBanco(() => F.jeito(caso.id, p.id, pid, j.id));
+        if (!r) return;
+        if (r.estado_caso) await depoisDaAcao({ ...r, estado: r.estado_caso });
+        if (r.estado === 'aberta') {
+          tirarCirculos();
+          (banco.jeitos ||= {})[pid] = 'aberta';
+          await conversar(pid, `*${comQuem(j.certo, nome)}*`);
+        } else {
+          anotar('CONVERSA', `${nome} se fechou: o jeito de perguntar não combinou. Esta noite, não fala mais.`);
+          lerPessoa(pid, `*${comQuem(j.errado, nome)}*`, { ...ler, estado: 'fechada' }, extras);
+        }
+      } finally { soltarConversa(cam); }
+    };
+    const opcoes = [];
+    if (ler.estado === 'nova') {
+      ler.detalhes.forEach((d, n) => { if (!d.ve) opcoes.push({ html: `Observar ${esc(PARTE[d.em] || d.em)} <small class="etiqueta-tempo">2 min</small>`, classe: 'observar', chip: true, n, fn: observar(n) }); });
+      for (const j of JEITOS) {
+        opcoes.push({
+          html: `Perguntar ${esc(j.rotulo.toLowerCase())} <small class="etiqueta-jeito">${esc(j.resumo)}</small>${ler.notou === j.id ? ' <small class="etiqueta-notou">você notou algo</small>' : ''}`,
+          classe: `jeito${ler.notou === j.id ? ' notou' : ''}`, fn: perguntar(j),
+        });
+      }
+    }
+    for (const t of extras) {
+      opcoes.push({ html: `${esc(t.rotulo)}${t.min ? ` <small class="etiqueta-tempo">${t.min} min</small>` : ''}`, fn: async (cam) => { tirarCirculos(); manterConversa(cam, pid); try { await escolherTopico(pid, t); } finally { soltarConversa(cam); } } });
+    }
+    opcoes.push({ html: 'Encerrar a conversa', classe: 'sair', fn: (cam) => cam.fechar() });
+    cena?.virarPessoaPara(`pessoa-${pid}`);
+    caixa({ rotulo: `${nome} · ${pe.sub}`, texto: partes.join('\n\n'), opcoes, falante: pid, aoFechar: tirarCirculos });
+    if (ler.estado === 'nova') mostrarCirculos(pid, ler, (n) => { const i = opcoes.findIndex((o) => o.n === n); const bs = document.querySelectorAll(`.dialogo-caso .escolhas-caso [data-escolha="${i}"]`); bs[bs.length - 1]?.click(); });
+    else tirarCirculos();
+  }
+
+  // --- Rodada 47, item 4: Apurar os ouvidos --------------------------------------------------------------
+  // 5 minutos: a cena perde a cor, e três vozes borradas ficam presas aos pontos da pintura onde haveria gente, na
+  // ordem que o banco mandou. O ouvido (o cursor ou o dedo) chega perto, e a frase fica nítida; depois de `trava`
+  // segundos, ela trava e mostra quem fala. Guardar a útil dá a pista e encerra; uma inútil custa 3 minutos.
+  const OUVIDO_PX = 70; // raio 1 = o tamanho normal do ouvido, em pixels da tela
+  async function atualizarOuvidos() {
+    const b = tela.querySelector('.botao-ouvidos');
+    if (!b || !banco || !F?.ouvidos) return;
+    const o = await F.ouvidos(caso.id, p.id).catch(() => null);
+    b.hidden = !o?.tem;
+    if (!o?.tem) return;
+    b.dataset.estado = o.estado;
+    b.disabled = o.estado === 'feita';
+    b.querySelector('span').textContent = o.estado === 'feita' ? 'Nada mais a ouvir aqui' : o.estado === 'aberta' ? 'Ouvir de novo' : 'Apurar os ouvidos';
+    b.querySelector('small').textContent = o.estado === 'nova' ? `${o.custo} min` : '';
+  }
+  let escuta = null;
+  function pararDeOuvir() {
+    if (!escuta) return;
+    escuta.fim();
+    escuta = null;
+  }
+  async function apurarOuvidos() {
+    if (escuta || !banco || !F?.escutar) return;
+    const r = await noBanco(() => F.escutar(caso.id, p.id));
+    if (!r) return;
+    if (r.estado_caso) await depoisDaAcao({ ...r, estado: r.estado_caso });
+    if (r.estado === 'feita') { aviso('Você já ouviu o que este lugar tinha a dizer.'); atualizarOuvidos(); return; }
+    if (r.min) anotar('ESCUTA', `Você parou para ouvir o lugar (${r.min} min).`);
+    abrirEscuta(r);
+  }
+  function abrirEscuta(r) {
+    const mundo = palco.querySelector('.mundo');
+    if (!mundo) return;
+    const geo = geografia(caso.lugares[st.lugar].geo);
+    const pontos = (geo.pontosLivres || []).length >= r.vozes.length ? geo.pontosLivres : [[0.3, 0.7], [0.5, 0.75], [0.7, 0.7]];
+    const guardadas = new Set(r.guardadas || []);
+    const camada = document.createElement('div');
+    camada.className = 'escuta-vozes';
+    const vozes = r.vozes.map((v, i) => {
+      const [x, y] = pontos[i % pontos.length];
+      const el = document.createElement('div');
+      el.className = `voz-borrada${guardadas.has(v.id) ? ' guardada' : ''}`;
+      el.style.left = `${x * 100}%`;
+      el.style.top = `${Math.max(0.08, y - 0.07) * 100}%`; // acima da cabeça de quem estaria ali (e da lupa de um exame)
+      el.innerHTML = `<span class="voz-quem" hidden></span><span class="voz-texto"></span><button type="button" class="voz-guardar" hidden>Guardar esta frase</button>`;
+      el.querySelector('.voz-texto').textContent = `“${v.texto}”`;
+      camada.appendChild(el);
+      return { v, el, perto: 0, travada: guardadas.has(v.id) };
+    });
+    mundo.appendChild(camada);
+    tela.classList.add('escutando');
+    const barra = document.createElement('div');
+    barra.className = 'escuta-barra';
+    barra.innerHTML = `<p>Leve o ouvido até as vozes. A frase fica nítida quando ele chega perto e trava depois de ${String(r.trava).replace('.', ',')} s.${r.auspicio ? ' <b>Auspícios:</b> o seu ouvido alcança mais longe.' : ''}</p><button type="button" class="btn">Parar de ouvir</button>`;
+    tela.appendChild(barra);
+    const raio = OUVIDO_PX * (r.raio || 1);
+    let ouvido = null;
+    let ultimo = performance.now();
+    let vivo = true;
+    const mover = (ev) => { const b = palco.getBoundingClientRect(); ouvido = { x: ev.clientX - b.left, y: ev.clientY - b.top }; };
+    const sair = () => { ouvido = null; };
+    palco.addEventListener('pointermove', mover);
+    palco.addEventListener('pointerdown', mover);
+    palco.addEventListener('pointerleave', sair);
+    const travar = (o) => {
+      o.travada = true;
+      o.el.classList.add('travada');
+      const q = o.el.querySelector('.voz-quem');
+      q.textContent = o.v.quem;
+      q.hidden = false;
+      const g = o.el.querySelector('.voz-guardar');
+      g.hidden = guardadas.has(o.v.id);
+      som.carmen?.('clique');
+    };
+    for (const o of vozes) if (o.travada) travar(o);
+    const passo = (agora) => {
+      if (!vivo) return;
+      const dt = Math.min(0.1, (agora - ultimo) / 1000);
+      ultimo = agora;
+      const b = palco.getBoundingClientRect();
+      // As vozes ficam no mundo (andam com a câmera), mas no tamanho da tela.
+      camada.style.setProperty('--zoom-cena', String(parseFloat((mundo.style.transform.split('scale(')[1] || '1')) || 1));
+      for (const o of vozes) {
+        if (o.travada) continue;
+        const e = o.el.getBoundingClientRect();
+        const d = ouvido ? Math.hypot(ouvido.x - (e.left + e.width / 2 - b.left), ouvido.y - (e.top + e.height / 2 - b.top)) : Infinity;
+        const nitidez = Math.max(0, 1 - d / (raio * 2.2));
+        o.el.style.setProperty('--borrao', `${(4.5 * (1 - nitidez)).toFixed(2)}px`);
+        o.el.style.setProperty('--nitidez', nitidez.toFixed(2));
+        o.perto = d <= raio ? o.perto + dt : 0;
+        o.el.style.setProperty('--trava', Math.min(1, o.perto / r.trava).toFixed(2));
+        if (o.perto >= r.trava) travar(o);
+      }
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+    camada.addEventListener('click', async (ev) => {
+      const g = ev.target.closest('.voz-guardar');
+      if (!g) return;
+      ev.stopPropagation();
+      const o = vozes.find((x) => x.el.contains(g));
+      g.disabled = true;
+      const res = await noBanco(() => F.guardarVoz(caso.id, p.id, o.v.id));
+      g.disabled = false;
+      if (!res) return;
+      if (res.estado_caso) await depoisDaAcao({ ...res, estado: res.estado_caso });
+      if (res.util) {
+        pararDeOuvir();
+        anotar('ESCUTA', `${o.v.quem}: ${resumoDaFala(o.v.texto)}`);
+        aviso('Você guarda a frase. Era isso que você precisava ouvir.');
+      } else {
+        guardadas.add(o.v.id);
+        o.el.classList.add('guardada');
+        g.hidden = true;
+        aviso(res.min ? `Você guarda a frase, mas ela não leva a lugar nenhum (${res.min} min).` : 'Essa frase não leva a lugar nenhum.');
+      }
+      atualizarOuvidos();
+    });
+    barra.querySelector('button').addEventListener('click', pararDeOuvir);
+    const tecla = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); pararDeOuvir(); } };
+    document.addEventListener('keydown', tecla, true);
+    escuta = {
+      fim: () => {
+        vivo = false;
+        palco.removeEventListener('pointermove', mover);
+        palco.removeEventListener('pointerdown', mover);
+        palco.removeEventListener('pointerleave', sair);
+        document.removeEventListener('keydown', tecla, true);
+        camada.remove();
+        barra.remove();
+        tela.classList.remove('escutando');
+      },
+    };
+  }
+
   const temAssuntoNovo = (pid) => (banco ? !!banco.assunto[pid] : topicosDe(pid).some((t) => t.estado === 'novo'));
 
   async function conversar(pid, intro = null) {
@@ -982,6 +1255,13 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       banco.topicos[pid] = r.topicos.map((t) => { const id = t.chave.slice(pid.length + 1); return { ...t, id, ...(PERGUNTA_TOPICO.has(id) ? { rotulo: ROTULO_PERGUNTA } : {}) }; });
       aplicarBanco(r);
       textoBanco = r.texto;
+      // Rodada 47: antes do jeito certo, quem tem leitura mostra a caixa da leitura (e só a Dominação, se houver).
+      if (F.ler && banco.jeitos?.[pid] !== 'aberta') {
+        // Sem a migração de 04/11 no banco, a função não existe: a conversa segue como antes, sem aviso de erro.
+        const lr = await F.ler(caso.id, p.id, pid).catch(() => null);
+        if (lr?.ler && lr.ler.estado !== 'aberta') { lerPessoa(pid, intro ?? textoBanco, lr.ler, banco.topicos[pid]); return; }
+        if (lr) (banco.jeitos ||= {})[pid] = 'aberta';
+      }
     }
     const primeira = !banco && !st.achados.includes(`conheceu-${pid}`);
     if (primeira) aplicar({ marcas: [`conheceu-${pid}`] });
@@ -1262,6 +1542,7 @@ ${textoDe(r)}` : textoDe(r));
   let leituraAntecipada = null;
   // fecharMapa: o mapa da viagem, que fecha só depois de o véu escurecer por cima dele (o lugar antigo não volta).
   function irPara(id, fecharMapa = null) {
+    pararDeOuvir();
     if (cena) st.posicoes[st.lugar] = [cena.posicao().x, cena.posicao().y];
     const veu = document.createElement('div');
     veu.className = 'passagem-caso';
@@ -2548,6 +2829,7 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
       case 'corrida': corrida(); break;
       case 'paineis': alternarPaineis(); break;
       case 'visao': cena?.visaoGeral(); break;
+      case 'ouvidos': apurarOuvidos(); break;
       case 'centrar': cena?.centrarCamera(); break;
       case 'pausa': cena?.alternarPausa(); break;
       case 'som': som.alternar(); b.setAttribute('aria-pressed', String(som.ligado())); break;

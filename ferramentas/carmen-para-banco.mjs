@@ -158,12 +158,19 @@ for (const lugar of Object.keys(c.erradas)) {
       const pe = f.pessoa || {};
       pessoas.push({ id, lugar, dados: { nome: f.nome, sub: pe.ocupacao || '', tipo: 'passante', pessoa: pe.pessoa || 'mortal', figura: pe.figura || null, x, y, saudacao: pe.jeito ? `*${pe.jeito}*` : `**${f.nome}** — Pois não?` } });
       if (viva) conteudos.push({ chave: `${id}:viu`, tipo: 'topico', pessoa: id, lugar, requer, dados: { id: 'viu', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: f.texto, pistas: f.pistas, ...(f.favor || f.pede ? { pedido: pedidoDe(f) } : {}) } });
+      // Ler a pessoa: o jeito certo e os detalhes (o mesmo em qualquer situação: nasce da pessoa).
+      const ler = f.ler || erradas[f.id]?.ler;
+      if (ler) conteudos.push({ chave: `${id}:ler`, tipo: 'ler', pessoa: id, lugar, requer: [], dados: ler });
       if (!viva || i > 0) conteudos.push({ chave: `${id}:nada`, tipo: 'topico', pessoa: id, lugar, requer: [], dados: { id: 'nada', rotulo: 'Perguntar por quem você procura', min: f.custo, texto: viva ? nada : f.texto, pistas: [], ...(viva ? { escondeSe: requer } : {}) } });
     } else {
       if (viva) conteudos.push({ chave: `x:${id}`, tipo: 'exame', pessoa: null, lugar, requer: [], dados: { min: f.custo, ponto: { x, y, rotulo: f.nome, requer }, texto: f.texto, pistas: f.pistas } });
       if (!viva || i > 0) conteudos.push({ chave: `x:${id}~e`, tipo: 'exame', pessoa: null, lugar, requer: [], dados: { min: f.custo, ponto: { x, y, rotulo: f.nome, ...(viva ? { escondeSe: requer } : {}) }, texto: viva ? nada : f.texto, pistas: [] } });
     }
   });
+  // Apurar os ouvidos: a escuta da visita certa vale com o rastro ali (requer); a do lugar errado, antes dele (escondeSe).
+  if (viva && visita.escuta) conteudos.push({ chave: `${lugar}:escuta`, tipo: 'escuta', pessoa: null, lugar, requer, dados: { vozes: visita.escuta } });
+  const esE = c.erradas[lugar].escuta;
+  if (esE && (!viva || i > 0)) conteudos.push({ chave: `${lugar}:escuta~e`, tipo: 'escuta', pessoa: null, lugar, requer: [], dados: { vozes: esE, ...(viva ? { escondeSe: requer } : {}) } });
 }
 for (const ct of conteudos) ct.ordem = ++ordem;
 
