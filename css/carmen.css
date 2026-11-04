@@ -1579,7 +1579,7 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { pad
 /* Rodada 47, item 4: Apurar os ouvidos. O botão do ouvido na cena; na escuta, a cena perde a cor e as vozes ficam
    borradas até o ouvido chegar perto (--borrao, --nitidez); o anel em volta enche enquanto trava (--trava). */
 .tela-caso.carmen .botao-ouvidos {
-  position: absolute; left: 16px; bottom: 76px; z-index: 6; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px;
+  position: absolute; left: 16px; bottom: 118px; z-index: 6; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px;
   border: 1px solid rgba(242, 163, 58, 0.55); border-radius: 999px; background: rgba(14, 10, 8, 0.82); color: #f6e6c0;
   font: 600 0.85rem/1 var(--fonte-ui, system-ui, sans-serif); cursor: pointer;
 }
@@ -1622,3 +1622,6 @@ body.celular .tela-jogo.bg2.tela-caso.carmen .cartao-chegada .cartao-volta { pad
   .tela-caso.carmen .escuta-barra { width: calc(100vw - 32px); flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
   .tela-caso.carmen .botao-ouvidos { left: 12px; bottom: 132px; }
 }
+/* "Para depois" do 46b8db1: o quadro do caso abre logo acima do Caderno (8 px), e o olho não atravessa a tela. */
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .hud-plano.quadro-caso { top: auto; bottom: var(--quadro-sobe, 74px); right: 20px; translate: 0 6px; }
+body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos):has(.hud-botoes [data-hud="quadro"]:is(:hover, :focus-visible)) .hud-plano.quadro-caso { translate: 0 0; }
