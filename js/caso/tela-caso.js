@@ -1205,7 +1205,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       el.innerHTML = `<span class="voz-quem" hidden></span><span class="voz-texto"></span><button type="button" class="voz-guardar" hidden>Guardar esta frase</button>`;
       el.querySelector('.voz-texto').textContent = `“${v.texto}”`;
       camada.appendChild(el);
-      return { v, el, ancora, perto: 0, travada: guardadas.has(v.id) };
+      return { v, el, ancora, xy: [x, y], perto: 0, travada: guardadas.has(v.id) };
     });
     mundo.appendChild(ancoras);
     palco.appendChild(camada);
@@ -1257,11 +1257,38 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     let ultimo = performance.now();
     let vivo = true;
     const mover = (ev) => { const b = palco.getBoundingClientRect(); ouvido = { x: ev.clientX - b.left, y: ev.clientY - b.top }; };
+    // Um toque durante a visita às vozes para a câmera onde está: o jogador já quer ouvir.
+    const tocar = (ev) => { if (visita) { clearTimeout(visita); visita = null; for (const q of vozes) q.el.classList.remove('mostrando'); } mover(ev); };
     const sair = () => { ouvido = null; };
     palco.addEventListener('pointermove', mover);
-    palco.addEventListener('pointerdown', mover);
+    palco.addEventListener('pointerdown', tocar);
     palco.addEventListener('pointerleave', sair);
-    const travar = (o) => {
+    // Para o 2.4 (avaliação do 1a9b60d): no celular, os pontos das vozes ficam fora da tela. A câmera mostra de onde
+    // cada voz vem: ao abrir, passa por elas (1,4 s cada, com o balão aceso); ao travar uma, vai até o ponto dela.
+    const celular = document.body.classList.contains('celular');
+    const semMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let visita = null;
+    const mostrarDeOnde = (o) => {
+      if (!celular || !cena?.olharPara) return;
+      cena.olharPara(o.xy[0], o.xy[1]);
+      for (const q of vozes) q.el.classList.toggle('mostrando', q === o);
+    };
+    const visitarVozes = () => {
+      const fila = vozes.filter((o) => !o.travada);
+      if (!celular || !cena?.olharPara || !fila.length) return;
+      let k = 0;
+      const proxima = () => {
+        if (!vivo) return;
+        if (k >= fila.length) { visita = null; for (const q of vozes) q.el.classList.remove('mostrando'); return; }
+        mostrarDeOnde(fila[k]);
+        k += 1;
+        visita = setTimeout(proxima, semMovimento ? 900 : 1400);
+      };
+      proxima();
+    };
+    const travar = (o, aoAbrir = false) => {
+      if (!aoAbrir && visita) { clearTimeout(visita); visita = null; }
+      if (!aoAbrir) mostrarDeOnde(o);
       o.travada = true;
       o.el.classList.add('travada');
       const q = o.el.querySelector('.voz-quem');
@@ -1271,7 +1298,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       g.hidden = guardadas.has(o.v.id);
       som.carmen?.('clique');
     };
-    for (const o of vozes) if (o.travada) travar(o);
+    for (const o of vozes) if (o.travada) travar(o, true);
+    visitarVozes();
     const passo = (agora) => {
       if (!vivo) return;
       const dt = Math.min(0.1, (agora - ultimo) / 1000);
@@ -1320,8 +1348,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     escuta = {
       fim: () => {
         vivo = false;
+        if (visita) clearTimeout(visita);
         palco.removeEventListener('pointermove', mover);
-        palco.removeEventListener('pointerdown', mover);
+        palco.removeEventListener('pointerdown', tocar);
         palco.removeEventListener('pointerleave', sair);
         document.removeEventListener('keydown', tecla, true);
         camada.remove();
