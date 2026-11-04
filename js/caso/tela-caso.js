@@ -1719,7 +1719,8 @@ ${textoDe(r)}` : textoDe(r));
     if (fundo) { fundo.style.backgroundImage = `url('${geo.imagem}')`; fundo.dataset.url = geo.imagem; }
     palco.innerHTML = '';
     cena = montarCena(palco, {
-      cla: p.ficha?.cla, sprite: p.sprite, imagem: geo.imagem, lugar: lugar.geo, inicio: st.posicoes[st.lugar] || lugar.inicio,
+      // Carmen 2026 (Rodada 47): sem caminhada dentro do lugar; o clique em alguém leva a câmera até a pessoa.
+      cla: p.ficha?.cla, sprite: rota ? null : p.sprite, imagem: geo.imagem, lugar: lugar.geo, inicio: st.posicoes[st.lugar] || lugar.inicio,
       pontos: pontosDo(st.lugar), gente: genteDo(st.lugar), comentarios: lugar.comentarios,
       comentar: (c) => { if (st.comentados.includes(c.id)) return false; st.comentados.push(c.id); salvar(); return true; },
       tempo: lugar.tempo, fome: st.fome, nome: p.nome, painel: tela.querySelector('.painel-pergunta'),

@@ -366,6 +366,19 @@ body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
 .tela-caso.carmen .fala-solta::after { content: ""; position: absolute; left: calc(50% - var(--empurra, 0px)); top: 100%; translate: -50% 0; border: 6px solid transparent; border-top-color: rgba(236, 228, 210, 0.94); }
 @keyframes fala-solta { 0% { opacity: 0; translate: -50% 6px; } 10%, 85% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; } }
 .tela-caso.carmen .cena .pessoa:is(:hover, :focus-visible) .fala-solta { display: none; }
+/* Rodada 47, item 2: a conversa pela câmera. Faixas pretas em cima e embaixo, o fundo e as outras pessoas
+   desfocados; quem fala continua nítido. */
+.tela-caso.carmen .palco::before, .tela-caso.carmen .palco::after {
+  content: ""; position: absolute; left: 0; right: 0; z-index: 145; height: 9vh; background: #000; pointer-events: none;
+  transition: transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.tela-caso.carmen .palco::before { top: 0; transform: translateY(-100%); }
+.tela-caso.carmen .palco::after { bottom: 0; transform: translateY(100%); }
+body.em-conversa .tela-caso.carmen .palco::before, body.em-conversa .tela-caso.carmen .palco::after { transform: none; }
+.tela-caso.carmen .cena :is(.pintura, .pintura-fundo, .pintura-cinza, .pessoa:not(.falando), .cena-pontos) { transition: filter 600ms ease; }
+body.em-conversa .tela-caso.carmen .cena :is(.pintura, .pintura-fundo, .pintura-cinza) { filter: blur(3px) brightness(0.62); }
+body.em-conversa .tela-caso.carmen .cena :is(.pessoa:not(.falando), .cena-pontos) { filter: blur(3px) brightness(0.62); }
+body.em-conversa .tela-caso.carmen .cena .fala-solta { display: none; }
 /* A chuva dentro da tela do caso: logo acima da cena, abaixo das setas, das dicas, do HUD e das janelas. */
 .tela-caso.carmen > #chuva { position: absolute; inset: 0; z-index: 140; }
 /* As barras de Vitalidade, Força de Vontade e Fome: moldura em linha fina, rótulos em texto suave. */
