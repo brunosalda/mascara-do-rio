@@ -145,8 +145,13 @@ for (const lugar of Object.keys(c.erradas)) {
   if (viva) for (const p of Object.values(visita.pistas)) {
     pistas.set(p.id, { id: p.id, titulo: p.resumo, texto: p.resumo, fonte: p.fonte, tipo: p.tipo, sobre: p.tipo === 'traco' ? `${p.categoria}=${p.valor}` : null, indireta: !!p.indireta, aponta: p.tipo === 'destino' ? p.aponta || null : null });
   }
+  // Quem tem o ponto dos pés nos dados (pessoa.pes, como o engraxate sentado na calçada) fica nele; os outros
+  // ocupam os pontos do lugar pela ordem, sem repetir um ponto já fixado.
+  const fixos = fontes.map((f) => f.pessoa?.pes).filter(Boolean);
+  const livres = (ALTOS[lugar]?.pontos || []).filter((p) => !fixos.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.04));
+  let kLivre = 0;
   fontes.forEach((f, k) => {
-    const [x, y] = pos(lugar, k);
+    const [x, y] = f.pessoa?.pes || (livres.length ? livres[kLivre++ % livres.length] : pos(lugar, k));
     const id = `${lugar}.${f.id}`;
     const nada = erradas[f.id]?.texto || f.textoErrada || null;
     if (f.tipo === 'testemunha') {
