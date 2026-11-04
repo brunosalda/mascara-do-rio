@@ -985,8 +985,17 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       certo: 'Você fala firme, como quem tem autoridade, e não aceita enrolação.', errado: '{quem} não gosta do tom e encerra a conversa.' },
   ];
   const comQuem = (t, nome) => t.replaceAll('{quem}', nome);
-  // O vulto de quem fala na escuta: desenho próprio, cabeça, casaco e pernas, sem rosto.
-  const VULTO_VOZ = '<svg viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy="11" rx="6.5" ry="7.5"/><path d="M10 21 Q20 16 30 21 L33 64 Q20 69 7 64 Z"/><path d="M13 62 L11 97 L18 97 L20 67 Z"/><path d="M27 62 L29 97 L22 97 L20 67 Z"/></svg>';
+  // O vulto de quem fala na escuta: desenho próprio, sem rosto, com ombros, braços e um gesto (mão no bolso,
+  // cigarro aceso ou braços cruzados). A luz de sódio vem da direita do desenho; o rosto fica no escuro.
+  const GESTOS_VULTO = [
+    // mão no bolso: um braço solto, o outro dobrado para o bolso do casaco
+    '<path d="M8.4 21.5 Q4 26 3.8 38 L4.2 55 L7.4 55 L7.6 38 Q7.6 30 9 25 Z"/><path d="M31.4 21.5 Q36 27 36.6 37.5 L30 50.5 L27.4 48.8 L33.2 37 Z"/>',
+    // cigarro: o braço dobra até a boca, com a brasa acesa
+    '<path d="M8.4 21.5 Q4 26 3.8 38 L4.2 55 L7.4 55 L7.6 38 Q7.6 30 9 25 Z"/><path d="M31.2 21 Q35.6 27 34.6 35.8 L32.6 38 L23.4 17.6 L25.8 15.6 L31.6 31.8 L30.4 24.5 Z"/><circle class="brasa" cx="23.4" cy="15.2" r="1.3"/>',
+    // braços cruzados na frente do peito
+    '<path d="M8.6 21.5 Q5.2 27 6.4 36 L31.4 39 L32.2 35.2 L11 32.4 L10.6 25 Z"/><path d="M31.4 21.5 Q34.8 27 33.6 36 L8.6 39 L7.8 35.2 L29 32.4 L29.4 25 Z"/>',
+  ];
+  const vultoVoz = (i) => `<svg viewBox="0 0 40 100" aria-hidden="true"><defs><linearGradient id="vulto-luz-${i}" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#09080b"/><stop offset="0.7" stop-color="#121013"/><stop offset="1" stop-color="var(--cor-vulto-luz, #3a2614)"/></linearGradient></defs><g fill="url(#vulto-luz-${i})"><path d="M14 17 Q20 15 26 17 L31.4 21 Q33.4 23.4 32.8 30 L31 61 L9 61 L7.2 30 Q6.6 23.4 8.6 21 Z"/><path d="M10 59 L9.6 97.6 L17.2 97.6 L19.6 64 L20.4 64 L22.8 97.6 L30.4 97.6 L30 59 Z"/>${GESTOS_VULTO[i % GESTOS_VULTO.length]}</g><ellipse class="rosto" cx="20" cy="9" rx="5.6" ry="7"/><path class="rosto" d="M17.6 15 L22.4 15 L22.6 18.4 L17.4 18.4 Z"/></svg>`;
   const CHAVE_AVISO_LEITURA = 'mascara.carmen.aviso-leitura';
   let avisoLeituraMemoria = false;
   const jaAvisouLeitura = () => { if (avisoLeituraMemoria) return true; try { return localStorage.getItem(CHAVE_AVISO_LEITURA) === '1'; } catch { return false; } };
@@ -1196,20 +1205,60 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     const camada = document.createElement('div');
     camada.className = 'escuta-vozes na-tela';
     // Para o 2.6 (avaliação do 1a9b60d): cada voz sai de alguém na pintura, um vulto que se mexe, com os pés no
-    // ponto da voz e da altura da gente da cena. O balão aponta para a cabeça dele.
-    const refGente = palco.querySelector('.pessoa[data-pid]');
-    const altoMundo = Math.max(1, mundo.offsetHeight);
-    const altVulto = Math.min(0.3, Math.max(0.08, (refGente?.offsetHeight || altoMundo * 0.14) / altoMundo));
+    // ponto da voz. O balão aponta para a cabeça dele.
+    // Ajuste da avaliação de 04/11, 06h03: a altura segue a profundidade, como a das pessoas da cena; nenhum vulto
+    // fica a menos de 40 px (na escala do mundo) dos pés de alguém, nem em cima de outro vulto; a luz de sódio vem
+    // do lado do poste mais forte por perto.
+    const mw = Math.max(1, mundo.offsetWidth);
+    const mh = Math.max(1, mundo.offsetHeight);
+    const pes = cena?.pesDaGente?.() || [];
+    const escalaMedia = pes.length ? pes.reduce((s, p) => s + p.escala, 0) / pes.length : 1;
+    const altEm = (y) => Math.min(0.45, Math.max(0.06, (cena?.alturaGenteEm?.(y) ?? 0.14) * escalaMedia));
+    const ocupados = pes.map((p) => ({ x: p.x, y: p.y, h: p.h }));
+    // Pés a 40 px ou mais; e, se as duas figuras ocupam a mesma faixa de altura na tela, lado a lado sem se
+    // cobrir (a largura de cada uma é cerca de 0,4 × a altura).
+    const longeDeTodos = (x, y, h) => ocupados.every((o) => {
+      const dx = Math.abs(x - o.x) * mw; const dy = Math.abs(y - o.y) * mh;
+      if (Math.hypot(dx, dy) < 40) return false;
+      return dy >= Math.max(h, o.h) * mh || dx >= 0.2 * (h + o.h) * mh + 6;
+    });
+    const lugarDoVulto = (x0, y0) => {
+      const h = altEm(y0);
+      if (longeDeTodos(x0, y0, h)) return [x0, y0, h];
+      // Desloca para o lado, primeiro para o mais perto, até achar chão livre.
+      for (let passo = 1; passo <= 14; passo += 1) {
+        for (const sinal of [1, -1]) {
+          const x = x0 + (sinal * passo * 14) / mw;
+          if (x < 0.04 || x > 0.96) continue;
+          if (longeDeTodos(x, y0, h)) return [x, y0, h];
+        }
+      }
+      return [x0, y0, h];
+    };
+    const luzes = (geo.luzes || []).filter((l) => l.raio < 0.5);
+    const ladoDaLuz = (x, y) => {
+      let forte = null; let melhor = 0;
+      for (const l of luzes) {
+        const peso = (l.forca ?? 1) * Math.max(0, 1 - Math.hypot(l.x - x, l.y - y) / (l.raio * 2.2));
+        if (peso > melhor) { melhor = peso; forte = l; }
+      }
+      return forte ? { lado: forte.x < x ? -1 : 1, forca: melhor } : { lado: x < 0.5 ? 1 : -1, forca: 0 };
+    };
     const vozes = r.vozes.map((v, i) => {
-      const [x, y] = pontos[i % pontos.length];
+      const [x, y, altVulto] = lugarDoVulto(...pontos[i % pontos.length]);
+      ocupados.push({ x, y, h: altVulto });
+      const luz = ladoDaLuz(x, y);
       const vulto = document.createElement('span');
       vulto.className = 'voz-vulto';
       vulto.style.left = `${x * 100}%`;
       vulto.style.top = `${y * 100}%`;
       vulto.style.height = `${altVulto * 100}%`;
+      vulto.style.zIndex = String(Math.round(y * 1000));
       vulto.style.setProperty('--atraso', `${(-1.3 * i).toFixed(1)}s`);
-      vulto.style.setProperty('--lado', i % 2 ? '-1' : '1');
-      vulto.innerHTML = VULTO_VOZ;
+      // O desenho tem a luz à direita; vira para a luz ficar do lado do poste.
+      vulto.style.setProperty('--lado', String(luz.lado));
+      vulto.style.setProperty('--luz-vulto', Math.min(0.85, 0.35 + luz.forca * 0.8).toFixed(2));
+      vulto.innerHTML = vultoVoz(i);
       ancoras.appendChild(vulto);
       const ancora = document.createElement('span');
       ancora.className = 'voz-ancora';

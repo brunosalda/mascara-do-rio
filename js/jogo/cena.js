@@ -2678,6 +2678,10 @@ export function montarCena(raiz, {
     // A câmera enquadra o personagem e um ponto (quem foge) juntos, com o zoom um pouco mais aberto.
     focar: (x, y, ms = 300) => { focoEscolha = { x, y, ate: performance.now() + ms }; },
     olharPara,
+    // Para a escuta (vultos das vozes): a altura de uma pessoa em pé no chão y (fração da altura do mundo) e os pés
+    // de quem está na cena, para nenhum vulto cair em cima de alguém.
+    alturaGenteEm: (y) => alturaGente(y),
+    pesDaGente: () => gente.filter((p) => !p.escondida).map((p) => ({ x: p.x, y: p.y, h: alturaGente(p.y) * (p.escala || 1), escala: p.escala || 1 })),
     desmontar,
   };
 }
