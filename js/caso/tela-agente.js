@@ -28,7 +28,8 @@ export function telaAgente(raiz, { aoEntrar }) {
             <b>Sentidos Aguçados</b>, <b>Compelir</b> e <b>Reflexos Rápidos</b>. Ganha quem chegar primeiro.</p>
         </div>
         <label class="agente-linha"><small>Nome do agente <i>aparece para os rivais e no placar</i></small>
-          <input name="nome" maxlength="40" autocomplete="nickname" required placeholder="escreva aqui"></label>
+          <input name="nome" maxlength="40" autocomplete="nickname" required placeholder="escreva aqui" aria-describedby="msg-agente"></label>
+        <p class="msg-agente" id="msg-agente" role="status" hidden></p>
         <fieldset class="agente-clas">
           <legend><small>Clã <i>só a aparência: os poderes são iguais para todos</i></small></legend>
           <div class="agente-fichas">${CLAS.map(([v, t]) => `
@@ -41,16 +42,18 @@ export function telaAgente(raiz, { aoEntrar }) {
           <p class="licenca-assina"><img class="xerife-rosto" src="img/carmen/xerife-rosto.webp" alt="" width="56" height="56"><span>Iolanda</span><small>Xerife</small></p>
           <button class="btn destaque" type="submit">Começar a caçada</button>
         </div>
-        <p class="msg-agente" role="status" hidden></p>
       </form>
     </section>`;
   const form = raiz.querySelector('.form-agente');
   const msg = raiz.querySelector('.msg-agente');
-  const dizer = (t) => { msg.textContent = t; msg.hidden = !t; };
+  const linha = raiz.querySelector('.agente-linha');
+  // O aviso fica logo abaixo da linha do nome; sem nome, a linha fica vermelha até a pessoa escrever.
+  const dizer = (t, naLinha = false) => { msg.textContent = t; msg.hidden = !t; linha.classList.toggle('erro', !!t && naLinha); };
+  form.nome.addEventListener('input', () => { if (linha.classList.contains('erro') && form.nome.value.trim()) dizer(''); });
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const nome = form.nome.value.trim();
-    if (!nome) { dizer('Escreva um nome para a Xerife chamar você.'); form.nome.focus(); return; }
+    if (!nome) { dizer('Escreva um nome para a Xerife chamar você.', true); form.nome.focus(); return; }
     const botao = form.querySelector('button[type="submit"]');
     botao.disabled = true;
     dizer('');

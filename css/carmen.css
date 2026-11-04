@@ -1701,6 +1701,8 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos):has(.hu
 
 /* A entrada do agente (para depois da avaliação do 2c9ff53): a credencial da Xerife no papel da Licença de Caça. */
 .entrada-agente { display: grid; place-items: start center; padding: 4px 16px 32px; background: none; }
+/* O papel fica direto sobre a cena, só com a sombra dele: sem o painel escuro da página. */
+main:has(> .tela > .entrada-agente) { margin-top: 0; padding-top: 10px; background: transparent; border: 0; }
 .entrada-agente .licenca-agente { width: min(600px, 100%); min-height: 0; margin: 0; padding: 20px 30px 18px; gap: 12px; }
 .entrada-agente .licenca-cabeca h2 { margin: 0; font: 800 36px/1 var(--f-titulo); letter-spacing: 0.03em; text-transform: uppercase; color: var(--c-tinta); }
 .agente-convite { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 16px; align-items: center; }
@@ -1733,7 +1735,9 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos):has(.hu
 .ficha-cla:has(input:focus-visible) { outline: 2px solid #1d2a55; outline-offset: 2px; }
 .agente-fim { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .licenca-agente .btn.destaque { min-height: 48px; margin: 0; padding-inline: 22px; }
-.licenca-agente .msg-agente { margin: 0; color: var(--c-carimbo); font: 600 15px/1.3 var(--f-ui); }
+.licenca-agente .msg-agente { margin: -6px 0 0; color: var(--c-carimbo); font: 600 15px/1.3 var(--f-ui); }
+.agente-linha.erro small { color: var(--c-carimbo); }
+.agente-linha.erro input { border-bottom: 2px solid var(--c-carimbo); background: rgba(179, 22, 43, 0.06); }
 @media (max-width: 560px) {
   .entrada-agente { padding: 0 0 24px; }
   .entrada-agente .licenca-agente { width: 100%; padding: 16px 14px; gap: 10px; rotate: 0deg; }
@@ -1744,9 +1748,10 @@ body:not(.celular) .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos):has(.hu
   .agente-convite p { font-size: 14px; line-height: 1.3; }
   .agente-linha input { font-size: 28px; }
   .agente-fichas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-  .ficha-cla { min-height: 44px; gap: 5px; padding: 3px 4px 3px 3px; font-size: 13px; }
-  .ficha-cla:has(input:checked) { padding: 2px 3px 2px 2px; }
-  .ficha-cla img, .ficha-cla-vazio { width: 30px; height: 30px; }
+  .ficha-cla { min-height: 44px; gap: 4px; padding: 3px 7px 3px 3px; font-size: 12.5px; }
+  .ficha-cla:has(input:checked) { padding: 2px 6px 2px 2px; }
+  .ficha-cla img, .ficha-cla-vazio { width: 24px; height: 24px; }
+  .ficha-cla-vazio { font-size: 14px; }
   .agente-fim { flex-wrap: nowrap; gap: 10px; }
   .agente-fim .licenca-assina { column-gap: 8px; }
   .agente-fim .licenca-assina .xerife-rosto { width: 40px; height: 40px; }
