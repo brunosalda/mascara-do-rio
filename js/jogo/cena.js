@@ -702,9 +702,26 @@ export function montarCena(raiz, {
 
   function posicionarPessoa(p) {
     p.el.style.left = pct(p.x);
+  // Carmen 2026 (Rodada 47): um fator por lugar multiplica a altura de todas as pessoas, para a mais distante
+  // ter 120 px na tela (no zoom inicial). Se a mais perto passar de 46% da altura da tela, as diferenças
+  // encolhem por igual (h' = hMin' + (h - hMin) × k). Quem está mais longe continua sempre menor.
+  const gentePerto = cena.closest('.carmen') && gente.length;
+  let alturaGente = altura;
+  function escalarGente() {
+    if (!gentePerto) return;
+    const px = mh * niveisZoom()[1];
+    if (!px) return;
+    const hs = gente.map((q) => altura(q.y));
+    const hMin = Math.min(...hs); const hMax = Math.max(...hs);
+    const f = 120 / px / hMin;
+    const teto = (0.46 * vh) / px;
+    const k = hMax * f > teto && hMax > hMin ? Math.max(0, (teto - hMin * f) / ((hMax - hMin) * f)) : 1;
+    alturaGente = (y) => hMin * f + (altura(y) - hMin) * f * k;
+  }
+  escalarGente();
+  if (gentePerto) window.addEventListener('resize', () => { escalarGente(); gente.forEach(posicionarPessoa); });
     p.el.style.top = pct(p.y);
-    p.el.style.height = `${(altura(p.y) * 100).toFixed(2)}%`;
-    p.el.style.setProperty('--h', `${(altura(p.y) * 100).toFixed(2)}%`); // o Carmen 2026 põe um mínimo em cima disto (CSS)
+    p.el.style.height = `${(alturaGente(p.y) * 100).toFixed(2)}%`;
     p.el.style.zIndex = String(Math.round(p.y * 1000));
     p.el.classList.toggle('vira', p.dir < 0);
   }
@@ -716,7 +733,13 @@ export function montarCena(raiz, {
       if (!vivo) return;
       setTimeout(falaSolta, 4000 + Math.random() * 3000);
       if (conversa || document.hidden || cena.closest('.abrindo-capitulo')) return;
-      const livres = gente.filter((q) => !q.el.querySelector('.fala-solta') && falasDe(q).length);
+      // Só fala quem tem o centro dentro da tela.
+      const livres = gente.filter((q) => {
+        if (q.el.querySelector('.fala-solta') || !falasDe(q).length || q.el.offsetParent === null) return false;
+        const r = q.el.getBoundingClientRect();
+        const cx = r.left + r.width / 2; const cy = r.top + r.height / 2;
+        return cx > 0 && cx < vw && cy > 0 && cy < vh;
+      });
       const q = livres[Math.floor(Math.random() * livres.length)];
       if (!q) return;
       const fs = falasDe(q);
@@ -727,6 +750,12 @@ export function montarCena(raiz, {
       q.el.appendChild(b);
       setTimeout(() => b.remove(), 3200);
     };
+      // O balão entra na tela com 8 px de margem; a ponta continua sobre a cabeça (--empurra, como na escuta).
+      const r = b.getBoundingClientRect(); const z = r.width / Math.max(1, b.offsetWidth) || 1;
+      const sobra = Math.min(0, vw - 8 - r.right) || Math.max(0, 8 - r.left);
+      const topo = Math.max(0, 8 - r.top);
+      b.style.setProperty('--empurra', `${(sobra / z).toFixed(1)}px`);
+      if (topo) b.style.bottom = `calc(100% + 10px - ${(topo / z).toFixed(1)}px)`;
     setTimeout(falaSolta, 2500);
   }
   // Amostra a pintura em volta dos pés de cada pessoa: a cor vira a tinta da figura e o brilho, o filtro.

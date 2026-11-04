@@ -351,7 +351,6 @@ body.celular .tela-jogo.bg2.tela-caso.carmen:not(.paineis-ocultos) .painel-baixo
 body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
 /* Rodada 47, item 1: gente viva no lugar. Cada pessoa tem pelo menos 128 px (na câmera de entrada), recebe mais da
    luz do lugar, sem o desfoque; o nome só com o mouse ou o foco; quem tem assunto novo ganha um contorno de sódio. */
-.tela-caso.carmen .cena .pessoa { height: max(var(--h, 0px), 128px) !important; }
 .tela-caso.carmen .cena .pessoa .pessoa-nome { opacity: 0 !important; }
 .tela-caso.carmen .cena .pessoa:is(:hover, :focus-visible) .pessoa-nome { opacity: 1 !important; }
 .tela-caso.carmen .cena .pessoa.pessoa-pintada .pessoa-figura img { filter: brightness(calc(var(--luz-gente, 0.8) * 1.08)) saturate(var(--sat-gente, 0.85)) contrast(1.05) drop-shadow(var(--rim-x, 1px) 0 1px var(--rim-gente, transparent)); }
@@ -360,11 +359,11 @@ body:has(.carmen .mapa-tela-cheia) #chuva { display: none; }
 .tela-caso.carmen .cena .pessoa .pessoa-sombra { opacity: 1; }
 .tela-caso.carmen .cena .pessoa .pessoa-reflexo { opacity: 0.42; }
 .tela-caso.carmen .fala-solta {
-  position: absolute; left: 50%; bottom: calc(100% + 10px); translate: -50% 0; width: max-content; max-width: 220px; padding: 6px 10px;
+  position: absolute; left: calc(50% + var(--empurra, 0px)); bottom: calc(100% + 10px); translate: -50% 0; width: max-content; max-width: 220px; padding: 6px 10px;
   border-radius: 10px; background: rgba(236, 228, 210, 0.94); color: #1a1410; font: italic 500 14px/1.3 var(--f-texto); text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); pointer-events: none; animation: fala-solta 3.2s ease both;
 }
-.tela-caso.carmen .fala-solta::after { content: ""; position: absolute; left: 50%; top: 100%; translate: -50% 0; border: 6px solid transparent; border-top-color: rgba(236, 228, 210, 0.94); }
+.tela-caso.carmen .fala-solta::after { content: ""; position: absolute; left: calc(50% - var(--empurra, 0px)); top: 100%; translate: -50% 0; border: 6px solid transparent; border-top-color: rgba(236, 228, 210, 0.94); }
 @keyframes fala-solta { 0% { opacity: 0; translate: -50% 6px; } 10%, 85% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; } }
 .tela-caso.carmen .cena .pessoa:is(:hover, :focus-visible) .fala-solta { display: none; }
 /* A chuva dentro da tela do caso: logo acima da cena, abaixo das setas, das dicas, do HUD e das janelas. */
