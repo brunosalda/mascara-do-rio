@@ -985,6 +985,8 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       certo: 'Você fala firme, como quem tem autoridade, e não aceita enrolação.', errado: '{quem} não gosta do tom e encerra a conversa.' },
   ];
   const comQuem = (t, nome) => t.replaceAll('{quem}', nome);
+  // O vulto de quem fala na escuta: desenho próprio, cabeça, casaco e pernas, sem rosto.
+  const VULTO_VOZ = '<svg viewBox="0 0 40 100" aria-hidden="true"><ellipse cx="20" cy="11" rx="6.5" ry="7.5"/><path d="M10 21 Q20 16 30 21 L33 64 Q20 69 7 64 Z"/><path d="M13 62 L11 97 L18 97 L20 67 Z"/><path d="M27 62 L29 97 L22 97 L20 67 Z"/></svg>';
   const CHAVE_AVISO_LEITURA = 'mascara.carmen.aviso-leitura';
   let avisoLeituraMemoria = false;
   const jaAvisouLeitura = () => { if (avisoLeituraMemoria) return true; try { return localStorage.getItem(CHAVE_AVISO_LEITURA) === '1'; } catch { return false; } };
@@ -1193,19 +1195,33 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     ancoras.className = 'escuta-ancoras';
     const camada = document.createElement('div');
     camada.className = 'escuta-vozes na-tela';
+    // Para o 2.6 (avaliação do 1a9b60d): cada voz sai de alguém na pintura, um vulto que se mexe, com os pés no
+    // ponto da voz e da altura da gente da cena. O balão aponta para a cabeça dele.
+    const refGente = palco.querySelector('.pessoa[data-pid]');
+    const altoMundo = Math.max(1, mundo.offsetHeight);
+    const altVulto = Math.min(0.3, Math.max(0.08, (refGente?.offsetHeight || altoMundo * 0.14) / altoMundo));
     const vozes = r.vozes.map((v, i) => {
       const [x, y] = pontos[i % pontos.length];
+      const vulto = document.createElement('span');
+      vulto.className = 'voz-vulto';
+      vulto.style.left = `${x * 100}%`;
+      vulto.style.top = `${y * 100}%`;
+      vulto.style.height = `${altVulto * 100}%`;
+      vulto.style.setProperty('--atraso', `${(-1.3 * i).toFixed(1)}s`);
+      vulto.style.setProperty('--lado', i % 2 ? '-1' : '1');
+      vulto.innerHTML = VULTO_VOZ;
+      ancoras.appendChild(vulto);
       const ancora = document.createElement('span');
       ancora.className = 'voz-ancora';
       ancora.style.left = `${x * 100}%`;
-      ancora.style.top = `${Math.max(0.08, y - 0.07) * 100}%`; // acima da cabeça de quem estaria ali (e da lupa de um exame)
+      ancora.style.top = `${Math.max(0.04, y - altVulto * 1.04) * 100}%`; // logo acima da cabeça do vulto
       ancoras.appendChild(ancora);
       const el = document.createElement('div');
       el.className = `voz-borrada${guardadas.has(v.id) ? ' guardada' : ''}`;
       el.innerHTML = `<span class="voz-quem" hidden></span><span class="voz-texto"></span><button type="button" class="voz-guardar" hidden>Guardar esta frase</button>`;
       el.querySelector('.voz-texto').textContent = `“${v.texto}”`;
       camada.appendChild(el);
-      return { v, el, ancora, xy: [x, y], perto: 0, travada: guardadas.has(v.id) };
+      return { v, el, ancora, vulto, xy: [x, y], perto: 0, travada: guardadas.has(v.id) };
     });
     mundo.appendChild(ancoras);
     palco.appendChild(camada);
@@ -1224,10 +1240,19 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const top = Math.min(Math.max(topoMin, ay - h - 10), b.height - BORDA - h);
         return { o, ax, ay, w, h, left, top };
       });
+      // Os balões cujo ponto saiu da tela (celular) descem para o pé da cena, empilhados de baixo para cima, para não
+      // cobrir o vulto que a câmera mostra no meio (para o 2.6).
+      let pe = b.height - BORDA;
+      for (const c of caixas.filter((q) => q.ax < 0 || q.ax > b.width).sort((p1, p2) => p2.ay - p1.ay)) {
+        c.top = Math.max(topoMin, pe - c.h);
+        c.fixo = true;
+        pe = c.top - 8;
+      }
       // Dois balões não se cobrem: o de baixo desce (ou sobe, se não couber embaixo).
       caixas.sort((p1, p2) => p1.top - p2.top);
       for (let i = 1; i < caixas.length; i += 1) {
         const c = caixas[i];
+        if (c.fixo) continue;
         for (let k = 0; k < i; k += 1) {
           const q = caixas[k];
           const cobreX = c.left < q.left + q.w + 6 && q.left < c.left + c.w + 6;
@@ -1235,6 +1260,12 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
           if (cobreX && cobreY) c.top = q.top + q.h + 8;
         }
         c.top = Math.min(c.top, b.height - BORDA - c.h);
+        // E não desce sobre os do pé: fica logo acima deles.
+        for (const q of caixas) {
+          if (!q.fixo) continue;
+          const cobreX = c.left < q.left + q.w + 6 && q.left < c.left + c.w + 6;
+          if (cobreX && c.top + c.h + 6 > q.top) c.top = Math.max(topoMin, q.top - c.h - 8);
+        }
       }
       for (const { o, ax, ay, w, h, left, top } of caixas) {
         o.el.style.left = `${Math.round(left)}px`;
@@ -1270,7 +1301,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     let visita = null;
     const mostrarDeOnde = (o) => {
       if (!celular || !cena?.olharPara) return;
-      cena.olharPara(o.xy[0], o.xy[1]);
+      // O ponto vai a 72% da altura da cena (e não ao meio), para o balão aberto caber acima do vulto.
+      const hm = mundo.getBoundingClientRect().height || 1;
+      cena.olharPara(o.xy[0], o.xy[1] - (0.17 * palco.clientHeight) / hm);
       for (const q of vozes) q.el.classList.toggle('mostrando', q === o);
     };
     const visitarVozes = () => {
@@ -1291,6 +1324,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       if (!aoAbrir) mostrarDeOnde(o);
       o.travada = true;
       o.el.classList.add('travada');
+      o.vulto.classList.add('travada');
       const q = o.el.querySelector('.voz-quem');
       q.textContent = o.v.quem;
       q.hidden = false;
@@ -1313,6 +1347,7 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
         const nitidez = Math.max(0, 1 - d / (raio * 2.2));
         o.el.style.setProperty('--borrao', `${(4.5 * (1 - nitidez)).toFixed(2)}px`);
         o.el.style.setProperty('--nitidez', nitidez.toFixed(2));
+        o.vulto.style.setProperty('--nitidez', nitidez.toFixed(2));
         o.perto = d <= raio ? o.perto + dt : 0;
         o.el.style.setProperty('--trava', Math.min(1, o.perto / r.trava).toFixed(2));
         if (o.perto >= r.trava) travar(o);
