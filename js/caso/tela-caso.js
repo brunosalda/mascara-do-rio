@@ -807,6 +807,9 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
       cartao.dataset.pessoa = falante;
       cartao.innerHTML = `<span class="ct-dossie">${src ? `<img class="ct-corpo" src="${esc(src)}" alt="">` : ''}</span><figcaption class="datilo"><b>${esc(pe.nome)}</b><small>${esc(pe.sub || '')}</small></figcaption>`;
       cartao.setAttribute('aria-hidden', 'true');
+      // A altura dos olhos na figura: a tira do celular, depois da primeira observação, mostra o rosto.
+      const arq = (src || '').split('/').pop().replace(/\.(png|webp).*$/, '');
+      cartao.style.setProperty('--rosto-y', String((NO_CORPO_FIGURA[arq]?.olhar || NO_CORPO.olhar)[1]));
       camada.el.prepend(cartao);
       camada.el.classList.add('com-cartao', 'com-dossie');
       marcarPistas(camada.el);
@@ -2218,10 +2221,41 @@ ${textoDe(r)}` : textoDe(r));
     fila.dataset.lugar = st.lugar;
     fila.setAttribute('aria-label', 'Quem está aqui');
     fila.innerHTML = `<small>Quem está aqui</small><ul>${gente.map((g) => `<li><button type="button" data-pid="${esc(g.id)}"><b>${esc(g.nome)}</b><span>${esc(caso.pessoas[g.id].sub || '')}</span></button></li>`).join('')}</ul>`;
-    fila.querySelectorAll('button').forEach((b) => { b.onclick = () => cena.pessoa(b.dataset.pid)?.el.click(); });
+    fila.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => cena.pessoa(b.dataset.pid)?.el.click();
+      // O mouse ou o foco no nome da fileira mostram a etiqueta ao lado da luz da pessoa.
+      const etiqueta = (ver) => { const el = cena.pessoa(b.dataset.pid)?.el; if (!el) return; if (ver) ladoDaEtiqueta(el); el.classList.toggle('etiqueta-mao', ver); };
+      b.addEventListener('pointerenter', () => etiqueta(true));
+      b.addEventListener('pointerleave', () => etiqueta(false));
+      b.addEventListener('focus', () => etiqueta(true));
+      b.addEventListener('blur', () => etiqueta(false));
+    });
     palco.after(fila);
     gente.forEach((g, i) => cena.pessoa(g.id)?.el.style.setProperty('--ordem', String(i)));
     marcarApagadas();
+    if (st.viuAbertura) anunciarLuzes();
+  }
+  // Avaliação de 04/11, 19h09: parada, a luz de uma pessoa se confunde com os postes. Ao acender, cada luz mostra ao
+  // lado o nome da pessoa, numa etiqueta de papel claro à máquina, por cerca de 2,5 s; depois a etiqueta some.
+  let anuncio = [];
+  function ladoDaEtiqueta(el) {
+    const nome = el.querySelector('.pessoa-nome');
+    if (!nome) return;
+    el.classList.remove('etiqueta-esq');
+    const r = nome.getBoundingClientRect();
+    if (r.width && r.right > innerWidth - 8) el.classList.add('etiqueta-esq');
+  }
+  function anunciarLuzes() {
+    if (!formaLuz || !cena) return;
+    for (const t of anuncio) clearTimeout(t);
+    anuncio = [];
+    genteDo(st.lugar).forEach((g, i) => {
+      const el = cena.pessoa(g.id)?.el;
+      if (!el) return;
+      el.classList.remove('etiqueta-chegada');
+      anuncio.push(setTimeout(() => { ladoDaEtiqueta(el); el.classList.add('etiqueta-chegada'); }, i * 350));
+      anuncio.push(setTimeout(() => el.classList.remove('etiqueta-chegada'), i * 350 + 2500));
+    });
   }
   function marcarApagadas() {
     if (!formaLuz) return;
@@ -2296,6 +2330,9 @@ ${textoDe(r)}` : textoDe(r));
   // Rótulos das pessoas (Tab ou mouse por cima) nunca cortam na borda da tela.
   const prenderRotulos = setInterval(() => {
     if (!tela.isConnected) { clearInterval(prenderRotulos); return; }
+    // Na forma A, a etiqueta fica colada na luz (ladoDaEtiqueta escolhe o lado); empurrar para dentro da tela tirava a
+    // etiqueta de perto da luz e trazia à tela o nome de quem está fora dela.
+    if (formaLuz) return;
     const rc = palco.getBoundingClientRect();
     for (const rot of palco.querySelectorAll('.pessoa-nome')) {
       rot.style.transform = '';
@@ -3000,7 +3037,8 @@ Você volta ao refúgio e dorme o dia inteiro. No jogo de verdade, a investigaç
           if (chegada) anotar('VOCÊ', chegada);
           // O capítulo também abre com o cartão de chegada; a dica entra 1 s depois de ele encolher.
           cartaoChegada(caso.lugares[st.lugar], null, caso.tempo?.frases?.[st.lugar], () => setTimeout(() =>
-            dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} no rosto de uma testemunha para conversar.`), 1000));
+            dica('conversa', `${document.body.classList.contains('toque') ? 'Toque' : 'Clique'} ${formaLuz ? 'numa luz ou num nome' : 'no rosto de uma testemunha'} para conversar.`), 1000));
+          anunciarLuzes();
         } }],
       });
       cam.el.classList.add('abertura-rota');
