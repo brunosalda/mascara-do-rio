@@ -1923,7 +1923,7 @@ export function montarCena(raiz, {
     // A figura cabe entre a faixa do alto (72 px) e a caixa da conversa, para a leitura ver a pessoa inteira (rodada 47).
     const FOLGA_PES = 14; // na conversa, os pés ficam 14 px acima da caixa
     const topoCaixaConversa = camConversa ? (() => { const cx = cena.closest('.tela-jogo')?.querySelector('.dialogo-caso'); return cx ? cx.getBoundingClientRect().top - cena.getBoundingClientRect().top : vh * 0.62; })() : 0;
-    // Forma A (a cena em luz, só na vitrine): a pessoa é uma luz, sem figura para medir. A câmera chega um pouco mais
+    // Forma A (a cena em luz): a pessoa é uma luz, sem figura para medir. A câmera chega um pouco mais
     // perto e põe a luz no meio da pintura que fica à vista, ao lado da coluna (no celular, acima da folha).
     const emLuz = camConversa && !!cena.closest('.forma-luz');
     const colunaLuz = emLuz && !estreito ? cena.closest('.tela-jogo')?.querySelector('.dialogo-caso.com-dossie') : null;

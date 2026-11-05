@@ -1786,7 +1786,7 @@ main:has(> .tela > .entrada-agente) { margin-top: 0; padding-top: 10px; backgrou
   .agente-fim .btn.destaque { flex: 1 1 auto; padding-inline: 12px; }
 }
 
-/* ===== Protótipo da forma A, "a cena em luz" (avaliação de 04/11, 15h13). Só na vitrine (tela-caso.js, formaLuz). =====
+/* ===== A forma A, "a cena em luz" (avaliação de 04/11, 15h13; no jogo desde a de 23h52). Em todo capítulo rota (tela-caso.js, formaLuz). =====
    1. Ninguém recortado sobre a pintura: cada pessoa é uma luz quente e baixa na altura do peito, com um reflexo curto no
       chão molhado. A mesma luz para todos (tamanho, cor e ritmo), para não entregar quem sabe. */
 .tela-caso.carmen.forma-luz .cena .pessoa > :not(.pessoa-nome) { display: none !important; }

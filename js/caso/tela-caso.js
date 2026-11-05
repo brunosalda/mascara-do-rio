@@ -203,10 +203,11 @@ export async function telaCaso(raiz, estadoApp, opcoes = {}) {
     </div>`;
   const tela = raiz.querySelector('.tela-jogo');
   const palco = tela.querySelector('.palco');
-  // Protótipo da forma A, "a cena em luz" (avaliação de 04/11, 15h13; gerencia/carmen-2026/nova-investigacao.md):
-  // só na vitrine, por enquanto. As figuras recortadas saem da pintura; cada pessoa é uma luz quente na altura do
-  // peito, e a conversa abre numa coluna à direita, com o retrato de dossiê de corpo inteiro. ?figuras volta ao antigo.
-  const formaLuz = !!opcoes.vitrine && rota && !/[?&]figuras\b/.test(location.hash);
+  // A forma A, "a cena em luz" (gerencia/carmen-2026/nova-investigacao.md; aprovada para o jogo na avaliação de
+  // 04/11, 23h52): em todo capítulo do formato rota, no jogo e na vitrine. As figuras recortadas saem da pintura; cada
+  // pessoa é uma luz quente na altura do peito, e a conversa abre numa coluna à direita, com o retrato de dossiê de
+  // corpo inteiro. Na escuta, as vozes saem em ondas, sem vultos. ?figuras no endereço volta à forma antiga (testes).
+  const formaLuz = rota && !/[?&]figuras\b/.test(location.hash);
   tela.classList.toggle('forma-luz', formaLuz);
   const apagadas = new Set(); // quem se fechou com o jeito errado: a luz apaga e o nome fica riscado
   const listaRegistro = tela.querySelector('.registro-noite');
