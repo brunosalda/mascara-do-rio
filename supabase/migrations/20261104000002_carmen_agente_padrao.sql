@@ -1,5 +1,5 @@
 -- Carmen 2026: um jogo só, com o agente padrão (decisão da coordenação em 04/11, pelo pedido do Bruno de "somente
--- um jogo"; proposta do Replanejamento). NÃO APLICADA: espera a liberação do Bruno na aba do desenvolvimento.
+-- um jogo"; proposta do Replanejamento). Aplicada em 06/11/2026, com a liberação do Bruno na aba do desenvolvimento.
 --
 -- Todo jogador é o mesmo agente da Xerife: os 3 poderes e os mesmos números (R.AGENTE, js/carmen/regras.js).
 -- A entrada pede só o nome e, se quiser, o clã, que muda só a aparência na lista dos rivais. Não há entrevista,

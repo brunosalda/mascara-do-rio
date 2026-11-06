@@ -1,5 +1,5 @@
 -- Carmen 2026, Rodada 47, itens 3 e 4: "Ler a pessoa" e "Apurar os ouvidos" (desenho do Replanejamento em
--- gerencia/carmen-2026/ler-e-escutar.md, seção 3). NÃO APLICADA: espera a liberação do Bruno na aba do desenvolvimento.
+-- gerencia/carmen-2026/ler-e-escutar.md, seção 3). Aplicada em 06/11/2026, com a liberação do Bruno na aba do desenvolvimento.
 --
 -- Dados (a carga, VERSAO_GERADOR 7, ferramentas/carmen-para-banco.mjs):
 --   cap_conteudos tipo 'ler':    uma linha por testemunha; dados = { certo, detalhes: [{ em, ve, indica }] }.
