@@ -340,6 +340,12 @@ async function desenhar() {
     return telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(8)), vitrine: true });
   }
 
+  // Fatia de teste do Subsolo (só local, sem login e sem banco).
+  if (rota === 'vitrine-subsolo' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+    const { telaSubsolo } = await import('./subsolo/tela-subsolo.js');
+    return telaSubsolo(tela);
+  }
+
   // Vitrine do passo de entrada do agente (só local, sem login e sem gravar nada).
   if (rota === 'vitrine-agente' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
     const { telaAgente } = await import('./caso/tela-agente.js');
