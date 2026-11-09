@@ -148,7 +148,7 @@ export function telaSubsolo(tela) {
   const botaoSom = raiz.querySelector('.ss-som');
 
   const partida = criarPartida(MAPA_TESTE);
-  const corredor = criarCorredor(canvas, partida.mapa);
+  const corredor = criarCorredor(canvas, partida.mapa, { aoCarregar: () => { sujo = true; } });
   const som = criarSom();
 
   // Pose desenhada: coordenadas contínuas da câmera, interpoladas pela animação.

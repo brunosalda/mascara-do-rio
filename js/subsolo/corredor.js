@@ -46,9 +46,37 @@ function sorteioFixo(x, y, f) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-export function criarCorredor(canvas, mapa) {
+export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   const ctx = canvas.getContext('2d', { alpha: false });
   const tabela = montarTabela();
+
+  // Texturas do acervo (versões pequenas de rastro/assets/texturas/p/). Sem elas, vale o desenho por planos.
+  let texParede = null;
+  let chaoP = null;
+  let tetoP = null;
+  let chaoTam = 1;
+  let tetoTam = 1;
+  function carregar(nome, pronto) {
+    const img = new Image();
+    img.onload = () => { pronto(img); aoCarregar?.(); };
+    img.src = `rastro/assets/texturas/p/${nome}-cor.jpg`;
+  }
+  carregar('cantaria', (img) => { texParede = img; });
+  carregar('paralelepipedo', (img) => { chaoP = ctx.createPattern(img, 'repeat'); chaoTam = img.width / 2; });
+  carregar('laje', (img) => { tetoP = ctx.createPattern(img, 'repeat'); tetoTam = img.width; });
+
+  // Luz sobre a textura: uma cor multiplicada, nas mesmas faixas de sempre.
+  const luzMultiplica = [];
+  for (let c = 0; c < CALORES; c += 1) {
+    const m = c / (CALORES - 1);
+    const alvo = [128 + 127 * m, 158 + 42 * m, 150 - 10 * m];
+    const fila = [];
+    for (let n = 0; n < NIVEIS; n += 1) {
+      const f = (n / (NIVEIS - 1)) ** 0.75;
+      fila.push(`rgb(${alvo.map((v) => Math.round(8 + (v - 8) * f)).join(',')})`);
+    }
+    luzMultiplica.push(fila);
+  }
   let L = 1;
   let A = 1;
   let foco = 1;
@@ -157,6 +185,76 @@ export function criarCorredor(canvas, mapa) {
     ctx.fill();
   }
 
+  function multiplicar(luz, calor, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz) {
+    const n = Math.max(0, Math.min(NIVEIS - 1, Math.round(luz * (NIVEIS - 1))));
+    const c = Math.max(0, Math.min(CALORES - 1, Math.round(calor * (CALORES - 1))));
+    ctx.globalCompositeOperation = 'multiply';
+    plano(luzMultiplica[c][n], ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // Parede com textura: fatias verticais de largura igual na tela, cada uma na altura certa.
+  function paredeComTextura(ax, ay, bx, by) {
+    let xa = (ax - cam.x) * cam.rx + (ay - cam.y) * cam.ry;
+    let za = (ax - cam.x) * cam.dx + (ay - cam.y) * cam.dy;
+    let xb = (bx - cam.x) * cam.rx + (by - cam.y) * cam.ry;
+    let zb = (bx - cam.x) * cam.dx + (by - cam.y) * cam.dy;
+    if (za < PERTO && zb < PERTO) return;
+    let u0 = 0;
+    let u1 = 1;
+    if (za < PERTO) { const k = (PERTO - za) / (zb - za); xa += (xb - xa) * k; za = PERTO; u0 = k; }
+    if (zb < PERTO) { const k = (PERTO - zb) / (za - zb); xb += (xa - xb) * k; zb = PERTO; u1 = 1 - k; }
+    const sa = L / 2 + (xa * foco) / za;
+    const sb = L / 2 + (xb * foco) / zb;
+    if (Math.max(sa, sb) < 0 || Math.min(sa, sb) > L) return;
+    const fatias = Math.max(1, Math.min(48, Math.ceil(Math.abs(sb - sa) / (L / 150))));
+    const tw = texParede.width;
+    const th = texParede.height;
+    const uDe = (q) => { const p = q / zb / ((1 - q) / za + q / zb); return u0 + (u1 - u0) * p; };
+    for (let i = 0; i < fatias; i += 1) {
+      const q0 = i / fatias;
+      const q1 = (i + 1) / fatias;
+      const s0 = sa + (sb - sa) * q0;
+      const s1 = sa + (sb - sa) * q1;
+      const esq = Math.min(s0, s1);
+      const larg = Math.abs(s1 - s0);
+      if (esq > L || esq + larg < 0) continue;
+      const inv = (1 - (q0 + q1) / 2) / za + ((q0 + q1) / 2) / zb; // 1/z no meio da fatia
+      const topo = A / 2 - (1 - cam.z) * foco * inv;
+      const altura = foco * inv;
+      const v0 = uDe(q0) * tw;
+      const v1 = uDe(q1) * tw;
+      ctx.drawImage(texParede, Math.min(v0, v1), 0, Math.max(1, Math.abs(v1 - v0)), th, esq, topo, larg + 0.8, altura);
+    }
+  }
+
+  // Chão e teto: uma passada só, por faixas horizontais. Cada faixa é uma transformação simples da textura.
+  function planosTexturados() {
+    const passo = Math.max(2, Math.round(A / 320));
+    for (const [padrao, tam, h, lado] of [[chaoP, chaoTam, cam.z, 1], [tetoP, tetoTam, 1 - cam.z, -1]]) {
+      if (!padrao) continue;
+      ctx.fillStyle = padrao;
+      for (let dy = passo; dy < A / 2 + passo; dy += passo) {
+        const z = (h * foco) / dy;
+        if (z > 6.3 || z < PERTO) continue;
+        const k = -(dy * dy) / (h * foco);
+        const yTela = A / 2 + lado * dy;
+        const s = foco / z;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.beginPath();
+        ctx.rect(0, lado > 0 ? yTela - 0.5 : yTela - passo - 0.5, L, passo + 1);
+        ctx.setTransform(
+          (cam.rx * s) / tam, (lado * cam.dx * k) / tam,
+          (cam.ry * s) / tam, (lado * cam.dy * k) / tam,
+          L / 2 - (cam.x * cam.rx + cam.y * cam.ry) * s,
+          yTela + lado * k * (-(cam.x * cam.dx + cam.y * cam.dy) - z),
+        );
+        ctx.fill();
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+  }
+
   function cor(superficie, luz, calor) {
     const n = Math.max(0, Math.min(NIVEIS - 1, Math.round(luz * (NIVEIS - 1))));
     const c = Math.max(0, Math.min(CALORES - 1, Math.round(calor * (CALORES - 1))));
@@ -180,6 +278,11 @@ export function criarCorredor(canvas, mapa) {
     const meioX = (ax + bx) / 2;
     const meioY = (ay + by) / 2;
     const { luz: l0, calor, d } = luzDa(meioX, meioY, s);
+    if (texParede) {
+      paredeComTextura(ax, ay, bx, by);
+      multiplicar(f % 2 === 0 ? l0 : l0 * 0.8, calor, ax, ay, 1, bx, by, 1, bx, by, 0, ax, ay, 0);
+      return;
+    }
     if (l0 <= 0.012) return;
     const luz = f % 2 === 0 ? l0 : l0 * 0.8; // duas orientações de parede, para os cantos aparecerem
     const corte = 0.42;
@@ -266,12 +369,18 @@ export function criarCorredor(canvas, mapa) {
   function aberta(x, y) {
     const s = sodio[y][x];
     const { luz, calor, d } = luzDa(x + 0.5, y + 0.5, s);
-    if (luz <= 0.012) return;
+    if (luz <= 0.012 && !chaoP) return;
     const chao = tipoChao(mapa, x, y);
-    plano(cor(chao === 'agua' ? 'agua' : 'chao', luz * 0.85, calor), x, y, 0, x + 1, y, 0, x + 1, y + 1, 0, x, y + 1, 0);
-    if (d < 5.5 && (chao === 'agua' || sorteioFixo(x, y, 9) > 0.3)) poca(x, y, luz, calor, chao, s);
+    if (chaoP) multiplicar(chao === 'agua' ? luz * 0.7 : luz, calor, x, y, 0, x + 1, y, 0, x + 1, y + 1, 0, x, y + 1, 0);
+    else plano(cor(chao === 'agua' ? 'agua' : 'chao', luz * 0.85, calor), x, y, 0, x + 1, y, 0, x + 1, y + 1, 0, x, y + 1, 0);
+    if (d < 5.5 && (chao === 'agua' || sorteioFixo(x, y, 9) > 0.3)) {
+      ctx.globalAlpha = chaoP ? 0.45 : 1;
+      poca(x, y, luz, calor, chao, s);
+      ctx.globalAlpha = 1;
+    }
     if (chao === 'trilho') trilhos(x, y, s);
-    plano(cor('teto', luz * 0.8, calor), x, y, 1, x + 1, y, 1, x + 1, y + 1, 1, x, y + 1, 1);
+    if (tetoP) multiplicar(luz * 0.75, calor, x, y, 1, x + 1, y, 1, x + 1, y + 1, 1, x, y + 1, 1);
+    else plano(cor('teto', luz * 0.8, calor), x, y, 1, x + 1, y, 1, x + 1, y + 1, 1, x, y + 1, 1);
     if (x === mapa.fim.x && y === mapa.fim.y) {
       // O alçapão de saída: uma tampa de ferro no chão.
       plano(cor('rejunte', Math.min(1, luz * 1.1), calor), x + 0.2, y + 0.2, 0.003, x + 0.8, y + 0.2, 0.003, x + 0.8, y + 0.8, 0.003, x + 0.2, y + 0.8, 0.003);
@@ -516,6 +625,7 @@ export function criarCorredor(canvas, mapa) {
     posicionar(pose);
     ctx.fillStyle = 'rgb(6,7,8)';
     ctx.fillRect(0, 0, L, A);
+    planosTexturados();
     ordem.length = 0;
     for (let y = 0; y < mapa.altura; y += 1) {
       for (let x = 0; x < mapa.largura; x += 1) {
