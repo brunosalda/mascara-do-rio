@@ -340,8 +340,9 @@ async function desenhar() {
     return telaCaso(tela, estado, { capitulo: decodeURIComponent(rota.slice(8)), vitrine: true });
   }
 
-  // Fatia de teste do Subsolo (só local, sem login e sem banco).
-  if (rota === 'vitrine-subsolo' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+  // Teste do Subsolo (sem login e sem banco). #/subsolo-teste abre também no site publicado, só por link direto,
+  // a pedido do Bruno em 08/11; nenhum botão do jogo leva até ela.
+  if (rota === 'subsolo-teste' || (rota === 'vitrine-subsolo' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname))) {
     const { telaSubsolo } = await import('./subsolo/tela-subsolo.js');
     return telaSubsolo(tela);
   }

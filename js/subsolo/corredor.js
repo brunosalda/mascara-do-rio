@@ -50,7 +50,7 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   const ctx = canvas.getContext('2d', { alpha: false });
   const tabela = montarTabela();
 
-  // Texturas do acervo (versões pequenas de rastro/assets/texturas/p/). Sem elas, vale o desenho por planos.
+  // Texturas do acervo (cópia das versões pequenas de rastro/assets/texturas/p/). Sem elas, vale o desenho por planos.
   let texParede = null;
   let chaoP = null;
   let tetoP = null;
@@ -61,7 +61,7 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   function carregar(nome, pronto) {
     const img = new Image();
     img.onload = () => { pronto(img); aoCarregar?.(); };
-    img.src = `rastro/assets/texturas/p/${nome}-cor.jpg`;
+    img.src = `img/subsolo/${nome}-cor.jpg`;
   }
   carregar('cantaria', (img) => { texParede = img; });
   carregar('azulejo-boteco', (img) => { texBanda = img; });
