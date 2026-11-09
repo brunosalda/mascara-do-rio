@@ -169,7 +169,9 @@ export function criarCorredor(canvas, mapa) {
     const queda = Math.max(0, 1 - d / ALCANCE);
     const base = queda * queda * 0.5;
     const quente = s * s * Math.sqrt(queda) * 0.92;
-    return { luz: Math.min(1, base + quente), calor: Math.min(1, quente / (base + quente + 0.001)), d };
+    // A visão noturna do vampiro: fria, fraca e só nos trechos sem poste.
+    const visao = Math.max(0, 1 - s * 3) * Math.max(0, 1 - d / 6.2) * 0.52;
+    return { luz: Math.min(1, base + quente + visao), calor: Math.min(1, quente / (base + quente + visao + 0.001)), d };
   }
 
   // Uma face de parede: tijolo em cima, faixa de azulejo verde embaixo, com peças quebradas.
@@ -274,7 +276,28 @@ export function criarCorredor(canvas, mapa) {
       // O alçapão de saída: uma tampa de ferro no chão.
       plano(cor('rejunte', Math.min(1, luz * 1.1), calor), x + 0.2, y + 0.2, 0.003, x + 0.8, y + 0.2, 0.003, x + 0.8, y + 0.8, 0.003, x + 0.2, y + 0.8, 0.003);
       plano(cor('trilho', Math.min(1, luz), calor), x + 0.46, y + 0.2, 0.004, x + 0.54, y + 0.2, 0.004, x + 0.54, y + 0.8, 0.004, x + 0.46, y + 0.8, 0.004);
+      const fresta = 'rgb(255,196,120)';
+      plano(fresta, x + 0.17, y + 0.17, 0.005, x + 0.83, y + 0.17, 0.005, x + 0.83, y + 0.205, 0.005, x + 0.17, y + 0.205, 0.005);
+      plano(fresta, x + 0.17, y + 0.795, 0.005, x + 0.83, y + 0.795, 0.005, x + 0.83, y + 0.83, 0.005, x + 0.17, y + 0.83, 0.005);
+      plano(fresta, x + 0.17, y + 0.17, 0.005, x + 0.205, y + 0.17, 0.005, x + 0.205, y + 0.83, 0.005, x + 0.17, y + 0.83, 0.005);
+      plano(fresta, x + 0.795, y + 0.17, 0.005, x + 0.83, y + 0.17, 0.005, x + 0.83, y + 0.83, 0.005, x + 0.795, y + 0.83, 0.005);
+      clarao(x + 0.5, y + 0.5, 0.02, 0.5, 0.42);
     }
+  }
+
+  function clarao(px, py, altura, raioMundo, forca) {
+    const wx = px - cam.x;
+    const wy = py - cam.y;
+    const z = wx * cam.dx + wy * cam.dy;
+    if (z < 0.25) return;
+    const sx = L / 2 + ((wx * cam.rx + wy * cam.ry) * foco) / z;
+    const sy = A / 2 - ((altura - cam.z) * foco) / z;
+    const raio = (raioMundo * foco) / z;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = forca * Math.max(0, 1 - z / ALCANCE);
+    ctx.drawImage(halo, sx - raio, sy - raio, raio * 2, raio * 2);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   function poste(l) {
@@ -287,7 +310,7 @@ export function criarCorredor(canvas, mapa) {
     if (z < 0.25) return;
     const sx = L / 2 + ((wx * cam.rx + wy * cam.ry) * foco) / z;
     const sy = A / 2 - ((0.97 - cam.z) * foco) / z;
-    const raio = Math.min(A * 1.1, (0.95 * foco) / z);
+    const raio = Math.min(A * 0.7, (0.5 * foco) / z);
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = Math.max(0, 1 - z / ALCANCE);
     ctx.drawImage(halo, sx - raio, sy - raio, raio * 2, raio * 2);
@@ -333,6 +356,161 @@ export function criarCorredor(canvas, mapa) {
     return true;
   }
 
+  // A seta pintada no chão: para onde o inimigo vai no próximo passo.
+  function seta(m) {
+    const cx = m.x + 0.5;
+    const cy = m.y + 0.5;
+    const cor2 = m.alerta ? 'rgba(214,56,44,0.72)' : 'rgba(208,146,78,0.5)';
+    if (m.parado) {
+      const pontos = 8;
+      for (let i = 0; i < pontos; i += 1) {
+        const a = (i / pontos) * Math.PI * 2;
+        borda[i * 3] = cx + Math.cos(a) * 0.28;
+        borda[i * 3 + 1] = cy + Math.sin(a) * 0.28;
+        borda[i * 3 + 2] = 0.006;
+      }
+      const n = projetar(borda, pontos);
+      if (n < 3) return;
+      ctx.strokeStyle = cor2;
+      ctx.lineWidth = Math.max(1.5, L / 620);
+      ctx.beginPath();
+      ctx.moveTo(saida[0], saida[1]);
+      for (let i = 1; i < n; i += 1) ctx.lineTo(saida[i * 2], saida[i * 2 + 1]);
+      ctx.closePath();
+      ctx.stroke();
+      return;
+    }
+    const lx = -m.dy;
+    const ly = m.dx;
+    const larg = 0.2;
+    const fundo = -0.04;
+    const ponta = 0.16;
+    const grossura = 0.09;
+    const trecho = (s) => plano(cor2, cx + m.dx * fundo + lx * larg * s, cy + m.dy * fundo + ly * larg * s, 0.006, cx + m.dx * ponta, cy + m.dy * ponta, 0.006, cx + m.dx * (ponta - grossura), cy + m.dy * (ponta - grossura), 0.006, cx + m.dx * (fundo - grossura) + lx * larg * s, cy + m.dy * (fundo - grossura) + ly * larg * s, 0.006);
+    trecho(1);
+    trecho(-1);
+  }
+
+  // Silhueta encurvada contra a luz, em 3 tamanhos prontos: nunca uma figura recortada e iluminada de frente.
+  function contorno(c, a) {
+    const u = a;
+    c.beginPath();
+    c.moveTo(0.33 * u, 0.19 * u);
+    c.quadraticCurveTo(0.25 * u, 0.2 * u, 0.17 * u, 0.25 * u);
+    c.lineTo(0.11 * u, 0.33 * u);
+    c.lineTo(0.07 * u, 0.52 * u);
+    c.lineTo(0.04 * u, 0.7 * u);
+    c.lineTo(0.09 * u, 0.72 * u);
+    c.lineTo(0.13 * u, 0.56 * u);
+    c.lineTo(0.18 * u, 0.4 * u);
+    c.lineTo(0.16 * u, 0.62 * u);
+    c.lineTo(0.11 * u, 0.74 * u);
+    c.lineTo(0.18 * u, 0.71 * u);
+    c.lineTo(0.22 * u, 0.77 * u);
+    c.lineTo(0.27 * u, 0.72 * u);
+    c.lineTo(0.25 * u, 0.98 * u);
+    c.lineTo(0.33 * u, 0.98 * u);
+    c.lineTo(0.35 * u, 0.74 * u);
+    c.lineTo(0.4 * u, 0.74 * u);
+    c.lineTo(0.43 * u, 0.98 * u);
+    c.lineTo(0.52 * u, 0.98 * u);
+    c.lineTo(0.47 * u, 0.73 * u);
+    c.lineTo(0.52 * u, 0.76 * u);
+    c.lineTo(0.56 * u, 0.7 * u);
+    c.lineTo(0.6 * u, 0.75 * u);
+    c.lineTo(0.54 * u, 0.58 * u);
+    c.lineTo(0.5 * u, 0.4 * u);
+    c.lineTo(0.55 * u, 0.54 * u);
+    c.lineTo(0.6 * u, 0.66 * u);
+    c.lineTo(0.64 * u, 0.62 * u);
+    c.lineTo(0.6 * u, 0.46 * u);
+    c.lineTo(0.55 * u, 0.3 * u);
+    c.quadraticCurveTo(0.52 * u, 0.24 * u, 0.48 * u, 0.21 * u);
+    c.lineTo(0.43 * u, 0.19 * u);
+    c.quadraticCurveTo(0.5 * u, 0.14 * u, 0.47 * u, 0.08 * u);
+    c.quadraticCurveTo(0.44 * u, 0.02 * u, 0.38 * u, 0.03 * u);
+    c.quadraticCurveTo(0.3 * u, 0.04 * u, 0.31 * u, 0.11 * u);
+    c.quadraticCurveTo(0.31 * u, 0.16 * u, 0.33 * u, 0.19 * u);
+    c.closePath();
+  }
+
+  function criarSilhuetas() {
+    return [120, 260, 520].map((a) => {
+      const nova = () => {
+        const n = document.createElement('canvas');
+        n.width = Math.ceil(a * 0.68);
+        n.height = a;
+        const c = n.getContext('2d');
+        c.lineJoin = 'round';
+        return [n, c];
+      };
+      const [corpo, c1] = nova();
+      contorno(c1, a);
+      c1.fillStyle = 'rgb(5,6,7)';
+      c1.fill();
+      const borda2 = (tom) => {
+        const [n, c] = nova();
+        contorno(c, a);
+        c.fillStyle = tom;
+        c.fill();
+        c.globalCompositeOperation = 'destination-out';
+        c.translate(a * 0.011, a * 0.012);
+        contorno(c, a);
+        c.fill();
+        return n;
+      };
+      return { altura: a, corpo, quente: borda2('rgb(255,178,100)'), frio: borda2('rgb(150,190,180)') };
+    });
+  }
+  const silhuetas = criarSilhuetas();
+
+  function inimigo(e, s) {
+    // Sombra no chão.
+    const pontos = 8;
+    for (let i = 0; i < pontos; i += 1) {
+      const a = (i / pontos) * Math.PI * 2;
+      borda[i * 3] = e.x + Math.cos(a) * 0.27;
+      borda[i * 3 + 1] = e.y + Math.sin(a) * 0.27;
+      borda[i * 3 + 2] = 0.007;
+    }
+    const n = projetar(borda, pontos);
+    if (n >= 3) {
+      ctx.fillStyle = 'rgba(0,0,0,0.62)';
+      ctx.beginPath();
+      ctx.moveTo(saida[0], saida[1]);
+      for (let i = 1; i < n; i += 1) ctx.lineTo(saida[i * 2], saida[i * 2 + 1]);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const wx = e.x - cam.x;
+    const wy = e.y - cam.y;
+    const z = wx * cam.dx + wy * cam.dy;
+    if (z < 0.22) return;
+    const sx = L / 2 + ((wx * cam.rx + wy * cam.ry) * foco) / z;
+    const chao = A / 2 + (cam.z * foco) / z;
+    const h = (0.9 * foco) / z;
+    const quanto = Math.max(0, 1 - z / ALCANCE);
+    // A luz atrás do vulto: do poste, se houver; senão, um véu frio e fraco que recorta a figura no escuro.
+    clarao(e.x + cam.dx * 0.15, e.y + cam.dy * 0.15, 0.48, 0.66, 0.34 + s * 0.8);
+    const tam = silhuetas.find((v) => v.altura >= h) ?? silhuetas[2];
+    const w = h * 0.68;
+    const inclina = Math.sin(e.andar * Math.PI) * 0.035;
+    ctx.save();
+    ctx.translate(sx, chao);
+    ctx.rotate(inclina);
+    ctx.drawImage(tam.corpo, -w / 2, -h, w, h);
+    ctx.globalAlpha = Math.min(1, (0.3 + s * 1.3) * Math.max(0.25, quanto) * 1.7);
+    ctx.drawImage(s > 0.2 ? tam.quente : tam.frio, -w / 2, -h, w, h);
+    ctx.globalAlpha = 1;
+    if (e.olhaOGrupo) {
+      ctx.fillStyle = e.alerta ? 'rgb(255,70,50)' : 'rgb(214,120,60)';
+      const r = Math.max(1, h * 0.009);
+      ctx.fillRect(-h * 0.052, -h * 0.905, r * 2, r);
+      ctx.fillRect(h * 0.02, -h * 0.905, r * 2, r);
+    }
+    ctx.restore();
+  }
+
   const ordem = [];
   function desenhar(pose, extras = {}) {
     posicionar(pose);
@@ -364,6 +542,8 @@ export function criarCorredor(canvas, mapa) {
         aberta(x, y);
         const l = postes.get(`${x},${y}`);
         if (l) poste(l);
+        for (const m of extras.marcas ?? []) if (m.x === x && m.y === y) seta(m);
+        for (const e of extras.inimigos ?? []) if (Math.floor(e.x) === x && Math.floor(e.y) === y) inimigo(e, sodio[y][x]);
       }
     }
     if (extras.gotas) gotas(extras.gotas, extras.agora);

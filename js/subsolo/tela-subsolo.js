@@ -1,9 +1,9 @@
 // Subsolo: a tela da fatia de teste (só na vitrine, sem banco). Junta a lógica, o corredor e os controles.
-import { aplicarComando, criarPartida, DIRECOES, minutosDaNoite, tipoChao } from './logica.js';
+import { aplicarComando, criarPartida, devolverInimigo, DIRECOES, minutosDaNoite, tipoChao } from './logica.js';
 import { MAPA_TESTE } from './mapa-teste.js';
 import { criarCorredor } from './corredor.js';
 
-const DURACAO = { passo: 180, giro: 170, tranco: 120 }; // milissegundos
+const DURACAO = { passo: 180, giro: 170, tranco: 120, contato: 160 }; // milissegundos
 
 // O grupo de teste: o agente e três vampiros, com as pinturas de clã que já existem.
 const GRUPO = [
@@ -90,6 +90,8 @@ function criarSom() {
       else estouro('lowpass', 950, 0.8, 0.07, 0.34);
     },
     tranco() { if (ctx && ligado) { estouro('lowpass', 240, 1, 0.13, 0.55); } },
+    passoInimigo(volume) { if (ctx && ligado) { estouro('lowpass', 330, 0.8, 0.12, 0.3 * volume, 0.06); } },
+    contato() { if (ctx && ligado) { tom(190, 70, 0.28, 0.2, 'sawtooth'); estouro('lowpass', 500, 1, 0.2, 0.4); } },
     gota() { if (ctx && ligado) tom(1050, 520, 0.08, 0.05); },
   };
 }
@@ -158,17 +160,57 @@ export function telaSubsolo(tela) {
   let gotasAtivas = [];
   let proximaGota = performance.now() + 900;
 
-  const medidas = { comandos: 0, executados: 0, respostas: [], quadros: [] };
-  window.__subsolo = { partida, medidas };
+  const medidas = { comandos: 0, executados: 0, trancos: 0, contatos: [], respostas: [], quadros: [] };
+  // Só para os testes: leva a câmera até a casa e a direção atuais da partida.
+  function forcar() {
+    fecharAnim();
+    fila = null;
+    pose.x = partida.x + 0.5;
+    pose.y = partida.y + 0.5;
+    pose.ang = angulo(partida.dir);
+    atualizarPainel();
+    sujo = true;
+  }
+  window.__subsolo = { partida, medidas, forcar };
 
   function atualizarPainel() {
     bussola.textContent = DIRECOES[partida.dir].letra;
     relogio.textContent = hora(minutosDaNoite(partida));
   }
 
-  function mostrarAviso(texto) {
+  let tempoDoAviso = 0;
+  function mostrarAviso(texto, duracao = 4200) {
     aviso.textContent = texto;
     aviso.hidden = false;
+    clearTimeout(tempoDoAviso);
+    tempoDoAviso = setTimeout(() => { aviso.hidden = true; }, duracao);
+  }
+
+  const TEXTO_CONTATO = {
+    costas: 'Você pegou o vigia pelas costas. Na luta do próximo passo, isso dará um golpe de graça.',
+    frente: 'Você topou de frente com o vigia. A luta entra no próximo passo; ele voltou à ronda.',
+    alcancado: 'O vigia alcançou o grupo. A luta entra no próximo passo; ele voltou à ronda.',
+  };
+
+  // Como cada inimigo aparece agora: na casa dele ou a caminho dela, junto com o passo do grupo.
+  function inimigosNaTela(agora) {
+    const t = anim ? Math.min(1, (agora - anim.inicio) / anim.duracao) : 1;
+    return partida.inimigos.map((e) => {
+      const m = anim?.movimentos?.find((o) => o.id === e.id);
+      const andou = m && (m.de.x !== m.para.x || m.de.y !== m.para.y);
+      const px = andou ? m.de.x + (m.para.x - m.de.x) * t : e.x;
+      const py = andou ? m.de.y + (m.para.y - m.de.y) * t : e.y;
+      // Os olhos só aparecem quando ele olha na direção do grupo: é assim que se sabe se dá para vir por trás.
+      const d = DIRECOES[e.dir];
+      const olhaOGrupo = d.x * (pose.x - (px + 0.5)) + d.y * (pose.y - (py + 0.5)) > 0.2;
+      return { x: px + 0.5, y: py + 0.5, andar: andou ? t : 0, alerta: e.alerta > 0, olhaOGrupo };
+    });
+  }
+
+  function marcasNoChao() {
+    return partida.inimigos.map((e) => (e.prox
+      ? { x: e.prox.x, y: e.prox.y, dx: e.prox.x - e.x, dy: e.prox.y - e.y, alerta: e.alerta > 0 }
+      : { x: e.x, y: e.y, parado: true, alerta: false }));
   }
 
   function fecharAnim() {
@@ -191,7 +233,25 @@ export function telaSubsolo(tela) {
     const alvo = { x: r.para.x + 0.5, y: r.para.y + 0.5, ang: pose.ang };
     if (r.tipo === 'giro') alvo.ang = pose.ang + (Math.PI / 2) * r.sentido;
     if (r.tipo === 'passo') som.passo(r.chao);
+    // Bater na parede não repete sozinho: só outro aperto dá outro tranco.
+    if (r.tipo === 'tranco' || r.tipo === 'contato') seguro = null;
+    if (r.tipo === 'tranco') medidas.trancos += 1;
     if (r.tipo === 'tranco') som.tranco();
+    if (r.tipo === 'passo') {
+      for (const m of r.movimentos) {
+        if (m.de.x === m.para.x && m.de.y === m.para.y) continue;
+        const d = Math.abs(m.para.x - partida.x) + Math.abs(m.para.y - partida.y);
+        if (d <= 4) som.passoInimigo((5 - d) / 4);
+      }
+    }
+    const contato = r.contato;
+    if (r.tipo === 'contato' || contato) {
+      som.contato();
+      medidas.contatos.push(contato.como);
+      mostrarAviso(TEXTO_CONTATO[contato.como]);
+      devolverInimigo(partida, contato.id);
+      seguro = null;
+    }
     if (r.chegouAgora) mostrarAviso('Você chegou ao alçapão. Fim do teste de andar: pode continuar andando.');
     if (!movimento) {
       pose.x = alvo.x;
@@ -207,6 +267,7 @@ export function telaSubsolo(tela) {
       de: { x: pose.x, y: pose.y, ang: pose.ang },
       para: alvo,
       direcao: r.direcao,
+      movimentos: r.movimentos,
     };
     sujo = true;
   }
@@ -226,7 +287,7 @@ export function telaSubsolo(tela) {
   function atualizarAnim(agora) {
     if (!anim) return;
     const t = Math.min(1, (agora - anim.inicio) / anim.duracao);
-    if (anim.tipo === 'tranco') {
+    if (anim.tipo === 'tranco' || anim.tipo === 'contato') {
       const f = Math.sin(t * Math.PI) * 0.09;
       pose.empurraX = anim.direcao.x * f;
       pose.empurraY = anim.direcao.y * f;
@@ -272,7 +333,7 @@ export function telaSubsolo(tela) {
     if (sujo) {
       sujo = false;
       const t0 = performance.now();
-      corredor.desenhar(pose, { gotas: gotasAtivas, agora });
+      corredor.desenhar(pose, { gotas: gotasAtivas, agora, inimigos: inimigosNaTela(agora), marcas: marcasNoChao() });
       if (medidas.quadros.length < 2000) medidas.quadros.push(performance.now() - t0);
     }
     requestAnimationFrame(quadro);
@@ -340,5 +401,6 @@ export function telaSubsolo(tela) {
   }
 
   atualizarPainel();
+  mostrarAviso('Cada passo seu é um passo deles. A seta no chão mostra para onde cada um vai. Olhos acesos: ele olha para você.', 7000);
   requestAnimationFrame(quadro);
 }
