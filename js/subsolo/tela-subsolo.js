@@ -1,17 +1,14 @@
 // Subsolo: a tela da fatia de teste (só na vitrine, sem banco). Junta a lógica, o corredor e os controles.
-import { aplicarComando, criarPartida, devolverInimigo, DIRECOES, minutosDaNoite, tipoChao } from './logica.js';
+import { aplicarComando, criarPartida, DIRECOES, minutosDaNoite, tipoChao } from './logica.js';
+import { criarGrupo } from './luta.js';
+import { conduzirLuta, pintarGrupo } from './tela-luta.js';
 import { MAPA_TESTE } from './mapa-teste.js';
 import { criarCorredor } from './corredor.js';
 
 const DURACAO = { passo: 180, giro: 170, tranco: 120, contato: 160 }; // milissegundos
 
 // O grupo de teste: o agente e três vampiros, com as pinturas de clã que já existem.
-const GRUPO = [
-  { id: 'agente', nome: 'Agente', papel: 'Frente', img: 'img/clas/caitiff.jpg' },
-  { id: 'brujah', nome: 'Brujah', papel: 'Frente', img: 'img/clas/brujah.jpg' },
-  { id: 'nosferatu', nome: 'Nosferatu', papel: 'Atrás', img: 'img/clas/nosferatu.jpg' },
-  { id: 'tremere', nome: 'Tremere', papel: 'Atrás', img: 'img/clas/tremere.jpg' },
-];
+const IMAGENS = { agente: 'img/clas/caitiff.jpg', brujah: 'img/clas/brujah.jpg', nosferatu: 'img/clas/nosferatu.jpg', tremere: 'img/clas/tremere.jpg' };
 
 const BOTOES = [
   { cmd: 'gira-e', rotulo: 'Girar à esquerda', icone: '↺', tecla: 'Q' },
@@ -92,6 +89,8 @@ function criarSom() {
     tranco() { if (ctx && ligado) { estouro('lowpass', 240, 1, 0.13, 0.55); } },
     passoInimigo(volume) { if (ctx && ligado) { estouro('lowpass', 330, 0.8, 0.12, 0.3 * volume, 0.06); } },
     contato() { if (ctx && ligado) { tom(190, 70, 0.28, 0.2, 'sawtooth'); estouro('lowpass', 500, 1, 0.2, 0.4); } },
+    golpe() { if (ctx && ligado) { estouro('lowpass', 700, 1, 0.1, 0.6); tom(140, 60, 0.12, 0.2, 'square'); } },
+    ferido() { if (ctx && ligado) { estouro('bandpass', 500, 1.2, 0.14, 0.45); } },
     gota() { if (ctx && ligado) tom(1050, 520, 0.08, 0.05); },
   };
 }
@@ -116,6 +115,7 @@ export function telaSubsolo(tela) {
 
   // Vai direto no corpo da página: a moldura das telas tem animação, e dentro dela o "fixed" não cobre tudo.
   document.querySelector('.subsolo')?.remove();
+  const grupoInicial = criarGrupo();
   tela.innerHTML = '';
   document.body.insertAdjacentHTML('beforeend', `
     <section class="subsolo" aria-label="Subsolo, teste de andar">
@@ -127,14 +127,20 @@ export function telaSubsolo(tela) {
           <button class="ss-som" type="button" aria-pressed="true">Som ligado</button>
         </div>
         <p class="ss-aviso" role="status" hidden></p>
+        <ul class="ss-intencoes" hidden></ul>
+        <div class="ss-dados" hidden></div>
+        <p class="ss-fala" role="status" hidden></p>
       </div>
       <div class="ss-grupo">
-        ${GRUPO.map((v) => `
-          <article class="ss-vampiro">
-            <img src="${v.img}" alt="">
-            <div><b>${v.nome}</b><small>${v.papel}</small></div>
+        ${grupoInicial.map((v) => `
+          <article class="ss-vampiro" data-id="${v.id}" data-nome="${v.nome}">
+            <img src="${IMAGENS[v.id]}" alt="">
+            <div class="ss-dados-v"><b>${v.nome}</b><small></small></div>
+            <span class="ss-ameaca" hidden></span>
+            <p class="ss-barras"><i><u class="b-vit"></u></i><i><u class="b-fv"></u></i><i><u class="b-fome"></u></i></p>
           </article>`).join('')}
       </div>
+      <div class="ss-ordens" hidden></div>
       <div class="ss-botoes" role="group" aria-label="Andar">
         ${BOTOES.map((b) => `<button type="button" data-cmd="${b.cmd}" aria-label="${b.rotulo}"><span>${b.icone}</span><kbd>${b.tecla}</kbd></button>`).join('')}
       </div>
@@ -148,19 +154,21 @@ export function telaSubsolo(tela) {
   const botaoSom = raiz.querySelector('.ss-som');
 
   const partida = criarPartida(MAPA_TESTE);
+  partida.grupo = grupoInicial;
   const corredor = criarCorredor(canvas, partida.mapa, { aoCarregar: () => { sujo = true; } });
   const som = criarSom();
 
   // Pose desenhada: coordenadas contínuas da câmera, interpoladas pela animação.
   const pose = { x: partida.x + 0.5, y: partida.y + 0.5, ang: angulo(partida.dir), balanco: 0, empurraX: 0, empurraY: 0 };
   let anim = null;
+  let emLuta = false;
   let fila = null;
   let seguro = null;
   let sujo = true;
   let gotasAtivas = [];
   let proximaGota = performance.now() + 900;
 
-  const medidas = { comandos: 0, executados: 0, trancos: 0, contatos: [], respostas: [], quadros: [] };
+  const medidas = { comandos: 0, executados: 0, trancos: 0, contatos: [], lutas: [], respostas: [], quadros: [] };
   // Só para os testes: leva a câmera até a casa e a direção atuais da partida.
   function forcar() {
     fecharAnim();
@@ -185,12 +193,6 @@ export function telaSubsolo(tela) {
     clearTimeout(tempoDoAviso);
     tempoDoAviso = setTimeout(() => { aviso.hidden = true; }, duracao);
   }
-
-  const TEXTO_CONTATO = {
-    costas: 'Você pegou o vigia pelas costas. Na luta do próximo passo, isso dará um golpe de graça.',
-    frente: 'Você topou de frente com o vigia. A luta entra no próximo passo; ele voltou à ronda.',
-    alcancado: 'O vigia alcançou o grupo. A luta entra no próximo passo; ele voltou à ronda.',
-  };
 
   // Como cada inimigo aparece agora: na casa dele ou a caminho dela, junto com o passo do grupo.
   function inimigosNaTela(agora) {
@@ -248,9 +250,10 @@ export function telaSubsolo(tela) {
     if (r.tipo === 'contato' || contato) {
       som.contato();
       medidas.contatos.push(contato.como);
-      mostrarAviso(TEXTO_CONTATO[contato.como]);
-      devolverInimigo(partida, contato.id);
       seguro = null;
+      fila = null;
+      emLuta = true;
+      setTimeout(comecar, 220, contato);
     }
     if (r.chegouAgora) mostrarAviso('Você chegou ao alçapão. Fim do teste de andar: pode continuar andando.');
     if (!movimento) {
@@ -272,7 +275,42 @@ export function telaSubsolo(tela) {
     sujo = true;
   }
 
+  // O que a luta pede ao corredor: girar, golpear, recuar e mover os inimigos.
+  const api = {
+    redesenhar() { sujo = true; },
+    forcar,
+    golpe() {
+      fecharAnim();
+      anim = { tipo: 'tranco', inicio: performance.now(), duracao: 130, de: { ...pose }, para: { x: pose.x, y: pose.y, ang: pose.ang }, direcao: DIRECOES[partida.dir] };
+    },
+    girar(dir) {
+      fecharAnim();
+      const alvo = angulo(dir);
+      const delta = ((((alvo - pose.ang + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+      anim = { tipo: 'giro', inicio: performance.now(), duracao: 200, de: { x: pose.x, y: pose.y, ang: pose.ang }, para: { x: pose.x, y: pose.y, ang: pose.ang + delta } };
+      atualizarPainel();
+    },
+    recuar(movimentos) {
+      fecharAnim();
+      anim = { tipo: 'passo', inicio: performance.now(), duracao: 200, de: { x: pose.x, y: pose.y, ang: pose.ang }, para: { x: partida.x + 0.5, y: partida.y + 0.5, ang: pose.ang }, movimentos };
+    },
+    animarInimigos(movimentos) {
+      fecharAnim();
+      anim = { tipo: 'luta', inicio: performance.now(), duracao: 220, de: { x: pose.x, y: pose.y, ang: pose.ang }, para: { x: pose.x, y: pose.y, ang: pose.ang }, movimentos };
+    },
+  };
+
+  async function comecar(contato) {
+    clearTimeout(tempoDoAviso);
+    aviso.hidden = true; // a luta tem a própria fala, e o vulto precisa da cabeça à vista
+    const texto = await conduzirLuta({ raiz, partida, contato, api, som });
+    emLuta = false;
+    atualizarPainel();
+    mostrarAviso(texto, 5500);
+  }
+
   function pedir(cmd) {
+    if (emLuta) return;
     const agora = performance.now();
     medidas.comandos += 1;
     som.preparar();
@@ -401,6 +439,7 @@ export function telaSubsolo(tela) {
   }
 
   atualizarPainel();
+  pintarGrupo(raiz, partida.grupo);
   mostrarAviso('Cada passo seu é um passo deles. A seta no chão mostra para onde cada um vai. Olhos acesos: ele olha para você.', 7000);
   requestAnimationFrame(quadro);
 }

@@ -12,9 +12,9 @@
 .ss-bussola { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--linha-forte); border-radius: 50%; color: var(--acento-claro); background: rgba(6, 7, 8, 0.7); font-weight: 600; }
 .ss-hora { padding: 3px 9px; background: rgba(6, 7, 8, 0.7); color: var(--texto-claro); font-variant-numeric: tabular-nums; }
 .ss-som { margin-left: auto; min-height: 44px; padding: 0 12px; background: rgba(6, 7, 8, 0.7); color: var(--texto-suave); border: 1px solid var(--linha); font: inherit; font-size: 15px; cursor: pointer; pointer-events: auto; }
-.ss-aviso { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(90%, 460px); margin: 0; padding: 9px 12px; background: rgba(6, 7, 8, 0.86); border-left: 3px solid var(--acento); color: var(--texto-claro); font-size: 17px; }
+.ss-aviso { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); width: min(90%, 460px); margin: 0; padding: 9px 12px; background: rgba(6, 7, 8, 0.86); border-left: 3px solid var(--acento); color: var(--texto-claro); font-size: 17px; }
 .ss-grupo { grid-area: grupo; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; min-width: 0; }
-.ss-vampiro { display: flex; gap: 8px; min-width: 0; background: var(--superficie-solida); border: 1px solid var(--linha); overflow: hidden; }
+.ss-vampiro { position: relative; display: flex; gap: 8px; min-width: 0; background: var(--superficie-solida); border: 1px solid var(--linha); overflow: hidden; }
 .ss-vampiro img { width: 62px; height: 100%; object-fit: cover; object-position: 50% 18%; flex: none; }
 .ss-vampiro div { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-right: 4px; }
 .ss-vampiro b { font-size: 17px; font-weight: 600; color: var(--texto-claro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -23,6 +23,42 @@
 .ss-botoes button { position: relative; min-width: 44px; min-height: 44px; padding: 0; background: var(--superficie-solida); color: var(--texto-claro); border: 1px solid var(--linha-forte); font-size: 21px; line-height: 1; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
 .ss-botoes button:active { background: var(--sangue-escuro); border-color: var(--acento); }
 .ss-botoes kbd { position: absolute; right: 3px; bottom: 2px; font: 12px var(--sans); color: var(--texto-fraco); }
+
+/* Barras de cada vampiro: Vitalidade, Força de Vontade e Fome. */
+.ss-barras { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 1px; margin: 0; }
+.ss-barras i { display: block; height: 4px; background: rgba(6, 7, 8, 0.85); }
+.ss-barras u { display: block; height: 100%; text-decoration: none; transition: width 180ms; }
+.ss-barras .b-vit { background: var(--sangue-vivo); }
+.ss-barras .b-fv { background: var(--voz-mental); }
+.ss-barras .b-fome { background: var(--voz-besta); opacity: 0.7; }
+.ss-vampiro.na-vez { border-color: var(--acento-claro); box-shadow: inset 0 0 0 1px var(--acento-claro); }
+.ss-vampiro.torpor img { filter: grayscale(1) brightness(0.4); }
+.ss-vampiro.atingido { outline: 2px solid var(--sangue-vivo); }
+.ss-ameaca { position: absolute; top: 2px; right: 2px; padding: 1px 6px; background: var(--sangue); color: #fff; font-size: 15px; font-weight: 600; }
+
+/* A luta acontece no próprio corredor: as ordens tomam o lugar dos botões de andar. */
+.subsolo.em-luta { grid-template-columns: minmax(0, 1fr) 470px; grid-template-rows: minmax(0, 1fr) 142px; }
+.subsolo.em-luta .ss-botoes { display: none; }
+.ss-ordens { grid-area: botoes; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 22px repeat(2, 1fr); gap: 4px; min-width: 0; }
+.ss-ordens[hidden] { display: none; }
+.ss-ordens h3 { grid-column: 1 / -1; margin: 0; font: 600 17px var(--sans); color: var(--acento-claro); }
+.ss-ordens button { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 44px; padding: 2px 6px; background: var(--superficie-solida); color: var(--texto-claro); border: 1px solid var(--linha-forte); text-align: left; cursor: pointer; touch-action: none; }
+.ss-ordens button:disabled { opacity: 0.38; cursor: default; }
+.ss-ordens button b { font-size: 16px; font-weight: 600; line-height: 1.1; }
+.ss-ordens button small { font-size: 13px; line-height: 1.1; color: var(--texto-suave); }
+.ss-ordens kbd { position: absolute; right: 3px; top: 1px; font: 12px var(--sans); color: var(--texto-fraco); }
+.ss-intencoes { position: absolute; top: 52px; right: 8px; width: 190px; margin: 0; padding: 6px 8px; list-style: none; background: rgba(6, 7, 8, 0.78); font-size: 15px; line-height: 1.2; }
+.ss-intencoes[hidden] { display: none; }
+.ss-intencoes li + li { margin-top: 5px; }
+.ss-intencoes .ss-rodada { color: var(--acento-claro); font-weight: 600; }
+.ss-intencoes .vida { color: var(--texto-suave); }
+.ss-dados { position: absolute; left: 50%; top: 42%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 80%; }
+.ss-dados[hidden] { display: none; }
+.ss-dados span { display: grid; place-items: center; width: 34px; height: 34px; background: rgba(6, 7, 8, 0.9); border: 1px solid var(--linha-forte); color: var(--texto-suave); font-size: 19px; font-variant-numeric: tabular-nums; }
+.ss-dados span.ok { color: var(--texto-claro); border-color: var(--texto-claro); }
+.ss-dados span.fome { border-color: var(--sangue-vivo); }
+.ss-fala { position: absolute; left: 8px; bottom: 8px; width: min(62%, 480px); margin: 0; padding: 7px 10px; background: rgba(6, 7, 8, 0.86); border-left: 3px solid var(--sangue-vivo); color: var(--texto-claro); font-size: 17px; line-height: 1.25; }
+.ss-fala[hidden] { display: none; }
 
 /* Celular em pé: corredor em cima, retratos numa faixa e 6 botões embaixo. */
 @media (max-width: 720px) and (orientation: portrait) {
@@ -38,6 +74,12 @@
   .ss-vampiro small { display: none; }
   .ss-botoes kbd { display: none; }
   .ss-botoes button { font-size: 28px; }
+  .subsolo.em-luta { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 62px 172px; }
+  .ss-ordens kbd { display: none; }
+  .ss-ordens button b { font-size: 16px; }
+  .ss-intencoes { top: 48px; right: 4px; width: 158px; font-size: 14px; }
+  .ss-fala { left: 4px; right: 4px; bottom: 4px; width: auto; font-size: 16px; }
+  .ss-vampiro .ss-dados-v { bottom: 13px; }
 }
 
 /* Celular deitado: corredor à esquerda; retratos e botões à direita. */
@@ -49,6 +91,13 @@
   }
   .ss-vampiro { gap: 0; position: relative; }
   .ss-vampiro img { width: 100%; }
-  .ss-vampiro div { display: none; }
+  .ss-vampiro .ss-dados-v { display: none; }
   .ss-botoes kbd { display: none; }
+  .subsolo.em-luta { grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: 52px minmax(0, 1fr); }
+  .ss-ordens { grid-template-rows: 18px repeat(2, 1fr); }
+  .ss-ordens h3 { font-size: 14px; }
+  .ss-ordens kbd { display: none; }
+  .ss-ordens button small { font-size: 12px; }
+  .ss-intencoes { top: 46px; width: 150px; font-size: 13px; }
+  .ss-fala { width: 56%; font-size: 15px; }
 }

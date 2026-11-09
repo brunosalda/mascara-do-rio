@@ -43,7 +43,7 @@ export function criarPartida(def, inicioMinutos = 3 * 60 + 40) {
 }
 
 export function minutosDaNoite(p) {
-  return p.inicioMinutos + Math.floor(p.passos / PASSOS_POR_MINUTO);
+  return p.inicioMinutos + Math.floor(p.passos / PASSOS_POR_MINUTO) + (p.minutosExtra ?? 0);
 }
 
 // Aplica um comando na hora e devolve o que a tela precisa animar. A lógica nunca espera a animação.
@@ -82,7 +82,7 @@ function criarInimigo(d) {
 }
 
 // O primeiro passo do caminho mais curto de uma casa até outra (busca em largura).
-function primeiroPasso(p, de, para, ocupadas) {
+export function primeiroPasso(p, de, para, ocupadas) {
   if (de.x === para.x && de.y === para.y) return null;
   const chave = (x, y) => y * p.mapa.largura + x;
   const veioDe = new Map([[chave(de.x, de.y), null]]);
@@ -109,7 +109,10 @@ function primeiroPasso(p, de, para, ocupadas) {
 function veOGrupo(p, e) {
   const dx = p.x - e.x;
   const dy = p.y - e.y;
-  if (Math.abs(dx) + Math.abs(dy) === 1) return true;
+  if (Math.abs(dx) + Math.abs(dy) === 1) {
+    const atras = DIRECOES[(e.dir + 2) % 4];
+    return !(dx === atras.x && dy === atras.y);
+  }
   if (dx !== 0 && dy !== 0) return false;
   const distancia = Math.abs(dx) + Math.abs(dy);
   if (distancia === 0 || distancia > ALCANCE_DA_VISTA) return false;
@@ -145,7 +148,9 @@ function moverInimigos(p) {
       const ocupada = p.inimigos.some((o) => o !== e && o.x === e.prox.x && o.y === e.prox.y);
       if (e.prox.x === p.x && e.prox.y === p.y) {
         // Alcançou o grupo: para na casa ao lado e a luta começa.
-        contato ??= { id: e.id, como: 'alcancado' };
+        const olhar = DIRECOES[p.dir];
+        const deFrente = e.x === p.x + olhar.x && e.y === p.y + olhar.y;
+        contato ??= { id: e.id, como: deFrente ? 'frente' : 'alcancado' };
       } else if (!ocupada) {
         e.x = e.prox.x;
         e.y = e.prox.y;

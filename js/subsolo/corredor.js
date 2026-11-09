@@ -504,42 +504,42 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   function contorno(c, a) {
     const u = a;
     c.beginPath();
-    c.moveTo(0.33 * u, 0.19 * u);
-    c.quadraticCurveTo(0.25 * u, 0.2 * u, 0.17 * u, 0.25 * u);
-    c.lineTo(0.11 * u, 0.33 * u);
-    c.lineTo(0.07 * u, 0.52 * u);
-    c.lineTo(0.04 * u, 0.7 * u);
-    c.lineTo(0.09 * u, 0.72 * u);
-    c.lineTo(0.13 * u, 0.56 * u);
-    c.lineTo(0.18 * u, 0.4 * u);
-    c.lineTo(0.16 * u, 0.62 * u);
-    c.lineTo(0.11 * u, 0.74 * u);
-    c.lineTo(0.18 * u, 0.71 * u);
-    c.lineTo(0.22 * u, 0.77 * u);
-    c.lineTo(0.27 * u, 0.72 * u);
-    c.lineTo(0.25 * u, 0.98 * u);
-    c.lineTo(0.33 * u, 0.98 * u);
-    c.lineTo(0.35 * u, 0.74 * u);
-    c.lineTo(0.4 * u, 0.74 * u);
-    c.lineTo(0.43 * u, 0.98 * u);
-    c.lineTo(0.52 * u, 0.98 * u);
-    c.lineTo(0.47 * u, 0.73 * u);
-    c.lineTo(0.52 * u, 0.76 * u);
-    c.lineTo(0.56 * u, 0.7 * u);
-    c.lineTo(0.6 * u, 0.75 * u);
-    c.lineTo(0.54 * u, 0.58 * u);
-    c.lineTo(0.5 * u, 0.4 * u);
-    c.lineTo(0.55 * u, 0.54 * u);
-    c.lineTo(0.6 * u, 0.66 * u);
-    c.lineTo(0.64 * u, 0.62 * u);
-    c.lineTo(0.6 * u, 0.46 * u);
-    c.lineTo(0.55 * u, 0.3 * u);
-    c.quadraticCurveTo(0.52 * u, 0.24 * u, 0.48 * u, 0.21 * u);
-    c.lineTo(0.43 * u, 0.19 * u);
-    c.quadraticCurveTo(0.5 * u, 0.14 * u, 0.47 * u, 0.08 * u);
-    c.quadraticCurveTo(0.44 * u, 0.02 * u, 0.38 * u, 0.03 * u);
-    c.quadraticCurveTo(0.3 * u, 0.04 * u, 0.31 * u, 0.11 * u);
-    c.quadraticCurveTo(0.31 * u, 0.16 * u, 0.33 * u, 0.19 * u);
+    c.moveTo(0.37 * u, 0.2 * u);
+    c.quadraticCurveTo(0.27 * u, 0.22 * u, 0.2 * u, 0.31 * u);
+    c.lineTo(0.12 * u, 0.4 * u);
+    c.lineTo(0.06 * u, 0.6 * u);
+    c.lineTo(0.02 * u, 0.84 * u);
+    c.lineTo(0.07 * u, 0.87 * u);
+    c.lineTo(0.12 * u, 0.66 * u);
+    c.lineTo(0.19 * u, 0.46 * u);
+    c.lineTo(0.17 * u, 0.64 * u);
+    c.lineTo(0.12 * u, 0.77 * u);
+    c.lineTo(0.19 * u, 0.73 * u);
+    c.lineTo(0.23 * u, 0.79 * u);
+    c.lineTo(0.28 * u, 0.74 * u);
+    c.lineTo(0.26 * u, 0.98 * u);
+    c.lineTo(0.34 * u, 0.98 * u);
+    c.lineTo(0.36 * u, 0.75 * u);
+    c.lineTo(0.41 * u, 0.75 * u);
+    c.lineTo(0.44 * u, 0.98 * u);
+    c.lineTo(0.53 * u, 0.98 * u);
+    c.lineTo(0.48 * u, 0.74 * u);
+    c.lineTo(0.53 * u, 0.77 * u);
+    c.lineTo(0.57 * u, 0.71 * u);
+    c.lineTo(0.61 * u, 0.76 * u);
+    c.lineTo(0.55 * u, 0.58 * u);
+    c.lineTo(0.51 * u, 0.42 * u);
+    c.lineTo(0.58 * u, 0.5 * u);
+    c.lineTo(0.63 * u, 0.56 * u);
+    c.lineTo(0.66 * u, 0.5 * u);
+    c.lineTo(0.61 * u, 0.4 * u);
+    c.lineTo(0.56 * u, 0.27 * u);
+    c.quadraticCurveTo(0.54 * u, 0.2 * u, 0.49 * u, 0.19 * u);
+    c.lineTo(0.47 * u, 0.2 * u);
+    c.quadraticCurveTo(0.56 * u, 0.17 * u, 0.54 * u, 0.1 * u);
+    c.quadraticCurveTo(0.51 * u, 0.03 * u, 0.45 * u, 0.04 * u);
+    c.quadraticCurveTo(0.37 * u, 0.05 * u, 0.38 * u, 0.12 * u);
+    c.quadraticCurveTo(0.38 * u, 0.17 * u, 0.37 * u, 0.2 * u);
     c.closePath();
   }
 
@@ -566,6 +566,25 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
         c.translate(a * 0.011, a * 0.012);
         contorno(c, a);
         c.fill();
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.globalCompositeOperation = 'source-over';
+        if (a >= 260) {
+          // Dobras do casaco, com a luz por dentro: é o que dá volume de perto.
+          c.save();
+          contorno(c, a);
+          c.clip();
+          c.strokeStyle = tom;
+          c.lineCap = 'round';
+          for (const [x0, y0, cx, cy, x1, y1, largura, alfa] of [[0.25, 0.34, 0.31, 0.5, 0.25, 0.7, 0.006, 0.3], [0.33, 0.3, 0.42, 0.48, 0.39, 0.72, 0.004, 0.2], [0.5, 0.36, 0.45, 0.52, 0.5, 0.68, 0.005, 0.25], [0.16, 0.43, 0.11, 0.56, 0.09, 0.72, 0.004, 0.2]]) {
+            c.globalAlpha = alfa;
+            c.lineWidth = a * largura;
+            c.beginPath();
+            c.moveTo(x0 * a, y0 * a);
+            c.quadraticCurveTo(cx * a, cy * a, x1 * a, y1 * a);
+            c.stroke();
+          }
+          c.restore();
+        }
         return n;
       };
       return { altura: a, corpo, quente: borda2('rgb(255,178,100)'), frio: borda2('rgb(150,190,180)') };
@@ -613,9 +632,19 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
     ctx.globalAlpha = 1;
     if (e.olhaOGrupo) {
       ctx.fillStyle = e.alerta ? 'rgb(255,70,50)' : 'rgb(214,120,60)';
-      const r = Math.max(1, h * 0.009);
-      ctx.fillRect(-h * 0.052, -h * 0.905, r * 2, r);
-      ctx.fillRect(h * 0.02, -h * 0.905, r * 2, r);
+      // Olhos: pelo menos 4 pixels de altura mesmo de longe, com um brilho curto.
+      const alturaOlho = Math.max(4 * (L / 1268), h * 0.018);
+      const larguraOlho = alturaOlho * 1.5;
+      const y = -h * 0.9;
+      for (const x of [h * 0.09, h * 0.17]) {
+        ctx.globalCompositeOperation = 'lighter';
+        const raio = alturaOlho * 3.2;
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(halo, x - raio, y - raio + alturaOlho / 2, raio * 2, raio * 2);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillRect(x - larguraOlho / 2, y, larguraOlho, alturaOlho);
+      }
     }
     ctx.restore();
   }
