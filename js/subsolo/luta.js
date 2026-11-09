@@ -21,7 +21,7 @@ export function criarGrupo() {
 
 export const NOME_PODER = { ler: 'Ler o golpe', varredura: 'Varredura', sombra: 'Golpe na sombra', sangue: 'Sangue fervente' };
 
-const TIPOS = {
+export const TIPOS = {
   carnical: { nome: 'Carniçal', vit: 5, parada: 6, dif: 2, dano: 4, agravado: true },
   atirador: { nome: 'Atirador', vit: 4, parada: 5, dif: 2, dano: 4, agravado: false },
 };
@@ -77,7 +77,7 @@ export function vezAtual(l) {
 }
 
 export function podeRecuar(l) {
-  if (l.p.grupo.some((v) => v.agiu && !v.perdeuAgora)) return false;
+  if (l.recuou || l.p.grupo.some((v) => v.agiu && !v.perdeuAgora)) return false;
   const d = DIRECOES[(l.p.dir + 2) % 4];
   const x = l.p.x + d.x;
   const y = l.p.y + d.y;
@@ -244,7 +244,7 @@ function planejar(l, soAlvos = false) {
     const t = TIPOS[e.tipo];
     const colado = distancia(p, e) === 1;
     e.alerta = 1;
-    if (e.tipo === 'atirador' && linhaLivre(p, e)) {
+    if (e.tipo === 'atirador' && linhaLivre(p, e) && l.inimigos.some((o) => o !== e && distancia(p, o) === 1)) {
       e.prox = null;
       e.intencao = { tipo: 'atira', casa: casaDoAlvo(l, e), dano: t.dano };
     } else if (colado) {
@@ -325,6 +325,7 @@ export function inimigosAgem(l) {
 // Recuar gasta a rodada do grupo inteiro: quem estava colado só caminha atrás; o atirador ainda dispara.
 export function recuar(l) {
   const p = l.p;
+  l.recuou = true;
   const d = DIRECOES[(p.dir + 2) % 4];
   p.x += d.x;
   p.y += d.y;
@@ -338,6 +339,7 @@ export function recuar(l) {
     } else golpear(l, e, eventos, true);
   }
   for (const v of p.grupo) v.agiu = true;
+  l.rodada -= 1; // recuar, uma vez por luta, não conta nas 4 rodadas
   fecharRodada(l);
   return eventos;
 }
@@ -365,6 +367,10 @@ export function comecarLuta(p, contato) {
   montar(e0, 'carnical', 1);
   const novos = achados.map((c, i) => montar({ id: `sombra-${i}`, x: c.x, y: c.y, dir: 0, rota: [c], alvo: 0, alerta: 1, prox: null, origem: { ...c } }, i === 0 ? 'atirador' : 'carnical', i === 0 ? 0 : 2));
   p.inimigos.push(...novos);
+  // Quem fugiu da luta anterior volta mais forte: cada fugitivo soma 1 de Vitalidade a todos os da próxima.
+  const reforco = Math.min(3, p.fugitivos ?? 0);
+  p.fugitivos = 0;
+  for (const e of [e0, ...novos]) { e.vit += reforco; e.max += reforco; }
   const l = { p, inimigos: [e0, ...novos], rodada: 1, bonus: 0, penalidade: contato.como === 'alcancado' ? 1 : 0, ultimas: {}, fim: null, como: contato.como, golpeInicial: null };
   for (const v of p.grupo) { v.agiu = false; v.defende = false; v.perdeTurno = false; v.perdeuAgora = false; }
   if (contato.como === 'costas') {
@@ -379,6 +385,7 @@ export function comecarLuta(p, contato) {
 // Fecha a luta. Quem sobrou vai embora; na derrota, os homens da Xerife tiram o grupo de lá e custa 1 hora.
 export function encerrarLuta(l) {
   const p = l.p;
+  if (l.fim === 'fugiram') p.fugitivos = (p.fugitivos ?? 0) + l.inimigos.length;
   p.inimigos = p.inimigos.filter((e) => !l.inimigos.includes(e));
   if (l.fim === 'derrota') {
     p.minutosExtra = (p.minutosExtra ?? 0) + MINUTOS_DA_DERROTA;

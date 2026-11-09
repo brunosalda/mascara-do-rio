@@ -40,14 +40,37 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
   const fala = raiz.querySelector('.ss-fala');
   const titulo = () => `Rodada ${l.rodada} de ${RODADAS}`;
 
-  // Tocar na vista pula a animação em curso.
+  // Tocar na vista, ou já dar a próxima ordem, pula o resto da animação até a próxima pergunta.
   let pular = null;
-  const aoTocar = () => { pular?.(); };
+  let pulando = false;
+  const aoTocar = () => { pulando = true; pular?.(); };
   raiz.querySelector('.ss-vista').addEventListener('pointerdown', aoTocar);
-  const esperar = (ms) => new Promise((r) => {
+  const esperar = (ms) => (pulando ? Promise.resolve() : new Promise((r) => {
     const t = setTimeout(() => { pular = null; r(); }, ms);
     pular = () => { clearTimeout(t); pular = null; r(); };
-  });
+  }));
+
+  // 1 ordem fica guardada durante a animação, como no andar.
+  let listaAtual = [];
+  let responder = null;
+  let guardada = null;
+  function receber(i) {
+    if (responder) {
+      const o = listaAtual[i];
+      if (!o?.ok) return;
+      const r = responder;
+      responder = null;
+      ordens.classList.add('ocupada');
+      r(o.acao);
+    } else {
+      guardada = i;
+      aoTocar();
+    }
+  }
+  const aoTeclar = (e) => { const n = Number(e.key); if (n >= 1 && n <= 6) receber(n - 1); };
+  const aoTocarOrdem = (e) => { const b = e.target.closest('button[data-i]'); if (b) { e.preventDefault(); receber(Number(b.dataset.i)); } };
+  window.addEventListener('keydown', aoTeclar);
+  ordens.addEventListener('pointerdown', aoTocarOrdem);
 
   const inicio = performance.now();
   const l = comecarLuta(partida, contato);
@@ -75,24 +98,15 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
   }
 
   function pedirOrdem(v) {
+    pulando = false;
+    listaAtual = opcoes(l, v);
+    listaAtual.push({ acao: 'recuar', rotulo: 'Recuar', ok: podeRecuar(l), detalhe: 'uma vez por luta, gasta a rodada' });
+    listaAtual.push({ acao: 'repetir', rotulo: 'Repetir', ok: l.rodada > 1, detalhe: 'as ordens da rodada anterior' });
+    ordens.classList.remove('ocupada');
+    ordens.innerHTML = `<h3>${v.nome} age</h3>${listaAtual.map((o, i) => `<button type="button" data-i="${i}" data-o="${o.acao}" ${o.ok ? '' : 'disabled'}><b>${o.rotulo}</b><small>${o.detalhe}</small><kbd>${i + 1}</kbd></button>`).join('')}`;
     return new Promise((resolver) => {
-      const lista = opcoes(l, v);
-      lista.push({ acao: 'recuar', rotulo: 'Recuar', ok: podeRecuar(l), detalhe: 'gasta a rodada do grupo' });
-      lista.push({ acao: 'repetir', rotulo: 'Repetir', ok: l.rodada > 1, detalhe: 'as ordens da rodada anterior' });
-      ordens.innerHTML = `<h3>${v.nome} age</h3>${lista.map((o, i) => `<button type="button" data-o="${o.acao}" ${o.ok ? '' : 'disabled'}><b>${o.rotulo}</b><small>${o.detalhe}</small><kbd>${i + 1}</kbd></button>`).join('')}`;
-      const fechar = (acao) => {
-        window.removeEventListener('keydown', aoTeclar);
-        ordens.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-        resolver(acao);
-      };
-      const aoTeclar = (e) => {
-        const o = lista[Number(e.key) - 1];
-        if (o?.ok) fechar(o.acao);
-      };
-      window.addEventListener('keydown', aoTeclar);
-      ordens.querySelectorAll('button:not([disabled])').forEach((b) => {
-        b.addEventListener('pointerdown', (e) => { e.preventDefault(); fechar(b.dataset.o); });
-      });
+      responder = resolver;
+      if (guardada !== null) { const i = guardada; guardada = null; receber(i); }
     });
   }
 
@@ -104,10 +118,9 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
     const desenho = (valores) => {
       dados.innerHTML = valores.map((n, i) => `<span class="${i >= r.normais.length ? 'fome' : ''} ${n >= 6 ? 'ok' : ''}">${n}</span>`).join('');
     };
-    while (performance.now() < fim) {
+    while (!pulando && performance.now() < fim) {
       desenho(Array.from({ length: total }, () => 1 + Math.floor(Math.random() * 10)));
       await esperar(50);
-      if (!pular && performance.now() >= fim) break;
     }
     desenho([...r.normais, ...r.dadosFome]);
     await esperar(rapido ? 110 : 240);
@@ -166,7 +179,8 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
     pintar();
     const v = vezAtual(l);
     if (!v) {
-      ordens.innerHTML = '<h3>A vez deles</h3>';
+      ordens.classList.add('ocupada');
+      ordens.querySelector('h3').textContent = 'A vez deles';
       await mostrarInimigos(inimigosAgem(l));
       continue;
     }
@@ -185,6 +199,8 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
   }
 
   encerrarLuta(l);
+  window.removeEventListener('keydown', aoTeclar);
+  ordens.removeEventListener('pointerdown', aoTocarOrdem);
   window.__subsolo.medidas.lutas.push({ fim: l.fim, rodadas: l.rodada, segundos: Math.round((performance.now() - inicio) / 1000) });
   raiz.classList.remove('em-luta');
   raiz.querySelector('.ss-vista').removeEventListener('pointerdown', aoTocar);
@@ -196,7 +212,7 @@ export async function conduzirLuta({ raiz, partida, contato, api, som }) {
   api.forcar();
   return {
     vitoria: 'O grupo venceu. Quem está de pé segue em frente.',
-    fugiram: 'O sol aperta e os que restaram fogem pelas galerias. O grupo segue, sem vencer.',
+    fugiram: 'Os que restaram fogem pelas galerias. Na próxima luta, voltam mais fortes.',
     derrota: 'Os 4 caíram. Os homens da Xerife tiram o grupo de lá: você volta ao começo e perde 1 hora da noite.',
   }[l.fim];
 }

@@ -56,12 +56,16 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   let tetoP = null;
   let chaoTam = 1;
   let tetoTam = 1;
+  let texBanda = null;
+  let texReboco = null;
   function carregar(nome, pronto) {
     const img = new Image();
     img.onload = () => { pronto(img); aoCarregar?.(); };
     img.src = `rastro/assets/texturas/p/${nome}-cor.jpg`;
   }
   carregar('cantaria', (img) => { texParede = img; });
+  carregar('azulejo-boteco', (img) => { texBanda = img; });
+  carregar('reboco', (img) => { texReboco = img; });
   carregar('paralelepipedo', (img) => { chaoP = ctx.createPattern(img, 'repeat'); chaoTam = img.width / 2; });
   carregar('laje', (img) => { tetoP = ctx.createPattern(img, 'repeat'); tetoTam = img.width; });
 
@@ -194,7 +198,7 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
   }
 
   // Parede com textura: fatias verticais de largura igual na tela, cada uma na altura certa.
-  function paredeComTextura(ax, ay, bx, by) {
+  function paredeComTextura(ax, ay, bx, by, tex = texParede, zBase = 0, zTopo = 1, vDe = 0, vAte = 1) {
     let xa = (ax - cam.x) * cam.rx + (ay - cam.y) * cam.ry;
     let za = (ax - cam.x) * cam.dx + (ay - cam.y) * cam.dy;
     let xb = (bx - cam.x) * cam.rx + (by - cam.y) * cam.ry;
@@ -208,8 +212,8 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
     const sb = L / 2 + (xb * foco) / zb;
     if (Math.max(sa, sb) < 0 || Math.min(sa, sb) > L) return;
     const fatias = Math.max(1, Math.min(48, Math.ceil(Math.abs(sb - sa) / (L / 150))));
-    const tw = texParede.width;
-    const th = texParede.height;
+    const tw = tex.width;
+    const th = tex.height;
     const uDe = (q) => { const p = q / zb / ((1 - q) / za + q / zb); return u0 + (u1 - u0) * p; };
     for (let i = 0; i < fatias; i += 1) {
       const q0 = i / fatias;
@@ -220,11 +224,11 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
       const larg = Math.abs(s1 - s0);
       if (esq > L || esq + larg < 0) continue;
       const inv = (1 - (q0 + q1) / 2) / za + ((q0 + q1) / 2) / zb; // 1/z no meio da fatia
-      const topo = A / 2 - (1 - cam.z) * foco * inv;
-      const altura = foco * inv;
+      const topo = A / 2 - (zTopo - cam.z) * foco * inv;
+      const altura = (zTopo - zBase) * foco * inv;
       const v0 = uDe(q0) * tw;
       const v1 = uDe(q1) * tw;
-      ctx.drawImage(texParede, Math.min(v0, v1), 0, Math.max(1, Math.abs(v1 - v0)), th, esq, topo, larg + 0.8, altura);
+      ctx.drawImage(tex, Math.min(v0, v1), th * vDe, Math.max(1, Math.abs(v1 - v0)), th * (vAte - vDe), esq, topo, larg + 0.8, altura);
     }
   }
 
@@ -279,7 +283,13 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
     const meioY = (ay + by) / 2;
     const { luz: l0, calor, d } = luzDa(meioX, meioY, s);
     if (texParede) {
-      paredeComTextura(ax, ay, bx, by);
+      // Os trechos do Rio: faixa baixa de azulejo de boteco, e reboco descascado em parte das galerias.
+      const trecho = Math.floor(cx / 2) + Math.floor(cy / 2);
+      paredeComTextura(ax, ay, bx, by, texReboco && trecho % 3 === 1 ? texReboco : texParede);
+      if (texBanda && trecho % 2 === 0) {
+        paredeComTextura(ax, ay, bx, by, texBanda, 0, 0.42, 0, 0.84);
+        plano('rgb(20,18,16)', ax, ay, 0.44, bx, by, 0.44, bx, by, 0.42, ax, ay, 0.42);
+      }
       multiplicar(f % 2 === 0 ? l0 : l0 * 0.8, calor, ax, ay, 1, bx, by, 1, bx, by, 0, ax, ay, 0);
       return;
     }
@@ -555,15 +565,25 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
       };
       const [corpo, c1] = nova();
       contorno(c1, a);
-      c1.fillStyle = 'rgb(5,6,7)';
+      c1.fillStyle = 'rgb(9,9,9)';
       c1.fill();
+      // Grão de pedra sobre a figura, para ela não parecer recortada de outro material.
+      c1.globalCompositeOperation = 'source-atop';
+      const grao = Math.round((corpo.width * corpo.height) / 14);
+      for (let i = 0; i < grao; i += 1) {
+        const claro = Math.random() < 0.5;
+        c1.fillStyle = claro ? `rgba(120,112,98,${0.05 + Math.random() * 0.13})` : 'rgba(0,0,0,0.3)';
+        const t2 = 1 + Math.random() * (a / 240);
+        c1.fillRect(Math.random() * corpo.width, Math.random() * corpo.height, t2, t2);
+      }
+      c1.globalCompositeOperation = 'source-over';
       const borda2 = (tom) => {
         const [n, c] = nova();
         contorno(c, a);
         c.fillStyle = tom;
         c.fill();
         c.globalCompositeOperation = 'destination-out';
-        c.translate(a * 0.011, a * 0.012);
+        c.translate(a * 0.005, a * 0.006);
         contorno(c, a);
         c.fill();
         c.setTransform(1, 0, 0, 1, 0, 0);
@@ -585,6 +605,14 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
           }
           c.restore();
         }
+        // Borra a luz: reduzir e ampliar de novo funciona em todos os navegadores.
+        const pequena = document.createElement('canvas');
+        pequena.width = Math.ceil(n.width * 0.4);
+        pequena.height = Math.ceil(n.height * 0.4);
+        pequena.getContext('2d').drawImage(n, 0, 0, pequena.width, pequena.height);
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.globalCompositeOperation = 'copy';
+        c.drawImage(pequena, 0, 0, n.width, n.height);
         return n;
       };
       return { altura: a, corpo, quente: borda2('rgb(255,178,100)'), frio: borda2('rgb(150,190,180)') };
@@ -633,17 +661,19 @@ export function criarCorredor(canvas, mapa, { aoCarregar } = {}) {
     if (e.olhaOGrupo) {
       ctx.fillStyle = e.alerta ? 'rgb(255,70,50)' : 'rgb(214,120,60)';
       // Olhos: pelo menos 4 pixels de altura mesmo de longe, com um brilho curto.
-      const alturaOlho = Math.max(4 * (L / 1268), h * 0.018);
-      const larguraOlho = alturaOlho * 1.5;
-      const y = -h * 0.9;
+      const sc = L / 1268;
+      const raioOlho = Math.min(4 * sc, Math.max(2.3 * sc, h * 0.008));
+      const y = -h * 0.895;
       for (const x of [h * 0.09, h * 0.17]) {
         ctx.globalCompositeOperation = 'lighter';
-        const raio = alturaOlho * 3.2;
-        ctx.globalAlpha = 0.55;
-        ctx.drawImage(halo, x - raio, y - raio + alturaOlho / 2, raio * 2, raio * 2);
+        const raio = raioOlho * 3.4;
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(halo, x - raio, y - raio, raio * 2, raio * 2);
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
-        ctx.fillRect(x - larguraOlho / 2, y, larguraOlho, alturaOlho);
+        ctx.beginPath();
+        ctx.arc(x, y, raioOlho, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     ctx.restore();

@@ -41,6 +41,7 @@
 .subsolo.em-luta .ss-botoes { display: none; }
 .ss-ordens { grid-area: botoes; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 22px repeat(2, 1fr); gap: 4px; min-width: 0; }
 .ss-ordens[hidden] { display: none; }
+.ss-ordens.ocupada button { opacity: 0.55; }
 .ss-ordens h3 { grid-column: 1 / -1; margin: 0; font: 600 17px var(--sans); color: var(--acento-claro); }
 .ss-ordens button { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 44px; padding: 2px 6px; background: var(--superficie-solida); color: var(--texto-claro); border: 1px solid var(--linha-forte); text-align: left; cursor: pointer; touch-action: none; }
 .ss-ordens button:disabled { opacity: 0.38; cursor: default; }
@@ -77,7 +78,10 @@
   .subsolo.em-luta { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 62px 172px; }
   .ss-ordens kbd { display: none; }
   .ss-ordens button b { font-size: 16px; }
-  .ss-intencoes { top: 48px; right: 4px; width: 158px; font-size: 14px; }
+  .ss-intencoes { top: 46px; left: 4px; right: 4px; width: auto; padding: 3px 6px; font-size: 13px; line-height: 1.15; }
+  .ss-intencoes br { display: none; }
+  .ss-intencoes li + li { margin-top: 1px; }
+  .ss-intencoes li span.vida { margin-right: 6px; }
   .ss-fala { left: 4px; right: 4px; bottom: 4px; width: auto; font-size: 16px; }
   .ss-vampiro .ss-dados-v { bottom: 13px; }
 }
